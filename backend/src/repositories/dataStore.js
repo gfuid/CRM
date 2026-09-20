@@ -49,7 +49,7 @@ const dataStore = {
     industry: 'Travel, Tourism & Trade Services',
     currency: 'USD',
     timezone: 'UTC+05:30',
-    revenueTargetMonthly: 150000,
+    revenueTargetMonthly: 0,
     plan: 'growth',
     maxStaff: 15,
     subscriptionStatus: 'active',

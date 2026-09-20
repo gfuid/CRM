@@ -15,7 +15,7 @@ export default function SettingsSection({ company, onUpdateSettings }) {
   const [formData, setFormData] = useState({
     name: company?.name || 'Travel-Trade',
     industry: company?.industry || 'Travel, Tourism & Trade Services',
-    revenueTargetMonthly: company?.revenueTargetMonthly || 150000,
+    revenueTargetMonthly: company?.revenueTargetMonthly || 0,
     timezone: company?.timezone || 'UTC+05:30',
   });
 
@@ -30,7 +30,7 @@ export default function SettingsSection({ company, onUpdateSettings }) {
       setFormData({
         name: company.name || 'Travel-Trade',
         industry: company.industry || 'Travel, Tourism & Trade Services',
-        revenueTargetMonthly: company.revenueTargetMonthly || 150000,
+        revenueTargetMonthly: company.revenueTargetMonthly || 0,
         timezone: company.timezone || 'UTC+05:30',
       });
     }

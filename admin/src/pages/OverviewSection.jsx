@@ -2,7 +2,7 @@ import React from 'react';
 import {
   Users2,
   TrendingUp,
-  DollarSign,
+  ListTodo,
   ShieldCheck,
   ChevronRight,
   UserPlus,
@@ -29,10 +29,10 @@ export default function OverviewSection({
   const managersCount = team.managers ?? users.filter((u) => u.role === 'manager').length;
   const agentsCount = team.agents ?? users.filter((u) => u.role === 'agent').length;
 
-  const totalLeads = crm.totalLeads ?? 24;
-  const pipelineValue = crm.pipelineValue ?? 184500;
-  const wonLeads = crm.wonLeads ?? 8;
-  const monthlyTarget = company?.revenueTargetMonthly || 150000;
+  const totalLeads = crm.totalLeads ?? 0;
+  const wonLeads = crm.wonLeads ?? 0;
+  const totalTasks = crm.totalTasks ?? 0;
+  const pendingTasks = crm.pendingTasks ?? 0;
 
   const recentUsers = team.recentUsers || users.slice(-5).reverse();
 
@@ -88,19 +88,22 @@ export default function OverviewSection({
           </div>
         </div>
 
-        {/* Pipeline Value */}
+        {/* CRM Operations & Tasks */}
         <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
           <div className="flex justify-between items-center text-slate-500 text-xs font-semibold">
-            <span>Pipeline Value</span>
+            <span>CRM Operations & Tasks</span>
             <div className="w-8 h-8 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-              <DollarSign size={18} />
+              <ListTodo size={18} />
             </div>
           </div>
           <div className="text-2xl font-extrabold text-slate-900 mt-2">
-            ${Number(pipelineValue).toLocaleString()}
+            {totalTasks} Tasks
           </div>
-          <div className="text-xs text-slate-500 mt-1">
-            Monthly Target: ${Number(monthlyTarget).toLocaleString()}
+          <div className="text-xs text-slate-500 mt-1 flex items-center justify-between">
+            <span>{pendingTasks} pending actions</span>
+            <span className="text-amber-700 font-bold text-[11px] bg-amber-50 px-2 py-0.5 rounded-full border border-amber-200/60">
+              Active Ops
+            </span>
           </div>
         </div>
 

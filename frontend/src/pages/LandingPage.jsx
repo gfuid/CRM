@@ -46,14 +46,6 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
           <a href="#preview" className="hover:text-slate-900 transition-colors">Platform Tour</a>
           <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing & Plans</a>
-          <a
-            href={import.meta.env.VITE_ADMIN_URL || 'https://crm-b2g7.vercel.app'}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="hover:text-emerald-600 transition-colors"
-          >
-            Admin Console &rarr;
-          </a>
         </nav>
 
         <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
@@ -446,14 +438,6 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
           <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
             <a href="#privacy" className="hover:text-slate-900">Privacy Policy</a>
             <a href="#terms" className="hover:text-slate-900">Terms of Service</a>
-            <a
-              href={import.meta.env.VITE_ADMIN_URL || 'https://crm-b2g7.vercel.app'}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-600 hover:text-emerald-700 font-semibold"
-            >
-              Admin Console &rarr;
-            </a>
           </div>
         </div>
       </footer>
