@@ -91,6 +91,8 @@ export const COMMODITY_PRODUCTS = [
 ];
 
 export const PIPELINE_STAGES = [
+  'Lead Generation',
+  'Contact Established',
   'Requirement Understood',
   'Sample Sent',
   'Quotation Sent',
@@ -413,8 +415,12 @@ export const INITIAL_LEADS = [
 
 const getStatusBadge = (status) => {
   switch (status) {
-    case 'Requirement Understood':
+    case 'Lead Generation':
       return 'bg-blue-50 text-blue-700 border-blue-200';
+    case 'Contact Established':
+      return 'bg-indigo-50 text-indigo-700 border-indigo-200';
+    case 'Requirement Understood':
+      return 'bg-sky-50 text-sky-700 border-sky-200';
     case 'Sample Sent':
       return 'bg-purple-50 text-purple-700 border-purple-200';
     case 'Quotation Sent':
@@ -486,32 +492,21 @@ export default function Leads() {
     contacts: [{ ...defaultContact }], // Contact 1, 2, ...
     whatsapp: '',
     website: '',
-    country: 'United Arab Emirates 🇦🇪', // All country add kro with flags
+    country: 'United Arab Emirates 🇦🇪',
     lead_source: 'Direct Inquiry',
     address: '',
-    // Company Profile
-    credit_rating: 'AA',
-    turnover: '',
-    sourcing_region: '',
-    legacy_industry_type: '',
+    stage: 'Requirement Understood',
     // Product
-    products: ['Turmeric'], // Products *
+    products: [], // Empty array by default - no forced Turmeric
     quantity: 0,
     price: 0, // Price ($)
-    // Export requirements
-    industry_type: 'Food & Spice Processing',
-    material_type: 'Whole Raw',
-    polish_level: 'Double Polish',
-    min_curcumin: '3.5%',
-    cultivation_methods: 'Conventional Cleaned',
-    preferred_origin: '',
-    quantity_needed_kg: '',
-    max_price_inr: '',
+    product_notes: '',
+    // Trade & Shipping terms
     incoterm: 'CIF',
     port_delivery: '',
     payment_days: 'CAD on BL copy',
     // Assignment
-    assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish', // Assign to *
+    assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
     agent_name: isStaff ? (profile?.name || 'Staff Member') : 'Athish',
     follow_up_date: '',
     notes: '',
@@ -586,11 +581,24 @@ export default function Leads() {
     const current = [...form.products];
     const idx = current.indexOf(prod);
     if (idx > -1) {
-      if (current.length > 1) current.splice(idx, 1);
+      current.splice(idx, 1);
     } else {
       current.push(prod);
     }
     setForm({ ...form, products: current });
+  };
+
+  // Quick Stage Update from Table or Card
+  const handleQuickStageChange = async (leadId, newStage) => {
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, stage: newStage, status: newStage, lead_stage: newStage } : l))
+    );
+    try {
+      await api.updateLead(leadId, { stage: newStage, lead_stage: newStage, status: newStage });
+      showNotification(`Lead stage updated to "${newStage}"`, 'success');
+    } catch (err) {
+      console.warn('Failed to update stage on server:', err.message);
+    }
   };
 
   // Open Create Modal
@@ -640,7 +648,7 @@ export default function Leads() {
       ? lead.products
       : lead.product
       ? lead.product.split(',').map((p) => p.trim())
-      : ['Turmeric'];
+      : [];
 
     const exp = lead.export_requirements || {};
 
@@ -655,19 +663,11 @@ export default function Leads() {
       address: lead.address || '',
       credit_rating: lead.credit_rating || 'AA',
       turnover: lead.turnover || '',
-      sourcing_region: lead.sourcing_region || '',
-      legacy_industry_type: lead.legacy_industry_type || '',
+      stage: lead.stage || lead.status || lead.lead_stage || 'Requirement Understood',
       products: leadProducts,
       quantity: lead.quantity || 0,
       price: lead.price || lead.value || 0,
-      industry_type: exp.industry_type || 'Food & Spice Processing',
-      material_type: exp.material_type || 'Whole Raw',
-      polish_level: exp.polish_level || 'Double Polish',
-      min_curcumin: exp.min_curcumin || '3.5%',
-      cultivation_methods: exp.cultivation_method || 'Conventional Cleaned',
-      preferred_origin: exp.preferred_origin || '',
-      quantity_needed_kg: exp.quantity_needed_kg || lead.quantity || '',
-      max_price_inr: exp.max_price_inr || '',
+      product_notes: exp.product_notes || lead.product_notes || '',
       incoterm: exp.incoterm || 'CIF',
       port_delivery: exp.port_delivery || '',
       payment_days: exp.payment_days || 'CAD on BL copy',
@@ -731,19 +731,14 @@ export default function Leads() {
       quantity: Number(form.quantity) || 0,
       price: Number(form.price) || 0,
       value: Number(form.price) || 0,
-      stage: editingLead ? editingLead.stage : 'Requirement Understood',
+      stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+      status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+      lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
       export_requirements: {
-        industry_type: form.industry_type,
-        material_type: form.material_type,
-        polish_level: form.polish_level,
-        min_curcumin: form.min_curcumin,
-        cultivation_method: form.cultivation_methods,
-        preferred_origin: form.preferred_origin,
-        quantity_needed_kg: Number(form.quantity_needed_kg) || Number(form.quantity) || 0,
-        max_price_inr: Number(form.max_price_inr) || 0,
         incoterm: form.incoterm,
         port_delivery: form.port_delivery,
         payment_days: form.payment_days,
+        product_notes: form.product_notes,
       },
       assigned_to: finalAssignedTo,
       agent_name: finalAgentName,
@@ -1571,15 +1566,22 @@ export default function Leads() {
                         </div>
                       </td>
 
-                      {/* Stage */}
-                      <td className="py-3.5 px-4 text-center">
-                        <span
-                          className={`inline-flex px-2.5 py-1 rounded-full font-bold text-[10px] border ${getStatusBadge(
+                      {/* Interactive Stage Dropdown */}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <select
+                          value={lead.stage || lead.status || 'Requirement Understood'}
+                          onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
+                          className={`px-2.5 py-1 rounded-full font-bold text-[10px] border cursor-pointer outline-none transition-all shadow-xs ${getStatusBadge(
                             lead.stage || lead.status
                           )}`}
+                          title="Click to update lead stage"
                         >
-                          {lead.stage || lead.status || 'New'}
-                        </span>
+                          {PIPELINE_STAGES.map((s) => (
+                            <option key={s} value={s} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 font-semibold text-xs">
+                              {s}
+                            </option>
+                          ))}
+                        </select>
                       </td>
 
                       {/* Actions */}
@@ -1643,13 +1645,19 @@ export default function Leads() {
                         <span className="font-semibold text-emerald-700">{lead.type || 'Export'}</span>
                       </div>
                     </div>
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full font-bold text-[10px] border ${getStatusBadge(
+                    <select
+                      value={lead.stage || lead.status || 'Requirement Understood'}
+                      onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
+                      className={`px-2 py-0.5 rounded-full font-bold text-[10px] border cursor-pointer outline-none transition-all ${getStatusBadge(
                         lead.stage || lead.status
                       )}`}
                     >
-                      {lead.stage || lead.status}
-                    </span>
+                      {PIPELINE_STAGES.map((s) => (
+                        <option key={s} value={s} className="bg-white dark:bg-slate-900 text-slate-800 dark:text-slate-100 text-xs font-semibold">
+                          {s}
+                        </option>
+                      ))}
+                    </select>
                   </div>
 
                   {/* Products */}
@@ -2122,32 +2130,17 @@ export default function Leads() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Preferred Sourcing Region
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Nizamabad & Salem, India"
-                    value={form.sourcing_region}
-                    onChange={(e) => setForm({ ...form, sourcing_region: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Legacy Industry Type
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="e.g. Spice Milling & Wholesale Trading"
-                    value={form.legacy_industry_type}
-                    onChange={(e) => setForm({ ...form, legacy_industry_type: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Commodity & Packaging Specifications (Optional)
+                </label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. 50 kg PP / Jute bags, sortex cleaned, moisture < 10%, origin certificates..."
+                  value={form.product_notes}
+                  onChange={(e) => setForm({ ...form, product_notes: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                />
               </div>
             </div>
           )}
@@ -2193,44 +2186,30 @@ export default function Leads() {
                 </div>
               </div>
 
-              {/* Quality & Processing Specs */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Polish Level</label>
-                  <select
-                    value={form.polish_level}
-                    onChange={(e) => setForm({ ...form, polish_level: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {POLISH_LEVELS.map((p) => (
-                      <option key={p} value={p}>{p}</option>
-                    ))}
-                  </select>
+              {/* Lead Pipeline Stage */}
+              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-xs font-bold text-slate-800">
+                    Lead Pipeline Stage <span className="text-rose-500">*</span>
+                  </label>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(form.stage)}`}>
+                    {form.stage}
+                  </span>
                 </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Min Curcumin %</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 3.5%"
-                    value={form.min_curcumin}
-                    onChange={(e) => setForm({ ...form, min_curcumin: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Cultivation</label>
-                  <select
-                    value={form.cultivation_methods}
-                    onChange={(e) => setForm({ ...form, cultivation_methods: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {CULTIVATION_METHODS.map((c) => (
-                      <option key={c} value={c}>{c}</option>
-                    ))}
-                  </select>
-                </div>
+                <select
+                  value={form.stage}
+                  onChange={(e) => setForm({ ...form, stage: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 font-semibold text-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none cursor-pointer"
+                >
+                  {PIPELINE_STAGES.map((stg) => (
+                    <option key={stg} value={stg}>
+                      {stg}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-slate-500 mt-1">
+                  Select current stage of this trade opportunity. Can also be updated in 1-click directly from the leads table.
+                </p>
               </div>
 
               {/* Assignment & Next Follow-up Card */}
@@ -2544,38 +2523,32 @@ export default function Leads() {
               )}
             </div>
 
-            {/* Export Specs */}
-            {activeDetailLead.export_requirements && (
+            {/* Trade & Shipping Specs */}
+            {(activeDetailLead.export_requirements || activeDetailLead.product_notes) && (
               <div className="space-y-2">
                 <div className="font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-                  <Ship size={14} className="text-emerald-600" /> Export Specifications
+                  <Ship size={14} className="text-emerald-600" /> Trade & Shipping Specifications
                 </div>
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
+                <div className="grid grid-cols-3 gap-2 text-[11px]">
                   <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                     <span className="text-slate-400 block">Incoterm</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.incoterm || 'FOB'}</span>
+                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.incoterm || 'CIF'}</span>
                   </div>
                   <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                     <span className="text-slate-400 block">Port Delivery</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.port_delivery || '—'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Polish Level</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.polish_level || '—'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Min Curcumin %</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.min_curcumin || '—'}</span>
+                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.port_delivery || '—'}</span>
                   </div>
                   <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
                     <span className="text-slate-400 block">Payment Terms</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.payment_days || '—'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Preferred Origin</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements.preferred_origin || '—'}</span>
+                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.payment_days || '—'}</span>
                   </div>
                 </div>
+                {(activeDetailLead.export_requirements?.product_notes || activeDetailLead.product_notes) && (
+                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px]">
+                    <span className="text-slate-400 block font-semibold mb-0.5">Commodity & Packaging Specifications:</span>
+                    <span className="text-slate-700 font-medium">{activeDetailLead.export_requirements?.product_notes || activeDetailLead.product_notes}</span>
+                  </div>
+                )}
               </div>
             )}
 
