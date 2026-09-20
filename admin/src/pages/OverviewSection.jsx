@@ -233,7 +233,44 @@ export default function OverviewSection({
           </button>
         </div>
 
-        <div className="overflow-x-auto">
+        {/* Mobile View: Card layout */}
+        <div className="block md:hidden space-y-3">
+          {recentUsers.map((u) => (
+            <div
+              key={u.id}
+              className="p-3.5 rounded-xl border border-slate-200/90 bg-slate-50/50 space-y-2.5"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2.5">
+                  <img
+                    src={u.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`}
+                    alt={u.name}
+                    className="w-8 h-8 rounded-full border border-slate-200 object-cover"
+                  />
+                  <div>
+                    <div className="font-bold text-slate-900 text-xs">{u.name}</div>
+                    <div className="text-[10px] text-slate-500 font-mono">{u.email}</div>
+                  </div>
+                </div>
+                <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider border ${getRoleBadge(u.role)}`}>
+                  {u.role}
+                </span>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-slate-200/60 text-[11px]">
+                <span className="text-slate-500">{u.department || 'Sales Outreach'}</span>
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+                  u.is_active ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-rose-50 text-rose-700 border border-rose-200'
+                }`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${u.is_active ? 'bg-emerald-500' : 'bg-rose-500'}`} />
+                  {u.is_active ? 'Active' : 'Inactive'}
+                </span>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Desktop View: Clean Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-100 text-slate-400 uppercase tracking-wider font-semibold">

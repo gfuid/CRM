@@ -22,11 +22,13 @@ import {
   X
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import TradeCalendar from '../components/TradeCalendar';
 
 export default function Analytics() {
   const [selectedYear, setSelectedYear] = useState('2025');
   const [selectedMonth, setSelectedMonth] = useState('Apr');
   const [timeframe, setTimeframe] = useState('This Month');
+  const [chartView, setChartView] = useState('calendar'); // 'calendar' | 'matrix'
   const [tableSearch, setTableSearch] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('All');
 
@@ -264,214 +266,225 @@ export default function Analytics() {
 
   return (
     <div className="w-full space-y-6">
-      {/* 1. TOP METRICS ROW: 4 Horizontal Cards (100% Tailwind Responsive) */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 w-full">
-        {/* Card 1: Total Revenue */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Total Pipeline Revenue</span>
-            <span className="p-1.5 rounded-lg bg-mint-50 text-mint-600">
-              <DollarSign size={15} />
-            </span>
-          </div>
-          <div className="flex items-end justify-between mt-3">
-            <div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">$101,491</div>
-              <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-mint-600 bg-mint-50 px-2 py-0.5 rounded-full">
-                <TrendingUp size={12} />
-                <span>+1.50% vs last week</span>
+      {/* 1. COMPACT 4-IN-1 SUMMARY BOX (As requested: "ese ek small box mian kro") */}
+      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3.5 sm:p-5">
+        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 gap-3 sm:gap-0">
+          {/* Metric 1 */}
+          <div className="sm:px-4 first:pl-0">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Pipeline Revenue</span>
+              <span className="p-1 rounded-md bg-emerald-50 text-emerald-600">
+                <DollarSign size={13} />
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1">
+              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">$101,491</div>
+              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                <TrendingUp size={11} /> +1.50%
               </div>
             </div>
-            {/* SVG Sparkline */}
-            <div className="h-10 w-20">
-              <svg width="80" height="38" viewBox="0 0 80 38" fill="none">
-                <path d="M2 30C14 28 20 18 32 22C44 26 52 10 64 14C70 16 74 4 78 6" stroke="#58BA84" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">vs last week</div>
           </div>
-        </div>
 
-        {/* Card 2: Software Licenses Sold */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Enterprise Seats Sold</span>
-            <span className="p-1.5 rounded-lg bg-blue-50 text-blue-600">
-              <Briefcase size={15} />
-            </span>
-          </div>
-          <div className="flex items-end justify-between mt-3">
-            <div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">4,346</div>
-              <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-mint-600 bg-mint-50 px-2 py-0.5 rounded-full">
-                <TrendingUp size={12} />
-                <span>+2.10% vs target</span>
+          {/* Metric 2 */}
+          <div className="sm:px-4 pt-3 sm:pt-0">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Enterprise Seats</span>
+              <span className="p-1 rounded-md bg-blue-50 text-blue-600">
+                <Briefcase size={13} />
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1">
+              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">4,346</div>
+              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">
+                <TrendingUp size={11} /> +2.10%
               </div>
             </div>
-            <div className="h-10 w-20">
-              <svg width="80" height="38" viewBox="0 0 80 38" fill="none">
-                <path d="M2 26C12 24 22 32 34 20C44 10 54 16 64 8C70 4 74 6 78 2" stroke="#58BA84" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">vs target</div>
           </div>
-        </div>
 
-        {/* Card 3: Closed Won Sales */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Closed Contract Value</span>
-            <span className="p-1.5 rounded-lg bg-coral-50 text-coral-600">
-              <ShieldCheck size={15} />
-            </span>
-          </div>
-          <div className="flex items-end justify-between mt-3">
-            <div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">$283,142</div>
-              <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-crimson-600 bg-crimson-50 px-2 py-0.5 rounded-full">
-                <TrendingDown size={12} />
-                <span>-4.51% quarterly dip</span>
+          {/* Metric 3 */}
+          <div className="sm:px-4 pt-3 sm:pt-0">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Closed Contracts</span>
+              <span className="p-1 rounded-md bg-rose-50 text-rose-600">
+                <ShieldCheck size={13} />
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1">
+              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">$283,142</div>
+              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-full">
+                <TrendingDown size={11} /> -4.51%
               </div>
             </div>
-            <div className="h-10 w-20">
-              <svg width="80" height="38" viewBox="0 0 80 38" fill="none">
-                <path d="M2 6C12 10 22 4 32 16C44 26 54 18 64 28C70 32 74 28 78 32" stroke="#EB4E55" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">quarterly dip</div>
           </div>
-        </div>
 
-        {/* Card 4: Total Customer Accounts */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-5 shadow-sm hover:shadow-md transition-shadow">
-          <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-            <span>Active Client Companies</span>
-            <span className="p-1.5 rounded-lg bg-gold-50 text-gold-700">
-              <Building2 size={15} />
-            </span>
-          </div>
-          <div className="flex items-end justify-between mt-3">
-            <div>
-              <div className="text-2xl font-black text-slate-900 tracking-tight">8,426</div>
-              <div className="inline-flex items-center gap-1 mt-1 text-[11px] font-bold text-mint-600 bg-mint-50 px-2 py-0.5 rounded-full">
-                <TrendingUp size={12} />
-                <span>+3.75% retention</span>
+          {/* Metric 4 */}
+          <div className="sm:px-4 pt-3 sm:pt-0 last:pr-0">
+            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
+              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Client Companies</span>
+              <span className="p-1 rounded-md bg-amber-50 text-amber-600">
+                <Building2 size={13} />
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between mt-1">
+              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">8,426</div>
+              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
+                <TrendingUp size={11} /> +3.75%
               </div>
             </div>
-            <div className="h-10 w-20">
-              <svg width="80" height="38" viewBox="0 0 80 38" fill="none">
-                <path d="M2 28C10 26 20 16 32 20C42 24 52 8 64 10C70 12 74 2 78 4" stroke="#58BA84" strokeWidth="2.2" strokeLinecap="round" />
-              </svg>
-            </div>
+            <div className="text-[10px] text-slate-400 mt-0.5">active retention</div>
           </div>
         </div>
       </div>
 
-      {/* 2. MIDDLE ROW: Interactive Sales Summary Chart & Performance Analytics */}
+      {/* 2. MIDDLE ROW: Interactive Calendar / Revenue Matrix & Performance Analytics */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Interactive Dot-Matrix Sales Chart (2/3 width) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
-          {/* Chart Header */}
+        {/* Left Column: Interactive Calendar or Matrix Chart (2/3 width) */}
+        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
+          {/* Header with View Switcher: Calendar (default) vs Revenue Matrix */}
           <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">Revenue & Inbound Contract Matrix</h2>
-              <p className="text-xs text-slate-400 mt-0.5">Click any month below to analyze deal flow & touchpoint split</p>
+              <h2 className="text-lg font-bold text-slate-900">
+                {chartView === 'calendar' ? 'Export Trade & Shipment Calendar' : 'Revenue & Inbound Contract Matrix'}
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                {chartView === 'calendar'
+                  ? 'Track cargo dispatch, vessel arrivals, phytosanitary lab tests, and LC milestones'
+                  : 'Click any month below to analyze deal flow & touchpoint split'}
+              </p>
             </div>
 
-            {/* Year Selector */}
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-                {['2024', '2025'].map((yr) => (
-                  <button
-                    key={yr}
-                    onClick={() => setSelectedYear(yr)}
-                    className={`px-3 py-1 rounded-lg transition-all ${
-                      selectedYear === yr ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500 hover:text-slate-800'
-                    }`}
-                  >
-                    {yr}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Subtotal Headline & Channel Legend */}
-          <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mt-4 gap-2">
-            <div>
-              <div className="text-3xl font-black text-slate-900 tracking-tight">
-                ${yearTotalRevenue.toLocaleString()}
-              </div>
-              <div className="text-xs text-slate-500 font-medium mt-0.5">
-                Total Annual Revenue for FY {selectedYear}
-              </div>
-            </div>
-
-            <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-mint-500" />
-                <span>Enterprise Inbound</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-mint-300" />
-                <span>Outbound SDR</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Selected Month Floating Dynamic Badge */}
-          <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+            {/* View Switcher Pills */}
             <div className="flex items-center gap-2">
-              <span className="px-2 py-0.5 rounded bg-slate-900 text-white font-bold">{activeMonthObj.month}</span>
-              <span className="text-slate-600 font-semibold">Selected Month Revenue:</span>
-              <span className="text-mint-700 font-black text-sm">${activeMonthObj.total.toLocaleString()}</span>
-            </div>
-            <div className="text-slate-500 text-[11px] hidden sm:block">
-              Inbound: <span className="font-bold text-slate-800">${activeMonthObj.onlineRev.toLocaleString()}</span> &bull; Outbound: <span className="font-bold text-slate-800">${activeMonthObj.offlineRev.toLocaleString()}</span>
-            </div>
-          </div>
+              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                <button
+                  onClick={() => setChartView('calendar')}
+                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+                    chartView === 'calendar'
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <Calendar size={13} />
+                  <span>Calendar</span>
+                </button>
+                <button
+                  onClick={() => setChartView('matrix')}
+                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
+                    chartView === 'matrix'
+                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
+                      : 'text-slate-600 hover:text-slate-900'
+                  }`}
+                >
+                  <span>Dot-Matrix</span>
+                </button>
+              </div>
 
-          {/* Dot-Matrix Visual Columns */}
-          <div className="mt-6 pt-2">
-            <div className="grid grid-cols-12 gap-1 sm:gap-2 h-48 items-end border-b border-slate-100 pb-2">
-              {currentYearData.map((item) => {
-                const isSelected = item.month === selectedMonth;
-                const totalDots = 14;
-                const onlineDots = item.online;
-                const offlineDots = item.offline;
-
-                return (
-                  <button
-                    key={item.month}
-                    onClick={() => setSelectedMonth(item.month)}
-                    className={`flex flex-col items-center justify-end h-full group transition-all py-1 rounded-lg ${
-                      isSelected ? 'bg-coral-50/60 ring-2 ring-coral-400/50' : 'hover:bg-slate-50'
-                    }`}
-                    title={`${item.month}: $${item.total.toLocaleString()}`}
-                  >
-                    {/* Vertical Dots */}
-                    <div className="flex flex-col-reverse gap-1 items-center mb-2">
-                      {Array.from({ length: totalDots }).map((_, dotIdx) => {
-                        let dotColor = 'bg-slate-100';
-                        if (dotIdx < offlineDots) {
-                          dotColor = isSelected ? 'bg-mint-400' : 'bg-mint-200 group-hover:bg-mint-300';
-                        } else if (dotIdx < offlineDots + onlineDots) {
-                          dotColor = isSelected ? 'bg-mint-600' : 'bg-mint-500 group-hover:bg-mint-600';
-                        }
-                        return <span key={dotIdx} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${dotColor}`} />;
-                      })}
-                    </div>
-
-                    {/* Month Label */}
-                    <span
-                      className={`text-[11px] font-bold mt-1 transition-colors ${
-                        isSelected ? 'text-coral-600 font-black' : 'text-slate-400 group-hover:text-slate-700'
+              {chartView === 'matrix' && (
+                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
+                  {['2024', '2025'].map((yr) => (
+                    <button
+                      key={yr}
+                      onClick={() => setSelectedYear(yr)}
+                      className={`px-2.5 py-1 rounded-lg transition-all ${
+                        selectedYear === yr ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
                       }`}
                     >
-                      {item.month}
-                    </span>
-                  </button>
-                );
-              })}
+                      {yr}
+                    </button>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
+
+          {/* Body: Render Calendar by default or Matrix Chart */}
+          {chartView === 'calendar' ? (
+            <div className="pt-4">
+              <TradeCalendar />
+            </div>
+          ) : (
+            <>
+              {/* Subtotal Headline & Channel Legend */}
+              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mt-4 gap-2">
+                <div>
+                  <div className="text-3xl font-black text-slate-900 tracking-tight">
+                    ${yearTotalRevenue.toLocaleString()}
+                  </div>
+                  <div className="text-xs text-slate-500 font-medium mt-0.5">
+                    Total Annual Revenue for FY {selectedYear}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                    <span>Enterprise Inbound</span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
+                    <span>Outbound SDR</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selected Month Floating Dynamic Badge */}
+              <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
+                <div className="flex items-center gap-2">
+                  <span className="px-2 py-0.5 rounded bg-slate-900 text-white font-bold">{activeMonthObj.month}</span>
+                  <span className="text-slate-600 font-semibold">Selected Month Revenue:</span>
+                  <span className="text-emerald-700 font-black text-sm">${activeMonthObj.total.toLocaleString()}</span>
+                </div>
+                <div className="text-slate-500 text-[11px] hidden sm:block">
+                  Inbound: <span className="font-bold text-slate-800">${activeMonthObj.onlineRev.toLocaleString()}</span> &bull; Outbound: <span className="font-bold text-slate-800">${activeMonthObj.offlineRev.toLocaleString()}</span>
+                </div>
+              </div>
+
+              {/* Dot-Matrix Visual Columns */}
+              <div className="mt-6 pt-2">
+                <div className="grid grid-cols-12 gap-1 sm:gap-2 h-48 items-end border-b border-slate-100 pb-2">
+                  {currentYearData.map((item) => {
+                    const isSelected = item.month === selectedMonth;
+                    const totalDots = 14;
+                    const onlineDots = item.online;
+                    const offlineDots = item.offline;
+
+                    return (
+                      <button
+                        key={item.month}
+                        onClick={() => setSelectedMonth(item.month)}
+                        className={`flex flex-col items-center justify-end h-full group transition-all py-1 rounded-lg ${
+                          isSelected ? 'bg-orange-50/60 ring-2 ring-orange-400/50' : 'hover:bg-slate-50'
+                        }`}
+                        title={`${item.month}: $${item.total.toLocaleString()}`}
+                      >
+                        <div className="flex flex-col-reverse gap-1 items-center mb-2">
+                          {Array.from({ length: totalDots }).map((_, dotIdx) => {
+                            let dotColor = 'bg-slate-100';
+                            if (dotIdx < offlineDots) {
+                              dotColor = isSelected ? 'bg-emerald-400' : 'bg-emerald-200 group-hover:bg-emerald-300';
+                            } else if (dotIdx < offlineDots + onlineDots) {
+                              dotColor = isSelected ? 'bg-emerald-600' : 'bg-emerald-500 group-hover:bg-emerald-600';
+                            }
+                            return <span key={dotIdx} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${dotColor}`} />;
+                          })}
+                        </div>
+                        <span
+                          className={`text-[11px] font-bold mt-1 transition-colors ${
+                            isSelected ? 'text-orange-600 font-black' : 'text-slate-400 group-hover:text-slate-700'
+                          }`}
+                        >
+                          {item.month}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </>
+          )}
         </div>
 
         {/* Right Column: Performance Indicators (1/3 width) */}

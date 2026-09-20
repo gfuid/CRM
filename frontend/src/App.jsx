@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
+import MobileTopHeader from './components/MobileTopHeader';
 import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
@@ -33,9 +34,39 @@ const tabNames = {
 function AppContent() {
   const { user, profile, company, loading, loginAsDemo, isOwner, isStaff } = useAuth();
   const [activeTab, setActiveTab] = useState('analytics');
-  const [authMode, setAuthMode] = useState('landing'); // 'landing' | 'login' | 'register'
+
+  // Dedicated Route Detection (/login, /signup, /register)
+  const getInitialAuthMode = () => {
+    const p = window.location.pathname.toLowerCase();
+    const h = window.location.hash.toLowerCase();
+    if (p === '/login' || h.includes('/login') || h.includes('login')) return 'login';
+    if (p === '/register' || p === '/signup' || h.includes('/register') || h.includes('/signup') || h.includes('register') || h.includes('signup')) return 'register';
+    return 'landing';
+  };
+
+  const [authMode, setAuthMode] = useState(getInitialAuthMode);
   const [taskBadgeCount, setTaskBadgeCount] = useState(1);
   const [staffModalOpen, setStaffModalOpen] = useState(false);
+
+  const navigateAuth = (mode) => {
+    setAuthMode(mode);
+    const targetPath = mode === 'login' ? '/login' : mode === 'register' ? '/signup' : '/';
+    if (window.location.pathname !== targetPath) {
+      window.history.pushState({ mode }, '', targetPath);
+    }
+  };
+
+  // Enforce Clean Light Theme & Route History
+  useEffect(() => {
+    document.documentElement.classList.remove('dark');
+    localStorage.removeItem('travel_trade_theme');
+
+    const handlePopState = () => {
+      setAuthMode(getInitialAuthMode());
+    };
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
 
   // Count overdue/due-soon tasks for badge
   useEffect(() => {
@@ -76,22 +107,22 @@ function AppContent() {
     );
   }
 
-  // Public Marketing Landing Page & Auth Flow
+  // Public Dedicated Routes: Landing (/), Login (/login), Register (/signup)
   if (!user || !profile) {
     return (
       <Suspense fallback={<PageSkeleton />}>
         {authMode === 'landing' ? (
           <LandingPage
-            onLoginClick={() => setAuthMode('login')}
-            onRegisterClick={() => setAuthMode('register')}
+            onLoginClick={() => navigateAuth('login')}
+            onRegisterClick={() => navigateAuth('register')}
             onExploreDemo={() => loginAsDemo()}
           />
         ) : authMode === 'register' ? (
-          <RegisterPage onSwitchToLogin={() => setAuthMode('login')} />
+          <RegisterPage onSwitchToLogin={() => navigateAuth('login')} />
         ) : (
           <LoginPage
-            onSwitchToRegister={() => setAuthMode('register')}
-            onBackToLanding={() => setAuthMode('landing')}
+            onSwitchToRegister={() => navigateAuth('register')}
+            onBackToLanding={() => navigateAuth('landing')}
             onExploreDemo={() => loginAsDemo()}
           />
         )}
@@ -124,7 +155,7 @@ function AppContent() {
   const breadcrumbPrefix = isStaff ? 'Staff Portal' : 'Main Menu';
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row antialiased text-slate-900 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row antialiased text-slate-900">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -133,24 +164,34 @@ function AppContent() {
         onOpenStaffModal={() => setStaffModalOpen(true)}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">
-        <MobileTabBar
-          activeTab={activeTab}
-          setActiveTab={setActiveTab}
+        {/* Mobile Top Header: Slim, Clean Light Theme with Brand & Actions */}
+        <MobileTopHeader
           companyName={company?.name || 'Travel-Trade'}
-          taskBadgeCount={taskBadgeCount}
           onOpenStaffModal={() => setStaffModalOpen(true)}
         />
+        
+        {/* Desktop TopBar */}
         <div className="hidden md:block">
           <TopBar
             breadcrumb={`${breadcrumbPrefix} / ${tabNames[activeTab] || 'Dashboard'}`}
             onCustomizeWidget={() => {}}
           />
         </div>
-        <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto">
+
+        {/* Main Content Area - with bottom padding on mobile so bottom bar never obscures content */}
+        <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           <Suspense fallback={<PageSkeleton />}>
             {renderPage()}
           </Suspense>
         </main>
+
+        {/* Mobile Bottom Tab Bar: Native App Bottom Nav */}
+        <MobileTabBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          taskBadgeCount={taskBadgeCount}
+          onOpenStaffModal={() => setStaffModalOpen(true)}
+        />
       </div>
 
       {/* Owner Staff Management Modal */}

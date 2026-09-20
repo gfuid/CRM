@@ -941,8 +941,7 @@ export default function Leads() {
                 onChange={(e) => setFromDate(e.target.value)}
                 placeholder="dd-mm-yyyy"
                 className="h-9 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-700"
-              >
-              </input>
+              />
             </div>
 
             {/* To Date */}
@@ -954,8 +953,7 @@ export default function Leads() {
                 onChange={(e) => setToDate(e.target.value)}
                 placeholder="dd-mm-yyyy"
                 className="h-9 px-3 text-xs bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none text-slate-700"
-              >
-              </input>
+              />
             </div>
 
             {/* Order */}
