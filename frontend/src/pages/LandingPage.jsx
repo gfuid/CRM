@@ -20,7 +20,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
-export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDemo }) {
+export default function LandingPage({ onLoginClick, onRegisterClick }) {
   const [activePreviewTab, setActivePreviewTab] = useState('analytics'); // 'analytics' | 'pipeline' | 'outreach' | 'followup'
 
   return (
@@ -49,51 +49,49 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
         <div className="flex items-center gap-3">
           <button
             onClick={onLoginClick}
-            className="px-4 py-2 text-xs font-semibold text-slate-700 hover:text-slate-900 transition-colors"
+            className="px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
           >
             Sign In
           </button>
           <button
-            onClick={onExploreDemo}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition-all"
+            onClick={onRegisterClick}
+            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
           >
-            <span>Open CRM Dashboard</span>
-            <ArrowRight size={14} />
+            Get Started Free
           </button>
         </div>
       </header>
 
       {/* Hero Section */}
       <section className="max-w-6xl mx-auto px-6 pt-16 pb-12 text-center">
-        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-coral-50 border border-coral-200 text-coral-800 text-xs font-bold mb-6 animate-fadeIn">
-          <Sparkles size={14} className="text-coral-600" />
-          <span>Next-Generation Sales Pipeline & Revenue Intelligence</span>
+        <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold mb-6 animate-fadeIn">
+          <Sparkles size={14} className="text-emerald-600" />
+          <span>Next-Generation Global Commodity Export & Trade CRM</span>
         </div>
 
         <h1 className="text-4xl sm:text-5xl lg:text-6xl font-black text-slate-900 tracking-tight leading-[1.1] max-w-4xl mx-auto">
-          Close High-Value Deals With <span className="bg-gradient-to-r from-coral-500 via-coral-600 to-crimson-500 bg-clip-text text-transparent">Zero Pipeline Friction</span>
+          Close High-Value Deals With <span className="bg-gradient-to-r from-emerald-600 to-teal-600 bg-clip-text text-transparent">Zero Trade Friction</span>
         </h1>
 
         <p className="mt-5 text-base sm:text-lg text-slate-500 max-w-2xl mx-auto font-normal">
-          Designed for modern revenue teams. Track multi-stage enterprise leads, automate SDR outbound cadences, enforce seat quotas, and never lose a follow-up.
+          Designed for modern export enterprises. Manage multi-commodity buyer requirements, schedule vessel dispatch dates, track LC milestones, and coordinate sales staff.
         </p>
 
         {/* CTA Buttons */}
         <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
           <button
-            onClick={onExploreDemo}
-            className="px-6 py-3.5 rounded-xl bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700 text-white font-bold text-sm shadow-lg shadow-coral-500/25 transition-all flex items-center gap-2 transform hover:-translate-y-0.5"
+            onClick={onRegisterClick}
+            className="px-7 py-3.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-sm shadow-lg shadow-emerald-600/25 transition-all flex items-center gap-2 cursor-pointer transform hover:-translate-y-0.5"
           >
-            <span>🚀 Launch Live Demo Workspace</span>
+            <span>Get Started Free</span>
             <ArrowRight size={16} />
           </button>
 
           <button
-            onClick={onRegisterClick}
-            className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
+            onClick={onLoginClick}
+            className="px-7 py-3.5 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-bold text-sm border border-slate-300 shadow-sm transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Sparkles size={16} className="text-emerald-400" />
-            <span>Create Free Account</span>
+            <span>Sign In to CRM</span>
           </button>
         </div>
 

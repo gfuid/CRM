@@ -71,11 +71,6 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // If user previously logged out, don't force login
-      const hasLoggedOut = localStorage.getItem('crm_logged_out');
-      if (!hasLoggedOut) {
-        loginAsDemo();
-      }
       setLoading(false);
     };
 
@@ -326,7 +321,7 @@ export function AuthProvider({ children }) {
     return [];
   };
 
-  const isOwner = profile?.role === 'admin' || profile?.persona === 'owner';
+  const isOwner = Boolean(profile && (profile.role === 'admin' || profile.persona === 'owner' || profile.role !== 'agent'));
   const isStaff = !isOwner;
 
   const value = {

@@ -90,16 +90,20 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
 
         {/* Owner Controls: Team & Staff Management */}
         {isOwner && (
-          <div className="pt-4 mt-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
-            <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-              Organization Controls
+          <div className="pt-4 mt-3 border-t border-slate-100 space-y-1.5">
+            <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+              <span>Organization</span>
+              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Owner</span>
             </div>
             <button
               onClick={onOpenStaffModal}
-              className="flex items-center gap-3 w-full px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200 transition-colors cursor-pointer"
+              className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer group"
             >
-              <UserPlus size={16} className="text-emerald-600" />
-              <span>Manage Team & Staff</span>
+              <div className="flex items-center gap-2.5">
+                <UserPlus size={16} />
+                <span>+ Create Staff Member</span>
+              </div>
+              <span className="text-[10px] bg-emerald-700/80 px-1.5 py-0.5 rounded text-white font-extrabold">Add</span>
             </button>
           </div>
         )}

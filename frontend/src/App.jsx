@@ -178,6 +178,7 @@ function AppContent() {
           <TopBar
             breadcrumb={`${breadcrumbPrefix} / ${tabNames[activeTab] || 'Dashboard'}`}
             onCustomizeWidget={() => {}}
+            onOpenStaffModal={() => setStaffModalOpen(true)}
           />
         </div>
 
