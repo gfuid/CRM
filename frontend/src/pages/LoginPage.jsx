@@ -152,6 +152,18 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
             Register Company
           </button>
         </div>
+
+        <div className="text-center mt-4 pt-4 border-t border-slate-100 text-xs text-slate-400">
+          System Administrator?{' '}
+          <a
+            href={import.meta.env.VITE_ADMIN_URL || 'https://crm-b2g7.vercel.app'}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="font-semibold text-slate-600 hover:text-emerald-600 transition-colors underline"
+          >
+            Open Admin Console &rarr;
+          </a>
+        </div>
       </div>
     </div>
   );
