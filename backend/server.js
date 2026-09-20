@@ -13,7 +13,7 @@ const startServer = async () => {
     await seedMongoDB();
   }
 
-  server.listen(config.port, () => {
+  server.listen(config.port, '0.0.0.0', () => {
     console.log(`====================================================`);
     console.log(`🚀 Production CRM Backend running on port ${config.port}`);
     console.log(`🌍 Environment: ${config.nodeEnv}`);

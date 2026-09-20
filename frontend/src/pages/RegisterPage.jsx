@@ -44,6 +44,7 @@ export default function RegisterPage({ onSwitchToLogin }) {
         persona: 'owner',
         plan: 'enterprise', // Unlimited free
       });
+      window.history.pushState({}, '', '/');
     } catch (err) {
       setError(err.message || 'Registration error');
     } finally {

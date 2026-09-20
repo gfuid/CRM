@@ -16,6 +16,7 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
     setLoading(true);
     try {
       await signIn({ email, password });
+      window.history.pushState({}, '', '/');
     } catch (err) {
       setError(err.message || 'Invalid email or password');
     } finally {

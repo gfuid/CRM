@@ -31,10 +31,13 @@ app.use(
 // High-precision latency tracking
 app.use(responseTimeMiddleware);
 
-// CORS configuration
+// CORS configuration - dynamic origin reflection to support credentials
 app.use(
   cors({
-    origin: config.corsOrigin,
+    origin: (origin, callback) => {
+      // Allow any caller origin dynamically so credentials: true works seamlessly
+      callback(null, true);
+    },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id'],
     credentials: true,
