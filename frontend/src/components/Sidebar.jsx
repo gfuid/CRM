@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
-const navItems = [
+export const navItems = [
   { id: 'analytics', label: 'Analytics', icon: BarChart2 },
   { id: 'leads', label: 'Leads', icon: Users },
   { id: 'tasks', label: 'Task Management', icon: ListTodo, badge: true },
@@ -22,17 +22,25 @@ const navItems = [
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount }) {
   return (
-    <aside className="w-full md:w-64 md:fixed md:inset-y-0 md:left-0 bg-slate-900 text-slate-300 z-30 flex flex-col border-r border-slate-800">
-      {/* Brand Header */}
-      <div className="p-5 flex items-center gap-3 border-b border-slate-800/80">
-        <BrandLogo size={28} />
-        <div className="text-base font-bold text-white truncate tracking-tight">
-          {companyName || 'Travel-Trade'}
+    <aside className="hidden md:flex md:w-64 md:fixed md:inset-y-0 md:left-0 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 z-30 flex-col border-r border-slate-200 dark:border-slate-800 select-none shadow-sm">
+      {/* Brand Header with Logo Colors */}
+      <div className="p-5 flex items-center gap-3 border-b border-slate-100 dark:border-slate-800">
+        <BrandLogo size={32} />
+        <div className="min-w-0">
+          <div className="text-base font-extrabold text-slate-900 dark:text-white truncate tracking-tight flex items-center gap-1.5">
+            <span>{companyName || 'Travel-Trade'}</span>
+          </div>
+          <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+            Export & Trade CRM
+          </div>
         </div>
       </div>
 
-      {/* Navigation List */}
-      <nav className="flex-1 px-3 py-4 space-y-1.5 overflow-y-auto">
+      {/* Navigation List - Light Theme Matching Logo Colors */}
+      <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
+        <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+          Sales & Operations
+        </div>
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
@@ -42,26 +50,26 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-200 ${
+              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
                 isActive
-                  ? 'bg-emerald-500/15 text-emerald-400 font-semibold shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/60'
+                  ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border-l-4 border-emerald-500 shadow-sm'
+                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
               }`}
             >
               <div className="flex items-center gap-3">
                 <Icon
                   size={18}
-                  className={isActive ? 'text-emerald-400' : 'text-slate-400 group-hover:text-slate-300'}
+                  className={isActive ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400 group-hover:text-slate-600'}
                 />
                 <span>{item.label}</span>
               </div>
 
               {showBadge ? (
-                <span className="px-2 py-0.5 text-xs font-bold text-white bg-rose-500 rounded-full shadow-sm">
+                <span className="px-2 py-0.5 text-xs font-bold text-white bg-[#F88F61] rounded-full shadow-sm">
                   {taskBadgeCount || 1}
                 </span>
               ) : isActive ? (
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
               ) : null}
             </button>
           );
@@ -69,12 +77,12 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
       </nav>
 
       {/* Footer / System Status */}
-      <div className="p-4 border-t border-slate-800/80 flex items-center justify-between text-xs text-slate-400">
+      <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
         <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500" />
-          <span>MongoDB Atlas Connected</span>
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="font-semibold text-slate-600 dark:text-slate-400">System Connected</span>
         </div>
-        <span className="font-mono text-slate-400">v1.0</span>
+        <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500">v1.2</span>
       </div>
     </aside>
   );

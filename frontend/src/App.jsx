@@ -3,6 +3,7 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
+import MobileTabBar from './components/MobileTabBar';
 import PageSkeleton from './components/PageSkeleton';
 import './index.css';
 
@@ -119,7 +120,7 @@ function AppContent() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row antialiased text-slate-900 dark:text-slate-100">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -127,11 +128,19 @@ function AppContent() {
         taskBadgeCount={taskBadgeCount}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">
-        <TopBar
-          breadcrumb={`Main Menu / ${tabNames[activeTab] || 'Dashboard'}`}
-          onCustomizeWidget={() => {}}
+        <MobileTabBar
+          activeTab={activeTab}
+          setActiveTab={setActiveTab}
+          companyName={company?.name || 'Travel-Trade'}
+          taskBadgeCount={taskBadgeCount}
         />
-        <main className="flex-1 p-4 md:p-8 max-w-7xl w-full mx-auto">
+        <div className="hidden md:block">
+          <TopBar
+            breadcrumb={`Main Menu / ${tabNames[activeTab] || 'Dashboard'}`}
+            onCustomizeWidget={() => {}}
+          />
+        </div>
+        <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto">
           <Suspense fallback={<PageSkeleton />}>
             {renderPage()}
           </Suspense>

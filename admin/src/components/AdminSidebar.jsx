@@ -74,11 +74,11 @@ export default function AdminSidebar({ activeSection, setActiveSection, isOpen =
                 onClick={() => handleSelect(item.id)}
                 className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all ${
                   isActive
-                    ? 'bg-slate-900 text-white font-semibold shadow-md shadow-slate-900/10'
+                    ? 'bg-emerald-50 text-emerald-800 font-bold border-l-4 border-emerald-500 shadow-sm'
                     : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
-                <Icon size={18} className={isActive ? 'text-emerald-400' : 'text-slate-400'} />
+                <Icon size={18} className={isActive ? 'text-emerald-600' : 'text-slate-400'} />
                 <span>{item.label}</span>
               </button>
             );

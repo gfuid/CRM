@@ -149,6 +149,7 @@ export default function App() {
       <div className="flex-1 flex flex-col min-w-0">
         <AdminTopBar
           activeSection={activeSection}
+          setActiveSection={setActiveSection}
           onRefresh={() => fetchAllData(true)}
           refreshing={refreshing}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}

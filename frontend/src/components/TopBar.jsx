@@ -14,7 +14,21 @@ import { useAuth } from '../context/AuthContext';
 
 export default function TopBar({ breadcrumb = 'Main Menu / Dashboard', onCustomizeWidget }) {
   const { profile, signOut } = useAuth();
-  const [darkMode, setDarkMode] = React.useState(false);
+  const [darkMode, setDarkMode] = React.useState(() => {
+    return localStorage.getItem('travel_trade_theme') === 'dark';
+  });
+
+  React.useEffect(() => {
+    if (darkMode) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('travel_trade_theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('travel_trade_theme', 'light');
+    }
+  }, [darkMode]);
+
+  const toggleTheme = () => setDarkMode((prev) => !prev);
 
   const parts = breadcrumb.split('/');
   const rootName = parts[0]?.trim() || 'Main Menu';
@@ -84,7 +98,7 @@ export default function TopBar({ breadcrumb = 'Main Menu / Dashboard', onCustomi
         {/* Theme Switch */}
         <button
           className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 hover:bg-slate-100 transition-colors"
-          onClick={() => setDarkMode(!darkMode)}
+          onClick={toggleTheme}
           title="Toggle Color Theme"
         >
           {darkMode ? <Sun size={15} className="text-amber-500" /> : <Moon size={15} className="text-slate-500" />}

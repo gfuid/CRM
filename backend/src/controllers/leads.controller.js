@@ -4,27 +4,44 @@ const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 /**
  * Get all leads with filtering & pagination
  */
+/**
+ * Get all leads with filtering & pagination
+ */
 const getLeads = async (req, res) => {
-  const { stage, priority, search, assigned_to } = req.query;
+  const { stage, priority, search, assigned_to, product, country } = req.query;
   let list = [...dataStore.leads];
 
   if (stage) {
-    list = list.filter((l) => l.stage.toLowerCase() === stage.toLowerCase());
+    list = list.filter((l) => (l.stage || '').toLowerCase() === stage.toLowerCase());
   }
   if (priority) {
-    list = list.filter((l) => l.priority.toLowerCase() === priority.toLowerCase());
+    list = list.filter((l) => (l.priority || '').toLowerCase() === priority.toLowerCase());
   }
   if (assigned_to) {
     list = list.filter((l) => l.assigned_to === assigned_to);
+  }
+  if (country) {
+    list = list.filter((l) => (l.country || '').toLowerCase().includes(country.toLowerCase()));
+  }
+  if (product) {
+    list = list.filter((l) => {
+      if (Array.isArray(l.products)) {
+        return l.products.some((p) => p.toLowerCase().includes(product.toLowerCase()));
+      }
+      return (l.product || '').toLowerCase().includes(product.toLowerCase());
+    });
   }
   if (search) {
     const q = search.toLowerCase();
     list = list.filter(
       (l) =>
-        l.name.toLowerCase().includes(q) ||
+        (l.name && l.name.toLowerCase().includes(q)) ||
+        (l.company_name && l.company_name.toLowerCase().includes(q)) ||
         (l.contact_person && l.contact_person.toLowerCase().includes(q)) ||
         (l.email && l.email.toLowerCase().includes(q)) ||
-        (l.source && l.source.toLowerCase().includes(q))
+        (l.country && l.country.toLowerCase().includes(q)) ||
+        (l.source && l.source.toLowerCase().includes(q)) ||
+        (Array.isArray(l.products) && l.products.some((p) => p.toLowerCase().includes(q)))
     );
   }
 
@@ -33,7 +50,7 @@ const getLeads = async (req, res) => {
     const agent = dataStore.users.find((u) => u.id === l.assigned_to);
     return {
       ...l,
-      agent_name: agent ? agent.name : 'Unassigned',
+      agent_name: agent ? agent.name : (l.assigned_to === 'usr_athish' ? 'Athish' : 'Unassigned'),
       agent_avatar: agent ? agent.avatar_url : null,
     };
   });
@@ -60,7 +77,7 @@ const getLeadById = async (req, res) => {
 
   return ApiResponse.success(res, {
     ...lead,
-    agent_name: agent ? agent.name : 'Unassigned',
+    agent_name: agent ? agent.name : (lead.assigned_to === 'usr_athish' ? 'Athish' : 'Unassigned'),
     agent_avatar: agent ? agent.avatar_url : null,
     activities: leadActivities,
     tasks: leadTasks,
@@ -71,24 +88,73 @@ const getLeadById = async (req, res) => {
  * Create a new lead
  */
 const createLead = async (req, res) => {
-  const { name, contact_person, email, phone, value, stage, source, priority, assigned_to, country, notes } = req.body;
+  const {
+    name,
+    company_name,
+    type,
+    contacts,
+    contact_person,
+    email,
+    phone,
+    whatsapp,
+    website,
+    country,
+    source,
+    lead_source,
+    address,
+    credit_rating,
+    turnover,
+    sourcing_region,
+    legacy_industry_type,
+    products,
+    product,
+    quantity,
+    price,
+    price_usd,
+    value,
+    stage,
+    priority,
+    export_requirements,
+    assigned_to,
+    follow_up_date,
+    notes,
+  } = req.body;
 
-  if (!name) {
-    return ApiResponse.error(res, 'Lead company name is required', 400);
+  const leadName = name || company_name;
+  if (!leadName) {
+    return ApiResponse.error(res, 'Company name is required', 400);
   }
+
+  const primaryContact = Array.isArray(contacts) && contacts[0] ? contacts[0] : null;
 
   const newLead = {
     id: generateId('lead'),
-    name,
-    contact_person: contact_person || '',
-    email: email || '',
-    phone: phone || '',
-    value: Number(value) || 0,
-    stage: stage || 'New',
-    source: source || 'Direct Inbound',
+    name: leadName,
+    company_name: leadName,
+    type: type || 'Export',
+    contacts: Array.isArray(contacts) ? contacts : [],
+    contact_person: contact_person || (primaryContact ? primaryContact.name : ''),
+    email: email || (primaryContact ? primaryContact.email : ''),
+    phone: phone || (primaryContact ? primaryContact.phone : ''),
+    whatsapp: whatsapp || '',
+    website: website || '',
+    country: country || 'India 🇮🇳',
+    source: source || lead_source || 'Direct Inbound',
+    address: address || '',
+    credit_rating: credit_rating || 'Not Rated',
+    turnover: turnover || '',
+    sourcing_region: sourcing_region || '',
+    legacy_industry_type: legacy_industry_type || '',
+    products: Array.isArray(products) ? products : (product ? [product] : ['Turmeric']),
+    product: Array.isArray(products) && products.length > 0 ? products.join(', ') : (product || 'Turmeric'),
+    quantity: Number(quantity) || 0,
+    price: Number(price || price_usd) || 0,
+    value: Number(value) || (Number(quantity || 0) * Number(price || price_usd || 0)) || 0,
+    stage: stage || 'Requirement Understood',
     priority: priority || 'Medium',
-    assigned_to: assigned_to || (req.user ? req.user.id : 'usr_agent_1'),
-    country: country || 'United States',
+    export_requirements: export_requirements || {},
+    assigned_to: assigned_to || 'usr_athish',
+    follow_up_date: follow_up_date || '',
     notes: notes || '',
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
@@ -101,17 +167,17 @@ const createLead = async (req, res) => {
   const act = {
     id: generateId('act'),
     type: 'note',
-    title: 'Lead Created',
-    description: `Created lead for ${name} (Value: $${newLead.value.toLocaleString()})`,
+    title: 'Export Lead Created',
+    description: `Created lead for ${leadName} (Products: ${newLead.product}, Value: $${newLead.value.toLocaleString()})`,
     lead_id: newLead.id,
-    user_id: req.user ? req.user.id : 'usr_admin_1',
+    user_id: req.user ? req.user.id : 'usr_athish',
     duration_minutes: null,
     timestamp: new Date().toISOString(),
   };
   dataStore.activities.unshift(act);
   dbSync.saveActivity(act);
 
-  return ApiResponse.created(res, newLead, 'Lead created successfully');
+  return ApiResponse.created(res, newLead, 'Export lead created successfully');
 };
 
 /**

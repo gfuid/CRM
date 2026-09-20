@@ -30,8 +30,11 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Default demo profile for seamless experience
-      loginAsDemo();
+      // If user previously logged out, don't force login
+      const hasLoggedOut = localStorage.getItem('crm_logged_out');
+      if (!hasLoggedOut) {
+        loginAsDemo();
+      }
       setLoading(false);
     };
 
@@ -40,6 +43,7 @@ export function AuthProvider({ children }) {
 
   // Demo profile fallback
   const loginAsDemo = () => {
+    localStorage.removeItem('crm_logged_out');
     const demoUser = {
       id: 'usr_admin_1',
       name: 'Sarah Connor (Owner)',
@@ -63,6 +67,7 @@ export function AuthProvider({ children }) {
   // Sign in with email & password via MongoDB Backend
   const signIn = async ({ email, password }) => {
     try {
+      localStorage.removeItem('crm_logged_out');
       const res = await api.login({ email, password });
       if (res && res.success) {
         const { user: u, token } = res.data;
@@ -131,10 +136,13 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Sign out
+  // Sign out - terminates session and returns to login/landing
   const signOut = () => {
     localStorage.removeItem('crm_token');
-    loginAsDemo();
+    localStorage.setItem('crm_logged_out', 'true');
+    setUser(null);
+    setProfile(null);
+    setCompany(null);
   };
 
   // Get all team members for current organization
