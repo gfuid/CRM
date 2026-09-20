@@ -26,13 +26,13 @@ const login = async (req, res) => {
   }
 
   // Fallback to in-memory store
-  if (!user) {
-    user = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  if (!user && dataStore.users && Array.isArray(dataStore.users)) {
+    user = dataStore.users.find((u) => u && u.email && u.email.toLowerCase() === email.toLowerCase());
   }
 
   // If user not found, reject with clean error (strictly no demo fallbacks)
   if (!user) {
-    return ApiResponse.error(res, 'No account found with this email. Please check your credentials or register.', 401);
+    return ApiResponse.error(res, 'Invalid email or password. No account found with this email.', 401);
   }
 
   // Verify active status
@@ -46,7 +46,7 @@ const login = async (req, res) => {
   }
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
-    return ApiResponse.error(res, 'Invalid password. Please check your credentials.', 401);
+    return ApiResponse.error(res, 'Invalid email or password. Please check your credentials.', 401);
   }
 
   // Update last login

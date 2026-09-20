@@ -25,39 +25,42 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased selection:bg-coral-500 selection:text-white">
-      {/* Top Navigation */}
-      <header className="sticky top-0 z-50 bg-white/85 backdrop-blur-md border-b border-slate-200/80 px-6 lg:px-12 py-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <BrandLogo size={34} />
-          <div>
-            <div className="font-extrabold text-slate-900 text-base tracking-tight flex items-center gap-1.5">
+      {/* Top Navigation - Fully Responsive on Mobile, Tablet & Desktop */}
+      <header className="sticky top-0 z-50 bg-white/90 backdrop-blur-md border-b border-slate-200/80 px-3.5 sm:px-6 lg:px-12 py-2.5 sm:py-3.5 flex items-center justify-between gap-2 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <BrandLogo size={30} className="shrink-0" />
+          <div className="min-w-0">
+            <div className="font-extrabold text-slate-900 text-sm sm:text-base tracking-tight flex items-center gap-1.5 whitespace-nowrap">
               <span>Travel-Trade CRM</span>
-              <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-coral-100 text-coral-700 uppercase tracking-wider">
+              <span className="hidden md:inline-block text-[10px] font-bold px-1.5 py-0.5 rounded bg-coral-100 text-coral-700 uppercase tracking-wider">
                 Enterprise
               </span>
             </div>
-            <div className="text-[11px] font-medium text-slate-400">Intelligent Revenue Operations</div>
+            <div className="hidden sm:block text-[11px] font-medium text-slate-400 truncate">
+              Intelligent Revenue Operations
+            </div>
           </div>
         </div>
 
-        <nav className="hidden md:flex items-center gap-8 text-xs font-semibold text-slate-600">
+        <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
           <a href="#preview" className="hover:text-slate-900 transition-colors">Platform Tour</a>
           <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing & Plans</a>
         </nav>
 
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             onClick={onLoginClick}
-            className="px-4 py-2 text-xs font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer"
+            className="px-2.5 sm:px-4 py-1.5 sm:py-2 text-xs font-bold text-slate-700 hover:text-slate-900 transition-colors cursor-pointer shrink-0 whitespace-nowrap"
           >
             Sign In
           </button>
           <button
             onClick={onRegisterClick}
-            className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer"
+            className="px-3 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-all cursor-pointer shrink-0 whitespace-nowrap"
           >
-            Get Started Free
+            <span>Get Started</span>
+            <span className="hidden sm:inline"> Free</span>
           </button>
         </div>
       </header>

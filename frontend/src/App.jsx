@@ -141,7 +141,12 @@ function AppContent() {
       case 'tasks':
         return <TaskManagement />;
       case 'activity':
-        return <Activity onNavigateToLeads={() => setActiveTab('leads')} />;
+        return (
+          <Activity
+            onNavigateToLeads={() => setActiveTab('leads')}
+            onNavigateToMyDays={() => setActiveTab('mydays')}
+          />
+        );
       case 'outreach':
         return <Outreach />;
       case 'mydays':

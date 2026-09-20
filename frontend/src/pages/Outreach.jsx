@@ -73,6 +73,7 @@ export default function Outreach() {
     e.preventDefault();
     const entry = {
       id: `out_${Date.now()}`,
+      employee_id: profile?.id,
       employee_name: newLog.employee_name,
       department: 'Sales Team',
       date: new Date().toISOString().split('T')[0],
@@ -84,6 +85,14 @@ export default function Outreach() {
     };
     setRecords([entry, ...records]);
     setModalOpen(false);
+
+    api.recordOutreach({
+      employee_id: profile?.id,
+      calls_made: entry.calls_made,
+      emails_sent: entry.emails_sent,
+      linkedin_touches: entry.linkedin_touches,
+      meetings_booked: entry.meetings_booked,
+    }).catch(() => {});
   };
 
   return (

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import {
   CalendarClock,
   Search,
@@ -15,7 +16,8 @@ import {
   Filter,
   User,
   MoreVertical,
-  Check
+  Check,
+  Trash2
 } from 'lucide-react';
 import Modal from '../components/Modal';
 
@@ -33,7 +35,17 @@ export default function FollowUp() {
       } catch (e) {}
     };
     fetchTeam();
+    loadFollowUps();
   }, [profile]);
+
+  const loadFollowUps = async () => {
+    try {
+      const res = await api.getFollowUps();
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setFollowUps(res.data);
+      }
+    } catch (e) {}
+  };
 
   const [followUps, setFollowUps] = useState([
     {
@@ -134,16 +146,24 @@ export default function FollowUp() {
   };
 
   const toggleComplete = (id) => {
+    const target = followUps.find((f) => f.id === id);
+    if (!target) return;
+    const nextStatus = target.status === 'completed' ? 'pending' : 'completed';
     setFollowUps(
       followUps.map((item) =>
-        item.id === id
-          ? { ...item, status: item.status === 'completed' ? 'pending' : 'completed' }
-          : item
+        item.id === id ? { ...item, status: nextStatus } : item
       )
     );
+    api.updateFollowUp(id, { status: nextStatus }).catch(() => {});
   };
 
-  const handleCreate = (e) => {
+  const handleDelete = (id, e) => {
+    if (e) e.stopPropagation();
+    setFollowUps(followUps.filter((item) => item.id !== id));
+    api.deleteFollowUp(id).catch(() => {});
+  };
+
+  const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.client_name || !formData.company) return;
 
@@ -161,6 +181,8 @@ export default function FollowUp() {
 
     setFollowUps([newItem, ...followUps]);
     setModalOpen(false);
+    api.createFollowUp(formData).catch(() => {});
+
     setFormData({
       client_name: '',
       company: '',
@@ -403,12 +425,21 @@ export default function FollowUp() {
                       </td>
 
                       <td className="py-3 px-4 text-right">
-                        <button
-                          onClick={() => toggleComplete(item.id)}
-                          className="px-3 py-1 rounded-lg text-xs font-medium text-slate-600 hover:bg-slate-100 transition-colors"
-                        >
-                          {isDone ? 'Undo' : 'Done'}
-                        </button>
+                        <div className="flex items-center justify-end gap-1.5">
+                          <button
+                            onClick={() => toggleComplete(item.id)}
+                            className="px-3 py-1 rounded-lg text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 transition-colors cursor-pointer"
+                          >
+                            {isDone ? 'Undo' : 'Done'}
+                          </button>
+                          <button
+                            onClick={(e) => handleDelete(item.id, e)}
+                            className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                            title="Delete follow-up"
+                          >
+                            <Trash2 size={14} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );

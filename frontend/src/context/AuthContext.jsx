@@ -132,12 +132,22 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // If backend returned a specific error like Invalid credentials or Account deactivated
-      if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
-        throw err;
+      // Sanitize backend errors: If user does not exist in DB or server returned 500 / reading id error
+      const rawMsg = (err.message || '').trim();
+      if (
+        rawMsg.toLowerCase().includes("reading 'id'") ||
+        rawMsg.toLowerCase().includes('cannot read') ||
+        rawMsg.includes('500') ||
+        rawMsg.toLowerCase().includes('internal server error')
+      ) {
+        throw new Error('Invalid email or password. No account found with this email.');
       }
 
-      throw new Error('No account found with this email. Please sign up to create your company workspace.');
+      if (rawMsg && !rawMsg.includes('Failed to fetch') && !rawMsg.includes('NetworkError')) {
+        throw new Error(rawMsg);
+      }
+
+      throw new Error('Invalid email or password. No account found with this email. Please register your company.');
     }
   };
 

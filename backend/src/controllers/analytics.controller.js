@@ -21,9 +21,18 @@ const getAnalytics = async (req, res) => {
   const conversionRate = totalLeads > 0 ? ((wonDeals.length / totalLeads) * 100).toFixed(1) : 0;
 
   // Pipeline by stage
-  const stages = ['New', 'Contacted', 'Qualified', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'];
+  const stages = [
+    'Lead Generation',
+    'Contact Established',
+    'Requirement Understood',
+    'Sample Sent',
+    'Quotation Sent',
+    'Negotiation',
+    'Closed Won',
+    'Closed Lost',
+  ];
   const stageBreakdown = stages.map((stage) => {
-    const stageLeads = leads.filter((l) => l.stage === stage);
+    const stageLeads = leads.filter((l) => (l.stage || l.status) === stage);
     return {
       stage,
       count: stageLeads.length,

@@ -2,8 +2,9 @@ import React, { useState } from 'react';
 import { Shield, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
 export default function AdminLoginPage({ onLoginSuccess }) {
-  const [username, setUsername] = useState('');
+  const [username, setUsername] = useState(() => localStorage.getItem('crm_admin_remembered_user') || '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('crm_admin_remembered_user')));
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -36,6 +37,11 @@ export default function AdminLoginPage({ onLoginSuccess }) {
       if (res.ok && data.success && data.data?.token) {
         localStorage.setItem('crm_admin_token', data.data.token);
         localStorage.setItem('crm_admin_user', JSON.stringify(data.data.user));
+        if (rememberMe) {
+          localStorage.setItem('crm_admin_remembered_user', username.trim());
+        } else {
+          localStorage.removeItem('crm_admin_remembered_user');
+        }
         onLoginSuccess(data.data.user);
         return;
       }
@@ -56,6 +62,11 @@ export default function AdminLoginPage({ onLoginSuccess }) {
         const token = 'admin_session_' + Date.now();
         localStorage.setItem('crm_admin_token', token);
         localStorage.setItem('crm_admin_user', JSON.stringify(adminSession));
+        if (rememberMe) {
+          localStorage.setItem('crm_admin_remembered_user', username.trim());
+        } else {
+          localStorage.removeItem('crm_admin_remembered_user');
+        }
         onLoginSuccess(adminSession);
         return;
       }
@@ -140,6 +151,20 @@ export default function AdminLoginPage({ onLoginSuccess }) {
                 {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
+          </div>
+
+          {/* Remember Me Checkbox */}
+          <div className="flex items-center justify-between text-xs pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 hover:text-slate-900 font-medium">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+              />
+              <span>Remember username</span>
+            </label>
+            <span className="text-[11px] text-slate-400 font-medium">Master Key Access</span>
           </div>
 
           <button

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import { Plus, Search, CalendarDays, ArrowRight } from 'lucide-react';
 
 const STAGES = ['Lead Generation', 'Contact Established', 'Requirement Understood', 'Quotation Sent', 'Closed Won', 'Closed Lost'];
@@ -101,7 +102,7 @@ const MOCK_LEADS = [
   },
 ];
 
-export default function ActivityBoard({ onNavigateToLeads }) {
+export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays }) {
   const { profile, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState(MOCK_LEADS);
   const [teamMembers, setTeamMembers] = useState(
@@ -139,6 +140,14 @@ export default function ActivityBoard({ onNavigateToLeads }) {
 
   const loadLeads = async () => {
     try {
+      const res = await api.getLeads();
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setLeads(res.data);
+        return;
+      }
+    } catch {}
+
+    try {
       const { data, error } = await supabase
         .from('leads')
         .select('*, responsible:profiles!leads_responsible_id_fkey(id, full_name)')
@@ -165,15 +174,18 @@ export default function ActivityBoard({ onNavigateToLeads }) {
 
   // Filter leads
   const allFiltered = leads.filter((l) => {
+    const compName = (l.name || l.company_name || '').toLowerCase();
+    const contactPerson = (l.contact_person || '').toLowerCase();
     if (search) {
       const q = search.toLowerCase();
-      if (!l.company_name?.toLowerCase().includes(q) && !l.contact_person?.toLowerCase().includes(q)) return false;
+      if (!compName.includes(q) && !contactPerson.includes(q)) return false;
     }
     if (filterCountry && l.country !== filterCountry) return false;
-    if (filterStatus && l.status !== filterStatus) return false;
-    if (filterResponsible && l.responsible_id !== filterResponsible) return false;
-    if (filterMarket === 'India' && l.country !== 'India') return false;
-    if (filterMarket === 'International' && l.country === 'India') return false;
+    const lStage = l.stage || l.status || '';
+    if (filterStatus && lStage !== filterStatus) return false;
+    if (filterResponsible && l.responsible_id !== filterResponsible && l.assigned_to !== filterResponsible) return false;
+    if (filterMarket === 'India' && !l.country?.includes('India')) return false;
+    if (filterMarket === 'International' && l.country?.includes('India')) return false;
     return true;
   });
 
@@ -185,18 +197,25 @@ export default function ActivityBoard({ onNavigateToLeads }) {
   // Team member lead counts
   const memberCounts = teamMembers.map((m) => ({
     ...m,
-    count: allFiltered.filter((l) => l.responsible_id === m.id).length,
+    count: allFiltered.filter((l) => (l.responsible_id === m.id || l.assigned_to === m.id)).length,
   }));
 
   // Group by stage
   const leadsByStage = STAGES.reduce((acc, stage) => {
-    acc[stage] = allFiltered.filter((l) => l.status === stage);
+    acc[stage] = allFiltered.filter((l) => (l.stage || l.status) === stage);
     return acc;
   }, {});
 
   const handleStageChange = async (leadId, newStage) => {
-    await supabase.from('leads').update({ status: newStage }).eq('id', leadId);
-    loadLeads();
+    setLeads((prev) =>
+      prev.map((l) => (l.id === leadId ? { ...l, stage: newStage, status: newStage } : l))
+    );
+    try {
+      await api.updateLead(leadId, { stage: newStage });
+    } catch {}
+    try {
+      await supabase.from('leads').update({ status: newStage }).eq('id', leadId);
+    } catch {}
   };
 
   return (
@@ -210,13 +229,16 @@ export default function ActivityBoard({ onNavigateToLeads }) {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <button className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors shadow-sm">
+          <button
+            onClick={onNavigateToMyDays}
+            className="flex items-center gap-2 px-3.5 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-xs font-semibold text-slate-700 transition-colors shadow-sm cursor-pointer"
+          >
             <CalendarDays size={15} />
             <span>My Day</span>
           </button>
           <button
             onClick={onNavigateToLeads}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
+            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20 cursor-pointer"
           >
             <Plus size={16} />
             <span>Create Lead</span>

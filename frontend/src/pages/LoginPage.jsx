@@ -5,8 +5,9 @@ import BrandLogo from '../components/BrandLogo';
 
 export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('');
+  const [email, setEmail] = useState(() => localStorage.getItem('crm_remembered_email') || '');
   const [password, setPassword] = useState('');
+  const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('crm_remembered_email')));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -16,9 +17,24 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
     setLoading(true);
     try {
       await signIn({ email, password });
+      if (rememberMe) {
+        localStorage.setItem('crm_remembered_email', email.trim());
+      } else {
+        localStorage.removeItem('crm_remembered_email');
+      }
       window.history.pushState({}, '', '/');
     } catch (err) {
-      setError(err.message || 'Invalid email or password');
+      const rawMsg = err.message || '';
+      if (
+        rawMsg.toLowerCase().includes("reading 'id'") ||
+        rawMsg.toLowerCase().includes('cannot read') ||
+        rawMsg.includes('500') ||
+        rawMsg.toLowerCase().includes('internal server error')
+      ) {
+        setError('Invalid email or password. No account found with this email.');
+      } else {
+        setError(rawMsg || 'Invalid email or password');
+      }
     } finally {
       setLoading(false);
     }
@@ -51,8 +67,9 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
         </p>
 
         {error && (
-          <div className="p-3 mb-5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">
-            {error}
+          <div className="p-3 mb-5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-center gap-2">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0" />
+            <span>{error}</span>
           </div>
         )}
 
@@ -95,6 +112,26 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
                 required
               />
             </div>
+          </div>
+
+          {/* Remember Me Checkbox & Forgot Password */}
+          <div className="flex items-center justify-between text-xs pt-0.5">
+            <label className="flex items-center gap-2 cursor-pointer select-none text-slate-600 hover:text-slate-900 font-medium">
+              <input
+                type="checkbox"
+                checked={rememberMe}
+                onChange={(e) => setRememberMe(e.target.checked)}
+                className="w-4 h-4 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500 focus:ring-offset-0 cursor-pointer accent-emerald-600"
+              />
+              <span>Remember me</span>
+            </label>
+            <button
+              type="button"
+              onClick={() => setError('Please contact your administrator or register a new company account.')}
+              className="text-emerald-600 hover:text-emerald-700 font-semibold"
+            >
+              Forgot password?
+            </button>
           </div>
 
           <button

@@ -190,6 +190,12 @@ class ApiClient {
     });
   }
 
+  deleteFollowUp(id) {
+    return this.request(`/followup/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Admin
   getUsers(params = {}) {
     const query = new URLSearchParams(params).toString();
