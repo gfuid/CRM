@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
-export default function RegisterPage({ onSwitchToLogin }) {
+export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
   const { signUpOwner } = useAuth();
   const [form, setForm] = useState({
     companyName: '',
@@ -57,6 +57,28 @@ export default function RegisterPage({ onSwitchToLogin }) {
   return (
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4 sm:p-6 md:p-8">
       <div className="w-full max-w-lg p-6 sm:p-8 bg-white rounded-2xl shadow-xl shadow-slate-200/60 border border-slate-100 transition-all">
+        {/* Top Navigation: Back to Home Arrow & Switch to Login */}
+        <div className="flex items-center justify-between mb-5">
+          <button
+            type="button"
+            onClick={onBackToLanding || onSwitchToLogin}
+            className="inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-xs font-bold text-slate-700 hover:text-slate-900 transition-all cursor-pointer group shadow-xs"
+          >
+            <ArrowLeft size={15} className="group-hover:-translate-x-0.5 transition-transform" />
+            <span>Back to Home</span>
+          </button>
+
+          {onSwitchToLogin && (
+            <button
+              type="button"
+              onClick={onSwitchToLogin}
+              className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 transition-colors cursor-pointer"
+            >
+              Already registered? <span className="font-bold underline">Sign In</span>
+            </button>
+          )}
+        </div>
+
         {/* Brand Header */}
         <div className="flex items-center gap-3 mb-2">
           <BrandLogo size={36} />

@@ -118,7 +118,10 @@ function AppContent() {
             onExploreDemo={() => loginAsDemo()}
           />
         ) : authMode === 'register' ? (
-          <RegisterPage onSwitchToLogin={() => navigateAuth('login')} />
+          <RegisterPage
+            onSwitchToLogin={() => navigateAuth('login')}
+            onBackToLanding={() => navigateAuth('landing')}
+          />
         ) : (
           <LoginPage
             onSwitchToRegister={() => navigateAuth('register')}
