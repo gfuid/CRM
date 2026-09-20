@@ -1352,6 +1352,57 @@ export default function Leads() {
               </select>
             </div>
 
+            {/* Quick Calendar Presets */}
+            <div className="flex flex-col gap-1">
+              <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">Date Presets</label>
+              <div className="flex items-center gap-1 h-9">
+                <button
+                  type="button"
+                  onClick={() => { setFromDate(''); setToDate(''); }}
+                  className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    !fromDate && !toDate
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  All Time
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFromDate('2026-09-20'); setToDate('2026-09-20'); }}
+                  className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    fromDate === '2026-09-20' && toDate === '2026-09-20'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  Today
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFromDate('2026-09-14'); setToDate('2026-09-20'); }}
+                  className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    fromDate === '2026-09-14' && toDate === '2026-09-20'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  7 Days
+                </button>
+                <button
+                  type="button"
+                  onClick={() => { setFromDate('2026-09-01'); setToDate('2026-09-30'); }}
+                  className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                    fromDate === '2026-09-01' && toDate === '2026-09-30'
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                      : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                  }`}
+                >
+                  This Month
+                </button>
+              </div>
+            </div>
+
             {/* From Date */}
             <div className="flex flex-col gap-1">
               <label className="text-[10px] font-bold uppercase text-slate-400 tracking-wider">From</label>
