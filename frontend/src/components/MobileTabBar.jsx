@@ -52,7 +52,7 @@ export default function MobileTabBar({
       {moreDrawerOpen && (
         <div
           onClick={() => setMoreDrawerOpen(false)}
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-xs z-50 md:hidden transition-opacity"
+          className="fixed inset-0 bg-slate-900/25 dark:bg-slate-950/70 backdrop-blur-xs z-50 md:hidden transition-opacity"
         />
       )}
 

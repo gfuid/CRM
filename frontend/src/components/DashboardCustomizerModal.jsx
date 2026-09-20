@@ -41,7 +41,7 @@ export default function DashboardCustomizerModal({ isOpen, onClose, onPreference
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/30 dark:bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
       onClick={onClose}
     >
       <div

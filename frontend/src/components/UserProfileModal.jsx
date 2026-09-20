@@ -27,7 +27,7 @@ import { api } from '../services/api';
 
 export default function UserProfileModal({ isOpen, onClose }) {
   const { profile, user, company, updateProfile, signOut, isOwner } = useAuth();
-  const { theme, toggleTheme } = useTheme();
+  const { theme, toggleTheme, setTheme } = useTheme();
 
   const [activeTab, setActiveTab] = useState('details'); // 'details' | 'activity' | 'security'
   const [isEditing, setIsEditing] = useState(false);
@@ -162,7 +162,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/30 dark:bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
       onClick={onClose}
     >
       <div
@@ -536,7 +536,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 <div className="grid grid-cols-2 gap-3">
                   <button
                     type="button"
-                    onClick={() => theme === 'dark' && toggleTheme()}
+                    onClick={() => setTheme('light')}
                     className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
                       theme === 'light'
                         ? 'bg-amber-50/50 border-amber-400 text-amber-900 font-bold ring-2 ring-amber-400/20'
@@ -554,7 +554,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
                   <button
                     type="button"
-                    onClick={() => theme === 'light' && toggleTheme()}
+                    onClick={() => setTheme('dark')}
                     className={`p-3.5 rounded-xl border flex items-center gap-3 transition-all cursor-pointer ${
                       theme === 'dark'
                         ? 'bg-emerald-950/40 border-emerald-500 text-emerald-300 font-bold ring-2 ring-emerald-500/20'
