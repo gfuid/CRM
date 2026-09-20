@@ -28,18 +28,17 @@ const userSchema = new mongoose.Schema(
   }
 );
 
-// Hash password before saving if modified
-userSchema.pre('save', async function (next) {
+// Hash password before saving if modified and not already hashed
+userSchema.pre('save', async function () {
   if (!this.isModified('password') || !this.password) {
-    return next();
+    return;
   }
-  try {
-    const salt = await bcrypt.genSalt(10);
-    this.password = await bcrypt.hash(this.password, salt);
-    next();
-  } catch (err) {
-    next(err);
+  // Prevent double hashing if already a bcrypt hash
+  if (this.password.startsWith('$2a$') || this.password.startsWith('$2b$')) {
+    return;
   }
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password, salt);
 });
 
 // Compare candidate password

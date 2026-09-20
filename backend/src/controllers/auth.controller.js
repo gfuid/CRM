@@ -3,6 +3,7 @@ const jwt = require('jsonwebtoken');
 const config = require('../config/env');
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { isDbConnected } = require('../config/db');
 const models = require('../models');
 
 /**
@@ -18,7 +19,7 @@ const login = async (req, res) => {
   // 1. Try finding in MongoDB first
   let user = null;
   try {
-    if (models.User) {
+    if (isDbConnected() && models.User) {
       user = await models.User.findOne({ email: email.toLowerCase() });
     }
   } catch (err) {
@@ -98,7 +99,7 @@ const register = async (req, res) => {
   // Check if exists in DB or cache
   let existing = null;
   try {
-    if (models.User) {
+    if (isDbConnected() && models.User) {
       existing = await models.User.findOne({ email: cleanEmail });
     }
   } catch (err) {}
@@ -137,7 +138,7 @@ const register = async (req, res) => {
 
   // Persist to MongoDB Atlas
   try {
-    if (models.User) {
+    if (isDbConnected() && models.User) {
       await models.User.create(newUser);
     }
   } catch (err) {
