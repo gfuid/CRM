@@ -22,6 +22,7 @@ import BrandLogo from '../components/BrandLogo';
 
 export default function LandingPage({ onLoginClick, onRegisterClick }) {
   const [activePreviewTab, setActivePreviewTab] = useState('analytics'); // 'analytics' | 'pipeline' | 'outreach' | 'followup'
+  const [billingCycle, setBillingCycle] = useState('monthly'); // 'monthly' | 'annual'
 
   return (
     <div className="min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased selection:bg-coral-500 selection:text-white">
@@ -337,41 +338,78 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
 
       {/* Pricing Section */}
       <section id="pricing" className="max-w-6xl mx-auto px-6 py-16 border-t border-slate-200">
-        <div className="text-center max-w-2xl mx-auto mb-12">
+        <div className="text-center max-w-2xl mx-auto mb-10">
           <div className="text-xs font-bold text-coral-600 uppercase tracking-wider mb-2">Transparent Pricing</div>
-          <h2 className="text-3xl font-extrabold text-slate-900">Choose The Right Capacity For Your Team</h2>
+          <h2 className="text-3xl sm:text-4xl font-extrabold text-slate-900 tracking-tight">Choose The Right Capacity For Your Team</h2>
           <p className="text-sm text-slate-500 mt-2">
-            Upgrade or scale staff seats as your sales development team expands.
+            Upgrade or scale staff seats as your sales development team expands. All plans include a 14-day free trial.
           </p>
+
+          {/* Monthly / Annual Billing Toggle */}
+          <div className="mt-6 inline-flex items-center gap-2 p-1 rounded-2xl bg-slate-100 border border-slate-200">
+            <button
+              onClick={() => setBillingCycle('monthly')}
+              className={`px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === 'monthly'
+                  ? 'bg-white text-slate-900 shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              Billed Monthly
+            </button>
+            <button
+              onClick={() => setBillingCycle('annual')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                billingCycle === 'annual'
+                  ? 'bg-emerald-600 text-white shadow-sm'
+                  : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <span>Billed Annually</span>
+              <span className={`text-[10px] px-1.5 py-0.2 rounded-full font-black ${
+                billingCycle === 'annual' ? 'bg-white/25 text-white' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                Save 20%
+              </span>
+            </button>
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
           {/* Starter */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
             <div>
               <div className="font-bold text-slate-900 text-lg">Starter Tier</div>
               <p className="text-xs text-slate-400 mt-1">For solo founders and boutique agencies</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">$29</span>
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                  {billingCycle === 'annual' ? '$24' : '$29'}
+                </span>
                 <span className="text-xs text-slate-400">/ month</span>
               </div>
+              {billingCycle === 'annual' && (
+                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">
+                  Billed annually ($288/yr)
+                </span>
+              )}
               <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Up to 3 Staff Seats</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> 500 Leads Storage</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Core Task Management</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Email Notifications</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Up to 3 Staff Seats</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> 500 Leads Storage</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Core Task Management & Calendar</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Email & WhatsApp Notifications</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Standard Trade Analytics</li>
               </ul>
             </div>
             <button
               onClick={onRegisterClick}
-              className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors"
+              className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors cursor-pointer"
             >
-              Start Free
+              Start 14-Day Free Trial
             </button>
           </div>
 
           {/* Growth - Highlighted */}
-          <div className="p-6 rounded-2xl bg-white border-2 border-coral-500 shadow-xl ring-4 ring-coral-500/10 flex flex-col justify-between relative">
+          <div className="p-6 rounded-2xl bg-white border-2 border-coral-500 shadow-xl ring-4 ring-coral-500/10 flex flex-col justify-between relative transform md:-translate-y-1">
             <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-slate-900 text-white text-[10px] font-extrabold uppercase tracking-wider">
               Most Popular
             </span>
@@ -379,48 +417,84 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
               <div className="font-bold text-slate-900 text-lg">Growth Tier</div>
               <p className="text-xs text-slate-400 mt-1">For scaling sales development teams</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">Free</span>
-                <span className="text-xs text-slate-400">/ forever</span>
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                  {billingCycle === 'annual' ? '$64' : '$79'}
+                </span>
+                <span className="text-xs text-slate-400">/ month</span>
               </div>
+              {billingCycle === 'annual' && (
+                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">
+                  Billed annually ($768/yr)
+                </span>
+              )}
               <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Full Staff Management</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Unlimited Commodity Leads</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Interactive Calendar & Tasks</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Up to 15 Staff Seats</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> 5,000 Commodity Leads</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Full Staff Management & Data Isolation</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Interactive Monthly Calendar & Tasks</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Daily Outreach Cadence Matrix</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Smart Follow-up Reminders</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Bulk CSV Import & Export</li>
               </ul>
             </div>
             <button
               onClick={onRegisterClick}
-              className="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700 font-bold text-xs text-white shadow-md transition-all"
+              className="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700 font-bold text-xs text-white shadow-md transition-all cursor-pointer"
             >
-              Get Started Free
+              Start 14-Day Free Trial
             </button>
           </div>
 
           {/* Enterprise */}
-          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div className="p-6 rounded-2xl bg-white border border-slate-200 shadow-sm flex flex-col justify-between hover:border-slate-300 transition-all">
             <div>
               <div className="font-bold text-slate-900 text-lg">Enterprise Tier</div>
               <p className="text-xs text-slate-400 mt-1">For large sales orgs and multi-branch teams</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">Free</span>
-                <span className="text-xs text-slate-400">/ forever</span>
+                <span className="text-3xl sm:text-4xl font-black text-slate-900">
+                  {billingCycle === 'annual' ? '$159' : '$199'}
+                </span>
+                <span className="text-xs text-slate-400">/ month</span>
               </div>
+              {billingCycle === 'annual' && (
+                <span className="text-[10px] text-emerald-600 font-bold block mt-0.5">
+                  Billed annually ($1,908/yr)
+                </span>
+              )}
               <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Unlimited Staff Seats</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Unlimited Leads & Storage</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Custom RBAC Role Matrix</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Dedicated Audit Logs & Telemetry</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> 24/7 Priority Support</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Unlimited Staff Seats</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Unlimited Leads & Storage</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Custom RBAC Role Matrix</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Dedicated Audit Logs & Telemetry</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> 24/7 Priority Support & SLA</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-emerald-600" /> Dedicated Trade Account Manager</li>
               </ul>
             </div>
             <button
               onClick={onRegisterClick}
-              className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors"
+              className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors cursor-pointer"
             >
-              Get Started Free
+              Start Enterprise Trial
             </button>
+          </div>
+        </div>
+
+        {/* Trust Badges */}
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-6 text-xs font-semibold text-slate-500">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>14-Day Free Trial on all tiers</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>No credit card required to start</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>Instant workspace activation</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={16} className="text-emerald-600" />
+            <span>Cancel or switch plans anytime</span>
           </div>
         </div>
       </section>
