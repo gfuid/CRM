@@ -17,13 +17,23 @@ import {
   User,
   MoreVertical,
   Check,
-  Trash2
+  Trash2,
+  Building2,
+  Sparkles,
+  Move,
+  X,
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import { INITIAL_LEADS } from './Leads';
 
 export default function FollowUp() {
   const { profile, getTeamMembers, isOwner, isStaff } = useAuth();
   const [teamList, setTeamList] = useState([]);
+  const [leadsList, setLeadsList] = useState([]);
+  const [selectedLead, setSelectedLead] = useState(null);
+  const [leadSearch, setLeadSearch] = useState('');
+  const [isLeadSearchOpen, setIsLeadSearchOpen] = useState(false);
+  const [isDraggingOver, setIsDraggingOver] = useState(false);
 
   useEffect(() => {
     const fetchTeam = async () => {
@@ -36,7 +46,21 @@ export default function FollowUp() {
     };
     fetchTeam();
     loadFollowUps();
+    loadLeads();
   }, [profile]);
+
+  const loadLeads = async () => {
+    try {
+      const res = await api.getLeads();
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        setLeadsList(res.data);
+      } else {
+        setLeadsList(INITIAL_LEADS);
+      }
+    } catch {
+      setLeadsList(INITIAL_LEADS);
+    }
+  };
 
   const loadFollowUps = async () => {
     try {
@@ -163,6 +187,34 @@ export default function FollowUp() {
     api.deleteFollowUp(id).catch(() => {});
   };
 
+  const applyLeadToForm = (lead) => {
+    if (!lead) return;
+    setSelectedLead(lead);
+    const company = lead.company_name || lead.name || '';
+    const client = lead.contact_person || (Array.isArray(lead.contacts) && lead.contacts[0]?.name) || '';
+    const prods = Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || '');
+    const stage = lead.stage || lead.status || 'Active Lead';
+
+    // Auto select preferred channel if phone / WA exists
+    let channel = 'phone';
+    if (lead.whatsapp) channel = 'whatsapp';
+    else if (lead.email) channel = 'email';
+
+    // Auto suggest agenda if empty or default
+    const agendaText = `Follow-up regarding ${prods || 'export trade order'} (${lead.country || 'Global'}). Current stage: ${stage}.`;
+
+    setFormData((prev) => ({
+      ...prev,
+      client_name: client || prev.client_name,
+      company: company || prev.company,
+      type: channel,
+      agenda: prev.agenda && prev.agenda.trim() ? prev.agenda : agendaText,
+      assigned_to: lead.agent_name || prev.assigned_to,
+    }));
+    setIsLeadSearchOpen(false);
+    setLeadSearch('');
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
     if (!formData.client_name || !formData.company) return;
@@ -193,6 +245,8 @@ export default function FollowUp() {
       assigned_to: profile?.name || 'Owner',
       agenda: '',
     });
+    setSelectedLead(null);
+    setLeadSearch('');
   };
 
   const filtered = followUps.filter((item) => {
@@ -453,27 +507,190 @@ export default function FollowUp() {
       {/* Schedule Follow-up Modal */}
       <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Schedule New Follow-up">
         <form onSubmit={handleCreate} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Smart Lead Fetcher & Drag-to-Fill Bar */}
+          <div
+            onDragOver={(e) => {
+              e.preventDefault();
+              setIsDraggingOver(true);
+            }}
+            onDragLeave={() => setIsDraggingOver(false)}
+            onDrop={(e) => {
+              e.preventDefault();
+              setIsDraggingOver(false);
+              try {
+                const raw = e.dataTransfer.getData('application/json');
+                if (raw) applyLeadToForm(JSON.parse(raw));
+              } catch (err) {
+                console.warn('Drop error:', err);
+              }
+            }}
+            className={`p-3.5 rounded-2xl border transition-all ${
+              isDraggingOver
+                ? 'bg-emerald-50 border-emerald-500 ring-2 ring-emerald-500/20'
+                : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            <div className="flex items-center justify-between gap-2 mb-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-slate-800 dark:text-slate-200">
+                <Sparkles size={14} className="text-emerald-600" />
+                <span>Auto-Fetch from Trade Leads</span>
+                <span className="text-[10px] font-normal text-slate-400">
+                  (Search, click, drag onto form, or type below)
+                </span>
+              </div>
+              {selectedLead && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedLead(null);
+                    setFormData((prev) => ({ ...prev, client_name: '', company: '' }));
+                  }}
+                  className="text-[11px] font-semibold text-rose-500 hover:text-rose-600 flex items-center gap-1 cursor-pointer"
+                >
+                  <X size={12} /> Clear Linked Lead
+                </button>
+              )}
+            </div>
+
+            {/* Search Dropdown / Autocomplete */}
+            <div className="relative mb-2.5">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder={selectedLead ? `✓ Linked: ${selectedLead.company_name || selectedLead.name}` : "Search leads by company, buyer name, country, or commodity..."}
+                  value={leadSearch}
+                  onFocus={() => setIsLeadSearchOpen(true)}
+                  onChange={(e) => {
+                    setLeadSearch(e.target.value);
+                    setIsLeadSearchOpen(true);
+                  }}
+                  className="w-full pl-9 pr-8 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/20 text-slate-800 dark:text-slate-100 placeholder:text-slate-400"
+                />
+                {leadSearch && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setLeadSearch('');
+                      setIsLeadSearchOpen(false);
+                    }}
+                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X size={12} />
+                  </button>
+                )}
+              </div>
+
+              {/* Autocomplete Results Dropdown */}
+              {isLeadSearchOpen && (
+                <div className="absolute z-30 top-full left-0 right-0 mt-1 max-h-52 overflow-y-auto bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl divide-y divide-slate-100 dark:divide-slate-800">
+                  {leadsList.filter((l) => {
+                    if (!leadSearch.trim()) return true;
+                    const q = leadSearch.toLowerCase();
+                    return (
+                      (l.company_name || l.name || '').toLowerCase().includes(q) ||
+                      (l.contact_person || '').toLowerCase().includes(q) ||
+                      (l.country || '').toLowerCase().includes(q) ||
+                      (Array.isArray(l.products) ? l.products.join(' ') : (l.product || '')).toLowerCase().includes(q)
+                    );
+                  }).slice(0, 8).map((lead) => (
+                    <button
+                      type="button"
+                      key={lead.id}
+                      onClick={() => applyLeadToForm(lead)}
+                      className="w-full text-left p-2.5 hover:bg-emerald-50/60 dark:hover:bg-slate-800 flex items-center justify-between gap-2 transition-colors cursor-pointer"
+                    >
+                      <div>
+                        <div className="font-bold text-xs text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                          <span>{lead.company_name || lead.name}</span>
+                          <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 font-semibold">
+                            {lead.country}
+                          </span>
+                        </div>
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 mt-0.5 flex items-center gap-2">
+                          <span>Buyer: {lead.contact_person || '—'}</span>
+                          <span>•</span>
+                          <span>{Array.isArray(lead.products) ? lead.products.join(', ') : lead.product}</span>
+                        </div>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 shrink-0">
+                        {lead.stage || lead.status || 'Select'}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Draggable & Clickable Quick Chips */}
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Client Name *</label>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-1.5 flex items-center gap-1">
+                <Move size={10} /> Quick Leads (Click or Drag onto Form):
+              </div>
+              <div className="flex items-center gap-1.5 overflow-x-auto pb-1">
+                {leadsList.slice(0, 8).map((lead) => {
+                  const isSelected = selectedLead?.id === lead.id;
+                  return (
+                    <div
+                      key={lead.id}
+                      draggable={true}
+                      onDragStart={(e) => {
+                        e.dataTransfer.setData('application/json', JSON.stringify(lead));
+                        e.dataTransfer.effectAllowed = 'copy';
+                      }}
+                      onClick={() => applyLeadToForm(lead)}
+                      title="Click to auto-fill or drag onto the form"
+                      className={`shrink-0 px-2.5 py-1 rounded-lg text-xs font-semibold border flex items-center gap-1.5 transition-all cursor-grab active:cursor-grabbing select-none ${
+                        isSelected
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
+                          : 'bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:border-emerald-400 hover:bg-emerald-50/50'
+                      }`}
+                    >
+                      <Building2 size={12} className={isSelected ? 'text-white' : 'text-slate-400'} />
+                      <span className="max-w-[130px] truncate">{lead.company_name || lead.name}</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Client & Company Inputs (Manual Typing + Drop Target) */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              try {
+                const raw = e.dataTransfer.getData('application/json');
+                if (raw) applyLeadToForm(JSON.parse(raw));
+              } catch {}
+            }}
+            className="grid grid-cols-1 sm:grid-cols-2 gap-4"
+          >
+            <div>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Client Name <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Rachel Adams"
+                placeholder="e.g. Rachel Adams (or select lead above)"
                 value={formData.client_name}
                 onChange={(e) => setFormData({ ...formData, client_name: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
+                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all text-slate-900 dark:text-slate-100"
               />
             </div>
             <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Company Name *</label>
+              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                Company Name <span className="text-rose-500">*</span>
+              </label>
               <input
                 type="text"
                 required
-                placeholder="e.g. Zenith Tech Corp"
+                placeholder="e.g. Zenith Tech Corp (or select lead above)"
                 value={formData.company}
                 onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
+                className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all text-slate-900 dark:text-slate-100"
               />
             </div>
           </div>
