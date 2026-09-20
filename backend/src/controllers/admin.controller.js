@@ -36,36 +36,46 @@ const getAllUsers = async (req, res) => {
 };
 
 /**
- * Create or invite a new employee
+ * Create a new staff/employee under the Company Owner
  */
 const createUser = async (req, res) => {
-  const { name, email, role, department, phone } = req.body;
+  const { name, email, role, department, phone, password, avatar_url, permissions } = req.body;
 
   if (!name || !email) {
-    return ApiResponse.error(res, 'Name and Email are required', 400);
+    return ApiResponse.error(res, 'Staff Name and Email are required', 400);
   }
 
-  const existing = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
+  const existing = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
   if (existing) {
-    return ApiResponse.error(res, 'A user with this email already exists', 409);
+    return ApiResponse.error(res, 'A staff member with this email already exists', 409);
   }
 
-  const validRoles = ['admin', 'manager', 'agent'];
-  const userRole = validRoles.includes(role) ? role : 'agent';
+  // Staff is not an admin - default to 'agent' / 'staff'
+  const userRole = role === 'admin' ? 'manager' : (role || 'agent');
 
+  const rawPassword = password || 'staff123';
   const salt = await bcrypt.genSalt(10);
-  const defaultPassword = await bcrypt.hash('agent123', salt);
+  const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
   const newUser = {
     id: generateId('usr'),
-    name,
-    email,
-    password: defaultPassword,
+    name: name.trim(),
+    email: email.toLowerCase().trim(),
+    password: hashedPassword,
     role: userRole,
-    department: department || 'Sales Outreach',
+    persona: 'staff',
+    department: department || 'Commodity Sales & Operations',
     phone: phone || '',
     is_active: true,
-    avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+    avatar_url:
+      avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+    permissions: permissions || {
+      can_create_leads: true,
+      can_edit_own_only: true,
+      can_manage_own_tasks: true,
+    },
+    company_id: req.user?.company_id || 'comp_traveltrade_1',
+    created_by: req.user?.id || 'usr_admin_1',
     last_login: null,
     created_at: new Date().toISOString(),
   };
@@ -76,10 +86,10 @@ const createUser = async (req, res) => {
   // Record audit log
   const auditLog = {
     id: generateId('log'),
-    actor_name: req.user ? req.user.name : 'System Admin',
+    actor_name: req.user ? req.user.name : 'Company Owner',
     actor_id: req.user ? req.user.id : 'usr_admin_1',
-    action: 'USER_CREATED',
-    details: `Added new user ${name} (${email}) with role '${userRole}'`,
+    action: 'STAFF_CREATED',
+    details: `Owner added staff member ${name} (${email}) with role '${userRole}'`,
     ip_address: req.ip || '127.0.0.1',
     timestamp: new Date().toISOString(),
   };
@@ -89,7 +99,7 @@ const createUser = async (req, res) => {
   const cleanUser = { ...newUser };
   delete cleanUser.password;
 
-  return ApiResponse.created(res, cleanUser, 'User created successfully');
+  return ApiResponse.created(res, cleanUser, 'Staff member created successfully');
 };
 
 /**

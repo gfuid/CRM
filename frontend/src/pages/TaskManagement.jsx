@@ -53,7 +53,7 @@ const MOCK_TASKS = [
 ];
 
 export default function TaskManagement() {
-  const { profile, getTeamMembers } = useAuth();
+  const { profile, getTeamMembers, isOwner, isStaff } = useAuth();
   const [tasks, setTasks] = useState(MOCK_TASKS);
   const [teamMembers, setTeamMembers] = useState([
     { id: 'usr_athish', full_name: 'Athish', name: 'Athish' },
@@ -123,7 +123,16 @@ export default function TaskManagement() {
   };
 
   const filteredTasks = tasks.filter((t) => {
-    if (filterMember && t.assigned_to !== filterMember) return false;
+    if (isStaff) {
+      const isMine =
+        t.assigned_to === profile?.id ||
+        t.assigned_to === profile?.name ||
+        t.assigned_name === profile?.name ||
+        (profile?.name?.toLowerCase().includes('athish') && (t.assigned_to === 'usr_athish' || t.assigned_name === 'Athish'));
+      if (!isMine) return false;
+    } else if (filterMember && t.assigned_to !== filterMember) {
+      return false;
+    }
     if (activeFilter === 'All') return true;
     const alert = getAlert(t);
     if (activeFilter === 'Overdue') return alert.type === 'overdue';
@@ -136,9 +145,13 @@ export default function TaskManagement() {
   const handleSave = async (e) => {
     e.preventDefault();
     try {
+      const assignedId = isStaff ? (profile?.id || 'usr_staff') : (form.assigned_to || null);
+      const assignedMember = teamMembers.find((m) => m.id === form.assigned_to);
+      const assignedName = isStaff ? (profile?.name || 'Staff') : (assignedMember ? (assignedMember.name || assignedMember.full_name) : 'Unassigned');
       const res = await api.createTask({
         ...form,
-        assigned_to: form.assigned_to || null,
+        assigned_to: assignedId,
+        assigned_name: assignedName,
       });
       if (res && res.success) {
         setModalOpen(false);
@@ -160,6 +173,10 @@ export default function TaskManagement() {
   };
 
   const handleDelete = async (id) => {
+    if (!isOwner) {
+      alert('Permission Denied: Only Company Owners can delete tasks.');
+      return;
+    }
     if (!window.confirm('Delete this task?')) return;
     try {
       await api.deleteTask(id);
@@ -202,8 +219,14 @@ export default function TaskManagement() {
       {/* Page Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Task Management</h1>
-          <p className="text-sm text-slate-500 mt-1">Assigned tasks with priority, due date, and alert status</p>
+          <h1 className="text-2xl font-black text-slate-900 tracking-tight">
+            {isStaff ? 'My Daily Action Tasks' : 'Task & Activity Dispatch'}
+          </h1>
+          <p className="text-xs text-slate-500 mt-1">
+            {isStaff
+              ? 'Personal tasks assigned directly to you. Other employee activities are protected and isolated.'
+              : 'Track, dispatch and monitor team action items, freight logistics, and client SLAs'}
+          </p>
         </div>
         <button
           onClick={() => {
@@ -351,13 +374,15 @@ export default function TaskManagement() {
 
                       <td className="px-5 py-3.5 whitespace-nowrap text-right">
                         <div className="inline-flex items-center gap-1">
-                          <button
-                            className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
-                            onClick={() => handleDelete(task.id)}
-                            title="Delete Task"
-                          >
-                            <Trash2 size={15} />
-                          </button>
+                          {isOwner && (
+                            <button
+                              className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              onClick={() => handleDelete(task.id)}
+                              title="Delete Task (Owner Only)"
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -450,18 +475,28 @@ export default function TaskManagement() {
               <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Assign To
               </label>
-              <select
-                className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-                value={form.assigned_to}
-                onChange={(e) => updateField('assigned_to', e.target.value)}
-              >
-                <option value="">Select person</option>
-                {teamMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.full_name || m.name}
-                  </option>
-                ))}
-              </select>
+              {isOwner ? (
+                <select
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+                  value={form.assigned_to}
+                  onChange={(e) => updateField('assigned_to', e.target.value)}
+                >
+                  <option value="">Select team member</option>
+                  <option value={profile?.id}>{profile?.name || 'Owner'} (Direct)</option>
+                  {teamMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.full_name || m.name}
+                    </option>
+                  ))}
+                </select>
+              ) : (
+                <input
+                  type="text"
+                  readOnly
+                  value={`${profile?.name || 'You'} (Personal Staff Task)`}
+                  className="w-full px-3 py-2 rounded-xl border border-slate-200 text-sm bg-slate-50 text-slate-700 font-semibold focus:outline-none cursor-not-allowed"
+                />
+              )}
             </div>
           </div>
         </form>

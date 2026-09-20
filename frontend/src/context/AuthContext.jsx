@@ -116,15 +116,17 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Add staff member (admin only)
-  const addStaffMember = async ({ email, fullName, role, department, phone }) => {
+  // Add staff member (owner only)
+  const addStaffMember = async ({ email, fullName, role, department, phone, password, avatar_url }) => {
     try {
       const res = await api.createUser({
         name: fullName,
         email,
+        password,
         role: role || 'agent',
-        department: department || 'Sales Outreach',
+        department: department || 'Commodity Sales & Export Operations',
         phone: phone || '',
+        avatar_url,
       });
       if (res && res.success) {
         return res.data;
@@ -158,6 +160,9 @@ export function AuthProvider({ children }) {
     return [];
   };
 
+  const isOwner = profile?.role === 'admin' || profile?.persona === 'owner';
+  const isStaff = !isOwner;
+
   const value = {
     user,
     profile,
@@ -169,8 +174,9 @@ export function AuthProvider({ children }) {
     signOut,
     loginAsDemo,
     getTeamMembers,
-    isOwner: profile?.role === 'admin' || profile?.persona === 'owner',
-    isAdmin: profile?.role === 'admin',
+    isOwner,
+    isAdmin: isOwner,
+    isStaff,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -428,13 +428,15 @@ const getStatusBadge = (status) => {
 };
 
 export default function Leads() {
-  const { profile } = useAuth();
+  const { profile, isOwner, isStaff, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [activeDetailLead, setActiveDetailLead] = useState(null);
   const [editingLead, setEditingLead] = useState(null);
+  const [teamList, setTeamList] = useState([]);
+  const [filterStaff, setFilterStaff] = useState('');
 
   // Filter Bar state
   const [filterType, setFilterType] = useState('created'); // 'created' | 'followup'
@@ -487,7 +489,8 @@ export default function Leads() {
     port_delivery: '',
     payment_days: 'CAD on BL copy',
     // Assignment
-    assigned_to: 'Athish', // Assign to *
+    assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish', // Assign to *
+    agent_name: isStaff ? (profile?.name || 'Staff Member') : 'Athish',
     follow_up_date: '',
     notes: '',
   };
@@ -497,7 +500,12 @@ export default function Leads() {
   // Load from API on mount
   useEffect(() => {
     loadLeads();
-  }, []);
+    if (isOwner && getTeamMembers) {
+      getTeamMembers().then((res) => {
+        if (Array.isArray(res) && res.length > 0) setTeamList(res);
+      }).catch(() => {});
+    }
+  }, [profile?.id, isOwner]);
 
   const loadLeads = async () => {
     try {
@@ -568,6 +576,8 @@ export default function Leads() {
     setEditingLead(null);
     setForm({
       ...initForm,
+      assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || 'usr_athish'),
+      agent_name: isStaff ? (profile?.name || 'Staff Member') : (teamList[0]?.name || 'Athish'),
       follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     });
     setModalOpen(true);
@@ -575,6 +585,19 @@ export default function Leads() {
 
   // Open Edit Modal
   const openEdit = (lead) => {
+    if (isStaff) {
+      const isMine =
+        lead.assigned_to === profile?.id ||
+        lead.assigned_to === profile?.name ||
+        lead.agent_name === profile?.name ||
+        lead.agent_id === profile?.id ||
+        (profile?.name?.toLowerCase().includes('athish') && (lead.assigned_to === 'usr_athish' || lead.agent_name === 'Athish'));
+      if (!isMine) {
+        alert('Permission Denied: Staff members can only edit their own assigned leads.');
+        return;
+      }
+    }
+
     setEditingLead(lead);
     const existingContacts = Array.isArray(lead.contacts) && lead.contacts.length > 0
       ? lead.contacts
@@ -624,7 +647,8 @@ export default function Leads() {
       incoterm: exp.incoterm || 'CIF',
       port_delivery: exp.port_delivery || '',
       payment_days: exp.payment_days || 'CAD on BL copy',
-      assigned_to: 'Athish',
+      assigned_to: lead.assigned_to || (isStaff ? profile?.id : 'usr_athish'),
+      agent_name: lead.agent_name || (isStaff ? profile?.name : 'Athish'),
       follow_up_date: lead.follow_up_date || '',
       notes: lead.notes || '',
     });
@@ -646,6 +670,21 @@ export default function Leads() {
     }
 
     const primary = form.contacts[0] || {};
+    
+    // Role-based assignment resolution
+    let finalAssignedTo = form.assigned_to;
+    let finalAgentName = form.agent_name;
+    if (isStaff) {
+      finalAssignedTo = profile?.id || 'staff';
+      finalAgentName = profile?.name || 'Staff Member';
+    } else {
+      const matched = teamList.find((t) => t.id === form.assigned_to || t.name === form.assigned_to);
+      if (matched) {
+        finalAssignedTo = matched.id;
+        finalAgentName = matched.name;
+      }
+    }
+
     const leadPayload = {
       type: form.type,
       company_name: form.company_name,
@@ -682,8 +721,8 @@ export default function Leads() {
         port_delivery: form.port_delivery,
         payment_days: form.payment_days,
       },
-      assigned_to: 'usr_athish',
-      agent_name: 'Athish',
+      assigned_to: finalAssignedTo,
+      agent_name: finalAgentName,
       follow_up_date: form.follow_up_date,
       notes: form.notes,
     };
@@ -713,8 +752,12 @@ export default function Leads() {
     setModalOpen(false);
   };
 
-  // Delete Lead
+  // Delete Lead - Owner only
   const handleDelete = async (id) => {
+    if (!isOwner) {
+      alert('Permission Denied: Only Company Owners can delete trade leads.');
+      return;
+    }
     if (window.confirm('Are you sure you want to delete this export trade lead?')) {
       try {
         await api.deleteLead(id);
@@ -727,6 +770,23 @@ export default function Leads() {
   // Filter & Sort Logic
   const filteredLeads = leads
     .filter((lead) => {
+      // Role Isolation for Staff: Staff can ONLY see their own leads!
+      if (isStaff) {
+        const isAssignedToMe =
+          lead.assigned_to === profile?.id ||
+          lead.assigned_to === profile?.name ||
+          lead.agent_name === profile?.name ||
+          lead.agent_id === profile?.id ||
+          (profile?.name?.toLowerCase().includes('athish') && (lead.assigned_to === 'usr_athish' || lead.agent_name === 'Athish'));
+        if (!isAssignedToMe) return false;
+      } else if (filterStaff) {
+        // Owner filtering by specific staff member
+        const matchesStaff =
+          lead.assigned_to === filterStaff ||
+          lead.agent_name === filterStaff;
+        if (!matchesStaff) return false;
+      }
+
       // Search
       if (search) {
         const q = search.toLowerCase();
@@ -778,8 +838,8 @@ export default function Leads() {
       return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
     });
 
-  const totalValue = leads.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
-  const totalVolumeMT = leads.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) / 1000;
+  const totalValue = filteredLeads.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
+  const totalVolumeMT = filteredLeads.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) / 1000;
 
   return (
     <div className="w-full space-y-5 pb-12">
@@ -788,14 +848,16 @@ export default function Leads() {
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
-              Export Trade Leads
+              {isStaff ? 'My Assigned Export Leads' : 'Export Trade Leads'}
             </h1>
             <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
-              Live Pipeline
+              {isStaff ? 'Personal Workspace' : 'Company Pipeline'}
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            Manage global commodity buyers, turmeric, chillies, DDGS, and export shipping requirements.
+            {isStaff
+              ? `Showing exclusively leads assigned to you (${profile?.name || 'Staff'}). Data isolated from other employees.`
+              : 'Manage global commodity buyers, turmeric, chillies, DDGS, and export shipping requirements across all staff.'}
           </p>
         </div>
 
@@ -815,7 +877,7 @@ export default function Leads() {
             ${totalValue.toLocaleString()}
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1">
-            <TrendingUp size={12} /> Active Global Contracts
+            <TrendingUp size={12} /> {isStaff ? 'My Active Value' : 'Global Portfolio Value'}
           </div>
         </div>
 
@@ -830,19 +892,21 @@ export default function Leads() {
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Assigned Rep</div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-center gap-1.5">
-            <span>Athish</span>
+          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
+            {isStaff ? 'Your Workspace' : 'Active Team'}
           </div>
-          <div className="text-[11px] font-semibold text-slate-500 mt-0.5">
-            Commodity Export Lead
+          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-center gap-1.5 truncate">
+            <span>{isStaff ? (profile?.name || 'Staff Member') : `${teamList.length || 4} Staff Members`}</span>
+          </div>
+          <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 truncate">
+            {isStaff ? 'Isolated Portfolio' : 'All Staff Activity Tracked'}
           </div>
         </div>
 
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
           <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Active Deals</div>
           <div className="text-xl sm:text-2xl font-black text-emerald-600 mt-1">
-            {leads.length} Leads
+            {filteredLeads.length} Leads
           </div>
           <div className="text-[11px] font-semibold text-slate-500 mt-0.5">
             Multi-country inquiries
@@ -913,8 +977,8 @@ export default function Leads() {
           </div>
         </div>
 
-        {/* Row 2: Search, Country, Product, and Stage */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 pt-2 border-t border-slate-100">
+        {/* Row 2: Search, Country, Product, Stage, and Staff Filter (Owner only) */}
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isOwner ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2.5 pt-2 border-t border-slate-100`}>
           <div className="relative">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -964,6 +1028,29 @@ export default function Leads() {
               </option>
             ))}
           </select>
+
+          {isOwner && (
+            <select
+              value={filterStaff}
+              onChange={(e) => setFilterStaff(e.target.value)}
+              className="w-full px-3 py-2 text-xs font-semibold bg-emerald-50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-emerald-900"
+            >
+              <option value="">All Staff Activity</option>
+              <option value={profile?.id || 'usr_admin_1'}>{profile?.name || 'Owner'} (Direct)</option>
+              {teamList.map((tm) => (
+                <option key={tm.id} value={tm.id}>
+                  {tm.name} ({tm.department || tm.role || 'Staff'})
+                </option>
+              ))}
+              {teamList.length === 0 && (
+                <>
+                  <option value="usr_athish">Athish (Commodity)</option>
+                  <option value="usr_agent_1">Sarah Jenkins</option>
+                  <option value="usr_agent_2">Michael Vance</option>
+                </>
+              )}
+            </select>
+          )}
         </div>
       </div>
 
@@ -1096,13 +1183,15 @@ export default function Leads() {
                           >
                             <Edit3 size={14} />
                           </button>
-                          <button
-                            onClick={() => handleDelete(lead.id)}
-                            className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                            title="Delete Lead"
-                          >
-                            <Trash2 size={14} />
-                          </button>
+                          {isOwner && (
+                            <button
+                              onClick={() => handleDelete(lead.id)}
+                              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                              title="Delete Lead (Owner Only)"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -1205,12 +1294,15 @@ export default function Leads() {
                       >
                         Edit
                       </button>
-                      <button
-                        onClick={() => handleDelete(lead.id)}
-                        className="p-1 text-rose-500"
-                      >
-                        <Trash2 size={15} />
-                      </button>
+                      {isOwner && (
+                        <button
+                          onClick={() => handleDelete(lead.id)}
+                          className="p-1 text-rose-500"
+                          title="Delete Lead (Owner Only)"
+                        >
+                          <Trash2 size={15} />
+                        </button>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -1804,16 +1896,49 @@ export default function Leads() {
               <label className="block text-xs font-bold text-emerald-950 mb-1">
                 Assign to *
               </label>
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  readOnly
-                  value="Athish"
-                  className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:outline-none"
-                />
-              </div>
+              {isOwner ? (
+                <select
+                  value={form.assigned_to}
+                  onChange={(e) => {
+                    const selUser = teamList.find((t) => t.id === e.target.value || t.name === e.target.value);
+                    setForm({
+                      ...form,
+                      assigned_to: e.target.value,
+                      agent_name: selUser ? selUser.name : (e.target.value === profile?.id ? profile?.name : 'Staff Member'),
+                    });
+                  }}
+                  className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                >
+                  <option value={profile?.id || 'usr_admin_1'}>
+                    {profile?.name || 'You (Company Owner)'} [Owner]
+                  </option>
+                  {teamList.map((tm) => (
+                    <option key={tm.id} value={tm.id}>
+                      {tm.name} ({tm.department || tm.role || 'Staff'})
+                    </option>
+                  ))}
+                  {teamList.length === 0 && (
+                    <>
+                      <option value="usr_athish">Athish (Commodity Export)</option>
+                      <option value="usr_agent_1">Sarah Jenkins (Enterprise Sales)</option>
+                      <option value="usr_agent_2">Michael Vance (Inbound Sales)</option>
+                    </>
+                  )}
+                </select>
+              ) : (
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    readOnly
+                    value={`${profile?.name || 'You'} (Your Personal Staff Workspace)`}
+                    className="w-full px-3 py-2 text-xs bg-emerald-100/60 border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:outline-none cursor-not-allowed"
+                  />
+                </div>
+              )}
               <p className="text-[11px] text-emerald-800 font-semibold mt-1">
-                ℹ️ Only admins can reassign this lead to another user.
+                {isOwner
+                  ? 'ℹ️ As Company Owner, you can assign this lead to yourself or any team member.'
+                  : '🔒 Locked: Leads created by staff are strictly assigned to your personal account.'}
               </p>
             </div>
 
@@ -1979,20 +2104,26 @@ export default function Leads() {
             )}
 
             <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-              <button
-                type="button"
-                onClick={() => {
-                  setDetailModalOpen(false);
-                  openEdit(activeDetailLead);
-                }}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200"
-              >
-                Edit Lead
-              </button>
+              {(isOwner ||
+                activeDetailLead.assigned_to === profile?.id ||
+                activeDetailLead.agent_name === profile?.name ||
+                activeDetailLead.assigned_to === profile?.name ||
+                (profile?.name?.toLowerCase().includes('athish') && (activeDetailLead.assigned_to === 'usr_athish' || activeDetailLead.agent_name === 'Athish'))) && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    openEdit(activeDetailLead);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
+                >
+                  Edit Lead
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setDetailModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200"
+                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
               >
                 Close
               </button>

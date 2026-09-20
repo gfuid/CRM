@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import MobileTabBar from './components/MobileTabBar';
+import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
 import './index.css';
 
@@ -30,10 +31,11 @@ const tabNames = {
 };
 
 function AppContent() {
-  const { user, profile, company, loading, loginAsDemo } = useAuth();
+  const { user, profile, company, loading, loginAsDemo, isOwner, isStaff } = useAuth();
   const [activeTab, setActiveTab] = useState('analytics');
   const [authMode, setAuthMode] = useState('landing'); // 'landing' | 'login' | 'register'
   const [taskBadgeCount, setTaskBadgeCount] = useState(1);
+  const [staffModalOpen, setStaffModalOpen] = useState(false);
 
   // Count overdue/due-soon tasks for badge
   useEffect(() => {
@@ -119,6 +121,8 @@ function AppContent() {
     }
   };
 
+  const breadcrumbPrefix = isStaff ? 'Staff Portal' : 'Main Menu';
+
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row antialiased text-slate-900 dark:text-slate-100">
       <Sidebar
@@ -126,6 +130,7 @@ function AppContent() {
         setActiveTab={setActiveTab}
         companyName={company?.name || 'Travel-Trade'}
         taskBadgeCount={taskBadgeCount}
+        onOpenStaffModal={() => setStaffModalOpen(true)}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">
         <MobileTabBar
@@ -133,10 +138,11 @@ function AppContent() {
           setActiveTab={setActiveTab}
           companyName={company?.name || 'Travel-Trade'}
           taskBadgeCount={taskBadgeCount}
+          onOpenStaffModal={() => setStaffModalOpen(true)}
         />
         <div className="hidden md:block">
           <TopBar
-            breadcrumb={`Main Menu / ${tabNames[activeTab] || 'Dashboard'}`}
+            breadcrumb={`${breadcrumbPrefix} / ${tabNames[activeTab] || 'Dashboard'}`}
             onCustomizeWidget={() => {}}
           />
         </div>
@@ -146,6 +152,14 @@ function AppContent() {
           </Suspense>
         </main>
       </div>
+
+      {/* Owner Staff Management Modal */}
+      {isOwner && (
+        <StaffManagementModal
+          isOpen={staffModalOpen}
+          onClose={() => setStaffModalOpen(false)}
+        />
+      )}
     </div>
   );
 }

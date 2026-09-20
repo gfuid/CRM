@@ -7,20 +7,26 @@ import {
   Table,
   Calendar,
   CalendarClock,
+  UserPlus,
+  ShieldCheck,
+  ExternalLink
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import { useAuth } from '../context/AuthContext';
 
-export const navItems = [
-  { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-  { id: 'leads', label: 'Leads', icon: Users },
-  { id: 'tasks', label: 'Task Management', icon: ListTodo, badge: true },
-  { id: 'activity', label: 'Activity', icon: LayoutGrid },
-  { id: 'outreach', label: 'Outreach', icon: Table },
-  { id: 'mydays', label: 'My Days', icon: Calendar },
-  { id: 'followup', label: 'Follow up', icon: CalendarClock },
-];
+export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
+  const { isOwner, isStaff, profile } = useAuth();
 
-export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount }) {
+  const navItems = [
+    { id: 'analytics', label: isStaff ? 'My Analytics' : 'Analytics', icon: BarChart2 },
+    { id: 'leads', label: isStaff ? 'My Leads' : 'Leads', icon: Users },
+    { id: 'tasks', label: isStaff ? 'My Tasks' : 'Task Management', icon: ListTodo, badge: true },
+    { id: 'activity', label: 'Activity', icon: LayoutGrid },
+    { id: 'outreach', label: 'Outreach', icon: Table },
+    { id: 'mydays', label: 'My Days', icon: Calendar },
+    { id: 'followup', label: 'Follow up', icon: CalendarClock },
+  ];
+
   return (
     <aside className="hidden md:flex md:w-64 md:fixed md:inset-y-0 md:left-0 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 z-30 flex-col border-r border-slate-200 dark:border-slate-800 select-none shadow-sm">
       {/* Brand Header with Logo Colors */}
@@ -30,16 +36,25 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
           <div className="text-base font-extrabold text-slate-900 dark:text-white truncate tracking-tight flex items-center gap-1.5">
             <span>{companyName || 'Travel-Trade'}</span>
           </div>
-          <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-            Export & Trade CRM
+          <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
+            <span>Export & Trade CRM</span>
+            {isStaff ? (
+              <span className="px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 text-[9px] font-bold text-slate-600">
+                STAFF
+              </span>
+            ) : (
+              <span className="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[9px] font-bold">
+                OWNER
+              </span>
+            )}
           </div>
         </div>
       </div>
 
-      {/* Navigation List - Light Theme Matching Logo Colors */}
+      {/* Navigation List */}
       <nav className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
         <div className="px-3 pb-2 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
-          Sales & Operations
+          {isStaff ? 'My Workspace' : 'Sales & Operations'}
         </div>
         {navItems.map((item) => {
           const Icon = item.icon;
@@ -50,7 +65,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 ${
+              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
                 isActive
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border-l-4 border-emerald-500 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
@@ -74,15 +89,48 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             </button>
           );
         })}
+
+        {/* Owner Controls: Team & Staff Management */}
+        {isOwner && (
+          <div className="pt-4 mt-3 border-t border-slate-100 dark:border-slate-800 space-y-1">
+            <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400">
+              Organization Controls
+            </div>
+            <button
+              onClick={onOpenStaffModal}
+              className="flex items-center gap-3 w-full px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-800 bg-emerald-50/70 hover:bg-emerald-100/70 border border-emerald-200 transition-colors cursor-pointer"
+            >
+              <UserPlus size={16} className="text-emerald-600" />
+              <span>Manage Team & Staff</span>
+            </button>
+
+            <a
+              href="http://localhost:5174"
+              target="_blank"
+              rel="noreferrer"
+              className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 border border-slate-200 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <ShieldCheck size={15} className="text-slate-500" />
+                <span>Admin Console</span>
+              </div>
+              <ExternalLink size={12} className="text-slate-400" />
+            </a>
+          </div>
+        )}
       </nav>
 
-      {/* Footer / System Status */}
+      {/* Footer / Logged In Role Banner */}
       <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-slate-600 dark:text-slate-400">System Connected</span>
+          <span className="font-semibold text-slate-600 dark:text-slate-400">
+            {profile?.name || 'Online'}
+          </span>
         </div>
-        <span className="font-mono text-[11px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-500">v1.2</span>
+        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-600">
+          {isOwner ? 'Owner' : 'Staff'}
+        </span>
       </div>
     </aside>
   );

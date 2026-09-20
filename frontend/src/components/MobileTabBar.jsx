@@ -9,7 +9,8 @@ import {
   CalendarClock,
   LogOut,
   Sun,
-  Moon
+  Moon,
+  UserPlus
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
@@ -24,8 +25,14 @@ const mobileNavItems = [
   { id: 'followup', label: 'Follow up', icon: CalendarClock },
 ];
 
-export default function MobileTabBar({ activeTab, setActiveTab, companyName, taskBadgeCount }) {
-  const { signOut, profile } = useAuth();
+export default function MobileTabBar({
+  activeTab,
+  setActiveTab,
+  companyName,
+  taskBadgeCount,
+  onOpenStaffModal,
+}) {
+  const { signOut, profile, isOwner, isStaff } = useAuth();
   const [isDark, setIsDark] = React.useState(() => localStorage.getItem('travel_trade_theme') === 'dark');
 
   const toggleTheme = () => {
@@ -104,6 +111,16 @@ export default function MobileTabBar({ activeTab, setActiveTab, companyName, tas
             </button>
           );
         })}
+
+        {isOwner && (
+          <button
+            onClick={onOpenStaffModal}
+            className="flex items-center gap-1 px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap bg-emerald-50 text-emerald-800 border border-emerald-300 hover:bg-emerald-100 shrink-0 cursor-pointer"
+          >
+            <UserPlus size={14} className="text-emerald-700" />
+            <span>+ Staff</span>
+          </button>
+        )}
       </nav>
     </div>
   );

@@ -8,14 +8,18 @@ const getTasks = async (req, res) => {
   const { status, priority, assigned_to } = req.query;
   let list = [...dataStore.tasks];
 
+  // Role-Based Isolation: Staff only see their own tasks
+  if (req.user && req.user.role !== 'admin') {
+    list = list.filter((t) => t.assigned_to === req.user.id);
+  } else if (assigned_to) {
+    list = list.filter((t) => t.assigned_to === assigned_to);
+  }
+
   if (status) {
     list = list.filter((t) => t.status.toLowerCase() === status.toLowerCase());
   }
   if (priority) {
     list = list.filter((t) => t.priority.toLowerCase() === priority.toLowerCase());
-  }
-  if (assigned_to) {
-    list = list.filter((t) => t.assigned_to === assigned_to);
   }
 
   // Populate assigned user and lead
@@ -42,6 +46,10 @@ const createTask = async (req, res) => {
     return ApiResponse.error(res, 'Task title is required', 400);
   }
 
+  const finalAssignedTo = (req.user && req.user.role !== 'admin')
+    ? req.user.id
+    : (assigned_to || (req.user ? req.user.id : 'usr_athish'));
+
   const newTask = {
     id: generateId('tsk'),
     title,
@@ -49,7 +57,7 @@ const createTask = async (req, res) => {
     priority: priority || 'Medium',
     status: 'Pending',
     due_date: due_date || new Date(Date.now() + 86400000).toISOString(),
-    assigned_to: assigned_to || (req.user ? req.user.id : 'usr_agent_1'),
+    assigned_to: finalAssignedTo,
     lead_id: lead_id || null,
     created_at: new Date().toISOString(),
   };
@@ -65,21 +73,21 @@ const createTask = async (req, res) => {
  */
 const updateTask = async (req, res) => {
   const { id } = req.params;
-  const taskIndex = dataStore.tasks.findIndex((t) => t.id === id);
+  const task = dataStore.tasks.find((t) => t.id === id);
 
-  if (taskIndex === -1) {
+  if (!task) {
     return ApiResponse.error(res, 'Task not found', 404);
   }
 
-  const updated = {
-    ...dataStore.tasks[taskIndex],
-    ...req.body,
-  };
+  // Non-admins can only update their own tasks
+  if (req.user && req.user.role !== 'admin' && task.assigned_to !== req.user.id) {
+    return ApiResponse.error(res, 'Access denied: You cannot edit another employee\'s task.', 403);
+  }
 
-  dataStore.tasks[taskIndex] = updated;
-  dbSync.saveTask(updated);
+  Object.assign(task, req.body, { updated_at: new Date().toISOString() });
+  dbSync.saveTask(task);
 
-  return ApiResponse.success(res, updated, 'Task updated successfully');
+  return ApiResponse.success(res, task, 'Task updated successfully');
 };
 
 /**
@@ -87,16 +95,20 @@ const updateTask = async (req, res) => {
  */
 const deleteTask = async (req, res) => {
   const { id } = req.params;
-  const index = dataStore.tasks.findIndex((t) => t.id === id);
 
+  if (req.user && req.user.role !== 'admin') {
+    return ApiResponse.error(res, 'Access denied: Only Company Owner can delete tasks.', 403);
+  }
+
+  const index = dataStore.tasks.findIndex((t) => t.id === id);
   if (index === -1) {
     return ApiResponse.error(res, 'Task not found', 404);
   }
 
-  const deleted = dataStore.tasks.splice(index, 1)[0];
+  dataStore.tasks.splice(index, 1);
   dbSync.deleteTask(id);
 
-  return ApiResponse.success(res, deleted, 'Task deleted successfully');
+  return ApiResponse.success(res, null, 'Task deleted successfully');
 };
 
 module.exports = {

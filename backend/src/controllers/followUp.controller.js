@@ -8,11 +8,15 @@ const getFollowUps = async (req, res) => {
   const { status, assigned_to } = req.query;
   let list = [...dataStore.followUps];
 
+  // Role-Based Isolation: Staff only see their own follow-ups
+  if (req.user && req.user.role !== 'admin') {
+    list = list.filter((f) => f.assigned_to === req.user.id);
+  } else if (assigned_to) {
+    list = list.filter((f) => f.assigned_to === assigned_to);
+  }
+
   if (status) {
     list = list.filter((f) => f.status.toLowerCase() === status.toLowerCase());
-  }
-  if (assigned_to) {
-    list = list.filter((f) => f.assigned_to === assigned_to);
   }
 
   const populated = list.map((f) => {
@@ -36,6 +40,10 @@ const createFollowUp = async (req, res) => {
     return ApiResponse.error(res, 'Client name and scheduled date are required', 400);
   }
 
+  const finalAssignedTo = (req.user && req.user.role !== 'admin')
+    ? req.user.id
+    : (assigned_to || (req.user ? req.user.id : 'usr_athish'));
+
   const newFollowUp = {
     id: generateId('flw'),
     lead_id: lead_id || null,
@@ -46,7 +54,7 @@ const createFollowUp = async (req, res) => {
     type: type || 'Phone Call',
     agenda: agenda || 'General Follow-up',
     status: 'Scheduled',
-    assigned_to: assigned_to || (req.user ? req.user.id : 'usr_agent_1'),
+    assigned_to: finalAssignedTo,
   };
 
   dataStore.followUps.unshift(newFollowUp);
@@ -60,21 +68,20 @@ const createFollowUp = async (req, res) => {
  */
 const updateFollowUp = async (req, res) => {
   const { id } = req.params;
-  const index = dataStore.followUps.findIndex((f) => f.id === id);
+  const followUp = dataStore.followUps.find((f) => f.id === id);
 
-  if (index === -1) {
+  if (!followUp) {
     return ApiResponse.error(res, 'Follow-up not found', 404);
   }
 
-  const updated = {
-    ...dataStore.followUps[index],
-    ...req.body,
-  };
+  if (req.user && req.user.role !== 'admin' && followUp.assigned_to !== req.user.id) {
+    return ApiResponse.error(res, 'Access denied: You cannot edit another employee\'s follow-up.', 403);
+  }
 
-  dataStore.followUps[index] = updated;
-  dbSync.saveFollowUp(updated);
+  Object.assign(followUp, req.body);
+  dbSync.saveFollowUp(followUp);
 
-  return ApiResponse.success(res, updated, 'Follow-up updated successfully');
+  return ApiResponse.success(res, followUp, 'Follow-up updated successfully');
 };
 
 /**
