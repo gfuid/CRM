@@ -137,14 +137,14 @@ export default function OverviewSection({
           <div>
             <div className="flex items-center gap-2">
               <h3 className="text-base font-bold text-slate-900 m-0">
-                {company?.name || 'Stellarsync Enterprise'}
+                {company?.name || 'Travel-Trade'}
               </h3>
               <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800 border border-emerald-200">
                 Operational
               </span>
             </div>
             <p className="text-xs text-slate-500 mt-1">
-              Industry: <strong>{company?.industry || 'Software & Cloud Sales'}</strong> &bull; Timezone: <strong>{company?.timezone || 'UTC+05:30'}</strong>
+              Industry: <strong>{company?.industry || 'Travel, Tourism & Trade Services'}</strong> &bull; Timezone: <strong>{company?.timezone || 'UTC+05:30'}</strong>
             </p>
           </div>
         </div>

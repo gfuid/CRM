@@ -13,8 +13,8 @@ import {
 
 export default function SettingsSection({ company, onUpdateSettings }) {
   const [formData, setFormData] = useState({
-    name: company?.name || 'Stellarsync Enterprise',
-    industry: company?.industry || 'Software & Cloud Sales',
+    name: company?.name || 'Travel-Trade',
+    industry: company?.industry || 'Travel, Tourism & Trade Services',
     revenueTargetMonthly: company?.revenueTargetMonthly || 150000,
     timezone: company?.timezone || 'UTC+05:30',
   });
@@ -22,14 +22,14 @@ export default function SettingsSection({ company, onUpdateSettings }) {
   const [strictQuota, setStrictQuota] = useState(true);
   const [emailVerification, setEmailVerification] = useState(true);
   const [maintenanceMode, setMaintenanceMode] = useState(false);
-  const [webhookUrl, setWebhookUrl] = useState('https://hooks.stellarsync.io/crm-events');
+  const [webhookUrl, setWebhookUrl] = useState('https://hooks.travel-trade.com/crm-events');
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
     if (company) {
       setFormData({
-        name: company.name || 'Stellarsync Enterprise',
-        industry: company.industry || 'Software & Cloud Sales',
+        name: company.name || 'Travel-Trade',
+        industry: company.industry || 'Travel, Tourism & Trade Services',
         revenueTargetMonthly: company.revenueTargetMonthly || 150000,
         timezone: company.timezone || 'UTC+05:30',
       });

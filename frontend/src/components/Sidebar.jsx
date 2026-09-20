@@ -27,7 +27,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
       <div className="p-5 flex items-center gap-3 border-b border-slate-800/80">
         <BrandLogo size={28} />
         <div className="text-base font-bold text-white truncate tracking-tight">
-          {companyName || 'Stellarsync'}
+          {companyName || 'Travel-Trade'}
         </div>
       </div>
 

@@ -40,8 +40,8 @@ export default function Admin() {
 
   // Settings Form
   const [settings, setSettings] = useState({
-    name: 'Stellarsync Enterprise',
-    industry: 'Cloud & Sales CRM Services',
+    name: 'Travel-Trade',
+    industry: 'Travel, Tourism & Trade Services',
     revenueTargetMonthly: 150000,
     timezone: 'UTC+05:30',
   });
@@ -65,8 +65,8 @@ export default function Admin() {
         setSubscription(subRes.data);
         if (subRes.data.company) {
           setSettings({
-            name: subRes.data.company.name || 'Stellarsync Enterprise',
-            industry: subRes.data.company.industry || 'Cloud & Sales CRM Services',
+            name: subRes.data.company.name || 'Travel-Trade',
+            industry: subRes.data.company.industry || 'Travel, Tourism & Trade Services',
             revenueTargetMonthly: subRes.data.company.revenueTargetMonthly || 150000,
             timezone: subRes.data.company.timezone || 'UTC+05:30',
           });
@@ -759,7 +759,7 @@ export default function Admin() {
               required
               type="email"
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
-              placeholder="david@stellarsync.io"
+              placeholder="david@travel-trade.com"
               value={newUser.email}
               onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
             />

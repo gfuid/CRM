@@ -1,4 +1,4 @@
-# Nexus CRM Platform
+# Travel-Trade CRM Platform
 
 A modern, high-performance Customer Relationship Management (CRM) system and Admin Console designed for sales teams, pipeline management, and enterprise administrative operations.
 

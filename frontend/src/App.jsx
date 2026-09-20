@@ -123,7 +123,7 @@ function AppContent() {
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        companyName={company?.name || 'Stellarsync'}
+        companyName={company?.name || 'Travel-Trade'}
         taskBadgeCount={taskBadgeCount}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">

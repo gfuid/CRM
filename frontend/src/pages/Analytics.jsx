@@ -246,7 +246,7 @@ export default function Analytics() {
     const encodedUri = encodeURI(csvContent);
     const link = document.createElement('a');
     link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Nexus_CRM_Deals_${selectedYear}.csv`);
+    link.setAttribute('download', `Travel_Trade_CRM_Deals_${selectedYear}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

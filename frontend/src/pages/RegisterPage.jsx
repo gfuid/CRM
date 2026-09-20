@@ -50,7 +50,7 @@ export default function RegisterPage({ onSwitchToLogin }) {
           <BrandLogo size={36} />
           <div>
             <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">
-              Join Stellarsync
+              Join Travel-Trade
             </h1>
           </div>
         </div>

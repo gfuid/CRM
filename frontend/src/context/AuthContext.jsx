@@ -20,7 +20,7 @@ export function AuthProvider({ children }) {
             const u = res.data.user;
             setUser(u);
             setProfile({ ...u, full_name: u.name });
-            setCompany(res.data.company || { name: 'Stellarsync Enterprise', plan: 'growth' });
+            setCompany(res.data.company || { name: 'Travel-Trade', plan: 'growth' });
             setLoading(false);
             return;
           }
@@ -43,17 +43,17 @@ export function AuthProvider({ children }) {
     const demoUser = {
       id: 'usr_admin_1',
       name: 'Sarah Connor (Owner)',
-      email: 'owner@stellarsync.io',
+      email: 'owner@travel-trade.com',
       role: 'admin',
       persona: 'owner',
       department: 'Founder & CEO',
       avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
     };
     const demoCompany = {
-      id: 'comp_stellarsync_1',
-      name: 'Stellarsync Enterprise',
+      id: 'comp_traveltrade_1',
+      name: 'Travel-Trade',
       plan: 'growth',
-      maxStaff: 15,
+      maxStaff: 50,
     };
     setUser(demoUser);
     setProfile({ ...demoUser, full_name: demoUser.name });
@@ -71,7 +71,7 @@ export function AuthProvider({ children }) {
         }
         setUser(u);
         setProfile({ ...u, full_name: u.name });
-        setCompany(res.data.company || { name: 'Stellarsync Enterprise', plan: 'growth' });
+        setCompany(res.data.company || { name: 'Travel-Trade', plan: 'growth' });
         return res.data;
       }
       throw new Error(res?.message || 'Login failed');

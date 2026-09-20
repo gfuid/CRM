@@ -11,7 +11,7 @@ const testBackend = async () => {
     const loginRes = await fetch(`${BASE_URL}/api/v1/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email: 'owner@stellarsync.io', password: 'admin123' }),
+      body: JSON.stringify({ email: 'owner@travel-trade.com', password: 'admin123' }),
     }).then((r) => r.json());
 
     if (!loginRes.success || !loginRes.data.token) {

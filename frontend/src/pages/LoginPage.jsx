@@ -5,7 +5,7 @@ import BrandLogo from '../components/BrandLogo';
 
 export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('owner@stellarsync.io');
+  const [email, setEmail] = useState('owner@travel-trade.com');
   const [password, setPassword] = useState('admin123');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -46,7 +46,7 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
           </div>
         </div>
         <p className="text-sm text-slate-500 mb-6">
-          Sign in to your Stellarsync CRM workspace
+          Sign in to your Travel-Trade CRM workspace
         </p>
 
         {/* Quick Demo Credentials Pill */}
@@ -78,7 +78,7 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
               <input
                 type="email"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
-                placeholder="owner@stellarsync.io"
+                placeholder="owner@travel-trade.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required

@@ -45,8 +45,8 @@ const dataStore = {
 
   company: {
     id: 'comp_stellarsync_1',
-    name: 'Stellarsync Enterprise',
-    industry: 'Software & Cloud Sales',
+    name: 'Travel-Trade',
+    industry: 'Travel, Tourism & Trade Services',
     currency: 'USD',
     timezone: 'UTC+05:30',
     revenueTargetMonthly: 150000,
@@ -59,10 +59,10 @@ const dataStore = {
   tenants: [
     {
       id: 'comp_stellarsync_1',
-      name: 'Stellarsync Enterprise',
-      domain: 'stellarsync.io',
+      name: 'Travel-Trade',
+      domain: 'travel-trade.com',
       owner_name: 'Sarah Connor',
-      owner_email: 'owner@stellarsync.io',
+      owner_email: 'owner@travel-trade.com',
       plan: 'growth',
       maxStaff: 15,
       currentStaff: 4,
@@ -115,7 +115,7 @@ const dataStore = {
     {
       id: 'usr_admin_1',
       name: 'Sarah Connor (Owner)',
-      email: 'owner@stellarsync.io',
+      email: 'owner@travel-trade.com',
       role: 'admin', // admin, manager, agent
       persona: 'owner', // 'owner' | 'staff'
       department: 'Founder & CEO',

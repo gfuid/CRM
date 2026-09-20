@@ -31,7 +31,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
           <BrandLogo size={34} />
           <div>
             <div className="font-extrabold text-slate-900 text-base tracking-tight flex items-center gap-1.5">
-              <span>Nexus CRM</span>
+              <span>Travel-Trade CRM</span>
               <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-coral-100 text-coral-700 uppercase tracking-wider">
                 Enterprise
               </span>
@@ -118,7 +118,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
           <span>✓ Full access to all 7 modules</span>
         </div>
 
-        {/* Interactive Live Preview of Nexus CRM Modules */}
+        {/* Interactive Live Preview of Travel-Trade CRM Modules */}
         <div id="preview" className="mt-14 p-4 rounded-3xl bg-white border border-slate-200 shadow-xl text-left">
           {/* Top Bar inside preview window */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
@@ -126,7 +126,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
               <span className="w-3 h-3 rounded-full bg-crimson-400" />
               <span className="w-3 h-3 rounded-full bg-gold-400" />
               <span className="w-3 h-3 rounded-full bg-mint-400" />
-              <span className="text-xs font-mono text-slate-400 ml-2">nexus-crm.io/app/{activePreviewTab}</span>
+              <span className="text-xs font-mono text-slate-400 ml-2">travel-trade.com/app/{activePreviewTab}</span>
             </div>
 
             {/* Interactive Module Tabs */}
@@ -441,10 +441,10 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
         <div className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="flex items-center gap-3">
             <BrandLogo size={28} />
-            <span className="font-bold text-sm text-slate-900">Nexus CRM Platform</span>
+            <span className="font-bold text-sm text-slate-900">Travel-Trade CRM Platform</span>
           </div>
           <p className="text-xs text-slate-400">
-            &copy; {new Date().getFullYear()} Nexus CRM Inc. All rights reserved. Enterprise-grade Security & RBAC.
+            &copy; {new Date().getFullYear()} Travel-Trade CRM Inc. All rights reserved. Enterprise-grade Security & RBAC.
           </p>
           <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
             <a href="#privacy" className="hover:text-slate-900">Privacy Policy</a>

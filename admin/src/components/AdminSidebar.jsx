@@ -41,7 +41,7 @@ export default function AdminSidebar({ activeSection, setActiveSection, isOpen =
             <BrandLogo size={32} />
             <div>
               <div className="font-extrabold text-slate-900 text-base tracking-tight flex items-center gap-1.5">
-                <span>Nexus CRM</span>
+                <span>Travel-Trade CRM</span>
                 <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-emerald-600 text-white uppercase tracking-wider">
                   Admin
                 </span>
