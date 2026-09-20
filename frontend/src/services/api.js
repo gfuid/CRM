@@ -216,6 +216,19 @@ class ApiClient {
     });
   }
 
+  updateUser(userId, updates) {
+    return this.request(`/admin/users/${userId}`, {
+      method: 'PATCH',
+      body: JSON.stringify(updates),
+    });
+  }
+
+  deleteUser(userId) {
+    return this.request(`/admin/users/${userId}`, {
+      method: 'DELETE',
+    });
+  }
+
   updateUserRole(userId, role, department) {
     return this.request(`/admin/users/${userId}/role`, {
       method: 'PATCH',

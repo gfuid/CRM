@@ -11,8 +11,10 @@ router.use(authorize('admin'));
 // User / Team management
 router.get('/users', asyncHandler(adminController.getAllUsers));
 router.post('/users', asyncHandler(adminController.createUser));
+router.patch('/users/:id', asyncHandler(adminController.updateUser));
 router.patch('/users/:id/role', asyncHandler(adminController.updateUserRole));
 router.patch('/users/:id/status', asyncHandler(adminController.toggleUserStatus));
+router.delete('/users/:id', asyncHandler(adminController.deleteUser));
 
 // Consolidated Overview Summary
 router.get('/overview-summary', asyncHandler(adminController.getOverviewSummary));

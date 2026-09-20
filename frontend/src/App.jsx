@@ -66,6 +66,13 @@ function AppContent() {
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
 
+  // Enforce staff permission boundaries on activeTab
+  useEffect(() => {
+    if (isStaff && profile?.permissions?.view_analytics !== true && activeTab === 'analytics') {
+      setActiveTab('leads');
+    }
+  }, [isStaff, profile?.permissions, activeTab]);
+
   // Count overdue/due-soon tasks for badge
   useEffect(() => {
     if (!profile) return;

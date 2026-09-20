@@ -21,15 +21,22 @@ export default function MobileTabBar({
   taskBadgeCount,
   onOpenStaffModal,
 }) {
-  const { signOut, isOwner } = useAuth();
+  const { signOut, isOwner, profile } = useAuth();
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
 
-  const primaryTabs = [
-    { id: 'analytics', label: 'Analytics', icon: BarChart2 },
-    { id: 'leads', label: 'Leads', icon: Users },
-    { id: 'tasks', label: 'Tasks', icon: ListTodo, badge: true },
-    { id: 'followup', label: 'Follow up', icon: CalendarClock },
+  const userPerms = profile?.permissions || {};
+  const canViewAnalytics = isOwner || userPerms.view_analytics === true;
+  const canViewLeads = isOwner || userPerms.view_leads !== false;
+  const canViewTasks = isOwner || userPerms.view_tasks !== false;
+  const canViewFollowUp = isOwner || userPerms.view_followup !== false;
+
+  const rawPrimaryTabs = [
+    { id: 'analytics', label: 'Analytics', icon: BarChart2, visible: canViewAnalytics },
+    { id: 'leads', label: 'Leads', icon: Users, visible: canViewLeads },
+    { id: 'tasks', label: 'Tasks', icon: ListTodo, badge: true, visible: canViewTasks },
+    { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
   ];
+  const primaryTabs = rawPrimaryTabs.filter((t) => t.visible !== false);
 
   const secondaryTabs = [
     { id: 'activity', label: 'Activity Logs', icon: LayoutGrid, desc: 'Audit trail of trade updates' },

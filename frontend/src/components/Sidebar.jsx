@@ -15,15 +15,26 @@ import { useAuth } from '../context/AuthContext';
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
   const { isOwner, isStaff, profile } = useAuth();
 
-  const navItems = [
-    { id: 'analytics', label: isStaff ? 'My Analytics' : 'Analytics', icon: BarChart2 },
-    { id: 'leads', label: isStaff ? 'My Leads' : 'Leads', icon: Users },
-    { id: 'tasks', label: isStaff ? 'My Tasks' : 'Task Management', icon: ListTodo, badge: true },
-    { id: 'activity', label: 'Activity', icon: LayoutGrid },
-    { id: 'outreach', label: 'Outreach', icon: Table },
-    { id: 'mydays', label: 'My Days', icon: Calendar },
-    { id: 'followup', label: 'Follow up', icon: CalendarClock },
+  const userPerms = profile?.permissions || {};
+  const canViewAnalytics = isOwner || userPerms.view_analytics === true;
+  const canViewLeads = isOwner || userPerms.view_leads !== false;
+  const canViewTasks = isOwner || userPerms.view_tasks !== false;
+  const canViewActivity = isOwner || userPerms.view_activity !== false;
+  const canViewOutreach = isOwner || userPerms.view_outreach !== false;
+  const canViewMyDays = isOwner || userPerms.view_mydays !== false;
+  const canViewFollowUp = isOwner || userPerms.view_followup !== false;
+
+  const rawNavItems = [
+    { id: 'analytics', label: isStaff ? 'My Analytics' : 'Analytics', icon: BarChart2, visible: canViewAnalytics },
+    { id: 'leads', label: isStaff ? 'My Leads' : 'Leads', icon: Users, visible: canViewLeads },
+    { id: 'tasks', label: isStaff ? 'My Tasks' : 'Task Management', icon: ListTodo, badge: true, visible: canViewTasks },
+    { id: 'activity', label: 'Activity', icon: LayoutGrid, visible: canViewActivity },
+    { id: 'outreach', label: 'Outreach', icon: Table, visible: canViewOutreach },
+    { id: 'mydays', label: 'My Days', icon: Calendar, visible: canViewMyDays },
+    { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
   ];
+
+  const navItems = rawNavItems.filter((item) => item.visible !== false);
 
   return (
     <aside className="hidden md:flex md:w-64 md:fixed md:inset-y-0 md:left-0 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 z-30 flex-col border-r border-slate-200 dark:border-slate-800 select-none shadow-sm">

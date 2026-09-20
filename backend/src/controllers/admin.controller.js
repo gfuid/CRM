@@ -39,7 +39,7 @@ const getAllUsers = async (req, res) => {
  * Create a new staff/employee under the Company Owner
  */
 const createUser = async (req, res) => {
-  const { name, email, role, department, phone, password, avatar_url, permissions } = req.body;
+  const { name, email, role, department, phone, password, avatar_url, permissions, data_scope } = req.body;
 
   if (!name || !email) {
     return ApiResponse.error(res, 'Staff Name and Email are required', 400);
@@ -57,6 +57,21 @@ const createUser = async (req, res) => {
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
+  const defaultPermissions = {
+    view_analytics: false, // Default hidden from staff as requested
+    view_leads: true,
+    view_tasks: true,
+    view_followup: true,
+    view_outreach: true,
+    view_activity: true,
+    view_mydays: true,
+    can_read: true,
+    can_create: true,
+    can_update: true,
+    can_delete: false, // Prevent deleting other staff's or company data
+    admin_access: false, // Strict: staff NEVER has main admin access
+  };
+
   const newUser = {
     id: generateId('usr'),
     name: name.trim(),
@@ -69,11 +84,10 @@ const createUser = async (req, res) => {
     is_active: true,
     avatar_url:
       avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
-    permissions: permissions || {
-      can_create_leads: true,
-      can_edit_own_only: true,
-      can_manage_own_tasks: true,
-    },
+    data_scope: data_scope || 'own_only', // 'own_only' | 'all'
+    permissions: permissions
+      ? { ...defaultPermissions, ...permissions, admin_access: false }
+      : defaultPermissions,
     company_id: req.user?.company_id || 'comp_traveltrade_1',
     created_by: req.user?.id || 'usr_admin_1',
     last_login: null,
@@ -89,7 +103,7 @@ const createUser = async (req, res) => {
     actor_name: req.user ? req.user.name : 'Company Owner',
     actor_id: req.user ? req.user.id : 'usr_admin_1',
     action: 'STAFF_CREATED',
-    details: `Owner added staff member ${name} (${email}) with role '${userRole}'`,
+    details: `Owner added staff member ${name} (${email}) with role '${userRole}', scope: '${newUser.data_scope}'`,
     ip_address: req.ip || '127.0.0.1',
     timestamp: new Date().toISOString(),
   };
@@ -103,28 +117,34 @@ const createUser = async (req, res) => {
 };
 
 /**
- * Update user role or department
+ * Update user granular permissions, role, department, data scope, or details
  */
-const updateUserRole = async (req, res) => {
+const updateUser = async (req, res) => {
   const { id } = req.params;
-  const { role, department } = req.body;
+  const { name, email, role, department, phone, permissions, data_scope, is_active } = req.body;
 
   const user = dataStore.users.find((u) => u.id === id);
   if (!user) {
     return ApiResponse.error(res, 'User not found', 404);
   }
 
-  const oldRole = user.role;
-  if (role) {
-    const validRoles = ['admin', 'manager', 'agent'];
-    if (!validRoles.includes(role)) {
-      return ApiResponse.error(res, 'Invalid role. Valid options: admin, manager, agent', 400);
+  if (name) user.name = name.trim();
+  if (email) user.email = email.toLowerCase().trim();
+  if (role && ['admin', 'manager', 'agent'].includes(role)) {
+    if (user.role !== 'admin' || req.user.id === user.id) {
+      user.role = role;
     }
-    user.role = role;
   }
-
-  if (department !== undefined) {
-    user.department = department;
+  if (department !== undefined) user.department = department;
+  if (phone !== undefined) user.phone = phone;
+  if (is_active !== undefined) user.is_active = is_active;
+  if (data_scope !== undefined) user.data_scope = data_scope;
+  if (permissions !== undefined) {
+    user.permissions = {
+      ...(user.permissions || {}),
+      ...permissions,
+      admin_access: false, // Staff never get main admin access
+    };
   }
 
   dbSync.saveUser(user);
@@ -132,17 +152,44 @@ const updateUserRole = async (req, res) => {
   // Audit log
   const auditLog = {
     id: generateId('log'),
-    actor_name: req.user ? req.user.name : 'System Admin',
+    actor_name: req.user ? req.user.name : 'Company Owner',
     actor_id: req.user ? req.user.id : 'usr_admin_1',
-    action: 'USER_ROLE_UPDATED',
-    details: `Changed role of ${user.name} from '${oldRole}' to '${user.role}'`,
+    action: 'STAFF_PERMISSIONS_UPDATED',
+    details: `Updated permissions & data scope for ${user.name} (${user.email})`,
     ip_address: req.ip || '127.0.0.1',
     timestamp: new Date().toISOString(),
   };
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  return ApiResponse.success(res, user, 'User updated successfully');
+  const cleanUser = { ...user };
+  delete cleanUser.password;
+
+  return ApiResponse.success(res, cleanUser, 'Staff member permissions updated successfully');
+};
+
+/**
+ * Delete a staff user (Owner only)
+ */
+const deleteUser = async (req, res) => {
+  const { id } = req.params;
+  const userIndex = dataStore.users.findIndex((u) => u.id === id);
+  if (userIndex === -1) {
+    return ApiResponse.error(res, 'User not found', 404);
+  }
+  const user = dataStore.users[userIndex];
+  if (user.role === 'admin') {
+    return ApiResponse.error(res, 'Cannot delete Company Owner account', 400);
+  }
+  dataStore.users.splice(userIndex, 1);
+  return ApiResponse.success(res, { id }, 'Staff member deleted successfully');
+};
+
+/**
+ * Update user role or department (backward compatibility)
+ */
+const updateUserRole = async (req, res) => {
+  return updateUser(req, res);
 };
 
 /**
@@ -489,8 +536,10 @@ module.exports = {
   getOverviewSummary,
   getAllUsers,
   createUser,
+  updateUser,
   updateUserRole,
   toggleUserStatus,
+  deleteUser,
   getSystemHealth,
   getAuditLogs,
   updateCompanySettings,
