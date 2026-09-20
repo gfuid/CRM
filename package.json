@@ -1,0 +1,13 @@
+{
+  "name": "crm-app",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "dev:admin": "npm --prefix admin run dev",
+    "build:admin": "npm --prefix admin run build",
+    "start:backend": "npm --prefix backend start",
+    "install:all": "npm --prefix backend install && npm --prefix frontend install && npm --prefix admin install"
+  }
+}
