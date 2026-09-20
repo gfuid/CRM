@@ -40,7 +40,7 @@ const getTasks = async (req, res) => {
  * Create task
  */
 const createTask = async (req, res) => {
-  const { title, description, priority, due_date, assigned_to, lead_id } = req.body;
+  const { title, description, priority, due_date, deadline_time, assigned_to, lead_id } = req.body;
 
   if (!title) {
     return ApiResponse.error(res, 'Task title is required', 400);
@@ -57,6 +57,7 @@ const createTask = async (req, res) => {
     priority: priority || 'Medium',
     status: 'Pending',
     due_date: due_date || new Date(Date.now() + 86400000).toISOString(),
+    deadline_time: deadline_time || '18:00',
     assigned_to: finalAssignedTo,
     lead_id: lead_id || null,
     created_at: new Date().toISOString(),
