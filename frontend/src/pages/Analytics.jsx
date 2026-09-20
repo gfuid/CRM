@@ -1,840 +1,536 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
-  TrendingUp,
-  TrendingDown,
-  ChevronDown,
-  Search,
-  Filter,
-  Download,
-  Plus,
-  Edit3,
-  Trash2,
-  Check,
-  DollarSign,
-  Briefcase,
   Users,
-  ShieldCheck,
+  TrendingUp,
+  CheckCircle2,
+  Globe,
+  Download,
+  Filter,
+  Search,
+  Package,
+  Layers,
+  UserCheck,
   Building2,
-  Calendar,
-  Sparkles,
+  PieChart,
+  BarChart3,
   ArrowUpRight,
-  SlidersHorizontal,
-  X
+  ShieldCheck,
+  AlertCircle
 } from 'lucide-react';
-import Modal from '../components/Modal';
-import TradeCalendar from '../components/TradeCalendar';
+import { api } from '../services/api';
+
+// Realistic Trade Country Flag Mapping
+const COUNTRY_FLAGS = {
+  'Bangladesh': '🇧🇩',
+  'Nepal': '🇳🇵',
+  'Vietnam': '🇻🇳',
+  'Malaysia': '🇲🇾',
+  'Not specified': '🌐',
+  'India': '🇮🇳',
+  'Russia': '🇷🇺',
+  'Indonesia': '🇮🇩',
+  'Saudi Arabia': '🇸🇦',
+  'Greece': '🇬🇷',
+};
+
+// Commodity color and icon accents
+const PRODUCT_COLORS = {
+  'turmeric': 'bg-amber-500 text-amber-500',
+  'rice ddgs': 'bg-emerald-500 text-emerald-500',
+  'corn ddgs': 'bg-yellow-500 text-yellow-500',
+  'dorb': 'bg-teal-500 text-teal-500',
+  'chilli': 'bg-rose-500 text-rose-500',
+  'maize': 'bg-orange-500 text-orange-500',
+  'rsm': 'bg-blue-500 text-blue-500',
+  'Not specified': 'bg-slate-400 text-slate-400',
+  'ginger': 'bg-lime-500 text-lime-500',
+};
 
 export default function Analytics() {
-  const [selectedYear, setSelectedYear] = useState('2025');
-  const [selectedMonth, setSelectedMonth] = useState('Apr');
-  const [timeframe, setTimeframe] = useState('This Month');
-  const [chartView, setChartView] = useState('calendar'); // 'calendar' | 'matrix'
-  const [tableSearch, setTableSearch] = useState('');
-  const [categoryFilter, setCategoryFilter] = useState('All');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedFilter, setSelectedFilter] = useState('all');
 
-  // Modal states
-  const [modalOpen, setModalOpen] = useState(false);
-  const [editingDeal, setEditingDeal] = useState(null);
+  // Baseline data provided by the user
+  const totalLeads = 252;
+  const inPipeline = 250;
+  const closedWon = 2;
+  const exportCount = 252;
+  const domesticCount = 0;
 
-  // 12 Months revenue data for Dot-Matrix Chart
-  const monthlyData = {
-    '2025': [
-      { month: 'Jan', online: 4, offline: 3, total: 18420, onlineRev: 10420, offlineRev: 8000 },
-      { month: 'Feb', online: 7, offline: 5, total: 24190, onlineRev: 14190, offlineRev: 10000 },
-      { month: 'Mar', online: 9, offline: 6, total: 31840, onlineRev: 18840, offlineRev: 13000 },
-      { month: 'Apr', online: 12, offline: 8, total: 28923, onlineRev: 17366, offlineRev: 11557 },
-      { month: 'May', online: 6, offline: 4, total: 21300, onlineRev: 13300, offlineRev: 8000 },
-      { month: 'Jun', online: 5, offline: 3, total: 19850, onlineRev: 11850, offlineRev: 8000 },
-      { month: 'Jul', online: 8, offline: 6, total: 27410, onlineRev: 16410, offlineRev: 11000 },
-      { month: 'Aug', online: 10, offline: 7, total: 33650, onlineRev: 20650, offlineRev: 13000 },
-      { month: 'Sep', online: 7, offline: 5, total: 26100, onlineRev: 15100, offlineRev: 11000 },
-      { month: 'Oct', online: 11, offline: 9, total: 39400, onlineRev: 23400, offlineRev: 16000 },
-      { month: 'Nov', online: 8, offline: 6, total: 29820, onlineRev: 17820, offlineRev: 12000 },
-      { month: 'Dec', online: 13, offline: 9, total: 44950, onlineRev: 27950, offlineRev: 17000 },
-    ],
-    '2024': [
-      { month: 'Jan', online: 3, offline: 2, total: 14200, onlineRev: 8200, offlineRev: 6000 },
-      { month: 'Feb', online: 5, offline: 4, total: 19500, onlineRev: 11500, offlineRev: 8000 },
-      { month: 'Mar', online: 7, offline: 5, total: 25000, onlineRev: 15000, offlineRev: 10000 },
-      { month: 'Apr', online: 9, offline: 6, total: 22400, onlineRev: 13400, offlineRev: 9000 },
-      { month: 'May', online: 5, offline: 3, total: 17800, onlineRev: 10800, offlineRev: 7000 },
-      { month: 'Jun', online: 4, offline: 3, total: 16200, onlineRev: 9200, offlineRev: 7000 },
-      { month: 'Jul', online: 6, offline: 4, total: 21500, onlineRev: 12500, offlineRev: 9000 },
-      { month: 'Aug', online: 8, offline: 5, total: 27000, onlineRev: 16000, offlineRev: 11000 },
-      { month: 'Sep', online: 6, offline: 4, total: 21000, onlineRev: 12000, offlineRev: 9000 },
-      { month: 'Oct', online: 9, offline: 7, total: 31000, onlineRev: 18000, offlineRev: 13000 },
-      { month: 'Nov', online: 7, offline: 5, total: 24000, onlineRev: 14000, offlineRev: 10000 },
-      { month: 'Dec', online: 11, offline: 8, total: 36000, onlineRev: 21000, offlineRev: 15000 },
-    ],
-  };
+  // Leads by Country
+  const countryBreakdown = [
+    { country: 'Bangladesh', count: 81, pct: 32, flag: '🇧🇩' },
+    { country: 'Nepal', count: 58, pct: 23, flag: '🇳🇵' },
+    { country: 'Vietnam', count: 47, pct: 19, flag: '🇻🇳' },
+    { country: 'Malaysia', count: 41, pct: 16, flag: '🇲🇾' },
+    { country: 'Not specified', count: 13, pct: 5, flag: '🌐' },
+    { country: 'India', count: 4, pct: 2, flag: '🇮🇳' },
+    { country: 'Russia', count: 3, pct: 1, flag: '🇷🇺' },
+    { country: 'Indonesia', count: 2, pct: 1, flag: '🇮🇩' },
+    { country: 'Saudi Arabia', count: 2, pct: 1, flag: '🇸🇦' },
+    { country: 'Greece', count: 1, pct: 0, flag: '🇬🇷' },
+  ];
 
-  const currentYearData = monthlyData[selectedYear] || monthlyData['2025'];
-  const activeMonthObj = currentYearData.find((m) => m.month === selectedMonth) || currentYearData[3];
-  const yearTotalRevenue = currentYearData.reduce((sum, m) => sum + m.total, 0);
+  // Leads by Product
+  const productBreakdown = [
+    { product: 'turmeric', count: 176, pct: 52, color: 'bg-amber-500' },
+    { product: 'rice ddgs', count: 38, pct: 11, color: 'bg-emerald-500' },
+    { product: 'corn ddgs', count: 31, pct: 9, color: 'bg-yellow-500' },
+    { product: 'dorb', count: 26, pct: 8, color: 'bg-teal-500' },
+    { product: 'chilli', count: 20, pct: 6, color: 'bg-rose-500' },
+    { product: 'maize', count: 19, pct: 6, color: 'bg-orange-500' },
+    { product: 'rsm', count: 18, pct: 5, color: 'bg-blue-500' },
+    { product: 'Not specified', count: 7, pct: 2, color: 'bg-slate-400' },
+    { product: 'ginger', count: 4, pct: 1, color: 'bg-lime-500' },
+  ];
 
-  // Performance breakdown based on timeframe
-  const performanceData = {
-    'This Month': { salesAchieved: '$493,200', salesPct: 82, kpiPct: 71, csatPct: 86 },
-    'Last Month': { salesAchieved: '$420,100', salesPct: 74, kpiPct: 68, csatPct: 84 },
-    'This Quarter': { salesAchieved: '$1,380,000', salesPct: 88, kpiPct: 76, csatPct: 89 },
-    'Year to Date': { salesAchieved: '$2,522,895', salesPct: 91, kpiPct: 80, csatPct: 88 },
-  }[timeframe] || { salesAchieved: '$493,200', salesPct: 82, kpiPct: 71, csatPct: 86 };
+  // Pipeline Status
+  const pipelineStatus = [
+    { status: 'Lead Generation', count: 101, pct: 40, color: 'bg-blue-500', barColor: 'from-blue-500 to-indigo-500' },
+    { status: 'Contact Established', count: 88, pct: 35, color: 'bg-amber-500', barColor: 'from-amber-400 to-orange-500' },
+    { status: 'Closed Lost', count: 61, pct: 24, color: 'bg-rose-500', barColor: 'from-rose-500 to-red-600' },
+    { status: 'Closed Won', count: 2, pct: 1, color: 'bg-emerald-500', barColor: 'from-emerald-500 to-teal-500' },
+  ];
 
-  // Authentic Global Commodity Export Deals & Shipments
-  const [deals, setDeals] = useState([
-    {
-      id: 'deal_1',
-      name: 'Curcumin 3.5% Turmeric Finger Consignment (50 MT)',
-      code: '#EXP-88421',
-      category: 'Spices Export',
-      client: 'Al-Barakah Global Agro Foods LLC (UAE 🇦🇪)',
-      seats: 50, // Metric Tons
-      unitPrice: 1680,
-      revenue: 84000,
-      status: 'Closed Won',
-      date: '19 Sep 2026',
-    },
-    {
-      id: 'deal_2',
-      name: 'Teja S4 Stemless Red Chilli (36 MT)',
-      code: '#EXP-91043',
-      category: 'Spices Export',
-      client: 'VietSpices Import & Distribution (Vietnam 🇻🇳)',
-      seats: 36,
-      unitPrice: 1902,
-      revenue: 68500,
-      status: 'Negotiation',
-      date: '19 Sep 2026',
-    },
-    {
-      id: 'deal_3',
-      name: 'Rice DDGS & DORB High-Protein Animal Feed (120 MT)',
-      code: '#EXP-77312',
-      category: 'Feed Ingredients',
-      client: 'Continental Feeds BV (Netherlands 🇳🇱)',
-      seats: 120,
-      unitPrice: 1183,
-      revenue: 142000,
-      status: 'Closed Won',
-      date: '18 Sep 2026',
-    },
-    {
-      id: 'deal_4',
-      name: 'Yellow Maize & Soya Seed Rail Consignment (85 MT)',
-      code: '#EXP-44021',
-      category: 'Grain & Oilseed',
-      client: 'Dhaka Agro Feeds Ltd (Bangladesh 🇧🇩)',
-      seats: 85,
-      unitPrice: 894,
-      revenue: 76000,
-      status: 'Closed Won',
-      date: '20 Sep 2026',
-    },
-    {
-      id: 'deal_5',
-      name: 'Fresh Tender Coconut Diamond Cut Reefer Container',
-      code: '#EXP-33104',
-      category: 'Fresh Produce',
-      client: 'Ceylon Tropical Goods PLC (Sri Lanka 🇱🇰)',
-      seats: 25,
-      unitPrice: 1280,
-      revenue: 32000,
-      status: 'Proposal Sent',
-      date: '21 Sep 2026',
-    },
-    {
-      id: 'deal_6',
-      name: 'Double Polish Turmeric Fingers CIF Dammam',
-      code: '#EXP-12890',
-      category: 'Spices Export',
-      client: 'Gulf Spice Processing Est. (Saudi Arabia 🇸🇦)',
-      seats: 35,
-      unitPrice: 1657,
-      revenue: 58000,
-      status: 'Closed Won',
-      date: '16 Sep 2026',
-    },
-  ]);
+  // Leads by Responsible Person (Team Workload)
+  const teamWorkload = [
+    { name: 'Rohan', count: 48, pct: 19, role: 'Senior Trader', avatar: 'RO', color: 'from-blue-600 to-indigo-600' },
+    { name: 'Shiva', count: 39, pct: 15, role: 'Export Manager', avatar: 'SH', color: 'from-emerald-600 to-teal-600' },
+    { name: 'David', count: 35, pct: 14, role: 'Trade Specialist', avatar: 'DA', color: 'from-amber-600 to-orange-600' },
+    { name: 'Preetham', count: 31, pct: 12, role: 'Sales Executive', avatar: 'PR', color: 'from-purple-600 to-indigo-600' },
+    { name: 'adric', count: 27, pct: 11, role: 'Key Accounts', avatar: 'AD', color: 'from-pink-600 to-rose-600' },
+    { name: 'aarav', count: 24, pct: 10, role: 'Desk Trader', avatar: 'AA', color: 'from-cyan-600 to-blue-600' },
+    { name: 'Rahul', count: 21, pct: 8, role: 'Commodity Rep', avatar: 'RA', color: 'from-teal-600 to-emerald-600' },
+    { name: 'Dan', count: 16, pct: 6, role: 'Regional Lead', avatar: 'DA', color: 'from-violet-600 to-purple-600' },
+    { name: 'Pavithra', count: 11, pct: 4, role: 'Operations Associate', avatar: 'PA', color: 'from-fuchsia-600 to-pink-600' },
+  ];
 
-  // Form State for Add / Edit Deal Modal
-  const [dealForm, setDealForm] = useState({
-    name: '',
-    category: 'Spices Export',
-    client: '',
-    seats: 20,
-    unitPrice: 1500,
-    status: 'Proposal Sent',
-  });
+  // Export Analytics Summary to CSV
+  const handleExportAnalyticsCSV = () => {
+    const lines = [];
+    lines.push('Category,Item,Lead Count,Percentage');
+    lines.push(`Overview,Total Leads,${totalLeads},100%`);
+    lines.push(`Overview,In Pipeline,${inPipeline},99.2%`);
+    lines.push(`Overview,Closed Won,${closedWon},0.8%`);
+    lines.push(`Overview,Export,${exportCount},100%`);
+    lines.push(`Overview,Domestic,${domesticCount},0%`);
 
-  const handleOpenAdd = () => {
-    setEditingDeal(null);
-    setDealForm({
-      name: '',
-      category: 'Enterprise Cloud',
-      client: '',
-      seats: 10,
-      unitPrice: 1000,
-      status: 'Proposal Sent',
+    countryBreakdown.forEach((c) => {
+      lines.push(`Country,${c.country},${c.count},${c.pct}%`);
     });
-    setModalOpen(true);
-  };
-
-  const handleOpenEdit = (deal) => {
-    setEditingDeal(deal);
-    setDealForm({
-      name: deal.name,
-      category: deal.category,
-      client: deal.client,
-      seats: deal.seats,
-      unitPrice: deal.unitPrice,
-      status: deal.status,
+    productBreakdown.forEach((p) => {
+      lines.push(`Product,${p.product},${p.count},${p.pct}%`);
     });
-    setModalOpen(true);
-  };
+    pipelineStatus.forEach((s) => {
+      lines.push(`Pipeline Status,${s.status},${s.count},${s.pct}%`);
+    });
+    teamWorkload.forEach((m) => {
+      lines.push(`Responsible Person,${m.name},${m.count},${m.pct}%`);
+    });
 
-  const handleSaveDeal = (e) => {
-    e.preventDefault();
-    const calculatedRevenue = Number(dealForm.seats) * Number(dealForm.unitPrice);
-
-    if (editingDeal) {
-      setDeals(
-        deals.map((d) =>
-          d.id === editingDeal.id
-            ? {
-                ...d,
-                ...dealForm,
-                seats: Number(dealForm.seats),
-                unitPrice: Number(dealForm.unitPrice),
-                revenue: calculatedRevenue,
-              }
-            : d
-        )
-      );
-    } else {
-      const newDeal = {
-        id: 'deal_' + Date.now(),
-        code: `#D-${Math.floor(10000 + Math.random() * 90000)}`,
-        ...dealForm,
-        seats: Number(dealForm.seats),
-        unitPrice: Number(dealForm.unitPrice),
-        revenue: calculatedRevenue,
-        date: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }),
-      };
-      setDeals([newDeal, ...deals]);
-    }
-    setModalOpen(false);
-  };
-
-  const handleDeleteDeal = (id) => {
-    if (window.confirm('Delete this enterprise contract record?')) {
-      setDeals(deals.filter((d) => d.id !== id));
-    }
-  };
-
-  const handleExportCSV = () => {
-    const headers = ['Deal Name', 'Contract Code', 'Category', 'Client', 'Seats/Units', 'Unit Price ($)', 'Total Revenue ($)', 'Status', 'Date'];
-    const rows = deals.map((d) => [
-      `"${d.name}"`,
-      d.code,
-      `"${d.category}"`,
-      `"${d.client}"`,
-      d.seats,
-      d.unitPrice,
-      d.revenue,
-      d.status,
-      d.date,
-    ]);
-    const csvContent = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const csvContent = 'data:text/csv;charset=utf-8,' + encodeURIComponent(lines.join('\n'));
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', `Travel_Trade_CRM_Deals_${selectedYear}.csv`);
+    link.setAttribute('href', csvContent);
+    link.setAttribute('download', `trade_lead_analytics_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
-  // Filtered Deals
-  const filteredDeals = deals.filter((d) => {
-    const matchesSearch =
-      d.name.toLowerCase().includes(tableSearch.toLowerCase()) ||
-      d.client.toLowerCase().includes(tableSearch.toLowerCase()) ||
-      d.code.toLowerCase().includes(tableSearch.toLowerCase());
-    const matchesCategory = categoryFilter === 'All' || d.category === categoryFilter;
-    return matchesSearch && matchesCategory;
-  });
+  // Filtered Country items
+  const filteredCountries = countryBreakdown.filter((c) =>
+    c.country.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Filtered Product items
+  const filteredProducts = productBreakdown.filter((p) =>
+    p.product.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
   return (
-    <div className="w-full space-y-6">
-      {/* 1. COMPACT 4-IN-1 SUMMARY BOX (As requested: "ese ek small box mian kro") */}
-      <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-3.5 sm:p-5">
-        <div className="grid grid-cols-2 lg:grid-cols-4 divide-y sm:divide-y-0 sm:divide-x divide-slate-100 gap-3 sm:gap-0">
-          {/* Metric 1 */}
-          <div className="sm:px-4 first:pl-0">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Pipeline Revenue</span>
-              <span className="p-1 rounded-md bg-emerald-50 text-emerald-600">
-                <DollarSign size={13} />
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">$101,491</div>
-              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                <TrendingUp size={11} /> +1.50%
-              </div>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">vs last week</div>
+    <div className="w-full space-y-6 pb-12 antialiased">
+      {/* Page Title & Subtitle Banner */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+        <div>
+          <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white tracking-tight">
+            Analytics
+          </h1>
+          <p className="text-xs sm:text-sm font-medium text-slate-500 dark:text-slate-400 mt-1">
+            Charts and insights across your leads
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          {/* Quick Search */}
+          <div className="relative">
+            <Search size={14} className="absolute left-3 top-2.5 text-slate-400" />
+            <input
+              type="text"
+              placeholder="Search metrics..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-8 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-800 dark:text-slate-100 outline-none focus:ring-2 focus:ring-emerald-500 w-36 sm:w-48"
+            />
           </div>
 
-          {/* Metric 2 */}
-          <div className="sm:px-4 pt-3 sm:pt-0">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Enterprise Seats</span>
-              <span className="p-1 rounded-md bg-blue-50 text-blue-600">
-                <Briefcase size={13} />
-              </span>
-            </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">4,346</div>
-              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded-full">
-                <TrendingUp size={11} /> +2.10%
-              </div>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">vs target</div>
-          </div>
+          {/* Download CSV Button */}
+          <button
+            onClick={handleExportAnalyticsCSV}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 transition-all shadow-xs cursor-pointer"
+            title="Export complete analytics data as CSV"
+          >
+            <Download size={14} className="text-slate-500" />
+            <span className="hidden sm:inline">Export Report</span>
+          </button>
+        </div>
+      </div>
 
-          {/* Metric 3 */}
-          <div className="sm:px-4 pt-3 sm:pt-0">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Closed Contracts</span>
-              <span className="p-1 rounded-md bg-rose-50 text-rose-600">
-                <ShieldCheck size={13} />
-              </span>
+      {/* TOP 4 KPI CARDS: Total Leads, In Pipeline, Closed Won, Export/Domestic */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Total Leads */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Total leads
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <Users size={16} />
             </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">$283,142</div>
-              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded-full">
-                <TrendingDown size={11} /> -4.51%
-              </div>
-            </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">quarterly dip</div>
           </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">
+            {totalLeads}
+          </div>
+          <div className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 mt-1 flex items-center gap-1">
+            <span>Overall buyer accounts registered</span>
+          </div>
+        </div>
 
-          {/* Metric 4 */}
-          <div className="sm:px-4 pt-3 sm:pt-0 last:pr-0">
-            <div className="flex items-center justify-between text-xs font-semibold text-slate-500">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 truncate">Client Companies</span>
-              <span className="p-1 rounded-md bg-amber-50 text-amber-600">
-                <Building2 size={13} />
-              </span>
+        {/* 2. In Pipeline */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              In pipeline
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
+              <TrendingUp size={16} />
             </div>
-            <div className="flex items-baseline justify-between mt-1">
-              <div className="text-lg sm:text-2xl font-black text-slate-900 tracking-tight">8,426</div>
-              <div className="inline-flex items-center gap-0.5 text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded-full">
-                <TrendingUp size={11} /> +3.75%
-              </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">
+            {inPipeline}
+          </div>
+          <div className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 mt-1 flex items-center gap-1">
+            <span>99.2% Active in sales stages</span>
+          </div>
+        </div>
+
+        {/* 3. Closed Won */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Closed won
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <CheckCircle2 size={16} />
             </div>
-            <div className="text-[10px] text-slate-400 mt-0.5">active retention</div>
+          </div>
+          <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400 mt-2 tracking-tight">
+            {closedWon}
+          </div>
+          <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-1 flex items-center gap-1">
+            <span>Finalized export contracts</span>
+          </div>
+        </div>
+
+        {/* 4. Export / Domestic */}
+        <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 dark:text-slate-500">
+              Export / Domestic
+            </span>
+            <div className="w-8 h-8 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+              <Globe size={16} />
+            </div>
+          </div>
+          <div className="text-3xl font-black text-slate-900 dark:text-white mt-2 tracking-tight">
+            {exportCount}
+          </div>
+          <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 mt-1">
+            Export: <span className="font-bold text-slate-800 dark:text-slate-200">{exportCount}</span> · Domestic: <span className="font-bold text-slate-800 dark:text-slate-200">{domesticCount}</span>
           </div>
         </div>
       </div>
 
-      {/* 2. MIDDLE ROW: Interactive Calendar / Revenue Matrix & Performance Analytics */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Left Column: Interactive Calendar or Matrix Chart (2/3 width) */}
-        <div className="lg:col-span-2 bg-white rounded-2xl border border-slate-200/80 p-5 sm:p-6 shadow-sm">
-          {/* Header with View Switcher: Calendar (default) vs Revenue Matrix */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-100 gap-3">
+      {/* SECTION 1: Leads by Country & Leads by Product (2 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
+        {/* LEADS BY COUNTRY */}
+        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
             <div>
-              <h2 className="text-lg font-bold text-slate-900">
-                {chartView === 'calendar' ? 'Export Trade & Shipment Calendar' : 'Revenue & Inbound Contract Matrix'}
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Globe size={18} className="text-emerald-600 dark:text-emerald-400" />
+                <span>Leads by country</span>
               </h2>
               <p className="text-xs text-slate-400 mt-0.5">
-                {chartView === 'calendar'
-                  ? 'Track cargo dispatch, vessel arrivals, phytosanitary lab tests, and LC milestones'
-                  : 'Click any month below to analyze deal flow & touchpoint split'}
+                Geographical buyer distribution across {totalLeads} accounts
               </p>
             </div>
-
-            {/* View Switcher Pills */}
-            <div className="flex items-center gap-2">
-              <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-                <button
-                  onClick={() => setChartView('calendar')}
-                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
-                    chartView === 'calendar'
-                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <Calendar size={13} />
-                  <span>Calendar</span>
-                </button>
-                <button
-                  onClick={() => setChartView('matrix')}
-                  className={`px-3 py-1 rounded-lg transition-all flex items-center gap-1.5 ${
-                    chartView === 'matrix'
-                      ? 'bg-emerald-600 text-white shadow-xs font-bold'
-                      : 'text-slate-600 hover:text-slate-900'
-                  }`}
-                >
-                  <span>Dot-Matrix</span>
-                </button>
-              </div>
-
-              {chartView === 'matrix' && (
-                <div className="flex items-center gap-1 p-1 bg-slate-100 rounded-xl text-xs font-semibold">
-                  {['2024', '2025'].map((yr) => (
-                    <button
-                      key={yr}
-                      onClick={() => setSelectedYear(yr)}
-                      className={`px-2.5 py-1 rounded-lg transition-all ${
-                        selectedYear === yr ? 'bg-white text-slate-900 shadow-xs' : 'text-slate-500 hover:text-slate-800'
-                      }`}
-                    >
-                      {yr}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* Body: Render Calendar by default or Matrix Chart */}
-          {chartView === 'calendar' ? (
-            <div className="pt-4">
-              <TradeCalendar />
-            </div>
-          ) : (
-            <>
-              {/* Subtotal Headline & Channel Legend */}
-              <div className="flex flex-col sm:flex-row sm:items-baseline justify-between mt-4 gap-2">
-                <div>
-                  <div className="text-3xl font-black text-slate-900 tracking-tight">
-                    ${yearTotalRevenue.toLocaleString()}
-                  </div>
-                  <div className="text-xs text-slate-500 font-medium mt-0.5">
-                    Total Annual Revenue for FY {selectedYear}
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 text-xs font-medium text-slate-600">
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-                    <span>Enterprise Inbound</span>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-300" />
-                    <span>Outbound SDR</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Selected Month Floating Dynamic Badge */}
-              <div className="mt-4 p-3 bg-slate-50 border border-slate-100 rounded-xl flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="px-2 py-0.5 rounded bg-slate-900 text-white font-bold">{activeMonthObj.month}</span>
-                  <span className="text-slate-600 font-semibold">Selected Month Revenue:</span>
-                  <span className="text-emerald-700 font-black text-sm">${activeMonthObj.total.toLocaleString()}</span>
-                </div>
-                <div className="text-slate-500 text-[11px] hidden sm:block">
-                  Inbound: <span className="font-bold text-slate-800">${activeMonthObj.onlineRev.toLocaleString()}</span> &bull; Outbound: <span className="font-bold text-slate-800">${activeMonthObj.offlineRev.toLocaleString()}</span>
-                </div>
-              </div>
-
-              {/* Dot-Matrix Visual Columns */}
-              <div className="mt-6 pt-2">
-                <div className="grid grid-cols-12 gap-1 sm:gap-2 h-48 items-end border-b border-slate-100 pb-2">
-                  {currentYearData.map((item) => {
-                    const isSelected = item.month === selectedMonth;
-                    const totalDots = 14;
-                    const onlineDots = item.online;
-                    const offlineDots = item.offline;
-
-                    return (
-                      <button
-                        key={item.month}
-                        onClick={() => setSelectedMonth(item.month)}
-                        className={`flex flex-col items-center justify-end h-full group transition-all py-1 rounded-lg ${
-                          isSelected ? 'bg-orange-50/60 ring-2 ring-orange-400/50' : 'hover:bg-slate-50'
-                        }`}
-                        title={`${item.month}: $${item.total.toLocaleString()}`}
-                      >
-                        <div className="flex flex-col-reverse gap-1 items-center mb-2">
-                          {Array.from({ length: totalDots }).map((_, dotIdx) => {
-                            let dotColor = 'bg-slate-100';
-                            if (dotIdx < offlineDots) {
-                              dotColor = isSelected ? 'bg-emerald-400' : 'bg-emerald-200 group-hover:bg-emerald-300';
-                            } else if (dotIdx < offlineDots + onlineDots) {
-                              dotColor = isSelected ? 'bg-emerald-600' : 'bg-emerald-500 group-hover:bg-emerald-600';
-                            }
-                            return <span key={dotIdx} className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full transition-colors ${dotColor}`} />;
-                          })}
-                        </div>
-                        <span
-                          className={`text-[11px] font-bold mt-1 transition-colors ${
-                            isSelected ? 'text-orange-600 font-black' : 'text-slate-400 group-hover:text-slate-700'
-                          }`}
-                        >
-                          {item.month}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            </>
-          )}
-        </div>
-
-        {/* Right Column: Performance Indicators (1/3 width) */}
-        <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm flex flex-col justify-between">
-          <div>
-            <div className="flex items-center justify-between pb-4 border-b border-slate-100">
-              <h2 className="text-lg font-bold text-slate-900">Sales Quota & KPI</h2>
-              <select
-                value={timeframe}
-                onChange={(e) => setTimeframe(e.target.value)}
-                className="text-xs font-semibold bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1 text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
-              >
-                <option>This Month</option>
-                <option>Last Month</option>
-                <option>This Quarter</option>
-                <option>Year to Date</option>
-              </select>
-            </div>
-
-            {/* Performance Bars */}
-            <div className="space-y-5 mt-5">
-              {/* Product / Deal Target */}
-              <div>
-                <div className="flex justify-between items-center text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700">Contract Volume</span>
-                  <span className="text-mint-600 font-bold">Quota achieved ({performanceData.salesPct}%)</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gradient-to-r from-mint-500 to-mint-600 transition-all duration-500 ${
-                      performanceData.salesPct >= 95 ? 'w-full' : performanceData.salesPct >= 80 ? 'w-[85%]' : performanceData.salesPct >= 60 ? 'w-2/3' : 'w-1/2'
-                    }`}
-                  />
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1">{performanceData.salesAchieved} secured</div>
-              </div>
-
-              {/* Team Deal Conversion KPI */}
-              <div>
-                <div className="flex justify-between items-center text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700">Team Conversion KPI</span>
-                  <span className="text-blue-600 font-bold">{performanceData.kpiPct}% conversion rate</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-blue-500 transition-all duration-500 ${
-                      performanceData.kpiPct >= 95 ? 'w-full' : performanceData.kpiPct >= 80 ? 'w-[85%]' : performanceData.kpiPct >= 65 ? 'w-2/3' : 'w-1/2'
-                    }`}
-                  />
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1">Lead to Closed Won velocity</div>
-              </div>
-
-              {/* Customer Retention */}
-              <div>
-                <div className="flex justify-between items-center text-xs mb-1.5">
-                  <span className="font-semibold text-slate-700">Net Client Retention</span>
-                  <span className="text-gold-700 font-bold">{performanceData.csatPct}% renewal rate</span>
-                </div>
-                <div className="w-full h-3 rounded-full bg-slate-100 overflow-hidden">
-                  <div
-                    className={`h-full rounded-full bg-gold-500 transition-all duration-500 ${
-                      performanceData.csatPct >= 95 ? 'w-full' : performanceData.csatPct >= 90 ? 'w-[94%]' : performanceData.csatPct >= 75 ? 'w-3/4' : 'w-1/2'
-                    }`}
-                  />
-                </div>
-                <div className="text-[11px] text-slate-400 mt-1">Low churn enterprise renewals</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Action Callout */}
-          <div className="mt-6 p-4 rounded-xl bg-coral-50/70 border border-coral-200/70 text-xs text-coral-900">
-            <div className="flex items-center gap-1.5 font-bold text-coral-800">
-              <Sparkles size={14} className="text-coral-600" />
-              <span>Pipeline Health: Excellent</span>
-            </div>
-            <p className="mt-1 text-[11px] text-coral-700 leading-relaxed">
-              Q3 target is on track to surpass previous benchmarks by +14.2%.
-            </p>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. BOTTOM SECTION: Real Enterprise Deals & Contracts Table */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 p-6 shadow-sm">
-        {/* Table Top Controls */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between pb-5 border-b border-slate-100 gap-4">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900">Enterprise Deals & Active Contracts</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Manage software licenses, contract terms, and client accounts</p>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-2.5">
-            <button
-              onClick={handleExportCSV}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-semibold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl transition-all"
-            >
-              <Download size={14} />
-              <span>Export CSV</span>
-            </button>
-
-            <button
-              onClick={handleOpenAdd}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-bold text-white bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700 rounded-xl shadow-sm transition-all"
-            >
-              <Plus size={15} />
-              <span>Add Enterprise Deal</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Filter and Search Bar */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 py-4">
-          <div className="relative flex-1 max-w-md">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              placeholder="Search contracts by deal name, client, or code..."
-              value={tableSearch}
-              onChange={(e) => setTableSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 text-xs bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-coral-500"
-            />
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-xs text-slate-400 font-medium">Category:</span>
-            <select
-              value={categoryFilter}
-              onChange={(e) => setCategoryFilter(e.target.value)}
-              className="text-xs font-semibold bg-white border border-slate-200 rounded-xl px-3 py-2 text-slate-700 focus:outline-none focus:ring-2 focus:ring-coral-500"
-            >
-              <option>All</option>
-              <option>Enterprise Cloud</option>
-              <option>AI Infrastructure</option>
-              <option>FinTech Security</option>
-              <option>Healthcare Suite</option>
-              <option>Analytics</option>
-              <option>ERP Integration</option>
-            </select>
-          </div>
-        </div>
-
-        {/* Responsive Table */}
-        <div className="overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse text-xs">
-            <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] font-semibold uppercase tracking-wider text-slate-500">
-                <th className="py-3 px-4">Contract / Deal Name</th>
-                <th className="py-3 px-4">Category</th>
-                <th className="py-3 px-4">Client Company</th>
-                <th className="py-3 px-4 text-center">Seats / Units</th>
-                <th className="py-3 px-4 text-right">Unit Price</th>
-                <th className="py-3 px-4 text-right">Total Value</th>
-                <th className="py-3 px-4 text-center">Status</th>
-                <th className="py-3 px-4 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filteredDeals.length === 0 ? (
-                <tr>
-                  <td colSpan="8" className="py-12 text-center text-slate-400">
-                    No enterprise contracts found matching your filters.
-                  </td>
-                </tr>
-              ) : (
-                filteredDeals.map((deal) => (
-                  <tr key={deal.id} className="hover:bg-slate-50/60 transition-colors">
-                    <td className="py-3.5 px-4">
-                      <div className="font-bold text-slate-900">{deal.name}</div>
-                      <div className="text-[11px] font-mono text-slate-400">{deal.code}</div>
-                    </td>
-                    <td className="py-3.5 px-4 text-slate-600 font-medium">
-                      <span className="px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-[11px]">
-                        {deal.category}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 font-semibold text-slate-800">
-                      {deal.client}
-                    </td>
-                    <td className="py-3.5 px-4 text-center font-bold text-slate-700">
-                      {deal.seats} seats
-                    </td>
-                    <td className="py-3.5 px-4 text-right text-slate-600">
-                      ${deal.unitPrice.toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-4 text-right font-black text-slate-900">
-                      ${deal.revenue.toLocaleString()}
-                    </td>
-                    <td className="py-3.5 px-4 text-center">
-                      <span
-                        className={`inline-flex px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                          deal.status === 'Closed Won'
-                            ? 'bg-mint-100 text-mint-700'
-                            : deal.status === 'Negotiation'
-                            ? 'bg-gold-100 text-gold-800'
-                            : 'bg-blue-100 text-blue-700'
-                        }`}
-                      >
-                        {deal.status}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <button
-                          onClick={() => handleOpenEdit(deal)}
-                          className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                          title="Edit Contract"
-                        >
-                          <Edit3 size={14} />
-                        </button>
-                        <button
-                          onClick={() => handleDeleteDeal(deal.id)}
-                          className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
-                          title="Delete Contract"
-                        >
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
-              )}
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      {/* 4. Add / Edit Deal Modal */}
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingDeal ? 'Edit Enterprise Contract' : 'Add New Enterprise Deal'}
-      >
-        <form onSubmit={handleSaveDeal} className="space-y-4">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">
-              Deal / Contract Name *
-            </label>
-            <input
-              type="text"
-              required
-              placeholder="e.g. Acme Cloud Fleet License"
-              value={dealForm.name}
-              onChange={(e) => setDealForm({ ...dealForm, name: e.target.value })}
-              className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Category
-              </label>
-              <select
-                value={dealForm.category}
-                onChange={(e) => setDealForm({ ...dealForm, category: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-              >
-                <option>Enterprise Cloud</option>
-                <option>AI Infrastructure</option>
-                <option>FinTech Security</option>
-                <option>Healthcare Suite</option>
-                <option>Analytics</option>
-                <option>ERP Integration</option>
-              </select>
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Client Company Name *
-              </label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Acme Corp"
-                value={dealForm.client}
-                onChange={(e) => setDealForm({ ...dealForm, client: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Seats / Licenses
-              </label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={dealForm.seats}
-                onChange={(e) => setDealForm({ ...dealForm, seats: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Unit Price ($)
-              </label>
-              <input
-                type="number"
-                min="1"
-                required
-                value={dealForm.unitPrice}
-                onChange={(e) => setDealForm({ ...dealForm, unitPrice: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">
-                Deal Status
-              </label>
-              <select
-                value={dealForm.status}
-                onChange={(e) => setDealForm({ ...dealForm, status: e.target.value })}
-                className="w-full px-3 py-2 text-xs border border-slate-300 rounded-lg focus:ring-2 focus:ring-coral-500"
-              >
-                <option>Proposal Sent</option>
-                <option>Negotiation</option>
-                <option>Closed Won</option>
-                <option>Qualified</option>
-              </select>
-            </div>
-          </div>
-
-          <div className="p-3 bg-slate-50 rounded-xl text-xs flex justify-between items-center text-slate-600">
-            <span>Total Calculated Value:</span>
-            <span className="text-base font-black text-slate-900">
-              ${(Number(dealForm.seats || 0) * Number(dealForm.unitPrice || 0)).toLocaleString()}
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+              {countryBreakdown.length} Countries
             </span>
           </div>
 
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-xs font-medium text-slate-600 hover:bg-slate-100 rounded-lg"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-xs font-bold text-white bg-coral-500 hover:bg-coral-600 rounded-lg shadow-sm"
-            >
-              {editingDeal ? 'Update Contract' : 'Save Deal'}
-            </button>
+          <div className="space-y-3">
+            {filteredCountries.map((c) => (
+              <div key={c.country} className="group">
+                <div className="flex items-center justify-between text-xs font-bold mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className="text-base">{c.flag}</span>
+                    <span className="text-slate-800 dark:text-slate-200 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {c.country}
+                    </span>
+                  </div>
+                  <div className="text-right text-slate-600 dark:text-slate-300">
+                    <span className="font-extrabold text-slate-900 dark:text-white">{c.count}</span>{' '}
+                    <span className="text-slate-400 font-medium">({c.pct}%)</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-full rounded-full bg-emerald-500 transition-all duration-500"
+                    style={{ width: `${Math.max(c.pct, 1.5)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
           </div>
-        </form>
-      </Modal>
+        </div>
+
+        {/* LEADS BY PRODUCT */}
+        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Package size={18} className="text-amber-500" />
+                <span>Leads by product</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Commodity demand breakdown across inquiry records
+              </p>
+            </div>
+            <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-800 dark:text-amber-300">
+              {productBreakdown.length} Commodities
+            </span>
+          </div>
+
+          <div className="space-y-3">
+            {filteredProducts.map((p) => (
+              <div key={p.product} className="group">
+                <div className="flex items-center justify-between text-xs font-bold mb-1">
+                  <div className="flex items-center gap-2">
+                    <span className={`w-2.5 h-2.5 rounded-full ${p.color}`} />
+                    <span className="capitalize text-slate-800 dark:text-slate-200 group-hover:text-amber-600 dark:group-hover:text-amber-400 transition-colors">
+                      {p.product}
+                    </span>
+                  </div>
+                  <div className="text-right text-slate-600 dark:text-slate-300">
+                    <span className="font-extrabold text-slate-900 dark:text-white">{p.count}</span>{' '}
+                    <span className="text-slate-400 font-medium">({p.pct}%)</span>
+                  </div>
+                </div>
+
+                {/* Progress bar */}
+                <div className="w-full h-2 rounded-full bg-slate-100 dark:bg-slate-800 overflow-hidden">
+                  <div
+                    className={`h-full rounded-full ${p.color} transition-all duration-500`}
+                    style={{ width: `${Math.max(p.pct, 1.5)}%` }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 2: Pipeline Status & Industry Split (2 Columns) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        {/* PIPELINE STATUS (Takes 2 columns) */}
+        <div className="lg:col-span-2 bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+          <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+            <div>
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                <Layers size={18} className="text-blue-600 dark:text-blue-400" />
+                <span>Pipeline status</span>
+              </h2>
+              <p className="text-xs text-slate-400 mt-0.5">
+                Current deal progression across active trade stages
+              </p>
+            </div>
+            <span className="text-xs font-bold text-slate-500">
+              {totalLeads} Total Inquiries
+            </span>
+          </div>
+
+          {/* Segmented Funnel Bar */}
+          <div className="w-full h-4 rounded-xl bg-slate-100 dark:bg-slate-800 flex overflow-hidden mb-6 p-0.5 shadow-inner">
+            {pipelineStatus.map((s) => (
+              <div
+                key={s.status}
+                className={`h-full first:rounded-l-lg last:rounded-r-lg bg-gradient-to-r ${s.barColor}`}
+                style={{ width: `${s.pct}%` }}
+                title={`${s.status}: ${s.count} (${s.pct}%)`}
+              />
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+            {pipelineStatus.map((s) => (
+              <div
+                key={s.status}
+                className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 flex items-center justify-between"
+              >
+                <div className="flex items-center gap-2.5">
+                  <span className={`w-3 h-3 rounded-full ${s.color}`} />
+                  <div>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                      {s.status}
+                    </span>
+                    <span className="text-[11px] text-slate-400">
+                      {s.pct}% of total inquiries
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-sm font-black text-slate-900 dark:text-white block">
+                    {s.count}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    ({s.pct}%)
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* INDUSTRY SPLIT (Takes 1 column) */}
+        <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors flex flex-col justify-between">
+          <div>
+            <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+              <div>
+                <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+                  <PieChart size={18} className="text-teal-600 dark:text-teal-400" />
+                  <span>Industry split</span>
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  Export vs. Domestic trade focus
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-2">
+              <div className="p-4 rounded-xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/50">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-black uppercase text-emerald-800 dark:text-emerald-300">
+                    Export Trade
+                  </span>
+                  <span className="text-xs font-black text-emerald-700 dark:text-emerald-400">
+                    252 (100%)
+                  </span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-emerald-200 dark:bg-emerald-900 overflow-hidden">
+                  <div className="h-full rounded-full bg-emerald-600 w-full" />
+                </div>
+                <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block mt-2 font-medium">
+                  Primary trade mandate across Bangladesh, Nepal, Vietnam & Southeast Asia.
+                </span>
+              </div>
+
+              <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 opacity-60">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-xs font-bold uppercase text-slate-600 dark:text-slate-400">
+                    Domestic Trade
+                  </span>
+                  <span className="text-xs font-bold text-slate-500">
+                    0 (0%)
+                  </span>
+                </div>
+                <div className="w-full h-2.5 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                  <div className="h-full rounded-full bg-slate-400 w-0" />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-400 text-center font-medium">
+            100% Export-Oriented Trading Desk
+          </div>
+        </div>
+      </div>
+
+      {/* SECTION 3: Leads by Responsible Person (Team Workload Overview) */}
+      <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-5">
+          <div>
+            <h2 className="text-base sm:text-lg font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
+              <UserCheck size={19} className="text-indigo-600 dark:text-indigo-400" />
+              <span>Leads by responsible person</span>
+            </h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Team workload overview across all 252 registered trade inquiries
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2 text-xs font-bold text-slate-500">
+            <span>{teamWorkload.length} Active Representatives</span>
+          </div>
+        </div>
+
+        {/* 9 Team Members Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {teamWorkload.map((member) => (
+            <div
+              key={member.name}
+              className="p-4 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60 hover:bg-slate-100/70 dark:hover:bg-slate-800 transition-all group"
+            >
+              <div className="flex items-center justify-between mb-2.5">
+                <div className="flex items-center gap-3">
+                  <div className={`w-9 h-9 rounded-xl bg-gradient-to-br ${member.color} text-white flex items-center justify-center font-black text-xs shadow-xs`}>
+                    {member.avatar}
+                  </div>
+                  <div>
+                    <h3 className="text-xs font-extrabold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      {member.name}
+                    </h3>
+                    <span className="text-[10px] text-slate-400 block font-medium">
+                      {member.role}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right">
+                  <span className="text-sm font-black text-slate-900 dark:text-white block">
+                    {member.count}
+                  </span>
+                  <span className="text-[10px] font-bold text-slate-400">
+                    {member.pct}% of leads
+                  </span>
+                </div>
+              </div>
+
+              {/* Workload Progress Bar */}
+              <div className="w-full h-2 rounded-full bg-slate-200 dark:bg-slate-700 overflow-hidden">
+                <div
+                  className={`h-full rounded-full bg-gradient-to-r ${member.color} transition-all duration-500`}
+                  style={{ width: `${Math.max(member.pct * 4, 10)}%` }}
+                />
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
