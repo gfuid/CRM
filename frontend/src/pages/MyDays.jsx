@@ -12,39 +12,41 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 
+import { api } from '../services/api';
+
 export default function MyDays() {
   const [tasks, setTasks] = useState([
     {
       id: 'day_1',
-      task: 'Review Q3 enterprise proposal with Nexis FinTech team',
+      task: 'Finalize SGS Inspection booking for JNPT container',
       priority: 'high',
       completed: true,
       time_slot: '09:30 AM - 10:30 AM',
-      category: 'Client Meeting',
+      category: 'Export Compliance',
     },
     {
       id: 'day_2',
-      task: 'Follow up on signed DocuSign contract for Apex Logistics ($48,000)',
+      task: 'Call Al-Barakah VP Procurement regarding LC opening for 50 MT Turmeric',
       priority: 'high',
       completed: false,
       time_slot: '11:00 AM - 11:30 AM',
-      category: 'Contract Closing',
+      category: 'Client Trade Sync',
     },
     {
       id: 'day_3',
-      task: 'Team standup: verify weekly outbound call targets and lead allocation',
+      task: 'Check Guntur Red Chilli mandi spot prices & procurement parity',
       priority: 'medium',
       completed: true,
       time_slot: '02:00 PM - 02:30 PM',
-      category: 'Team Standup',
+      category: 'Market Sourcing',
     },
     {
       id: 'day_4',
-      task: 'Audit newly invited staff accounts against Growth Plan quota (15 seats)',
+      task: 'Verify Maersk ocean freight bill of lading drafts for Rotterdam shipment',
       priority: 'medium',
       completed: false,
       time_slot: '04:30 PM - 05:00 PM',
-      category: 'Admin & Quotas',
+      category: 'Shipping & Logistics',
     },
   ]);
 
@@ -53,14 +55,11 @@ export default function MyDays() {
     task: '',
     priority: 'high',
     time_slot: '01:00 PM - 01:30 PM',
-    category: 'Sales Follow-up',
+    category: 'Export Operations',
   });
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/v1/my-days', {
-      headers: { 'x-user-id': 'usr_admin_1' },
-    })
-      .then((r) => r.json())
+    api.getMyDays()
       .then((res) => {
         if (res.success && res.data && res.data.length > 0) {
           setTasks(res.data);
@@ -76,18 +75,12 @@ export default function MyDays() {
     setTasks((prev) =>
       prev.map((t) => (t.id === id ? { ...t, completed: !t.completed } : t))
     );
-    fetch(`http://localhost:5000/api/v1/my-days/${id}/toggle`, {
-      method: 'PATCH',
-      headers: { 'x-user-id': 'usr_admin_1' },
-    }).catch(() => {});
+    api.toggleMyDay(id).catch(() => {});
   };
 
   const deleteTask = (id) => {
     setTasks((prev) => prev.filter((t) => t.id !== id));
-    fetch(`http://localhost:5000/api/v1/my-days/${id}`, {
-      method: 'DELETE',
-      headers: { 'x-user-id': 'usr_admin_1' },
-    }).catch(() => {});
+    api.deleteMyDay(id).catch(() => {});
   };
 
   const handleAddTask = (e) => {
@@ -102,12 +95,13 @@ export default function MyDays() {
       category: newTask.category,
     };
     setTasks([...tasks, entry]);
+    api.addMyDay(entry).catch(() => {});
     setModalOpen(false);
     setNewTask({
       task: '',
       priority: 'high',
       time_slot: '01:00 PM - 01:30 PM',
-      category: 'Sales Follow-up',
+      category: 'Export Operations',
     });
   };
 

@@ -7,39 +7,48 @@ import { Plus, Trash2, CheckCircle2, Clock, AlertTriangle } from 'lucide-react';
 const MOCK_TASKS = [
   {
     id: 'task_1',
-    title: 'Review Q3 Enterprise Proposal with Nexis FinTech team',
-    description: 'Ensure 15-seat quota and dedicated SLA terms are included before DocuSign send',
+    title: 'Send Pre-Shipment Sample of Curcumin 3.5% Turmeric to Al-Barakah',
+    description: 'Prepare 500g double-polished turmeric finger samples with lab certificate and dispatch via DHL.',
     priority: 'High',
-    due_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    status: 'Pending',
-    assigned_name: 'Sarah Jenkins',
+    due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
+    status: 'In Progress',
+    assigned_name: 'Athish',
   },
   {
     id: 'task_2',
-    title: 'Follow up on signed DocuSign contract for Apex Logistics ($48,000)',
-    description: 'Call David Vance to confirm billing details and onboarding kickoff date',
+    title: 'Confirm Phytosanitary Certificate for VietSpices Red Chilli at Chennai Port',
+    description: 'Coordinate with Plant Quarantine department for 2x40ft Teja stemless red chilli containers.',
     priority: 'High',
-    due_date: new Date().toISOString().split('T')[0],
-    status: 'In Progress',
-    assigned_name: 'Michael Vance',
+    due_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+    status: 'Pending',
+    assigned_name: 'Athish',
   },
   {
     id: 'task_3',
-    title: 'Team standup: verify weekly outbound call targets and lead allocation',
-    description: 'Review SDR outreach numbers and adjust cadences for UK/EU prospects',
-    priority: 'Medium',
-    due_date: new Date(Date.now() + 86400000).toISOString().split('T')[0],
-    status: 'Pending',
-    assigned_name: 'Alex Morgan',
+    title: 'Review Mundra Port Ocean Freight Rates for Rice DDGS to Rotterdam',
+    description: 'Compare Maersk and MSC 40ft container freight quotes for 120 MT consignment.',
+    priority: 'High',
+    due_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
+    status: 'Completed',
+    assigned_name: 'Athish',
   },
   {
     id: 'task_4',
-    title: 'Audit newly invited staff accounts against Growth Plan quota (15 seats)',
-    description: 'Deactivate inactive trial accounts and ensure compliance with subscription tier',
-    priority: 'Low',
-    due_date: new Date(Date.now() + 172800000).toISOString().split('T')[0],
-    status: 'Completed',
-    assigned_name: 'Sarah Jenkins',
+    title: 'Draft Proforma Invoice for 85 MT Maize Consignment to Dhaka',
+    description: 'Specify CFR Chittagong Port terms and bank routing instructions for irrevocable LC.',
+    priority: 'Medium',
+    due_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+    status: 'Pending',
+    assigned_name: 'Athish',
+  },
+  {
+    id: 'task_5',
+    title: 'Track Reefer Container Temperature Logs for Pollachi Tender Coconut to Colombo',
+    description: 'Confirm pre-cooling at +12°C with shipping line before loading at Tuticorin Port.',
+    priority: 'Medium',
+    due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
+    status: 'In Progress',
+    assigned_name: 'Athish',
   },
 ];
 
@@ -47,9 +56,8 @@ export default function TaskManagement() {
   const { profile, getTeamMembers } = useAuth();
   const [tasks, setTasks] = useState(MOCK_TASKS);
   const [teamMembers, setTeamMembers] = useState([
-    { id: 'usr_1', full_name: 'Sarah Jenkins', name: 'Sarah Jenkins' },
-    { id: 'usr_2', full_name: 'Alex Morgan', name: 'Alex Morgan' },
-    { id: 'usr_3', full_name: 'Michael Vance', name: 'Michael Vance' },
+    { id: 'usr_athish', full_name: 'Athish', name: 'Athish' },
+    { id: 'usr_admin_1', full_name: 'Sarah Connor (Owner)', name: 'Sarah Connor' },
   ]);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
