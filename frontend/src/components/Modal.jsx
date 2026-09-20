@@ -23,22 +23,22 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-xs animate-fadeIn"
       onClick={onClose}
     >
       <div
-        className={`w-full ${maxWidth} bg-white rounded-2xl shadow-2xl border border-slate-100 overflow-hidden transition-all transform animate-scaleUp flex flex-col max-h-[90vh]`}
+        className={`w-full ${maxWidth} bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 overflow-hidden transition-all transform animate-scaleUp flex flex-col max-h-[90vh]`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 shrink-0 bg-white">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-white dark:bg-slate-900">
           <div>
-            <h2 className="text-base sm:text-lg font-bold text-slate-900">{title}</h2>
-            {subtitle && <p className="text-xs text-slate-400 mt-0.5">{subtitle}</p>}
+            <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white">{title}</h2>
+            {subtitle && <p className="text-xs text-slate-400 dark:text-slate-500 mt-0.5">{subtitle}</p>}
           </div>
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer"
+            className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             aria-label="Close modal"
           >
             <X size={18} />
@@ -52,7 +52,7 @@ export default function Modal({
 
         {/* Footer */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-3.5 bg-slate-50 border-t border-slate-100 shrink-0">
+          <div className="flex items-center justify-end gap-3 px-6 py-3.5 bg-slate-50 dark:bg-slate-800/60 border-t border-slate-100 dark:border-slate-800 shrink-0">
             {footer}
           </div>
         )}

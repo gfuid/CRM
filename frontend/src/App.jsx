@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { supabase } from './lib/supabase';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
@@ -56,11 +57,8 @@ function AppContent() {
     }
   };
 
-  // Enforce Clean Light Theme & Route History
+  // Handle browser popstate
   useEffect(() => {
-    document.documentElement.classList.remove('dark');
-    localStorage.removeItem('travel_trade_theme');
-
     const handlePopState = () => {
       setAuthMode(getInitialAuthMode());
     };
@@ -161,7 +159,7 @@ function AppContent() {
   const breadcrumbPrefix = isStaff ? 'Staff Portal' : 'Main Menu';
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row antialiased text-slate-900">
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row antialiased text-slate-900 dark:text-slate-100 transition-colors">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
@@ -214,8 +212,10 @@ function AppContent() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <AppContent />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AppContent />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

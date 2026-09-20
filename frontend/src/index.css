@@ -6,6 +6,91 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased;
+    @apply bg-slate-50 text-slate-900 font-sans antialiased transition-colors duration-150;
   }
+  .dark body {
+    @apply bg-slate-950 text-slate-100;
+  }
+}
+
+/* Comprehensive Dark Mode Layer Support */
+.dark {
+  color-scheme: dark;
+}
+
+.dark .bg-white {
+  background-color: #0f172a !important; /* slate-900 */
+}
+
+.dark .bg-slate-50 {
+  background-color: #090d16 !important;
+}
+
+.dark .bg-slate-100 {
+  background-color: #1e293b !important;
+}
+
+.dark .text-slate-900 {
+  color: #f8fafc !important;
+}
+
+.dark .text-slate-800 {
+  color: #f1f5f9 !important;
+}
+
+.dark .text-slate-700 {
+  color: #e2e8f0 !important;
+}
+
+.dark .text-slate-600 {
+  color: #cbd5e1 !important;
+}
+
+.dark .border-slate-100,
+.dark .border-slate-200,
+.dark .border-slate-200\/80 {
+  border-color: #1e293b !important;
+}
+
+.dark .hover\:bg-slate-50:hover {
+  background-color: #1e293b !important;
+}
+
+.dark .hover\:bg-slate-100:hover {
+  background-color: #334155 !important;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"]),
+.dark select,
+.dark textarea {
+  background-color: #1e293b;
+  color: #f8fafc;
+  border-color: #334155;
+}
+
+.dark input:not([type="checkbox"]):not([type="radio"])::placeholder,
+.dark textarea::placeholder {
+  color: #64748b;
+}
+
+/* Modern slim scrollbars to prevent clunky browser bars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(148, 163, 184, 0.4);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(100, 116, 139, 0.6);
+}
+.dark ::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.4);
+}
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
 }

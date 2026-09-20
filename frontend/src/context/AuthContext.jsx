@@ -263,6 +263,47 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Update profile details (Name, phone, department, avatar, password)
+  const updateProfile = async (updates) => {
+    const updated = {
+      ...(profile || {}),
+      ...updates,
+      full_name: updates.name || updates.full_name || profile?.full_name || profile?.name,
+      name: updates.name || updates.full_name || profile?.name,
+    };
+    setProfile(updated);
+    setUser((prev) => ({ ...(prev || {}), ...updates, name: updated.name }));
+
+    // Persist to local users store for offline/local continuity
+    try {
+      const email = (updated.email || user?.email || '').toLowerCase();
+      const localUsers = getLocalUsers();
+      const idx = localUsers.findIndex((u) => u.email?.toLowerCase() === email);
+      if (idx !== -1) {
+        localUsers[idx] = { ...localUsers[idx], ...updates, name: updated.name };
+        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
+      }
+    } catch (e) {
+      console.warn('Could not save updated profile to local users:', e);
+    }
+
+    // Try backend API update
+    try {
+      const res = await api.updateProfile(updates);
+      if (res && res.success && res.data) {
+        const u = res.data;
+        const merged = { ...updated, ...u, full_name: u.name };
+        setProfile(merged);
+        setUser((prev) => ({ ...(prev || {}), ...u }));
+        return merged;
+      }
+    } catch (err) {
+      console.warn('Backend updateProfile notice (using local update):', err.message);
+    }
+
+    return updated;
+  };
+
   // Sign out - terminates session and returns to login/landing
   const signOut = () => {
     localStorage.removeItem('crm_token');
@@ -301,6 +342,7 @@ export function AuthProvider({ children }) {
     addStaffMember,
     signIn,
     signOut,
+    updateProfile,
     getTeamMembers,
     isOwner,
     isAdmin: isOwner,

@@ -65,6 +65,13 @@ class ApiClient {
     return this.request('/auth/me');
   }
 
+  updateProfile(profileData) {
+    return this.request('/auth/profile', {
+      method: 'PATCH',
+      body: JSON.stringify(profileData),
+    });
+  }
+
   // Analytics
   getAnalytics() {
     return this.request('/analytics');
