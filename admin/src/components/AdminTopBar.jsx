@@ -52,7 +52,7 @@ export default function AdminTopBar({
           </div>
 
           <a
-            href="http://localhost:5173"
+            href="https://crm-amber-nine.vercel.app"
             target="_blank"
             rel="noreferrer"
             className="hidden sm:flex items-center gap-1 text-xs font-bold text-emerald-700 hover:text-emerald-800 bg-emerald-50 px-3 py-1.5 rounded-xl border border-emerald-200 transition-colors"

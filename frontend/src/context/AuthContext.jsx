@@ -77,30 +77,7 @@ export function AuthProvider({ children }) {
     initAuth();
   }, []);
 
-  // Demo profile fallback
-  const loginAsDemo = () => {
-    localStorage.removeItem('crm_logged_out');
-    const demoUser = {
-      id: 'usr_admin_1',
-      name: 'Sarah Connor (Owner)',
-      email: 'owner@travel-trade.com',
-      role: 'admin',
-      persona: 'owner',
-      department: 'Founder & CEO',
-      avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80',
-    };
-    const demoCompany = {
-      id: 'comp_traveltrade_1',
-      name: 'Travel-Trade',
-      plan: 'growth',
-      maxStaff: 50,
-    };
-    setUser(demoUser);
-    setProfile({ ...demoUser, full_name: demoUser.name });
-    setCompany(demoCompany);
-  };
-
-  // Sign in with email & password via MongoDB Backend with Resilient Fallback
+  // Sign in with email & password via Backend with Resilient Fallback
   const signIn = async ({ email, password }) => {
     localStorage.removeItem('crm_logged_out');
     const cleanEmail = email.toLowerCase().trim();
@@ -122,9 +99,9 @@ export function AuthProvider({ children }) {
         throw new Error(res.message || 'Login failed');
       }
     } catch (err) {
-      console.warn('Backend login error, checking local registered users:', err.message);
+      console.warn('Backend login response/error, checking registered accounts:', err.message);
 
-      // Check if credentials match a locally registered user
+      // Check if credentials match a registered user
       const localUsers = getLocalUsers();
       const localMatch = localUsers.find((u) => u.email.toLowerCase() === cleanEmail);
 
@@ -140,46 +117,27 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Check default demo credentials
-      if (
-        (cleanEmail === 'owner@travel-trade.com' && (password === 'admin123' || !password)) ||
-        (cleanEmail.includes('admin') && password === 'admin123')
-      ) {
-        loginAsDemo();
-        return;
+      // Check if it's a registered staff member created by the owner
+      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const staffMatch = localStaff.find((s) => s.email.toLowerCase() === cleanEmail);
+      if (staffMatch) {
+        if (!password || staffMatch.password === password) {
+          localStorage.setItem('crm_token', 'local_session_' + Date.now());
+          setUser(staffMatch);
+          setProfile({ ...staffMatch, full_name: staffMatch.name });
+          setCompany({ name: 'Travel-Trade', plan: 'growth' });
+          return { user: staffMatch };
+        } else {
+          throw new Error('Invalid credentials. Please check your password.');
+        }
       }
 
-      // If backend gave a specific business error (e.g. deactivated)
+      // If backend returned a specific error like Invalid credentials or Account deactivated
       if (err.message && !err.message.includes('Failed to fetch') && !err.message.includes('NetworkError')) {
         throw err;
       }
 
-      // Fallback: create session for valid email format
-      const fallbackUser = {
-        id: 'usr_' + Date.now(),
-        name: cleanEmail.split('@')[0],
-        email: cleanEmail,
-        password,
-        role: 'admin',
-        persona: 'owner',
-        department: 'Founder & CEO',
-        phone: '',
-        is_active: true,
-        avatar_url: `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(cleanEmail)}`,
-        created_at: new Date().toISOString(),
-      };
-      const fallbackCompany = {
-        id: 'comp_' + Date.now(),
-        name: 'Travel-Trade',
-        plan: 'enterprise',
-        maxStaff: 100,
-      };
-      saveLocalUser({ ...fallbackUser, company: fallbackCompany });
-      localStorage.setItem('crm_token', 'local_session_' + Date.now());
-      setUser(fallbackUser);
-      setProfile({ ...fallbackUser, full_name: fallbackUser.name });
-      setCompany(fallbackCompany);
-      return { user: fallbackUser, company: fallbackCompany };
+      throw new Error('No account found with this email. Please sign up to create your company workspace.');
     }
   };
 
@@ -333,7 +291,6 @@ export function AuthProvider({ children }) {
     addStaffMember,
     signIn,
     signOut,
-    loginAsDemo,
     getTeamMembers,
     isOwner,
     isAdmin: isOwner,

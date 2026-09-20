@@ -88,7 +88,7 @@ export default function AdminSidebar({ activeSection, setActiveSection, isOpen =
         {/* Footer Switcher */}
         <div className="p-3 border-t border-slate-100">
           <a
-            href="http://localhost:5173"
+            href="https://crm-amber-nine.vercel.app"
             target="_blank"
             rel="noreferrer"
             className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/60 transition-colors"

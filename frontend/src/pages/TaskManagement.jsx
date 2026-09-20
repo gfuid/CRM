@@ -55,10 +55,9 @@ const MOCK_TASKS = [
 export default function TaskManagement() {
   const { profile, getTeamMembers, isOwner, isStaff } = useAuth();
   const [tasks, setTasks] = useState(MOCK_TASKS);
-  const [teamMembers, setTeamMembers] = useState([
-    { id: 'usr_athish', full_name: 'Athish', name: 'Athish' },
-    { id: 'usr_admin_1', full_name: 'Sarah Connor (Owner)', name: 'Sarah Connor' },
-  ]);
+  const [teamMembers, setTeamMembers] = useState(
+    profile ? [{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner' }] : []
+  );
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [activeFilter, setActiveFilter] = useState('All');
@@ -82,9 +81,15 @@ export default function TaskManagement() {
   const loadTeam = async () => {
     try {
       const members = await getTeamMembers();
-      if (members && members.length > 0) setTeamMembers(members);
+      if (members && members.length > 0) {
+        setTeamMembers(members);
+      } else if (profile) {
+        setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner' }]);
+      }
     } catch {
-      // fallback
+      if (profile) {
+        setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner' }]);
+      }
     }
   };
 

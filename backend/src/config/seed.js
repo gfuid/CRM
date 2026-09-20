@@ -44,71 +44,11 @@ const syncFromDB = async () => {
 const seedMongoDB = async () => {
   try {
     const userCount = await models.User.countDocuments();
-    if (userCount === 0) {
-      console.log('🌱 Empty MongoDB database detected. Seeding initial CRM collections with secure authentication credentials...');
-
-      // Prepare users with hashed passwords
-      const salt = await bcrypt.genSalt(10);
-      const defaultHash = await bcrypt.hash('admin123', salt);
-      const agentHash = await bcrypt.hash('agent123', salt);
-
-      const usersToSeed = dataStore.users.map((u) => ({
-        ...u,
-        password: u.role === 'admin' ? defaultHash : agentHash,
-      }));
-
-      // Seed Users
-      await models.User.insertMany(usersToSeed);
-
-      // Seed Company
-      if (dataStore.company) {
-        await models.Company.create(dataStore.company);
-      }
-
-      // Seed Leads
-      if (dataStore.leads && dataStore.leads.length > 0) {
-        await models.Lead.insertMany(dataStore.leads);
-      }
-
-      // Seed Tasks
-      if (dataStore.tasks && dataStore.tasks.length > 0) {
-        await models.Task.insertMany(dataStore.tasks);
-      }
-
-      // Seed Activities
-      if (dataStore.activities && dataStore.activities.length > 0) {
-        await models.Activity.insertMany(dataStore.activities);
-      }
-
-      // Seed FollowUps
-      if (dataStore.followUps && dataStore.followUps.length > 0) {
-        await models.FollowUp.insertMany(dataStore.followUps);
-      }
-
-      // Seed MyDays
-      if (dataStore.myDays && dataStore.myDays.length > 0) {
-        await models.MyDay.insertMany(dataStore.myDays);
-      }
-
-      // Seed Outreach
-      if (dataStore.outreach && dataStore.outreach.length > 0) {
-        await models.Outreach.insertMany(dataStore.outreach);
-      }
-
-      // Seed AuditLogs
-      if (dataStore.auditLogs && dataStore.auditLogs.length > 0) {
-        await models.AuditLog.insertMany(dataStore.auditLogs);
-      }
-
-      console.log('✅ Initial CRM datasets successfully seeded to MongoDB Atlas!');
-    } else {
-      console.log(`📦 MongoDB already contains ${userCount} users. Hydrating latest state...`);
-    }
-
-    // Always synchronize dataStore with MongoDB after connecting
+    console.log(`📦 MongoDB connected with ${userCount} registered users.`);
+    // Synchronize in-memory cache with MongoDB Atlas
     await syncFromDB();
   } catch (error) {
-    console.error('⚠️  Error seeding MongoDB:', error.message);
+    console.error('⚠️  Error initializing DB sync:', error.message);
   }
 };
 

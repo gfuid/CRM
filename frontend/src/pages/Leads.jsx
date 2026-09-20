@@ -1034,19 +1034,12 @@ export default function Leads() {
               className="w-full px-3 py-2 text-xs font-semibold bg-emerald-50 border border-emerald-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-emerald-900"
             >
               <option value="">All Staff Activity</option>
-              <option value={profile?.id || 'usr_admin_1'}>{profile?.name || 'Owner'} (Direct)</option>
+              <option value={profile?.id || 'owner'}>{profile?.name || 'Owner'} (Direct)</option>
               {teamList.map((tm) => (
                 <option key={tm.id} value={tm.id}>
                   {tm.name} ({tm.department || tm.role || 'Staff'})
                 </option>
               ))}
-              {teamList.length === 0 && (
-                <>
-                  <option value="usr_athish">Athish (Commodity)</option>
-                  <option value="usr_agent_1">Sarah Jenkins</option>
-                  <option value="usr_agent_2">Michael Vance</option>
-                </>
-              )}
             </select>
           )}
         </div>
@@ -1907,7 +1900,7 @@ export default function Leads() {
                   }}
                   className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                 >
-                  <option value={profile?.id || 'usr_admin_1'}>
+                  <option value={profile?.id || 'owner'}>
                     {profile?.name || 'You (Company Owner)'} [Owner]
                   </option>
                   {teamList.map((tm) => (
@@ -1915,13 +1908,6 @@ export default function Leads() {
                       {tm.name} ({tm.department || tm.role || 'Staff'})
                     </option>
                   ))}
-                  {teamList.length === 0 && (
-                    <>
-                      <option value="usr_athish">Athish (Commodity Export)</option>
-                      <option value="usr_agent_1">Sarah Jenkins (Enterprise Sales)</option>
-                      <option value="usr_agent_2">Michael Vance (Inbound Sales)</option>
-                    </>
-                  )}
                 </select>
               ) : (
                 <div className="flex items-center gap-2">

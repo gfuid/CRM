@@ -32,8 +32,8 @@ const authenticate = async (req, res, next) => {
       }
     }
 
-    // Default to admin user in dev if neither token nor header is provided (for smooth testing)
-    if (config.nodeEnv === 'development') {
+    // Default to admin user in dev only if available and neither token nor header is provided
+    if (config.nodeEnv === 'development' && dataStore.users.length > 0) {
       const defaultUser = { ...dataStore.users[0] };
       delete defaultUser.password;
       req.user = defaultUser;

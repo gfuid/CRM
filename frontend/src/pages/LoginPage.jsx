@@ -5,8 +5,8 @@ import BrandLogo from '../components/BrandLogo';
 
 export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
   const { signIn } = useAuth();
-  const [email, setEmail] = useState('owner@travel-trade.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -49,17 +49,6 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
         <p className="text-sm text-slate-500 mb-6">
           Sign in to your Travel-Trade CRM workspace
         </p>
-
-        {/* Quick Demo Credentials Pill */}
-        <div className="flex items-center justify-between p-3 mb-5 bg-emerald-50/80 border border-emerald-200/60 rounded-xl text-xs text-emerald-800">
-          <div className="flex items-center gap-2">
-            <Sparkles size={15} className="text-emerald-600" />
-            <span>Pre-filled with Demo Owner account</span>
-          </div>
-          <span className="font-bold text-emerald-700 bg-emerald-100/80 px-2 py-0.5 rounded-md">
-            Ready
-          </span>
-        </div>
 
         {error && (
           <div className="p-3 mb-5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">

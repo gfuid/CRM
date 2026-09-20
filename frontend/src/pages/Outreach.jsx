@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
+import { api } from '../services/api';
 import {
   Phone,
   Mail,
@@ -31,57 +33,12 @@ const LinkedInIcon = ({ size = 16, className = '' }) => (
 );
 
 export default function Outreach() {
-  const [records, setRecords] = useState([
-    {
-      id: 'out_1',
-      employee_name: 'Sarah Jenkins',
-      department: 'Enterprise Sales',
-      date: new Date().toISOString().split('T')[0],
-      calls_made: 42,
-      emails_sent: 85,
-      linkedin_touches: 30,
-      meetings_booked: 4,
-      target_met: true,
-    },
-    {
-      id: 'out_2',
-      employee_name: 'Michael Vance',
-      department: 'Inbound Sales',
-      date: new Date().toISOString().split('T')[0],
-      calls_made: 38,
-      emails_sent: 70,
-      linkedin_touches: 25,
-      meetings_booked: 3,
-      target_met: true,
-    },
-    {
-      id: 'out_3',
-      employee_name: 'Alex Morgan',
-      department: 'SDR Outreach',
-      date: new Date().toISOString().split('T')[0],
-      calls_made: 18,
-      emails_sent: 35,
-      linkedin_touches: 15,
-      meetings_booked: 1,
-      target_met: false,
-    },
-    {
-      id: 'out_4',
-      employee_name: 'David Miller',
-      department: 'Enterprise Sales',
-      date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      calls_made: 45,
-      emails_sent: 90,
-      linkedin_touches: 32,
-      meetings_booked: 5,
-      target_met: true,
-    },
-  ]);
-
+  const { profile } = useAuth();
+  const [records, setRecords] = useState([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [search, setSearch] = useState('');
   const [newLog, setNewLog] = useState({
-    employee_name: 'Sarah Jenkins',
+    employee_name: profile?.name || 'Owner',
     calls_made: 30,
     emails_sent: 50,
     linkedin_touches: 20,
@@ -89,17 +46,17 @@ export default function Outreach() {
   });
 
   useEffect(() => {
-    fetch('http://localhost:5000/api/v1/outreach', {
-      headers: { 'x-user-id': 'usr_admin_1' },
-    })
-      .then((r) => r.json())
+    if (profile?.name) {
+      setNewLog((prev) => ({ ...prev, employee_name: profile.name }));
+    }
+    api.getOutreach()
       .then((res) => {
-        if (res.success && res.data && res.data.length > 0) {
+        if (res && res.success && Array.isArray(res.data)) {
           setRecords(res.data);
         }
       })
       .catch(() => {});
-  }, []);
+  }, [profile]);
 
   const totalCalls = records.reduce((s, r) => s + (r.calls_made || 0), 0);
   const totalEmails = records.reduce((s, r) => s + (r.emails_sent || 0), 0);
@@ -221,30 +178,38 @@ export default function Outreach() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {filtered.map((item) => (
-                <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                  <td className="py-3 px-3 font-semibold text-slate-900">
-                    <div>{item.employee_name}</div>
-                    <div className="text-[11px] text-slate-400 font-normal">{item.department}</div>
-                  </td>
-                  <td className="py-3 px-3 text-slate-600 font-medium">{item.date}</td>
-                  <td className="py-3 px-3 font-bold text-slate-800">{item.calls_made}</td>
-                  <td className="py-3 px-3 font-bold text-slate-800">{item.emails_sent}</td>
-                  <td className="py-3 px-3 font-bold text-slate-800">{item.linkedin_touches}</td>
-                  <td className="py-3 px-3 font-bold text-emerald-600">{item.meetings_booked}</td>
-                  <td className="py-3 px-3 text-right">
-                    <span
-                      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                        item.target_met
-                          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                          : 'bg-amber-50 text-amber-700 border border-amber-200'
-                      }`}
-                    >
-                      {item.target_met ? '✓ Target Met' : 'In Progress'}
-                    </span>
+              {filtered.length === 0 ? (
+                <tr>
+                  <td colSpan="7" className="py-10 text-center text-slate-400 text-xs">
+                    No outreach activities recorded yet. Click "Log Outreach" to add your team's metrics.
                   </td>
                 </tr>
-              ))}
+              ) : (
+                filtered.map((item) => (
+                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
+                    <td className="py-3 px-3 font-semibold text-slate-900">
+                      <div>{item.employee_name}</div>
+                      <div className="text-[11px] text-slate-400 font-normal">{item.department}</div>
+                    </td>
+                    <td className="py-3 px-3 text-slate-600 font-medium">{item.date}</td>
+                    <td className="py-3 px-3 font-bold text-slate-800">{item.calls_made}</td>
+                    <td className="py-3 px-3 font-bold text-slate-800">{item.emails_sent}</td>
+                    <td className="py-3 px-3 font-bold text-slate-800">{item.linkedin_touches}</td>
+                    <td className="py-3 px-3 font-bold text-emerald-600">{item.meetings_booked}</td>
+                    <td className="py-3 px-3 text-right">
+                      <span
+                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
+                          item.target_met
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        {item.target_met ? '✓ Target Met' : 'In Progress'}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
             </tbody>
           </table>
         </div>

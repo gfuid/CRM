@@ -32,7 +32,7 @@ const tabNames = {
 };
 
 function AppContent() {
-  const { user, profile, company, loading, loginAsDemo, isOwner, isStaff } = useAuth();
+  const { user, profile, company, loading, isOwner, isStaff } = useAuth();
   const [activeTab, setActiveTab] = useState('analytics');
 
   // Dedicated Route Detection (/login, /signup, /register)
@@ -115,7 +115,6 @@ function AppContent() {
           <LandingPage
             onLoginClick={() => navigateAuth('login')}
             onRegisterClick={() => navigateAuth('register')}
-            onExploreDemo={() => loginAsDemo()}
           />
         ) : authMode === 'register' ? (
           <RegisterPage
@@ -126,7 +125,6 @@ function AppContent() {
           <LoginPage
             onSwitchToRegister={() => navigateAuth('register')}
             onBackToLanding={() => navigateAuth('landing')}
-            onExploreDemo={() => loginAsDemo()}
           />
         )}
       </Suspense>

@@ -104,10 +104,9 @@ const MOCK_LEADS = [
 export default function ActivityBoard({ onNavigateToLeads }) {
   const { profile, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState(MOCK_LEADS);
-  const [teamMembers, setTeamMembers] = useState([
-    { id: 'usr_athish', full_name: 'Athish' },
-    { id: 'usr_admin_1', full_name: 'Sarah Connor (Owner)' },
-  ]);
+  const [teamMembers, setTeamMembers] = useState(
+    profile ? [{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner' }] : []
+  );
 
   // Filters
   const [search, setSearch] = useState('');
@@ -126,9 +125,15 @@ export default function ActivityBoard({ onNavigateToLeads }) {
   const loadTeam = async () => {
     try {
       const members = await getTeamMembers();
-      if (members && members.length > 0) setTeamMembers(members);
+      if (members && members.length > 0) {
+        setTeamMembers(members);
+      } else if (profile) {
+        setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner' }]);
+      }
     } catch {
-      // keep fallback
+      if (profile) {
+        setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner' }]);
+      }
     }
   };
 

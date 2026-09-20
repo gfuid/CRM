@@ -20,7 +20,21 @@ import {
 import Modal from '../components/Modal';
 
 export default function FollowUp() {
-  const { profile, isOwner, isStaff } = useAuth();
+  const { profile, getTeamMembers, isOwner, isStaff } = useAuth();
+  const [teamList, setTeamList] = useState([]);
+
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        if (getTeamMembers) {
+          const members = await getTeamMembers();
+          if (members && members.length > 0) setTeamList(members);
+        }
+      } catch (e) {}
+    };
+    fetchTeam();
+  }, [profile]);
+
   const [followUps, setFollowUps] = useState([
     {
       id: 'fu_1',
@@ -32,7 +46,7 @@ export default function FollowUp() {
       type: 'whatsapp',
       priority: 'high',
       status: 'pending',
-      assigned_to: 'Athish',
+      assigned_to: profile?.name || 'Team Lead',
       agenda: 'Verify DHL tracking for sample turmeric (curcumin 3.5%) and confirm LC draft opening.',
     },
     {
@@ -45,7 +59,7 @@ export default function FollowUp() {
       type: 'demo',
       priority: 'high',
       status: 'pending',
-      assigned_to: 'Athish',
+      assigned_to: profile?.name || 'Team Lead',
       agenda: 'Video meeting to review SGS lab moisture certificate and finalize 2x40ft Teja stemless red chilli booking.',
     },
     {
@@ -58,8 +72,8 @@ export default function FollowUp() {
       type: 'email',
       priority: 'high',
       status: 'pending',
-      assigned_to: 'Athish',
-      agenda: 'Send revised CIF Rotterdam quote ($1,180/MT) for 120 MT Rice DDGS & DORB consignment.',
+      assigned_to: profile?.name || 'Team Lead',
+      agenda: 'Confirm bulk delivery of Corn DDGS (protein 28% min) to Rotterdam Port.',
     },
     {
       id: 'fu_4',
@@ -154,7 +168,7 @@ export default function FollowUp() {
       scheduled_time: '02:00 PM',
       type: 'phone',
       priority: 'high',
-      assigned_to: 'Sarah Jenkins',
+      assigned_to: profile?.name || 'Owner',
       agenda: '',
     });
   };
@@ -164,7 +178,7 @@ export default function FollowUp() {
       const isMine =
         item.assigned_to === profile?.id ||
         item.assigned_to === profile?.name ||
-        (profile?.name?.toLowerCase().includes('athish') && item.assigned_to === 'Athish');
+        item.assigned_to === profile?.email;
       if (!isMine) return false;
     }
 
@@ -477,10 +491,12 @@ export default function FollowUp() {
                   onChange={(e) => setFormData({ ...formData, assigned_to: e.target.value })}
                   className="w-full px-3 py-2 text-xs bg-slate-50 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
                 >
-                  <option value="Athish">Athish (Commodity Export)</option>
-                  <option value="Sarah Jenkins">Sarah Jenkins (Enterprise)</option>
-                  <option value="Michael Vance">Michael Vance (Inbound)</option>
-                  <option value="Alex Morgan">Alex Morgan (SDR)</option>
+                  <option value={profile?.name || 'Owner'}>{profile?.name || 'Owner'} (You)</option>
+                  {teamList.map((tm) => (
+                    <option key={tm.id} value={tm.name}>
+                      {tm.name} ({tm.department || tm.role || 'Staff'})
+                    </option>
+                  ))}
                 </select>
               ) : (
                 <input
