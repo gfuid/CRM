@@ -113,28 +113,6 @@ export default function MobileTabBar({
                 </div>
               </button>
             )}
-
-            {isOwner && (
-              <a
-                href="http://localhost:5174"
-                target="_blank"
-                rel="noreferrer"
-                className="w-full flex items-center justify-between p-2.5 rounded-2xl text-left bg-slate-50 hover:bg-slate-100 text-slate-700 font-bold transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-xl bg-purple-100 text-purple-700 flex items-center justify-center">
-                    <ExternalLink size={16} />
-                  </div>
-                  <div>
-                    <div className="text-xs">Admin Master Console</div>
-                    <div className="text-[10px] text-slate-400 font-normal">Platform infrastructure</div>
-                  </div>
-                </div>
-                <span className="text-[10px] bg-purple-100 text-purple-800 px-2 py-0.5 rounded-md font-extrabold">
-                  PORT 5174
-                </span>
-              </a>
-            )}
           </div>
         </div>
       )}

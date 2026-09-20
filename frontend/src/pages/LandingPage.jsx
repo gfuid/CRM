@@ -44,16 +44,6 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
           <a href="#preview" className="hover:text-slate-900 transition-colors">Platform Tour</a>
           <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing & Plans</a>
-          <a
-            href="http://localhost:5174"
-            target="_blank"
-            rel="noreferrer"
-            className="flex items-center gap-1.5 text-slate-900 hover:text-coral-600 font-bold transition-colors"
-          >
-            <span className="w-2 h-2 rounded-full bg-mint-500" />
-            <span>Super Admin (Port 5174)</span>
-            <ExternalLink size={12} />
-          </a>
         </nav>
 
         <div className="flex items-center gap-3">
@@ -98,15 +88,13 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
             <ArrowRight size={16} />
           </button>
 
-          <a
-            href="http://localhost:5174"
-            target="_blank"
-            rel="noreferrer"
-            className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2"
+          <button
+            onClick={onRegisterClick}
+            className="px-6 py-3.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-sm shadow-md transition-all flex items-center gap-2 cursor-pointer"
           >
-            <Crown size={16} className="text-gold-400" />
-            <span>Open Super Admin Console</span>
-          </a>
+            <Sparkles size={16} className="text-emerald-400" />
+            <span>Create Free Account</span>
+          </button>
         </div>
 
         {/* Trust Points */}
@@ -449,7 +437,6 @@ export default function LandingPage({ onLoginClick, onRegisterClick, onExploreDe
           <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
             <a href="#privacy" className="hover:text-slate-900">Privacy Policy</a>
             <a href="#terms" className="hover:text-slate-900">Terms of Service</a>
-            <a href="http://localhost:5174" target="_blank" rel="noreferrer" className="text-coral-600 font-bold">Admin Console</a>
           </div>
         </div>
       </footer>

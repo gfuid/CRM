@@ -7,9 +7,7 @@ import {
   Table,
   Calendar,
   CalendarClock,
-  UserPlus,
-  ShieldCheck,
-  ExternalLink
+  UserPlus
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
@@ -103,19 +101,6 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
               <UserPlus size={16} className="text-emerald-600" />
               <span>Manage Team & Staff</span>
             </button>
-
-            <a
-              href="http://localhost:5174"
-              target="_blank"
-              rel="noreferrer"
-              className="flex items-center justify-between w-full px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 border border-slate-200 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                <ShieldCheck size={15} className="text-slate-500" />
-                <span>Admin Console</span>
-              </div>
-              <ExternalLink size={12} className="text-slate-400" />
-            </a>
           </div>
         )}
       </nav>

@@ -48,7 +48,7 @@ export default function AdminTopBar({
 
           <div className="hidden sm:flex items-center gap-2 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1 rounded-full text-xs font-semibold">
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span>API Port 5000</span>
+            <span>Render Cloud API</span>
           </div>
 
           <a

@@ -3,7 +3,7 @@
  * Includes automatic auth headers, response time metrics, and fallback handling
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || '/api/v1';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1';
 
 class ApiClient {
   constructor() {

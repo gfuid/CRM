@@ -6,7 +6,9 @@ import UsersSection from './pages/UsersSection';
 import SettingsSection from './pages/SettingsSection';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
-const API_BASE = 'http://localhost:5000/api/v1/admin';
+const API_BASE = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL}/admin`
+  : 'https://crm-ep4i.onrender.com/api/v1/admin';
 const HEADERS = {
   'Content-Type': 'application/json',
   'x-user-id': 'usr_admin_1',
@@ -52,7 +54,7 @@ export default function App() {
       }
     } catch (err) {
       console.error('Failed to load admin data:', err);
-      showToast('Backend connection error (Port 5000)', 'error');
+      showToast('Backend connection error (Render Cloud API)', 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
