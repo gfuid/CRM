@@ -7,6 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 
 router.post('/login', authLimiter, asyncHandler(authController.login));
 router.post('/register', authLimiter, asyncHandler(authController.register));
+router.post('/admin-login', authLimiter, asyncHandler(authController.adminLogin));
 router.get('/me', authenticate, asyncHandler(authController.getProfile));
 router.patch('/profile', authenticate, asyncHandler(authController.updateProfile));
 

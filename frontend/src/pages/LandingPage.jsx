@@ -360,10 +360,10 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
               </ul>
             </div>
             <button
-              onClick={onExploreDemo}
+              onClick={onRegisterClick}
               className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors"
             >
-              Start Free Demo
+              Start Free
             </button>
           </div>
 
@@ -376,22 +376,22 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
               <div className="font-bold text-slate-900 text-lg">Growth Tier</div>
               <p className="text-xs text-slate-400 mt-1">For scaling sales development teams</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">$79</span>
-                <span className="text-xs text-slate-400">/ month</span>
+                <span className="text-3xl font-black text-slate-900">Free</span>
+                <span className="text-xs text-slate-400">/ forever</span>
               </div>
               <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Up to 15 Staff Seats</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> 5,000 Leads Storage</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> 12-Month Dot-Matrix Analytics</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Full Staff Management</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Unlimited Commodity Leads</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Interactive Calendar & Tasks</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Daily Outreach Cadence Matrix</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-coral-600" /> Smart Follow-up Reminders</li>
               </ul>
             </div>
             <button
-              onClick={onExploreDemo}
+              onClick={onRegisterClick}
               className="mt-6 w-full py-2.5 rounded-xl bg-gradient-to-r from-coral-500 to-coral-600 hover:from-coral-600 hover:to-coral-700 font-bold text-xs text-white shadow-md transition-all"
             >
-              Launch Growth Workspace
+              Get Started Free
             </button>
           </div>
 
@@ -401,22 +401,22 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
               <div className="font-bold text-slate-900 text-lg">Enterprise Tier</div>
               <p className="text-xs text-slate-400 mt-1">For large sales orgs and multi-branch teams</p>
               <div className="mt-4 flex items-baseline gap-1">
-                <span className="text-3xl font-black text-slate-900">$199</span>
-                <span className="text-xs text-slate-400">/ month</span>
+                <span className="text-3xl font-black text-slate-900">Free</span>
+                <span className="text-xs text-slate-400">/ forever</span>
               </div>
               <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Unlimited Staff Seats</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Unlimited Leads & Storage</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Custom RBAC Role Matrix</li>
                 <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> Dedicated Audit Logs & Telemetry</li>
-                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> 24/7 Priority SLA Support</li>
+                <li className="flex items-center gap-2"><CheckCircle2 size={14} className="text-mint-600" /> 24/7 Priority Support</li>
               </ul>
             </div>
             <button
-              onClick={onExploreDemo}
+              onClick={onRegisterClick}
               className="mt-6 w-full py-2.5 rounded-xl border border-slate-200 hover:bg-slate-50 font-bold text-xs text-slate-700 transition-colors"
             >
-              Contact Enterprise Sales
+              Get Started Free
             </button>
           </div>
         </div>

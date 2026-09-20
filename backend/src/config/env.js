@@ -13,4 +13,7 @@ module.exports = {
   },
   mongodbUri: process.env.MONGODB_URI || '',
   mongodbDbName: process.env.MONGODB_DB_NAME || 'crm',
+  adminUsername: process.env.ADMIN_USERNAME || 'traveltrade_admin',
+  adminEmail: process.env.ADMIN_EMAIL || 'admin@travel-trade.com',
+  adminPassword: process.env.ADMIN_PASSWORD || 'TravelTrade#Admin2026!',
 };

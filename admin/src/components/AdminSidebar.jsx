@@ -4,7 +4,8 @@ import {
   Users2,
   Settings,
   ExternalLink,
-  X
+  X,
+  LogOut
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
@@ -14,7 +15,13 @@ const adminNavItems = [
   { id: 'settings', label: 'CRM Platform Settings', icon: Settings },
 ];
 
-export default function AdminSidebar({ activeSection, setActiveSection, isOpen = false, onClose = () => {} }) {
+export default function AdminSidebar({
+  activeSection,
+  setActiveSection,
+  isOpen = false,
+  onClose = () => {},
+  onSignOut,
+}) {
   const handleSelect = (id) => {
     setActiveSection(id);
     onClose();
@@ -86,12 +93,12 @@ export default function AdminSidebar({ activeSection, setActiveSection, isOpen =
         </div>
 
         {/* Footer Switcher */}
-        <div className="p-3 border-t border-slate-100">
+        <div className="p-3 border-t border-slate-100 space-y-2">
           <a
             href="https://crm-amber-nine.vercel.app"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between p-3 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/60 transition-colors"
+            className="flex items-center justify-between p-2.5 rounded-xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-semibold border border-slate-200/60 transition-colors"
           >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500" />
@@ -99,6 +106,16 @@ export default function AdminSidebar({ activeSection, setActiveSection, isOpen =
             </div>
             <ExternalLink size={14} className="text-slate-400" />
           </a>
+
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200/60 transition-colors cursor-pointer"
+            >
+              <LogOut size={14} />
+              <span>Sign Out of Console</span>
+            </button>
+          )}
         </div>
       </aside>
     </>

@@ -30,19 +30,9 @@ const login = async (req, res) => {
     user = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase());
   }
 
-  // Fallback to default demo user if user not found (for smooth demo experience)
+  // If user not found, reject with clean error (strictly no demo fallbacks)
   if (!user) {
-    const defaultUser = dataStore.users[0];
-    const token = jwt.sign(
-      { id: defaultUser.id, email: defaultUser.email, role: defaultUser.role, persona: defaultUser.persona },
-      config.jwtSecret,
-      { expiresIn: config.jwtExpiresIn }
-    );
-    return ApiResponse.success(
-      res,
-      { user: defaultUser, token },
-      'Logged in successfully with demo profile'
-    );
+    return ApiResponse.error(res, 'No account found with this email. Please check your credentials or register.', 401);
   }
 
   // Verify active status
@@ -50,19 +40,13 @@ const login = async (req, res) => {
     return ApiResponse.error(res, 'Account is deactivated. Please contact your administrator.', 403);
   }
 
-  // Password verification if password is provided and user has a password
-  if (password && user.password) {
-    const isMatch = await bcrypt.compare(password, user.password);
-    if (!isMatch) {
-      // If it's a known demo password fallback or mismatch
-      const isDemoMatch =
-        (user.role === 'admin' && password === 'admin123') ||
-        (user.role !== 'admin' && password === 'agent123');
-
-      if (!isDemoMatch) {
-        return ApiResponse.error(res, 'Invalid credentials. Please check your password.', 401);
-      }
-    }
+  // Password verification: require password and check match
+  if (!password || !user.password) {
+    return ApiResponse.error(res, 'Password is required.', 400);
+  }
+  const isMatch = await bcrypt.compare(password, user.password);
+  if (!isMatch) {
+    return ApiResponse.error(res, 'Invalid password. Please check your credentials.', 401);
   }
 
   // Update last login
@@ -235,9 +219,60 @@ const updateProfile = async (req, res) => {
   return ApiResponse.success(res, cleanUser, 'Profile updated successfully');
 };
 
+/**
+ * Dedicated Super Admin Login with credential verification & 30-day token
+ */
+const adminLogin = async (req, res) => {
+  const { username, password } = req.body;
+
+  if (!username || !password) {
+    return ApiResponse.error(res, 'Admin username and password are required', 400);
+  }
+
+  const cleanUser = (username || '').toLowerCase().trim();
+  const validUser = (config.adminUsername || 'traveltrade_admin').toLowerCase();
+  const validEmail = (config.adminEmail || 'admin@travel-trade.com').toLowerCase();
+
+  const isUserMatch = cleanUser === validUser || cleanUser === validEmail;
+  const isPassMatch = password === config.adminPassword;
+
+  if (!isUserMatch || !isPassMatch) {
+    return ApiResponse.error(res, 'Invalid administrator credentials. Access denied.', 401);
+  }
+
+  const token = jwt.sign(
+    {
+      id: 'usr_super_admin',
+      name: 'Super Administrator',
+      email: config.adminEmail || 'admin@travel-trade.com',
+      username: config.adminUsername || 'traveltrade_admin',
+      role: 'admin',
+      persona: 'owner',
+    },
+    config.jwtSecret,
+    { expiresIn: '30d' }
+  );
+
+  return ApiResponse.success(
+    res,
+    {
+      user: {
+        id: 'usr_super_admin',
+        name: 'Super Administrator',
+        email: config.adminEmail || 'admin@travel-trade.com',
+        username: config.adminUsername || 'traveltrade_admin',
+        role: 'admin',
+      },
+      token,
+    },
+    'Administrator authenticated successfully'
+  );
+};
+
 module.exports = {
   login,
   register,
   getProfile,
   updateProfile,
+  adminLogin,
 };

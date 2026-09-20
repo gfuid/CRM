@@ -1,5 +1,5 @@
 import React from 'react';
-import { RefreshCw, Menu, LayoutDashboard, Users2, Settings } from 'lucide-react';
+import { RefreshCw, Menu, LayoutDashboard, Users2, Settings, LogOut } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
 export default function AdminTopBar({
@@ -7,7 +7,8 @@ export default function AdminTopBar({
   setActiveSection = () => {},
   onRefresh,
   refreshing,
-  onOpenMobileMenu = () => {}
+  onOpenMobileMenu = () => {},
+  onSignOut,
 }) {
   const titles = {
     overview: 'CRM Business Overview & Platform KPIs',
@@ -59,6 +60,17 @@ export default function AdminTopBar({
           >
             Open Sales App &rarr;
           </a>
+
+          {onSignOut && (
+            <button
+              onClick={onSignOut}
+              title="Sign Out of Admin Console"
+              className="flex items-center gap-1.5 text-xs font-bold text-rose-600 hover:text-rose-700 bg-rose-50 hover:bg-rose-100 px-3 py-1.5 rounded-xl border border-rose-200 transition-colors cursor-pointer"
+            >
+              <LogOut size={13} />
+              <span className="hidden sm:inline">Logout</span>
+            </button>
+          )}
         </div>
       </div>
 

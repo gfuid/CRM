@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import AdminSidebar from './components/AdminSidebar';
 import AdminTopBar from './components/AdminTopBar';
+import AdminLoginPage from './pages/AdminLoginPage';
 import OverviewSection from './pages/OverviewSection';
 import UsersSection from './pages/UsersSection';
 import SettingsSection from './pages/SettingsSection';
@@ -9,12 +10,18 @@ import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 const API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/admin`
   : 'https://crm-ep4i.onrender.com/api/v1/admin';
-const HEADERS = {
-  'Content-Type': 'application/json',
-  'x-user-id': 'usr_admin_1',
-};
 
 export default function App() {
+  const [adminUser, setAdminUser] = useState(() => {
+    try {
+      const savedUser = localStorage.getItem('crm_admin_user');
+      const token = localStorage.getItem('crm_admin_token');
+      return savedUser && token ? JSON.parse(savedUser) : null;
+    } catch {
+      return null;
+    }
+  });
+
   const [activeSection, setActiveSection] = useState('overview');
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -35,14 +42,23 @@ export default function App() {
     }, 3500);
   };
 
+  const getHeaders = () => {
+    const token = localStorage.getItem('crm_admin_token');
+    return {
+      'Content-Type': 'application/json',
+      ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'usr_super_admin' }),
+    };
+  };
+
   // Fetch core administrative telemetry from backend
   const fetchAllData = async (isManual = false) => {
     if (isManual) setRefreshing(true);
     try {
+      const headers = getHeaders();
       const [uRes, sRes, oRes] = await Promise.all([
-        fetch(`${API_BASE}/users`, { headers: HEADERS }).then((r) => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/subscription`, { headers: HEADERS }).then((r) => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/overview-summary`, { headers: HEADERS }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/users`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/subscription`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${API_BASE}/overview-summary`, { headers }).then((r) => r.json()).catch(() => ({})),
       ]);
 
       if (uRes.success) setUsers(uRes.data);
@@ -62,13 +78,21 @@ export default function App() {
   };
 
   useEffect(() => {
-    fetchAllData();
-  }, []);
+    if (adminUser) {
+      fetchAllData();
+    }
+  }, [adminUser]);
+
+  const handleSignOut = () => {
+    localStorage.removeItem('crm_admin_token');
+    localStorage.removeItem('crm_admin_user');
+    setAdminUser(null);
+  };
 
   const handleCreateUser = async (userData) => {
     const res = await fetch(`${API_BASE}/users`, {
       method: 'POST',
-      headers: HEADERS,
+      headers: getHeaders(),
       body: JSON.stringify(userData),
     });
     const data = await res.json();
@@ -85,7 +109,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/users/${id}/role`, {
         method: 'PATCH',
-        headers: HEADERS,
+        headers: getHeaders(),
         body: JSON.stringify({ role }),
       });
       const data = await res.json();
@@ -104,7 +128,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/users/${id}/status`, {
         method: 'PATCH',
-        headers: HEADERS,
+        headers: getHeaders(),
       });
       const data = await res.json();
       if (data.success) {
@@ -122,7 +146,7 @@ export default function App() {
     try {
       const res = await fetch(`${API_BASE}/settings`, {
         method: 'PATCH',
-        headers: HEADERS,
+        headers: getHeaders(),
         body: JSON.stringify(settingsData),
       });
       const data = await res.json();
@@ -137,6 +161,18 @@ export default function App() {
     }
   };
 
+  // Secure Admin Gate: Render Login Page if not authenticated
+  if (!adminUser) {
+    return (
+      <AdminLoginPage
+        onLoginSuccess={(user) => {
+          setAdminUser(user);
+          showToast(`Welcome back, ${user.name || 'Administrator'}`);
+        }}
+      />
+    );
+  }
+
   return (
     <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased">
       {/* Responsive Sidebar */}
@@ -145,6 +181,7 @@ export default function App() {
         setActiveSection={setActiveSection}
         isOpen={mobileMenuOpen}
         onClose={() => setMobileMenuOpen(false)}
+        onSignOut={handleSignOut}
       />
 
       {/* Main Content Area */}
@@ -155,6 +192,7 @@ export default function App() {
           onRefresh={() => fetchAllData(true)}
           refreshing={refreshing}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
+          onSignOut={handleSignOut}
         />
 
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
