@@ -27,7 +27,10 @@ import {
   Layers,
   MapPin,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Download,
+  Upload,
+  FileSpreadsheet
 } from 'lucide-react';
 
 // Comprehensive Countries with Flags
@@ -438,6 +441,25 @@ export default function Leads() {
   const [teamList, setTeamList] = useState([]);
   const [filterStaff, setFilterStaff] = useState('');
 
+  // Form Tab & Modal Polish
+  const [activeFormTab, setActiveFormTab] = useState('basic'); // 'basic' | 'contact' | 'deal' | 'export'
+
+  // Bulk Import / Export state
+  const [importModalOpen, setImportModalOpen] = useState(false);
+  const [importFile, setImportFile] = useState(null);
+  const [importPreview, setImportPreview] = useState([]);
+  const [importing, setImporting] = useState(false);
+  const [importError, setImportError] = useState('');
+
+  // Toast notification
+  const [notification, setNotification] = useState(null);
+  const showNotification = (message, type = 'success') => {
+    setNotification({ message, type });
+    setTimeout(() => {
+      setNotification((curr) => (curr?.message === message ? null : curr));
+    }, 4000);
+  };
+
   // Filter Bar state
   const [filterType, setFilterType] = useState('created'); // 'created' | 'followup'
   const [fromDate, setFromDate] = useState('');
@@ -574,6 +596,7 @@ export default function Leads() {
   // Open Create Modal
   const openCreate = () => {
     setEditingLead(null);
+    setActiveFormTab('basic');
     setForm({
       ...initForm,
       assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || 'usr_athish'),
@@ -599,6 +622,7 @@ export default function Leads() {
     }
 
     setEditingLead(lead);
+    setActiveFormTab('basic');
     const existingContacts = Array.isArray(lead.contacts) && lead.contacts.length > 0
       ? lead.contacts
       : [
@@ -764,6 +788,353 @@ export default function Leads() {
       } catch {}
       setLeads((prev) => prev.filter((l) => l.id !== id));
       if (activeDetailLead?.id === id) setDetailModalOpen(false);
+      showNotification('Trade lead deleted successfully.', 'success');
+    }
+  };
+
+  // CSV Parser with quote-handling support
+  const parseCSV = (text) => {
+    const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
+    if (lines.length < 2) return [];
+
+    const parseRow = (rowStr) => {
+      const cells = [];
+      let inQuotes = false;
+      let currentCell = '';
+      for (let i = 0; i < rowStr.length; i++) {
+        const char = rowStr[i];
+        if (char === '"' || char === "'") {
+          if (inQuotes && rowStr[i + 1] === char) {
+            currentCell += char;
+            i++;
+          } else {
+            inQuotes = !inQuotes;
+          }
+        } else if (char === ',' && !inQuotes) {
+          cells.push(currentCell.trim());
+          currentCell = '';
+        } else {
+          currentCell += char;
+        }
+      }
+      cells.push(currentCell.trim());
+      return cells;
+    };
+
+    const headers = parseRow(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
+    const parsedRows = [];
+
+    for (let i = 1; i < lines.length; i++) {
+      const values = parseRow(lines[i]);
+      if (values.length === 0 || values.every((v) => !v)) continue;
+
+      const rowObj = {};
+      headers.forEach((h, idx) => {
+        rowObj[h] = values[idx] || '';
+      });
+      parsedRows.push(rowObj);
+    }
+
+    return parsedRows;
+  };
+
+  // Export current leads as CSV
+  const handleExportCSV = () => {
+    const exportData = filteredLeads.length > 0 ? filteredLeads : leads;
+    if (!exportData || exportData.length === 0) {
+      showNotification('No leads to export', 'error');
+      return;
+    }
+
+    const headers = [
+      'Lead ID',
+      'Company Name',
+      'Type',
+      'Country',
+      'Contact Person',
+      'Phone',
+      'Email',
+      'WhatsApp',
+      'Website',
+      'Products',
+      'Quantity (kg)',
+      'Deal Value ($)',
+      'Stage',
+      'Priority',
+      'Lead Source',
+      'Credit Rating',
+      'Turnover',
+      'Incoterm',
+      'Port Delivery',
+      'Assigned Rep',
+      'Follow-up Date',
+      'Created Date',
+      'Notes',
+    ];
+
+    const escapeCSV = (val) => {
+      if (val === null || val === undefined) return '""';
+      const str = String(val).replace(/"/g, '""');
+      return `"${str}"`;
+    };
+
+    const rows = exportData.map((l) => [
+      escapeCSV(l.id),
+      escapeCSV(l.company_name || l.name),
+      escapeCSV(l.type || 'Export'),
+      escapeCSV(l.country || ''),
+      escapeCSV(l.contact_person || l.contacts?.[0]?.name || ''),
+      escapeCSV(l.phone || l.contacts?.[0]?.phone || ''),
+      escapeCSV(l.email || l.contacts?.[0]?.email || ''),
+      escapeCSV(l.whatsapp || ''),
+      escapeCSV(l.website || ''),
+      escapeCSV(Array.isArray(l.products) ? l.products.join(', ') : (l.product || '')),
+      escapeCSV(l.quantity || 0),
+      escapeCSV(l.price || l.value || 0),
+      escapeCSV(l.stage || 'Requirement Understood'),
+      escapeCSV(l.priority || 'High'),
+      escapeCSV(l.source || ''),
+      escapeCSV(l.credit_rating || ''),
+      escapeCSV(l.turnover || ''),
+      escapeCSV(l.export_requirements?.incoterm || l.incoterm || ''),
+      escapeCSV(l.export_requirements?.port_delivery || l.port_delivery || ''),
+      escapeCSV(l.agent_name || 'Staff'),
+      escapeCSV(l.follow_up_date || ''),
+      escapeCSV(l.created_at || ''),
+      escapeCSV(l.notes || ''),
+    ]);
+
+    const csvContent = [headers.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', `trade_leads_export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+
+    showNotification(`Exported ${exportData.length} leads successfully!`, 'success');
+  };
+
+  // Download sample CSV template
+  const handleDownloadSampleCSV = () => {
+    const sampleHeaders = [
+      'Company Name',
+      'Type',
+      'Country',
+      'Contact Person',
+      'Phone',
+      'Email',
+      'WhatsApp',
+      'Website',
+      'Products',
+      'Quantity kg',
+      'Deal Value USD',
+      'Stage',
+      'Incoterm',
+      'Port Delivery',
+      'Assigned Rep',
+      'Follow-up Date',
+      'Notes',
+    ];
+
+    const sampleRows = [
+      [
+        'Al-Zahra Trading LLC',
+        'Export',
+        'United Arab Emirates 🇦🇪',
+        'Ahmed Al-Mansoor',
+        '+971 50 111 2222',
+        'ahmed@alzahra.ae',
+        '+971 50 111 2222',
+        'https://alzahra.ae',
+        'Turmeric',
+        '40000',
+        '68000',
+        'Requirement Understood',
+        'CIF',
+        'Jebel Ali Port',
+        'Athish',
+        new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
+        'Customer requested COA min 3.5% curcumin',
+      ],
+      [
+        'Global Agri Impex BV',
+        'Export',
+        'Netherlands 🇳🇱',
+        'Lars Janssen',
+        '+31 20 555 4321',
+        'lars@globalagri.nl',
+        '+31 20 555 4321',
+        'https://globalagri.nl',
+        'Rice DDGS, DORB',
+        '80000',
+        '95000',
+        'Sample Sent',
+        'FOB',
+        'Rotterdam',
+        'Athish',
+        new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
+        'Feed grade protein analysis submitted',
+      ],
+    ];
+
+    const escapeCSV = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+    const csvContent = [
+      sampleHeaders.map(escapeCSV).join(','),
+      ...sampleRows.map((r) => r.map(escapeCSV).join(',')),
+    ].join('\r\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'sample_trade_leads_template.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  // Handle CSV file selection & parsing
+  const handleFileSelect = (file) => {
+    if (!file) return;
+    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
+      setImportError('Please select a valid .csv spreadsheet file');
+      return;
+    }
+    setImportFile(file);
+    setImportError('');
+
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const text = e.target.result;
+        const rawRows = parseCSV(text);
+        if (rawRows.length === 0) {
+          setImportError('No valid data rows found in the CSV file.');
+          setImportPreview([]);
+          return;
+        }
+
+        const mapped = rawRows
+          .map((r) => {
+            const companyName = r.companyname || r.company || r.name || '';
+            if (!companyName) return null;
+
+            const contactName = r.contactperson || r.contact || '';
+            const phone = r.phone || '';
+            const email = r.email || '';
+            const products = (r.products || r.product || 'Turmeric').split(',').map((p) => p.trim());
+
+            return {
+              type: r.type || 'Export',
+              company_name: companyName,
+              name: companyName,
+              country: r.country || 'India 🇮🇳',
+              contacts: [
+                {
+                  name: contactName,
+                  phone,
+                  extra_phones: [],
+                  email,
+                  designation: r.designation || '',
+                  linkedin: '',
+                },
+              ],
+              contact_person: contactName,
+              phone,
+              email,
+              whatsapp: r.whatsapp || phone,
+              website: r.website || '',
+              source: r.leadsource || r.source || 'Bulk CSV Import',
+              address: r.address || '',
+              credit_rating: r.creditrating || 'AA',
+              turnover: r.turnover || '',
+              sourcing_region: r.sourcingregion || '',
+              legacy_industry_type: '',
+              products,
+              product: products.join(', '),
+              quantity: Number(r.quantitykg || r.quantity) || 0,
+              price: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
+              value: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
+              stage: r.stage || 'Requirement Understood',
+              priority: r.priority || 'High',
+              export_requirements: {
+                industry_type: r.industrytype || 'Food & Spice Processing',
+                material_type: 'Whole Raw',
+                polish_level: 'Double Polish',
+                min_curcumin: '3.5%',
+                cultivation_method: 'Conventional Cleaned',
+                preferred_origin: '',
+                quantity_needed_kg: Number(r.quantitykg || r.quantity) || 0,
+                max_price_inr: 0,
+                incoterm: r.incoterm || 'CIF',
+                port_delivery: r.portdelivery || r.port || '',
+                payment_days: r.paymentdays || 'CAD on BL copy',
+              },
+              assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
+              agent_name: isStaff ? (profile?.name || 'Staff') : (r.assignedrep || 'Athish'),
+              follow_up_date: r.followupdate || '',
+              notes: r.notes || 'Imported via bulk CSV upload',
+            };
+          })
+          .filter(Boolean);
+
+        if (mapped.length === 0) {
+          setImportError('None of the rows had a valid "Company Name". Please verify headers in your CSV.');
+          setImportPreview([]);
+        } else {
+          setImportPreview(mapped);
+          setImportError('');
+        }
+      } catch (err) {
+        setImportError('Failed to parse CSV file: ' + err.message);
+        setImportPreview([]);
+      }
+    };
+    reader.readAsText(file);
+  };
+
+  // Execute bulk import
+  const executeBulkImport = async () => {
+    if (importPreview.length === 0) return;
+    setImporting(true);
+    setImportError('');
+    try {
+      const addedLeads = [];
+      for (const leadData of importPreview) {
+        try {
+          const res = await api.createLead(leadData);
+          if (res && res.data) {
+            addedLeads.push(res.data);
+          } else {
+            addedLeads.push({
+              ...leadData,
+              id: 'lead_imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+              created_at: new Date().toISOString(),
+            });
+          }
+        } catch {
+          addedLeads.push({
+            ...leadData,
+            id: 'lead_imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
+            created_at: new Date().toISOString(),
+          });
+        }
+      }
+
+      setLeads((prev) => [...addedLeads, ...prev]);
+      setImportModalOpen(false);
+      setImportPreview([]);
+      setImportFile(null);
+      showNotification(`Successfully imported ${addedLeads.length} trade leads in bulk!`, 'success');
+    } catch (err) {
+      setImportError('Failed to import leads: ' + (err.message || 'Unknown error'));
+    } finally {
+      setImporting(false);
     }
   };
 
@@ -861,13 +1232,67 @@ export default function Leads() {
           </p>
         </div>
 
-        <button
-          onClick={openCreate}
-          className="inline-flex items-center gap-2 px-4 py-2.5 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
-        >
-          <Plus size={16} /> Add New Export Lead
-        </button>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+          {/* Export CSV */}
+          <button
+            onClick={handleExportCSV}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer"
+            title="Download leads as CSV spreadsheet"
+          >
+            <Download size={14} className="text-slate-500" />
+            <span>Export CSV</span>
+          </button>
+
+          {/* Bulk Import */}
+          <button
+            onClick={() => {
+              setImportModalOpen(true);
+              setImportError('');
+              setImportPreview([]);
+              setImportFile(null);
+            }}
+            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 text-emerald-800 shadow-xs transition-all cursor-pointer"
+            title="Import multiple leads via CSV spreadsheet"
+          >
+            <Upload size={14} className="text-emerald-700" />
+            <span>Bulk Import</span>
+          </button>
+
+          {/* Manual Add Lead */}
+          <button
+            onClick={openCreate}
+            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+          >
+            <Plus size={16} />
+            <span>+ Add Lead</span>
+          </button>
+        </div>
       </div>
+
+      {/* Dynamic Notification Toast */}
+      {notification && (
+        <div
+          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold animate-fadeIn ${
+            notification.type === 'success'
+              ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+              : 'bg-rose-50 text-rose-800 border-rose-200'
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <CheckCircle2
+              size={16}
+              className={notification.type === 'success' ? 'text-emerald-600' : 'text-rose-600'}
+            />
+            <span>{notification.message}</span>
+          </div>
+          <button
+            onClick={() => setNotification(null)}
+            className="text-slate-400 hover:text-slate-700 cursor-pointer"
+          >
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       {/* KPI Stats Overview (Clean Light Theme) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
@@ -1303,659 +1728,743 @@ export default function Leads() {
         </div>
       </div>
 
-      {/* COMPREHENSIVE ADD / EDIT LEAD MODAL WITH ALL USER FIELDS */}
+      {/* REVAMPED ADD / EDIT LEAD MODAL (CLEAN SINGLE SCROLLBAR, ORGANIZED TABS) */}
       <Modal
         isOpen={modalOpen}
         onClose={() => setModalOpen(false)}
         title={editingLead ? 'Edit Export Trade Lead' : 'Add New Export Trade Lead'}
+        subtitle={editingLead ? `Modifying specifications for ${editingLead.company_name || editingLead.name}` : 'Fill in the customer, commodity, and trade specifications below'}
+        maxWidth="max-w-4xl"
+        bodyClassName="p-4 sm:p-6 overflow-y-auto"
       >
-        <form onSubmit={handleSave} className="space-y-6 max-h-[80vh] overflow-y-auto pr-1">
-          {/* SECTION: Type */}
-          <div className="bg-slate-50 p-4 rounded-xl border border-slate-200">
-            <label className="block text-xs font-bold text-slate-800 uppercase tracking-wider mb-2">
-              Type *
-            </label>
-            <div className="grid grid-cols-3 gap-2">
-              {['Export', 'Import', 'Domestic'].map((t) => (
-                <button
-                  type="button"
-                  key={t}
-                  onClick={() => setForm({ ...form, type: t })}
-                  className={`py-2 text-xs font-bold rounded-xl border transition-all ${
-                    form.type === t
-                      ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm'
-                      : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                  }`}
-                >
-                  {t}
-                </button>
-              ))}
-            </div>
+        <form onSubmit={handleSave} className="space-y-5">
+          {/* STEP / CATEGORY NAVIGATION TABS */}
+          <div className="flex border-b border-slate-200 overflow-x-auto gap-1 pb-1">
+            <button
+              type="button"
+              onClick={() => setActiveFormTab('basic')}
+              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                activeFormTab === 'basic'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Building2 size={14} className={activeFormTab === 'basic' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>1. Company & Source</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormTab('contact')}
+              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                activeFormTab === 'contact'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <User size={14} className={activeFormTab === 'contact' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>2. Contacts ({form.contacts.length})</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormTab('deal')}
+              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                activeFormTab === 'deal'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Layers size={14} className={activeFormTab === 'deal' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>3. Products & Deal</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setActiveFormTab('export')}
+              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
+                activeFormTab === 'export'
+                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
+                  : 'border-transparent text-slate-500 hover:text-slate-800'
+              }`}
+            >
+              <Ship size={14} className={activeFormTab === 'export' ? 'text-emerald-600' : 'text-slate-400'} />
+              <span>4. Shipping & Assignment</span>
+            </button>
           </div>
 
-          {/* SECTION: Customer details */}
-          <div className="space-y-4">
-            <div className="border-b border-slate-200 pb-2">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                <Building2 size={16} className="text-emerald-600" />
-                Customer Details
-              </h3>
-            </div>
+          {/* TAB 1: BASIC & COMPANY */}
+          {activeFormTab === 'basic' && (
+            <div className="space-y-4 animate-fadeIn">
+              {/* Type Selection */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
+                  Trade Type *
+                </label>
+                <div className="grid grid-cols-3 gap-2.5 max-w-md">
+                  {['Export', 'Import', 'Domestic'].map((t) => (
+                    <button
+                      type="button"
+                      key={t}
+                      onClick={() => setForm({ ...form, type: t })}
+                      className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                        form.type === t
+                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20'
+                          : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
+                      }`}
+                    >
+                      {t}
+                    </button>
+                  ))}
+                </div>
+              </div>
 
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Company Name *</label>
-              <input
-                type="text"
-                required
-                placeholder="e.g. Al-Barakah Global Agro Foods LLC"
-                value={form.company_name}
-                onChange={(e) => setForm({ ...form, company_name: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
+              {/* Company Name & Country */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Company Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Al-Barakah Global Agro Foods LLC"
+                    value={form.company_name}
+                    onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
 
-            {/* Contacts Array (Contact 1, Contact 2, ...) */}
-            <div className="space-y-4">
-              {form.contacts.map((contact, cIdx) => (
-                <div key={cIdx} className="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-slate-800">
-                      Contact {cIdx + 1}
-                    </span>
-                    {form.contacts.length > 1 && (
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Country <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={form.country}
+                    onChange={(e) => setForm({ ...form, country: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {COUNTRIES_WITH_FLAGS.map((c) => (
+                      <option key={c.code} value={`${c.name} ${c.flag}`}>
+                        {c.flag} {c.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Lead Source & Website */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Lead Source</label>
+                  <select
+                    value={form.lead_source}
+                    onChange={(e) => setForm({ ...form, lead_source: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {LEAD_SOURCES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Website</label>
+                  <input
+                    type="url"
+                    placeholder="https://company.com"
+                    value={form.website}
+                    onChange={(e) => setForm({ ...form, website: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Credit Rating & Turnover */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Credit Rating</label>
+                  <select
+                    value={form.credit_rating}
+                    onChange={(e) => setForm({ ...form, credit_rating: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {CREDIT_RATINGS.map((r) => (
+                      <option key={r} value={r}>{r}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Annual Turnover (cr)</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 50 cr"
+                    value={form.turnover}
+                    onChange={(e) => setForm({ ...form, turnover: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">Warehouse / Corporate Address</label>
+                <textarea
+                  rows={2}
+                  placeholder="e.g. Warehouse #14, Al Quoz Industrial Area 3, Dubai, UAE"
+                  value={form.address}
+                  onChange={(e) => setForm({ ...form, address: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 2: CONTACTS */}
+          {activeFormTab === 'contact' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-bold text-slate-700">Buyer Contact Personnel</span>
+                <span className="text-[11px] text-slate-400">Add key buyers & sourcing managers</span>
+              </div>
+
+              {/* Contact Cards */}
+              <div className="space-y-3">
+                {form.contacts.map((contact, cIdx) => (
+                  <div key={cIdx} className="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] flex items-center justify-center font-black">
+                          {cIdx + 1}
+                        </span>
+                        <span>{contact.name || `Contact Person #${cIdx + 1}`}</span>
+                      </span>
+                      {form.contacts.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeContact(cIdx)}
+                          className="text-xs text-rose-600 hover:text-rose-800 font-semibold cursor-pointer"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Full Name</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. Tariq Mansoor"
+                          value={contact.name}
+                          onChange={(e) => handleContactChange(cIdx, 'name', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number</label>
+                        <input
+                          type="text"
+                          placeholder="+971 50 892 4110"
+                          value={contact.phone}
+                          onChange={(e) => handleContactChange(cIdx, 'phone', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Extra Phones */}
+                    {contact.extra_phones && contact.extra_phones.map((ext, pIdx) => (
+                      <div key={pIdx} className="flex items-center gap-2">
+                        <input
+                          type="text"
+                          placeholder={`Alternate phone #${pIdx + 2}`}
+                          value={ext}
+                          onChange={(e) => handleExtraPhoneChange(cIdx, pIdx, e.target.value)}
+                          className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeExtraPhone(cIdx, pIdx)}
+                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+
+                    <button
+                      type="button"
+                      onClick={() => addExtraPhone(cIdx)}
+                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Plus size={13} /> Add alternate phone number
+                    </button>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Work Email</label>
+                        <input
+                          type="email"
+                          placeholder="tmansoor@company.com"
+                          value={contact.email}
+                          onChange={(e) => handleContactChange(cIdx, 'email', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Designation</label>
+                        <input
+                          type="text"
+                          placeholder="e.g. VP Procurement"
+                          value={contact.designation}
+                          onChange={(e) => handleContactChange(cIdx, 'designation', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">LinkedIn Profile</label>
+                        <input
+                          type="url"
+                          placeholder="https://linkedin.com/in/..."
+                          value={contact.linkedin}
+                          onChange={(e) => handleContactChange(cIdx, 'linkedin', e.target.value)}
+                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+
+                <button
+                  type="button"
+                  onClick={addAnotherContact}
+                  className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-700 hover:border-emerald-400 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                >
+                  <Plus size={14} /> + Add Another Contact Person
+                </button>
+              </div>
+
+              {/* Direct WhatsApp field */}
+              <div className="pt-2">
+                <label className="block text-xs font-bold text-slate-700 mb-1">Direct WhatsApp Number</label>
+                <input
+                  type="text"
+                  placeholder="+971 50 892 4110"
+                  value={form.whatsapp}
+                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
+                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                />
+              </div>
+            </div>
+          )}
+
+          {/* TAB 3: PRODUCTS & DEAL */}
+          {activeFormTab === 'deal' && (
+            <div className="space-y-4 animate-fadeIn">
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-2">
+                  Target Commodities <span className="text-rose-500">*</span> (Select all that apply)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {COMMODITY_PRODUCTS.map((prod) => {
+                    const isSelected = form.products.includes(prod);
+                    return (
                       <button
                         type="button"
-                        onClick={() => removeContact(cIdx)}
-                        className="text-xs text-rose-600 hover:text-rose-800 font-semibold"
+                        key={prod}
+                        onClick={() => toggleProduct(prod)}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
+                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                        }`}
                       >
-                        Remove Contact
+                        {isSelected ? '✓ ' : '+ '}
+                        {prod}
                       </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Volume Quantity (kg)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 50000 (50 MT)"
+                    value={form.quantity}
+                    onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Volume: {((Number(form.quantity) || 0) / 1000).toFixed(1)} Metric Tonnes (MT)
+                  </span>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Deal Value / Price ($ USD)
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="e.g. 84000"
+                    value={form.price}
+                    onChange={(e) => setForm({ ...form, price: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Preferred Sourcing Region
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Nizamabad & Salem, India"
+                    value={form.sourcing_region}
+                    onChange={(e) => setForm({ ...form, sourcing_region: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">
+                    Legacy Industry Type
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Spice Milling & Wholesale Trading"
+                    value={form.legacy_industry_type}
+                    onChange={(e) => setForm({ ...form, legacy_industry_type: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* TAB 4: EXPORT SPECS & ASSIGNMENT */}
+          {activeFormTab === 'export' && (
+            <div className="space-y-4 animate-fadeIn">
+              {/* Shipping & Trade Terms */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Incoterm</label>
+                  <select
+                    value={form.incoterm}
+                    onChange={(e) => setForm({ ...form, incoterm: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {INCOTERMS.map((term) => (
+                      <option key={term} value={term}>{term}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Port Delivery</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Jebel Ali / Nhava Sheva"
+                    value={form.port_delivery}
+                    onChange={(e) => setForm({ ...form, port_delivery: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Days</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. CAD on BL copy"
+                    value={form.payment_days}
+                    onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              {/* Quality & Processing Specs */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Polish Level</label>
+                  <select
+                    value={form.polish_level}
+                    onChange={(e) => setForm({ ...form, polish_level: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {POLISH_LEVELS.map((p) => (
+                      <option key={p} value={p}>{p}</option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Min Curcumin %</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. 3.5%"
+                    value={form.min_curcumin}
+                    onChange={(e) => setForm({ ...form, min_curcumin: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Cultivation</label>
+                  <select
+                    value={form.cultivation_methods}
+                    onChange={(e) => setForm({ ...form, cultivation_methods: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  >
+                    {CULTIVATION_METHODS.map((c) => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Assignment & Next Follow-up Card */}
+              <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 mb-1">
+                      Assign Rep / Staff <span className="text-rose-500">*</span>
+                    </label>
+                    {isOwner ? (
+                      <select
+                        value={form.assigned_to}
+                        onChange={(e) => {
+                          const selUser = teamList.find((t) => t.id === e.target.value || t.name === e.target.value);
+                          setForm({
+                            ...form,
+                            assigned_to: e.target.value,
+                            agent_name: selUser ? selUser.name : (e.target.value === profile?.id ? profile?.name : 'Staff Member'),
+                          });
+                        }}
+                        className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                      >
+                        <option value={profile?.id || 'owner'}>
+                          {profile?.name || 'You (Company Owner)'} [Owner]
+                        </option>
+                        {teamList.map((tm) => (
+                          <option key={tm.id} value={tm.id}>
+                            {tm.name} ({tm.department || tm.role || 'Staff'})
+                          </option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input
+                        type="text"
+                        readOnly
+                        value={`${profile?.name || 'You'} (Your Staff Account)`}
+                        className="w-full px-3 py-2 text-xs bg-emerald-100/60 border border-emerald-300 font-bold text-emerald-900 rounded-xl cursor-not-allowed"
+                      />
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Contact Person
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Contact name"
-                        value={contact.name}
-                        onChange={(e) => handleContactChange(cIdx, 'name', e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Phone
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="Phone number"
-                        value={contact.phone}
-                        onChange={(e) => handleContactChange(cIdx, 'phone', e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    </div>
-                  </div>
-
-                  {/* Dynamic extra phone numbers */}
-                  {contact.extra_phones && contact.extra_phones.map((ext, pIdx) => (
-                    <div key={pIdx} className="flex items-center gap-2">
-                      <input
-                        type="text"
-                        placeholder={`Alternate phone #${pIdx + 2}`}
-                        value={ext}
-                        onChange={(e) => handleExtraPhoneChange(cIdx, pIdx, e.target.value)}
-                        className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => removeExtraPhone(cIdx, pIdx)}
-                        className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg"
-                      >
-                        <X size={14} />
-                      </button>
-                    </div>
-                  ))}
-
-                  <button
-                    type="button"
-                    onClick={() => addExtraPhone(cIdx)}
-                    className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
-                  >
-                    <Plus size={13} /> Add another number
-                  </button>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Email
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="email@example.com"
-                        value={contact.email}
-                        onChange={(e) => handleContactChange(cIdx, 'email', e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        Designation
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Sourcing Director"
-                        value={contact.designation}
-                        onChange={(e) => handleContactChange(cIdx, 'designation', e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                        LinkedIn
-                      </label>
-                      <input
-                        type="url"
-                        placeholder="https://linkedin.com/in/..."
-                        value={contact.linkedin}
-                        onChange={(e) => handleContactChange(cIdx, 'linkedin', e.target.value)}
-                        className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 mb-1">
+                      Next Follow-up Date
+                    </label>
+                    <input
+                      type="date"
+                      value={form.follow_up_date}
+                      onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
                   </div>
                 </div>
-              ))}
 
-              <button
-                type="button"
-                onClick={addAnotherContact}
-                className="w-full py-2 border-2 border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-700 hover:border-emerald-400 transition-colors flex items-center justify-center gap-1.5"
-              >
-                <Plus size={14} /> Add another contact
-              </button>
-            </div>
-
-            {/* Other Customer fields */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  WhatsApp Number
-                </label>
-                <input
-                  type="text"
-                  placeholder="+971 50 123 4567"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">Website</label>
-                <input
-                  type="text"
-                  placeholder="https://company.com"
-                  value={form.website}
-                  onChange={(e) => setForm({ ...form, website: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Country with Flags & Lead Source */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Country *
-                </label>
-                <select
-                  value={form.country}
-                  onChange={(e) => setForm({ ...form, country: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {COUNTRIES_WITH_FLAGS.map((c) => (
-                    <option key={c.code} value={`${c.name} ${c.flag}`}>
-                      {c.flag} {c.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Lead Source
-                </label>
-                <select
-                  value={form.lead_source}
-                  onChange={(e) => setForm({ ...form, lead_source: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {LEAD_SOURCES.map((s) => (
-                    <option key={s} value={s}>
-                      {s}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-semibold text-slate-700 mb-1">Address</label>
-              <textarea
-                rows={2}
-                placeholder="Warehouse or corporate address"
-                value={form.address}
-                onChange={(e) => setForm({ ...form, address: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* SECTION: Company profile */}
-          <div className="space-y-4 pt-2">
-            <div className="border-b border-slate-200 pb-2">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                <ShieldCheck size={16} className="text-emerald-600" />
-                Company Profile
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Credit Rating
-                </label>
-                <select
-                  value={form.credit_rating}
-                  onChange={(e) => setForm({ ...form, credit_rating: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {CREDIT_RATINGS.map((r) => (
-                    <option key={r} value={r}>
-                      {r}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Company Turnover (cr)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 50 cr"
-                  value={form.turnover}
-                  onChange={(e) => setForm({ ...form, turnover: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Sourcing Region
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Nizamabad & Guntur"
-                  value={form.sourcing_region}
-                  onChange={(e) => setForm({ ...form, sourcing_region: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Legacy Industry Type (Optional)
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Spice Milling & Processing"
-                  value={form.legacy_industry_type}
-                  onChange={(e) => setForm({ ...form, legacy_industry_type: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION: Product */}
-          <div className="space-y-4 pt-2">
-            <div className="border-b border-slate-200 pb-2">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                <Layers size={16} className="text-amber-600" />
-                Products & Volume
-              </h3>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-2">
-                Products * (Select all that apply)
-              </label>
-              <div className="flex flex-wrap gap-1.5">
-                {COMMODITY_PRODUCTS.map((prod) => {
-                  const isSelected = form.products.includes(prod);
-                  return (
-                    <button
-                      type="button"
-                      key={prod}
-                      onClick={() => toggleProduct(prod)}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all ${
-                        isSelected
-                          ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                          : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-100'
-                      }`}
-                    >
-                      {isSelected ? '✓ ' : '+ '}
-                      {prod}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Quantity (kg)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.quantity}
-                  onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Price ($)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={form.price}
-                  onChange={(e) => setForm({ ...form, price: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION: Export requirements */}
-          <div className="space-y-4 pt-2">
-            <div className="border-b border-slate-200 pb-2">
-              <h3 className="text-sm font-black text-slate-900 flex items-center gap-1.5">
-                <Ship size={16} className="text-blue-600" />
-                Export Requirements
-              </h3>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Industry Type
-                </label>
-                <select
-                  value={form.industry_type}
-                  onChange={(e) => setForm({ ...form, industry_type: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {INDUSTRY_TYPES.map((i) => (
-                    <option key={i} value={i}>
-                      {i}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Material Type
-                </label>
-                <select
-                  value={form.material_type}
-                  onChange={(e) => setForm({ ...form, material_type: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {MATERIAL_TYPES.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Polish Level
-                </label>
-                <select
-                  value={form.polish_level}
-                  onChange={(e) => setForm({ ...form, polish_level: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {POLISH_LEVELS.map((p) => (
-                    <option key={p} value={p}>
-                      {p}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Min Curcumin %
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 3.5%"
-                  value={form.min_curcumin}
-                  onChange={(e) => setForm({ ...form, min_curcumin: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Cultivation Methods
-                </label>
-                <select
-                  value={form.cultivation_methods}
-                  onChange={(e) => setForm({ ...form, cultivation_methods: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {CULTIVATION_METHODS.map((c) => (
-                    <option key={c} value={c}>
-                      {c}
-                    </option>
-                  ))}
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Preferred Origin
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Salem, India"
-                  value={form.preferred_origin}
-                  onChange={(e) => setForm({ ...form, preferred_origin: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Quantity Needed (kg)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 50000"
-                  value={form.quantity_needed_kg}
-                  onChange={(e) => setForm({ ...form, quantity_needed_kg: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Max Price (₹)
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  placeholder="e.g. 145"
-                  value={form.max_price_inr}
-                  onChange={(e) => setForm({ ...form, max_price_inr: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Incoterm
-                </label>
-                <select
-                  value={form.incoterm}
-                  onChange={(e) => setForm({ ...form, incoterm: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                >
-                  {INCOTERMS.map((term) => (
-                    <option key={term} value={term}>
-                      {term}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Port Delivery
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. Jebel Ali / Nhava Sheva"
-                  value={form.port_delivery}
-                  onChange={(e) => setForm({ ...form, port_delivery: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-xs font-semibold text-slate-700 mb-1">
-                  Payment Days After Sailing
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. CAD on BL copy / 30 Days"
-                  value={form.payment_days}
-                  onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
-                  className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* SECTION: Assignment */}
-          <div className="space-y-3 pt-2 bg-emerald-50/70 p-4 rounded-xl border border-emerald-200">
-            <div className="border-b border-emerald-200 pb-2">
-              <h3 className="text-sm font-black text-emerald-950 flex items-center gap-1.5">
-                <User size={16} className="text-emerald-700" />
-                Assignment & Follow-up
-              </h3>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-emerald-950 mb-1">
-                Assign to *
-              </label>
-              {isOwner ? (
-                <select
-                  value={form.assigned_to}
-                  onChange={(e) => {
-                    const selUser = teamList.find((t) => t.id === e.target.value || t.name === e.target.value);
-                    setForm({
-                      ...form,
-                      assigned_to: e.target.value,
-                      agent_name: selUser ? selUser.name : (e.target.value === profile?.id ? profile?.name : 'Staff Member'),
-                    });
-                  }}
-                  className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
-                >
-                  <option value={profile?.id || 'owner'}>
-                    {profile?.name || 'You (Company Owner)'} [Owner]
-                  </option>
-                  {teamList.map((tm) => (
-                    <option key={tm.id} value={tm.id}>
-                      {tm.name} ({tm.department || tm.role || 'Staff'})
-                    </option>
-                  ))}
-                </select>
-              ) : (
-                <div className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    readOnly
-                    value={`${profile?.name || 'You'} (Your Personal Staff Workspace)`}
-                    className="w-full px-3 py-2 text-xs bg-emerald-100/60 border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:outline-none cursor-not-allowed"
+                <div>
+                  <label className="block text-xs font-bold text-emerald-950 mb-1">Notes & Next Actions</label>
+                  <textarea
+                    rows={2}
+                    placeholder="Enter discussion notes, sample requirements, lab report status..."
+                    value={form.notes}
+                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
-              )}
-              <p className="text-[11px] text-emerald-800 font-semibold mt-1">
-                {isOwner
-                  ? 'ℹ️ As Company Owner, you can assign this lead to yourself or any team member.'
-                  : '🔒 Locked: Leads created by staff are strictly assigned to your personal account.'}
-              </p>
+              </div>
             </div>
+          )}
 
-            <div>
-              <label className="block text-xs font-bold text-emerald-950 mb-1">
-                Follow-up Date (dd-mm-yyyy)
-              </label>
-              <input
-                type="date"
-                value={form.follow_up_date}
-                onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
-                className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-              />
-            </div>
-          </div>
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t border-slate-200">
+          {/* ACTION BUTTONS: STICKY AT BOTTOM */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-6 bg-white sticky bottom-0">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl cursor-pointer"
+              className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+            >
+              Cancel
+            </button>
+
+            <div className="flex items-center gap-2">
+              {activeFormTab !== 'export' && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (activeFormTab === 'basic') setActiveFormTab('contact');
+                    else if (activeFormTab === 'contact') setActiveFormTab('deal');
+                    else if (activeFormTab === 'deal') setActiveFormTab('export');
+                  }}
+                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
+                >
+                  Next Step &rarr;
+                </button>
+              )}
+
+              <button
+                type="submit"
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
+              >
+                <CheckCircle2 size={14} />
+                <span>{editingLead ? 'Update Lead' : 'Save Export Lead'}</span>
+              </button>
+            </div>
+          </div>
+        </form>
+      </Modal>
+
+      {/* BULK IMPORT CSV MODAL */}
+      <Modal
+        isOpen={importModalOpen}
+        onClose={() => setImportModalOpen(false)}
+        title="Bulk Import Trade Leads"
+        subtitle="Upload a CSV spreadsheet to import multiple trade leads at once"
+        maxWidth="max-w-2xl"
+      >
+        <div className="space-y-4">
+          {/* Instructions and Download Template Card */}
+          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <div className="text-xs font-bold text-slate-900">Need the correct column format?</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Download our sample CSV template with pre-filled headers and examples.</div>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadSampleCSV}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors shrink-0 cursor-pointer"
+            >
+              <Download size={13} />
+              <span>Download Sample CSV</span>
+            </button>
+          </div>
+
+          {/* Drag & Drop File Input Area */}
+          <div
+            onDragOver={(e) => e.preventDefault()}
+            onDrop={(e) => {
+              e.preventDefault();
+              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
+                handleFileSelect(e.dataTransfer.files[0]);
+              }
+            }}
+            className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-white group"
+            onClick={() => document.getElementById('bulk-csv-input')?.click()}
+          >
+            <input
+              id="bulk-csv-input"
+              type="file"
+              accept=".csv,text/csv"
+              className="hidden"
+              onChange={(e) => {
+                if (e.target.files && e.target.files[0]) {
+                  handleFileSelect(e.target.files[0]);
+                }
+              }}
+            />
+            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <FileSpreadsheet size={24} />
+            </div>
+            <div className="text-sm font-bold text-slate-800">
+              {importFile ? importFile.name : 'Click to select CSV file, or drag and drop here'}
+            </div>
+            <p className="text-xs text-slate-400 mt-1">
+              Supports standard comma-separated (.csv) files with headers
+            </p>
+          </div>
+
+          {importError && (
+            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
+              <AlertCircle size={15} className="shrink-0" />
+              <span>{importError}</span>
+            </div>
+          )}
+
+          {/* Parsed Preview Table */}
+          {importPreview.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
+                <span>Preview Ready ({importPreview.length} leads detected)</span>
+                <span className="text-[11px] text-slate-400 font-normal">First 5 rows shown below:</span>
+              </div>
+              <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
+                    <tr>
+                      <th className="p-2">Company</th>
+                      <th className="p-2">Country</th>
+                      <th className="p-2">Contact</th>
+                      <th className="p-2">Products</th>
+                      <th className="p-2">Value</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {importPreview.slice(0, 5).map((row, idx) => (
+                      <tr key={idx} className="hover:bg-slate-50">
+                        <td className="p-2 font-semibold text-slate-900">{row.company_name}</td>
+                        <td className="p-2 text-slate-600">{row.country}</td>
+                        <td className="p-2 text-slate-600">{row.contact_person || '—'}</td>
+                        <td className="p-2 text-slate-600">{Array.isArray(row.products) ? row.products.join(', ') : row.product}</td>
+                        <td className="p-2 font-bold text-emerald-600">${Number(row.price || row.value || 0).toLocaleString()}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+
+          {/* Action Buttons */}
+          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setImportModalOpen(false)}
+              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
             <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer"
+              type="button"
+              disabled={importing || importPreview.length === 0}
+              onClick={executeBulkImport}
+              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
             >
-              {editingLead ? 'Update Lead' : 'Save Export Lead'}
+              {importing ? (
+                <>
+                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                  <span>Importing...</span>
+                </>
+              ) : (
+                <>
+                  <Upload size={14} />
+                  <span>Import {importPreview.length} Leads Now</span>
+                </>
+              )}
             </button>
           </div>
-        </form>
+        </div>
       </Modal>
 
       {/* DETAIL MODAL: VIEW FULL COMMODITY SPECIFICATIONS */}
@@ -1964,8 +2473,10 @@ export default function Leads() {
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
           title={`Lead Dossier: ${activeDetailLead.company_name || activeDetailLead.name}`}
+          subtitle="Detailed trade requirements, contacts, and contract specifications"
+          maxWidth="max-w-3xl"
         >
-          <div className="space-y-4 max-h-[80vh] overflow-y-auto pr-1 text-xs">
+          <div className="space-y-4 text-xs">
             {/* Header info */}
             <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
               <div>
