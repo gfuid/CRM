@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
@@ -13,6 +13,7 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
     email: '',
     password: '',
   });
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -235,12 +236,21 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
               </span>
               <input
                 required
-                type="password"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                type={showPassword ? 'text' : 'password'}
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 placeholder="••••••••"
                 value={form.password}
                 onChange={(e) => updateField('password', e.target.value)}
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 

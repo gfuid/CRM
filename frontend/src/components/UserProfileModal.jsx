@@ -19,7 +19,9 @@ import {
   TrendingUp,
   FileSpreadsheet,
   LogOut,
-  AlertCircle
+  AlertCircle,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -48,6 +50,9 @@ export default function UserProfileModal({ isOpen, onClose }) {
     newPassword: '',
     confirmPassword: '',
   });
+  const [showCurrentPass, setShowCurrentPass] = useState(false);
+  const [showNewPass, setShowNewPass] = useState(false);
+  const [showConfirmPass, setShowConfirmPass] = useState(false);
   const [passMsg, setPassMsg] = useState({ type: '', text: '' });
 
   // Activity stats & user's entered leads
@@ -599,13 +604,24 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Current Password
                     </label>
-                    <input
-                      type="password"
-                      value={passData.currentPassword}
-                      onChange={(e) => setPassData({ ...passData, currentPassword: e.target.value })}
-                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="Enter current password"
-                    />
+                    <div className="relative">
+                      <input
+                        type={showCurrentPass ? 'text' : 'password'}
+                        value={passData.currentPassword}
+                        onChange={(e) => setPassData({ ...passData, currentPassword: e.target.value })}
+                        className="w-full pl-3.5 pr-10 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
+                        placeholder="Enter current password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCurrentPass(!showCurrentPass)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer transition-colors"
+                        title={showCurrentPass ? 'Hide password' : 'Show password'}
+                        aria-label={showCurrentPass ? 'Hide password' : 'Show password'}
+                      >
+                        {showCurrentPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -613,25 +629,47 @@ export default function UserProfileModal({ isOpen, onClose }) {
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         New Password
                       </label>
-                      <input
-                        type="password"
-                        value={passData.newPassword}
-                        onChange={(e) => setPassData({ ...passData, newPassword: e.target.value })}
-                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
-                        placeholder="At least 6 characters"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showNewPass ? 'text' : 'password'}
+                          value={passData.newPassword}
+                          onChange={(e) => setPassData({ ...passData, newPassword: e.target.value })}
+                          className="w-full pl-3.5 pr-10 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
+                          placeholder="At least 6 characters"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowNewPass(!showNewPass)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer transition-colors"
+                          title={showNewPass ? 'Hide password' : 'Show password'}
+                          aria-label={showNewPass ? 'Hide password' : 'Show password'}
+                        >
+                          {showNewPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
                     </div>
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Confirm New Password
                       </label>
-                      <input
-                        type="password"
-                        value={passData.confirmPassword}
-                        onChange={(e) => setPassData({ ...passData, confirmPassword: e.target.value })}
-                        className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
-                        placeholder="Repeat new password"
-                      />
+                      <div className="relative">
+                        <input
+                          type={showConfirmPass ? 'text' : 'password'}
+                          value={passData.confirmPassword}
+                          onChange={(e) => setPassData({ ...passData, confirmPassword: e.target.value })}
+                          className="w-full pl-3.5 pr-10 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
+                          placeholder="Repeat new password"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowConfirmPass(!showConfirmPass)}
+                          className="absolute inset-y-0 right-0 flex items-center pr-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 focus:outline-none cursor-pointer transition-colors"
+                          title={showConfirmPass ? 'Hide password' : 'Show password'}
+                          aria-label={showConfirmPass ? 'Hide password' : 'Show password'}
+                        >
+                          {showConfirmPass ? <EyeOff size={15} /> : <Eye size={15} />}
+                        </button>
+                      </div>
                     </div>
                   </div>
 

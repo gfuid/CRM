@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, Sparkles, Lock, Mail } from 'lucide-react';
+import { ArrowLeft, Sparkles, Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
   const { signIn } = useAuth();
   const [email, setEmail] = useState(() => localStorage.getItem('crm_remembered_email') || '');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('crm_remembered_email')));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -104,13 +105,22 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding }) {
                 <Lock size={16} />
               </span>
               <input
-                type="password"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
+                type={showPassword ? 'text' : 'password'}
+                className="w-full pl-10 pr-10 py-2.5 rounded-xl border border-slate-200 bg-white text-slate-900 placeholder-slate-400 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 transition-all"
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
               />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3.5 text-slate-400 hover:text-slate-600 focus:outline-none cursor-pointer transition-colors"
+                title={showPassword ? 'Hide password' : 'Show password'}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
             </div>
           </div>
 
