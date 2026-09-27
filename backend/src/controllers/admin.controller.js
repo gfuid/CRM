@@ -28,10 +28,77 @@ const getAllUsers = async (req, res) => {
     );
   }
 
-  return ApiResponse.success(res, results, 'Users fetched successfully', 200, {
-    total: results.length,
-    activeCount: results.filter((u) => u.is_active).length,
-    adminsCount: results.filter((u) => u.role === 'admin').length,
+  // Enrich each user with staff quota and associated employee breakdown
+  const enrichedResults = results.map((u) => {
+    const isOwner = u.persona === 'owner' || u.role === 'admin';
+    const cleanUser = { ...u };
+    delete cleanUser.password;
+
+    if (isOwner) {
+      // Find all staff members belonging to this owner/company
+      const staffList = dataStore.users
+        .filter(
+          (s) =>
+            s.persona !== 'owner' &&
+            (s.company_id === u.company_id || s.created_by === u.id || !s.company_id)
+        )
+        .map((s) => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          role: s.role,
+          department: s.department,
+          phone: s.phone || '',
+          is_active: s.is_active,
+          avatar_url: s.avatar_url,
+          created_at: s.created_at,
+          data_scope: s.data_scope,
+        }));
+
+      // Free Trial default is 3 staff seats unless customized or upgraded
+      const staffLimit =
+        u.staff_limit !== undefined
+          ? Number(u.staff_limit)
+          : Number(dataStore.company.maxStaff || 3);
+
+      return {
+        ...cleanUser,
+        is_owner: true,
+        company_name: u.company_name || dataStore.company.name || 'Travel-Trade',
+        staff_limit: staffLimit,
+        staff_count: staffList.length,
+        staff_list: staffList,
+        plan: dataStore.company.plan || 'growth',
+      };
+    } else {
+      // For staff, identify their reporting owner
+      const owner =
+        dataStore.users.find(
+          (o) =>
+            (o.persona === 'owner' || o.role === 'admin') &&
+            (o.company_id === u.company_id || o.id === u.created_by)
+        ) || dataStore.users.find((o) => o.persona === 'owner' || o.role === 'admin');
+
+      return {
+        ...cleanUser,
+        is_owner: false,
+        owner_name: owner ? owner.name : 'Company Owner',
+        owner_id: owner ? owner.id : null,
+        company_name: owner ? (owner.company_name || dataStore.company.name) : dataStore.company.name,
+      };
+    }
+  });
+
+  const ownersCount = dataStore.users.filter((u) => u.persona === 'owner' || u.role === 'admin').length;
+  const staffCount = dataStore.users.filter((u) => u.persona !== 'owner').length;
+
+  return ApiResponse.success(res, enrichedResults, 'Users fetched successfully', 200, {
+    total: enrichedResults.length,
+    activeCount: enrichedResults.filter((u) => u.is_active).length,
+    adminsCount: enrichedResults.filter((u) => u.role === 'admin').length,
+    ownersCount,
+    staffCount,
+    defaultFreeTrialLimit: 3,
   });
 };
 
@@ -48,6 +115,22 @@ const createUser = async (req, res) => {
   const existing = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
   if (existing) {
     return ApiResponse.error(res, 'A staff member with this email already exists', 409);
+  }
+
+  // Enforce staff limit check against owner quota
+  const owner = dataStore.users.find((u) => u.persona === 'owner' || u.role === 'admin');
+  const staffLimit =
+    owner?.staff_limit !== undefined
+      ? Number(owner.staff_limit)
+      : Number(dataStore.company?.maxStaff || 3);
+  const currentStaffCount = dataStore.users.filter((u) => u.persona !== 'owner').length;
+
+  if (currentStaffCount >= staffLimit) {
+    return ApiResponse.error(
+      res,
+      `Staff seat limit reached (${currentStaffCount}/${staffLimit} seats used). The Super Admin can increase the staff limit in the Admin Console.`,
+      403
+    );
   }
 
   // Staff is not an admin - default to 'agent' / 'staff'
@@ -225,6 +308,81 @@ const toggleUserStatus = async (req, res) => {
   dbSync.saveAuditLog(auditLog);
 
   return ApiResponse.success(res, user, `User ${user.is_active ? 'activated' : 'deactivated'} successfully`);
+};
+
+/**
+ * Update staff seat limit for an owner / company (Super Admin only)
+ */
+const updateStaffLimit = async (req, res) => {
+  const { id } = req.params;
+  const { staff_limit } = req.body;
+
+  if (staff_limit === undefined || isNaN(Number(staff_limit)) || Number(staff_limit) < 0) {
+    return ApiResponse.error(res, 'Valid staff_limit number is required (0 or more)', 400);
+  }
+
+  const user = dataStore.users.find((u) => u.id === id);
+  if (!user) {
+    return ApiResponse.error(res, 'Owner / User not found', 404);
+  }
+
+  const newLimit = Number(staff_limit);
+  user.staff_limit = newLimit;
+
+  // Sync with company quota if owner or admin
+  if (user.persona === 'owner' || user.role === 'admin') {
+    dataStore.company.maxStaff = newLimit;
+    dbSync.saveCompany(dataStore.company);
+  }
+
+  dbSync.saveUser(user);
+
+  // Record audit log
+  const auditLog = {
+    id: generateId('log'),
+    actor_name: req.user ? req.user.name : 'Super Admin',
+    actor_id: req.user ? req.user.id : 'usr_admin_1',
+    action: 'STAFF_LIMIT_UPDATED',
+    details: `Updated staff quota limit for ${user.name} (${user.email}) to ${newLimit} seats`,
+    ip_address: req.ip || '127.0.0.1',
+    timestamp: new Date().toISOString(),
+  };
+  dataStore.auditLogs.unshift(auditLog);
+  dbSync.saveAuditLog(auditLog);
+
+  // Compute refreshed staff list
+  const staffList = dataStore.users
+    .filter(
+      (s) =>
+        s.persona !== 'owner' &&
+        (s.company_id === user.company_id || s.created_by === user.id || !s.company_id)
+    )
+    .map((s) => ({
+      id: s.id,
+      name: s.name,
+      email: s.email,
+      role: s.role,
+      department: s.department,
+      phone: s.phone || '',
+      is_active: s.is_active,
+      avatar_url: s.avatar_url,
+      created_at: s.created_at,
+    }));
+
+  const enrichedUser = {
+    ...user,
+    staff_limit: newLimit,
+    staff_count: staffList.length,
+    staff_list: staffList,
+    company_name: user.company_name || dataStore.company.name || 'Travel-Trade',
+  };
+  delete enrichedUser.password;
+
+  return ApiResponse.success(
+    res,
+    enrichedUser,
+    `Staff limit for ${user.name} successfully updated to ${newLimit} seats!`
+  );
 };
 
 /**

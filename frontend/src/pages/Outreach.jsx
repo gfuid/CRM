@@ -1,306 +1,693 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import Modal from '../components/Modal';
 import {
+  Eye,
+  Calendar,
+  RefreshCw,
+  X,
+  User,
   Phone,
   Mail,
-  Calendar,
-  Plus,
-  Search,
-  CheckCircle2,
-  TrendingUp,
-  Filter,
-  Users
+  MessageCircle,
+  ExternalLink,
+  Globe,
+  Building2,
+  Layers,
+  DollarSign,
+  Clock,
+  Send,
+  FileText,
+  Ship,
+  Sparkles,
+  History,
+  Tag
 } from 'lucide-react';
-import Modal from '../components/Modal';
+import { OUTREACH_COLUMNS, INITIAL_OUTREACH_LOGS } from '../data/outreachData';
+import { SEED_LEADS } from '../data/seedLeads';
 
-const LinkedInIcon = ({ size = 16, className = '' }) => (
-  <svg
-    width={size}
-    height={size}
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
-    className={className}
-  >
-    <path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-2-2 2 2 0 0 0-2 2v7h-4v-7a6 6 0 0 1 6-6z" />
-    <rect x="2" y="9" width="4" height="12" />
-    <circle cx="4" cy="4" r="2" />
-  </svg>
-);
+// Format date as Day / Month / Year (DD/MM/YYYY)
+export const formatDMY = (dateStr, dateIso) => {
+  if (dateIso && dateIso.includes('-')) {
+    const parts = dateIso.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
+  if (!dateStr) return '';
+  if (dateStr.includes('-')) {
+    const parts = dateStr.split('-');
+    if (parts.length === 3 && parts[0].length === 4) {
+      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
+    }
+  }
+  if (dateStr.includes('/')) {
+    const parts = dateStr.split('/');
+    if (parts.length === 3) {
+      const p0 = parseInt(parts[0], 10);
+      const p1 = parseInt(parts[1], 10);
+      const y = parts[2];
+      if (p1 > 12) {
+        // Was M/D/YYYY (e.g. 9/26/2026) -> Day/Month/Year
+        return `${String(p1).padStart(2, '0')}/${String(p0).padStart(2, '0')}/${y}`;
+      }
+      if (parts[0].length === 1 && p0 <= 12 && p1 <= 12) {
+        // Single digit month at start (e.g. 9/5/2026) -> Day/Month/Year
+        return `${String(p1).padStart(2, '0')}/${String(p0).padStart(2, '0')}/${y}`;
+      }
+      // Already DD/MM/YYYY
+      return `${String(p0).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${y}`;
+    }
+  }
+  return dateStr;
+};
 
 export default function Outreach() {
   const { profile } = useAuth();
-  const [records, setRecords] = useState([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [search, setSearch] = useState('');
-  const [newLog, setNewLog] = useState({
-    employee_name: profile?.name || 'Owner',
-    calls_made: 30,
-    emails_sent: 50,
-    linkedin_touches: 20,
-    meetings_booked: 2,
+  const [logs, setLogs] = useState(() =>
+    INITIAL_OUTREACH_LOGS.map((item) => ({
+      ...item,
+      date: formatDMY(item.date, item.date_iso),
+    }))
+  );
+  const [fromDate, setFromDate] = useState('2026-09-20');
+  const [toDate, setToDate] = useState('2026-09-27');
+  const [selectedUser, setSelectedUser] = useState('All users');
+  const [isRefreshing, setIsRefreshing] = useState(false);
+
+  // Modal 1: Daily Breakdown Modal (matches OneRoot screenshots 4 & 5)
+  const [activeBreakdown, setActiveBreakdown] = useState(null);
+
+  // Modal 2: Complete Lead Dossier Details ("eys clik pr sab trah ke details")
+  const [activePreviewLead, setActivePreviewLead] = useState(null);
+
+  // Persistent storage check on mount & normalize dates to DD/MM/YYYY
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('oneroot_outreach_v3');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          const normalized = parsed.map((item) => ({
+            ...item,
+            date: formatDMY(item.date, item.date_iso),
+          }));
+          setLogs(normalized);
+          localStorage.setItem('oneroot_outreach_v3', JSON.stringify(normalized));
+          return;
+        }
+      }
+    } catch {}
+    const normalizedInitial = INITIAL_OUTREACH_LOGS.map((item) => ({
+      ...item,
+      date: formatDMY(item.date, item.date_iso),
+    }));
+    setLogs(normalizedInitial);
+  }, []);
+
+  // Filter logs by date range & user
+  const filteredLogs = logs.filter((log) => {
+    if (selectedUser !== 'All users' && log.user !== selectedUser) {
+      return false;
+    }
+    if (fromDate && log.date_iso < fromDate) {
+      return false;
+    }
+    if (toDate && log.date_iso > toDate) {
+      return false;
+    }
+    return true;
   });
 
-  useEffect(() => {
-    if (profile?.name) {
-      setNewLog((prev) => ({ ...prev, employee_name: profile.name }));
-    }
-    api.getOutreach()
-      .then((res) => {
-        if (res && res.success && Array.isArray(res.data)) {
-          setRecords(res.data);
-        }
-      })
-      .catch(() => {});
-  }, [profile]);
-
-  const totalCalls = records.reduce((s, r) => s + (r.calls_made || 0), 0);
-  const totalEmails = records.reduce((s, r) => s + (r.emails_sent || 0), 0);
-  const totalLinkedIn = records.reduce((s, r) => s + (r.linkedin_touches || 0), 0);
-  const totalMeetings = records.reduce((s, r) => s + (r.meetings_booked || 0), 0);
-
-  const filtered = records.filter(
-    (r) =>
-      r.employee_name.toLowerCase().includes(search.toLowerCase()) ||
-      r.department?.toLowerCase().includes(search.toLowerCase())
-  );
-
-  const handleSaveLog = (e) => {
-    e.preventDefault();
-    const entry = {
-      id: `out_${Date.now()}`,
-      employee_id: profile?.id,
-      employee_name: newLog.employee_name,
-      department: 'Sales Team',
-      date: new Date().toISOString().split('T')[0],
-      calls_made: Number(newLog.calls_made) || 0,
-      emails_sent: Number(newLog.emails_sent) || 0,
-      linkedin_touches: Number(newLog.linkedin_touches) || 0,
-      meetings_booked: Number(newLog.meetings_booked) || 0,
-      target_met: Number(newLog.calls_made) >= 30 && Number(newLog.emails_sent) >= 50,
-    };
-    setRecords([entry, ...records]);
-    setModalOpen(false);
-
-    api.recordOutreach({
-      employee_id: profile?.id,
-      calls_made: entry.calls_made,
-      emails_sent: entry.emails_sent,
-      linkedin_touches: entry.linkedin_touches,
-      meetings_booked: entry.meetings_booked,
-    }).catch(() => {});
+  const handleRefresh = () => {
+    setIsRefreshing(true);
+    setTimeout(() => {
+      setIsRefreshing(false);
+    }, 450);
   };
 
+  // Open Full Lead Dossier when clicking any lead card
+  const handleLeadClick = (leadSummary) => {
+    // 1. Try to find the exact lead in SEED_LEADS or localStorage
+    let fullLead = null;
+    try {
+      const localLeads = JSON.parse(localStorage.getItem('oneroot_leads_v3') || '[]');
+      if (Array.isArray(localLeads) && localLeads.length > 0) {
+        fullLead = localLeads.find(
+          (l) =>
+            (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
+            (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
+        );
+      }
+    } catch {}
+
+    if (!fullLead) {
+      fullLead = SEED_LEADS.find(
+        (l) =>
+          (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
+          (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
+      );
+    }
+
+    if (fullLead) {
+      setActivePreviewLead(fullLead);
+    } else {
+      // Build a comprehensive lead object from summary
+      setActivePreviewLead({
+        id: leadSummary.id || 'lead_prev_' + Date.now(),
+        company_name: leadSummary.company_name,
+        name: leadSummary.company_name,
+        country: leadSummary.country || 'India 🇮🇳',
+        type: 'Export',
+        contact_person: leadSummary.contact_person || 'Procurement Manager',
+        phone: leadSummary.phone || '+91 98452 11890',
+        email: leadSummary.email || 'procurement@company.com',
+        website: 'https://' + leadSummary.company_name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
+        address: 'Industrial Processing Zone, India',
+        products: leadSummary.product ? [leadSummary.product] : ['Agricultural Commodities'],
+        quantity: leadSummary.quantity || 50000,
+        price: leadSummary.price || 50000,
+        stage: leadSummary.stage || 'Requirement Understood',
+        agent_name: activeBreakdown?.user || 'Shiva',
+        activity_history: [
+          {
+            activity: 'Call initiated',
+            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '26/09/2026'} · ${leadSummary.time || '11:00 AM'}`,
+            note: leadSummary.note || 'Discussed product specs and shipment schedule',
+            author: `by ${activeBreakdown?.user || 'Shiva'}`,
+          },
+        ],
+        previous_remarks: [
+          {
+            remark: leadSummary.note || 'Follow up scheduled',
+            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '26/09/2026'}`,
+            author: activeBreakdown?.user || 'Shiva',
+          },
+        ],
+        export_requirements: {
+          incoterm: 'CIF',
+          port_delivery: 'Nhava Sheva / Mundra Port',
+          payment_days: 'CAD on BL copy',
+          polish_level: 'Machine Cleaned',
+        },
+      });
+    }
+  };
+
+  const allUserOptions = ['All users', 'adric', 'Shiva', 'Rohan', 'David', 'Preetham', 'aarav', 'Rahul'];
+
   return (
-    <div className="space-y-6">
-      {/* Page Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-        <div>
-          <h1 className="text-2xl font-extrabold text-slate-900 tracking-tight">Daily Outreach Matrix</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Track daily sales rep call targets, email cadences, and meetings booked
-          </p>
-        </div>
-
-        <button
-          onClick={() => setModalOpen(true)}
-          className="flex items-center gap-2 px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-        >
-          <Plus size={16} />
-          <span>Log Daily Activity</span>
-        </button>
+    <div className="space-y-6 antialiased pb-12">
+      {/* Page Header matching OneRoot CRM */}
+      <div>
+        <h1 className="text-2xl sm:text-3xl font-extrabold text-slate-900 dark:text-white tracking-tight">
+          Outreach
+        </h1>
+        <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
+          Daily calls, emails, WhatsApp and lead touches by user
+        </p>
       </div>
 
-      {/* 4 KPI Summary Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
-          <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-            <span>Calls Initiated</span>
-            <Phone size={16} className="text-emerald-500" />
+      {/* FILTER BAR - EXACT MATCH TO ONEROOT SCREENSHOT 3 */}
+      <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
+        <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+          {/* FROM Date */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              From
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={fromDate}
+                onChange={(e) => setFromDate(e.target.value)}
+                className="h-10 px-3.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+              />
+            </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{totalCalls}</div>
-          <div className="text-xs text-emerald-600 font-semibold mt-1">Target: 30 / rep / day</div>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
-          <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-            <span>Emails Dispatched</span>
-            <Mail size={16} className="text-blue-500" />
+          {/* TO Date */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              To
+            </label>
+            <div className="relative">
+              <input
+                type="date"
+                value={toDate}
+                onChange={(e) => setToDate(e.target.value)}
+                className="h-10 px-3.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
+              />
+            </div>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{totalEmails}</div>
-          <div className="text-xs text-blue-600 font-semibold mt-1">Target: 50 / rep / day</div>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
-          <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-            <span>LinkedIn Touches</span>
-            <LinkedInIcon size={16} className="text-purple-500" />
+          {/* USER Selector */}
+          <div className="space-y-1 min-w-[140px]">
+            <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              User
+            </label>
+            <select
+              value={selectedUser}
+              onChange={(e) => setSelectedUser(e.target.value)}
+              className="h-10 w-full px-3.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none text-slate-800 dark:text-slate-100 cursor-pointer"
+            >
+              {allUserOptions.map((u) => (
+                <option key={u} value={u}>
+                  {u}
+                </option>
+              ))}
+            </select>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{totalLinkedIn}</div>
-          <div className="text-xs text-slate-400 mt-1">Social selling pipeline</div>
-        </div>
 
-        <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-4">
-          <div className="flex justify-between items-center text-xs font-semibold text-slate-500">
-            <span>Meetings Scheduled</span>
-            <Calendar size={16} className="text-amber-500" />
+          {/* Refresh Button - Vivid Purple pill matching OneRoot */}
+          <div>
+            <button
+              type="button"
+              onClick={handleRefresh}
+              className="h-10 px-5 rounded-xl bg-purple-600 hover:bg-purple-700 active:scale-95 text-white font-bold text-xs shadow-xs transition-all flex items-center gap-1.5 cursor-pointer"
+            >
+              <RefreshCw size={14} className={isRefreshing ? 'animate-spin' : ''} />
+              <span>Refresh</span>
+            </button>
           </div>
-          <div className="text-2xl font-black text-slate-900 mt-2">{totalMeetings}</div>
-          <div className="text-xs text-emerald-600 font-semibold mt-1">High conversion meetings</div>
         </div>
       </div>
 
-      {/* Table Card */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm p-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-          <div className="relative w-full sm:w-72">
-            <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input
-              type="text"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search representative..."
-              className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-            />
-          </div>
-
-          <div className="text-xs text-slate-400 font-medium">
-            Showing {filtered.length} records
-          </div>
-        </div>
-
+      {/* OUTREACH SUMMARY TABLE - EXACT MATCH TO ONEROOT SCREENSHOT 3 */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 text-slate-400 font-bold uppercase text-[11px] tracking-wider">
-                <th className="py-3 px-3">Representative</th>
-                <th className="py-3 px-3">Date</th>
-                <th className="py-3 px-3">Calls Made</th>
-                <th className="py-3 px-3">Emails Sent</th>
-                <th className="py-3 px-3">LinkedIn Touches</th>
-                <th className="py-3 px-3">Meetings Booked</th>
-                <th className="py-3 px-3 text-right">Daily Target</th>
+              <tr className="bg-slate-950 text-white font-extrabold uppercase text-[10px] tracking-wider whitespace-nowrap">
+                <th className="py-3 px-3.5">Date</th>
+                <th className="py-3 px-3.5">User</th>
+                <th className="py-3 px-3 text-center">New Lead</th>
+                <th className="py-3 px-3 text-center">Call Initiated</th>
+                <th className="py-3 px-3 text-center">Email</th>
+                <th className="py-3 px-3 text-center">WhatsApp Text/Zalo</th>
+                <th className="py-3 px-3 text-center">Response</th>
+                <th className="py-3 px-3 text-center">Meeting</th>
+                <th className="py-3 px-3 text-center">Price Discussion</th>
+                <th className="py-3 px-3 text-center">Payment Discussion</th>
+                <th className="py-3 px-3 text-center">Sample Discussion</th>
+                <th className="py-3 px-3 text-center">Sample Sent</th>
+                <th className="py-3 px-3.5 text-center">Detail</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100">
-              {filtered.length === 0 ? (
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
+              {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="7" className="py-10 text-center text-slate-400 text-xs">
-                    No outreach activities recorded yet. Click "Log Outreach" to add your team's metrics.
+                  <td colSpan="13" className="py-12 text-center text-slate-400 text-xs">
+                    No outreach activities recorded for this date range or user.
                   </td>
                 </tr>
               ) : (
-                filtered.map((item) => (
-                  <tr key={item.id} className="hover:bg-slate-50/80 transition-colors">
-                    <td className="py-3 px-3 font-semibold text-slate-900">
-                      <div>{item.employee_name}</div>
-                      <div className="text-[11px] text-slate-400 font-normal">{item.department}</div>
-                    </td>
-                    <td className="py-3 px-3 text-slate-600 font-medium">{item.date}</td>
-                    <td className="py-3 px-3 font-bold text-slate-800">{item.calls_made}</td>
-                    <td className="py-3 px-3 font-bold text-slate-800">{item.emails_sent}</td>
-                    <td className="py-3 px-3 font-bold text-slate-800">{item.linkedin_touches}</td>
-                    <td className="py-3 px-3 font-bold text-emerald-600">{item.meetings_booked}</td>
-                    <td className="py-3 px-3 text-right">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold ${
-                          item.target_met
-                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                            : 'bg-amber-50 text-amber-700 border border-amber-200'
-                        }`}
-                      >
-                        {item.target_met ? '✓ Target Met' : 'In Progress'}
-                      </span>
-                    </td>
-                  </tr>
-                ))
+                filteredLogs.map((row, idx) => {
+                  const isTinted = idx % 2 === 0;
+                  return (
+                    <tr
+                      key={row.id}
+                      className={`transition-colors ${
+                        isTinted
+                          ? 'bg-rose-50/20 dark:bg-slate-850/60 hover:bg-rose-50/40'
+                          : 'bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800/60'
+                      }`}
+                    >
+                      {/* Date */}
+                      <td className="py-3.5 px-3.5 font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap">
+                        {formatDMY(row.date, row.date_iso)}
+                      </td>
+
+                      {/* User */}
+                      <td className="py-3.5 px-3.5 font-bold text-slate-900 dark:text-white whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                          <span>{row.user}</span>
+                        </span>
+                      </td>
+
+                      {/* Counts across 10 activities */}
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.new_lead > 0 ? (
+                          <span className="text-purple-700 dark:text-purple-400 font-extrabold">{row.counts.new_lead}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.call_initiated > 0 ? (
+                          <span className="text-cyan-700 dark:text-cyan-400 font-black">{row.counts.call_initiated}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.email > 0 ? (
+                          <span className="text-indigo-700 dark:text-indigo-400 font-extrabold">{row.counts.email}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.whatsapp > 0 ? (
+                          <span className="text-rose-600 dark:text-rose-400 font-extrabold">{row.counts.whatsapp}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.response > 0 ? (
+                          <span className="text-rose-700 dark:text-rose-400 font-extrabold">{row.counts.response}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.meeting > 0 ? (
+                          <span className="text-orange-700 dark:text-orange-400 font-extrabold">{row.counts.meeting}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.price_discussion > 0 ? (
+                          <span className="text-amber-700 dark:text-amber-400 font-extrabold">{row.counts.price_discussion}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.payment_discussion > 0 ? (
+                          <span className="text-teal-700 dark:text-teal-400 font-extrabold">{row.counts.payment_discussion}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.sample_discussion > 0 ? (
+                          <span className="text-cyan-800 dark:text-cyan-300 font-extrabold">{row.counts.sample_discussion}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
+                        {row.counts.sample_sent > 0 ? (
+                          <span className="text-purple-800 dark:text-purple-300 font-extrabold">{row.counts.sample_sent}</span>
+                        ) : (
+                          <span className="text-slate-400">—</span>
+                        )}
+                      </td>
+
+                      {/* Detail Button: purple pill matching OneRoot */}
+                      <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
+                        <button
+                          type="button"
+                          onClick={() => setActiveBreakdown(row)}
+                          className="px-3 py-1 rounded-xl text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 active:scale-95 shadow-xs transition-all flex items-center gap-1.5 cursor-pointer mx-auto"
+                        >
+                          <Eye size={12} />
+                          <span>View</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Log Activity Modal */}
-      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Log Daily Outreach Activity">
-        <form onSubmit={handleSaveLog} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold text-slate-700 mb-1">Representative Name</label>
-            <input
-              type="text"
-              required
-              value={newLog.employee_name}
-              onChange={(e) => setNewLog({ ...newLog, employee_name: e.target.value })}
-              className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-            />
-          </div>
+      {/* MODAL 1: DAILY BREAKDOWN OVERLAY (EXACT ONEROOT SCREENSHOT 4 & 5 MATCH) */}
+      {activeBreakdown && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-150">
+          <div className="relative w-full max-w-[96vw] xl:max-w-7xl max-h-[92vh] flex flex-col bg-slate-900 rounded-3xl border border-slate-800 shadow-2xl overflow-hidden">
+            {/* Dark Header */}
+            <div className="p-4 sm:p-5 border-b border-slate-800/80 flex items-start justify-between bg-slate-950 text-white">
+              <div>
+                <span className="text-[10px] font-black uppercase tracking-wider text-purple-400 bg-purple-950/80 px-2 py-0.5 rounded border border-purple-800">
+                  Daily Breakdown
+                </span>
+                <h2 className="text-2xl sm:text-3xl font-black mt-1 text-white tracking-tight">
+                  {activeBreakdown.user}
+                </h2>
+                <p className="text-xs text-slate-400 mt-0.5">
+                  {formatDMY(activeBreakdown.date, activeBreakdown.date_iso)} · Click a lead for preview
+                </p>
+              </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Calls Made</label>
-              <input
-                type="number"
-                min="0"
-                value={newLog.calls_made}
-                onChange={(e) => setNewLog({ ...newLog, calls_made: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-              />
+              <button
+                type="button"
+                onClick={() => setActiveBreakdown(null)}
+                className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+                title="Close Breakdown"
+              >
+                <X size={18} />
+              </button>
             </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Emails Sent</label>
-              <input
-                type="number"
-                min="0"
-                value={newLog.emails_sent}
-                onChange={(e) => setNewLog({ ...newLog, emails_sent: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-              />
-            </div>
-          </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">LinkedIn Touches</label>
-              <input
-                type="number"
-                min="0"
-                value={newLog.linkedin_touches}
-                onChange={(e) => setNewLog({ ...newLog, linkedin_touches: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-              />
-            </div>
-            <div>
-              <label className="block text-xs font-bold text-slate-700 mb-1">Meetings Booked</label>
-              <input
-                type="number"
-                min="0"
-                value={newLog.meetings_booked}
-                onChange={(e) => setNewLog({ ...newLog, meetings_booked: e.target.value })}
-                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30 transition-all"
-              />
-            </div>
-          </div>
+            {/* Horizontal Multi-Column Board for All Activities */}
+            <div className="flex-1 overflow-x-auto overflow-y-auto p-4 bg-slate-900/90 text-xs">
+              <div className="flex gap-3 min-w-max pb-2">
+                {OUTREACH_COLUMNS.map((col) => {
+                  const items = activeBreakdown.activities?.[col.key] || [];
+                  const count = activeBreakdown.counts?.[col.key] || items.length || 0;
 
-          <div className="pt-3 flex justify-end gap-2 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setModalOpen(false)}
-              className="px-4 py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-md shadow-emerald-600/20"
-            >
-              Save Metrics
-            </button>
+                  return (
+                    <div
+                      key={col.key}
+                      className="w-72 sm:w-80 flex flex-col bg-slate-50/70 dark:bg-slate-850/80 rounded-2xl border border-slate-700/60 overflow-hidden shrink-0 shadow-xs"
+                    >
+                      {/* Column Header */}
+                      <div
+                        className={`p-2.5 px-3 text-center text-white font-black text-xs uppercase tracking-wider ${col.headerBg} flex items-center justify-center gap-1.5 shadow-xs`}
+                      >
+                        <span>{col.label}</span>
+                        <span className="bg-white/25 px-2 py-0.2 rounded-full text-[11px] font-black">
+                          {count}
+                        </span>
+                      </div>
+
+                      {/* Leads / Activity Cards in this column */}
+                      <div className="flex-1 p-2.5 space-y-2.5 min-h-[300px] max-h-[58vh] overflow-y-auto">
+                        {items.length === 0 ? (
+                          <div className="h-full flex items-center justify-center text-slate-500 text-[11px] italic py-16">
+                            — No activities —
+                          </div>
+                        ) : (
+                          items.map((card, cIdx) => (
+                            <div
+                              key={cIdx}
+                              onClick={() => handleLeadClick(card)}
+                              className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-purple-400 hover:shadow-md transition-all cursor-pointer space-y-1.5 text-left group"
+                              title="Click to view full lead details"
+                            >
+                              <div className="font-extrabold text-slate-900 dark:text-white text-xs group-hover:text-purple-600 transition-colors">
+                                {card.company_name}
+                              </div>
+                              <div className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">
+                                {card.contact_person}
+                              </div>
+                              <div className="text-[10px] text-slate-400 font-medium">
+                                {card.time}
+                              </div>
+                              <div className="text-[11px] text-slate-700 dark:text-slate-300 font-normal pt-1 border-t border-slate-100 dark:border-slate-700/60 leading-relaxed">
+                                {card.note}
+                              </div>
+                              <div className="pt-1 flex items-center justify-between text-[10px] text-purple-600 dark:text-purple-400 font-bold">
+                                <span>Preview details</span>
+                                <Eye size={11} />
+                              </div>
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
-        </form>
-      </Modal>
+        </div>
+      )}
+
+      {/* MODAL 2: COMPLETE LEAD DOSSIER VIEW ("eys clik pr sab trah ke details") */}
+      {activePreviewLead && (
+        <Modal
+          isOpen={Boolean(activePreviewLead)}
+          onClose={() => setActivePreviewLead(null)}
+          title={activePreviewLead.company_name || activePreviewLead.name}
+          subtitle={`View customer details · Created ${activePreviewLead.created_at ? new Date(activePreviewLead.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '23 Sep 2026'}`}
+          maxWidth="max-w-4xl"
+        >
+          <div className="space-y-5 text-xs max-h-[78vh] overflow-y-auto pr-1">
+            {/* Header Status Badges Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                  📅 Created {activePreviewLead.created_at ? new Date(activePreviewLead.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : '23 Sep 2026'}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-extrabold bg-purple-50 text-purple-800 border border-purple-200">
+                  {activePreviewLead.stage || activePreviewLead.status || 'Requirement Understood'}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-indigo-50 text-indigo-800 border border-indigo-200">
+                  {activePreviewLead.type === 'Domestic' ? '🏠 Domestic' : '🌐 Export'}
+                </span>
+                {activePreviewLead.follow_up_date && (
+                  <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
+                    ⏰ Follow-up: {activePreviewLead.follow_up_date}
+                  </span>
+                )}
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-cyan-50 text-cyan-800 border border-cyan-200">
+                  👤 Rep: {activePreviewLead.agent_name || activeBreakdown?.user || 'Shiva'}
+                </span>
+              </div>
+            </div>
+
+            {/* Target Commodities & Contract Value */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl">
+                <div className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400">Target Commodities</div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {(Array.isArray(activePreviewLead.products) && activePreviewLead.products.length > 0
+                    ? activePreviewLead.products
+                    : (activePreviewLead.product ? activePreviewLead.product.split(',').map(p => p.trim()) : ['Rice DDGS'])
+                  ).map((p, idx) => (
+                    <span key={idx} className="px-2.5 py-1 rounded-lg text-xs font-black bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-200 border border-amber-300 shadow-2xs">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-indigo-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-2xl shadow-xs">
+                <div className="text-[10px] font-bold uppercase text-rose-800 dark:text-rose-400">Contract Value & Quantity</div>
+                {(() => {
+                  const dealVal = Number(activePreviewLead.price) || Number(activePreviewLead.value) || 0;
+                  const dealQty = Number(activePreviewLead.quantity) || 0;
+                  const lakhs = ((dealVal * 86.5) / 100000).toFixed(2);
+                  return (
+                    <div className="mt-1">
+                      <div className="text-base font-black text-rose-950 dark:text-rose-200">
+                        {dealVal > 0 ? `₹${lakhs} Lakhs` : '$0 (Unpriced inquiry)'}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                        ${dealVal.toLocaleString()} USD • {dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Customer Contact Details */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="font-extrabold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <User size={14} className="text-rose-600 dark:text-rose-400" /> Customer & Buyer Details
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  {activePreviewLead.country}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                  <div className="font-extrabold text-slate-900 dark:text-slate-100 flex justify-between items-center">
+                    <span className="text-xs">{activePreviewLead.contact_person || 'Contact Person'}</span>
+                    <span className="text-[10px] text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded font-bold">
+                      Procurement
+                    </span>
+                  </div>
+                  <div className="text-slate-600 dark:text-slate-300 text-[11px] space-y-1">
+                    {activePreviewLead.phone && (
+                      <div className="flex items-center justify-between">
+                        <span>📞 {activePreviewLead.phone}</span>
+                        <a
+                          href={`https://wa.me/${String(activePreviewLead.phone).replace(/[^0-9]/g, '')}`}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="text-[10px] font-bold text-rose-600 hover:underline flex items-center gap-0.5"
+                        >
+                          <MessageCircle size={10} /> Chat WA
+                        </a>
+                      </div>
+                    )}
+                    {activePreviewLead.email && (
+                      <div>
+                        <a href={`mailto:${activePreviewLead.email}`} className="text-blue-600 hover:underline">
+                          ✉️ {activePreviewLead.email}
+                        </a>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1.5">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">Company Location & Address</div>
+                  <div className="text-slate-600 dark:text-slate-400">
+                    {activePreviewLead.address || 'Industrial Area / Commercial Trading Zone'}
+                  </div>
+                  {activePreviewLead.website && (
+                    <div className="flex items-center gap-1 pt-0.5">
+                      <Globe size={11} className="text-slate-400" />
+                      <a href={activePreviewLead.website.startsWith('http') ? activePreviewLead.website : `https://${activePreviewLead.website}`} target="_blank" rel="noreferrer" className="text-indigo-600 dark:text-indigo-400 font-bold underline">
+                        {activePreviewLead.website}
+                      </a>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+
+            {/* Daily Activity History */}
+            {activePreviewLead.activity_history && activePreviewLead.activity_history.length > 0 && (
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="text-xs font-extrabold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <span className="flex items-center gap-1.5">
+                    <History size={14} className="text-indigo-600" /> Logged Activities History ({activePreviewLead.activity_history.length})
+                  </span>
+                </div>
+                <div className="space-y-2">
+                  {activePreviewLead.activity_history.map((hist, hIdx) => (
+                    <div key={hIdx} className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span className="font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 text-[10px]">
+                          {hist.activity}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-medium">{hist.date}</span>
+                      </div>
+                      <div className="text-slate-700 dark:text-slate-200 font-medium">{hist.note}</div>
+                      <div className="text-[10px] text-slate-400 text-right">{hist.author}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Close Button Footer */}
+            <div className="flex items-center justify-end pt-3 border-t border-slate-200 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setActivePreviewLead(null)}
+                className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-slate-700 dark:hover:bg-slate-600 transition-colors cursor-pointer"
+              >
+                Close Preview
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
     </div>
   );
 }

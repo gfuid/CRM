@@ -34,7 +34,12 @@ const tabNames = {
 
 function AppContent() {
   const { user, profile, company, loading, isOwner, isStaff } = useAuth();
-  const [activeTab, setActiveTab] = useState('analytics');
+  const [activeTab, setActiveTabState] = useState(() => localStorage.getItem('crm_active_tab') || 'analytics');
+
+  const setActiveTab = (tab) => {
+    localStorage.setItem('crm_active_tab', tab);
+    setActiveTabState(tab);
+  };
 
   // Dedicated Route Detection (/login, /signup, /register)
   const getInitialAuthMode = () => {
@@ -65,13 +70,6 @@ function AppContent() {
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
   }, []);
-
-  // Enforce staff permission boundaries on activeTab
-  useEffect(() => {
-    if (isStaff && profile?.permissions?.view_analytics !== true && activeTab === 'analytics') {
-      setActiveTab('leads');
-    }
-  }, [isStaff, profile?.permissions, activeTab]);
 
   // Count overdue/due-soon tasks for badge
   useEffect(() => {

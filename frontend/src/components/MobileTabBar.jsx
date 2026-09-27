@@ -25,7 +25,7 @@ export default function MobileTabBar({
   const [moreDrawerOpen, setMoreDrawerOpen] = useState(false);
 
   const userPerms = profile?.permissions || {};
-  const canViewAnalytics = isOwner || userPerms.view_analytics === true;
+  const canViewAnalytics = isOwner || userPerms.view_analytics !== false;
   const canViewLeads = isOwner || userPerms.view_leads !== false;
   const canViewTasks = isOwner || userPerms.view_tasks !== false;
   const canViewFollowUp = isOwner || userPerms.view_followup !== false;

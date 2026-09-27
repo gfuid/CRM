@@ -15,8 +15,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
   const { isOwner, isStaff, profile } = useAuth();
 
-  const userPerms = profile?.permissions || {};
-  const canViewAnalytics = isOwner || userPerms.view_analytics === true;
+  const canViewAnalytics = isOwner || userPerms.view_analytics !== false;
   const canViewLeads = isOwner || userPerms.view_leads !== false;
   const canViewTasks = isOwner || userPerms.view_tasks !== false;
   const canViewActivity = isOwner || userPerms.view_activity !== false;

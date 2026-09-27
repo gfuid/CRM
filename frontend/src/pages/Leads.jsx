@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import { SEED_LEADS } from '../data/seedLeads';
 import {
   Plus,
   Search,
@@ -30,8 +31,46 @@ import {
   AlertCircle,
   Download,
   Upload,
-  FileSpreadsheet
+  FileSpreadsheet,
+  Share2,
+  Factory,
+  Sparkles,
+  Tag,
+  Paperclip,
+  MessageSquare,
+  Send,
+  History,
+  CalendarDays,
+  Lock
 } from 'lucide-react';
+
+export const AVAILABLE_ACTIVITIES = [
+  'Call initiated',
+  'Email',
+  'WhatsApp text/Zalo',
+  'Response',
+  'Meeting',
+  'Price discussion',
+  'Payment discussion',
+  'Sample discussion',
+  'Sample sent',
+  'Negotiation',
+  'Sent quotations',
+  'Email reply',
+  'Follow up calls'
+];
+
+export const SOCIAL_PLATFORMS = [
+  { id: 'LinkedIn', label: 'LinkedIn', icon: '💼', placeholder: 'https://linkedin.com/in/... or company profile' },
+  { id: 'Instagram', label: 'Instagram', icon: '📸', placeholder: 'https://instagram.com/company_handle' },
+  { id: 'Twitter', label: 'Twitter / X', icon: '🐦', placeholder: 'https://x.com/handle' },
+  { id: 'Facebook', label: 'Facebook', icon: '📘', placeholder: 'https://facebook.com/page' },
+  { id: 'WeChat', label: 'WeChat', icon: '💬', placeholder: 'WeChat ID or phone' },
+  { id: 'WhatsApp', label: 'WhatsApp', icon: '📱', placeholder: '+971 50 123 4567' },
+  { id: 'Telegram', label: 'Telegram', icon: '✈️', placeholder: 'https://t.me/channel' },
+  { id: 'YouTube', label: 'YouTube', icon: '🎥', placeholder: 'https://youtube.com/@channel' },
+  { id: 'Website', label: 'Website / Other', icon: '🌐', placeholder: 'https://...' },
+];
 
 // Comprehensive Countries with Flags
 export const COUNTRIES_WITH_FLAGS = [
@@ -113,7 +152,25 @@ export const LEAD_SOURCES = [
 ];
 
 export const CREDIT_RATINGS = ['AAA', 'AA+', 'AA', 'A', 'BBB', 'BB', 'Not Rated'];
-export const INCOTERMS = ['FOB', 'CIF', 'CFR', 'EXW', 'FCA', 'CIP', 'DDP'];
+export const INCOTERMS = ['FOB', 'CIF', 'CFR', 'EXW', 'FCA', 'CIP', 'DDP', 'DAP', 'DPU'];
+export const PAYMENT_TERMS = [
+  'LC at Sight (Letter of Credit)',
+  'LC 30 Days',
+  'LC 60 Days',
+  'LC 90 Days',
+  'CAD (Cash Against Documents)',
+  'CAD on BL copy',
+  'TT Advance (100% Wire Transfer)',
+  'TT 30% Advance + 70% on BL',
+  'TT 50% Advance + 50% on BL',
+  'Open Account 30 Days',
+  'Open Account 60 Days',
+  'Irrevocable LC at Sight',
+  'Standby LC',
+  'Bank Guarantee',
+  'DP (Documents against Payment)',
+  'DA (Documents against Acceptance)',
+];
 export const INDUSTRY_TYPES = [
   'Food & Spice Processing',
   'Animal Feed & Poultry',
@@ -145,7 +202,8 @@ export const CULTIVATION_METHODS = [
   'Natural Sun-Dried Plantation',
 ];
 
-export const INITIAL_LEADS = [
+export const INITIAL_LEADS = SEED_LEADS;
+const _OLD_LEADS_UNUSED = [
   {
     id: 'lead_1',
     name: 'Al-Barakah Global Agro Foods LLC',
@@ -436,6 +494,24 @@ const getStatusBadge = (status) => {
   }
 };
 
+// Follow-up health status for lead rows
+// Active: follow_up_date is today or future
+// Missed: 1-2 days overdue
+// Idle:   2-5 days overdue
+// Risk:   5+ days overdue
+const getFollowUpHealth = (followUpDate) => {
+  if (!followUpDate) return null;
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const due = new Date(followUpDate);
+  due.setHours(0, 0, 0, 0);
+  const diffDays = Math.floor((today - due) / 86400000);
+  if (diffDays <= 0) return { label: 'Active',  cls: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+  if (diffDays <= 2) return { label: 'Missed',  cls: 'bg-amber-100 text-amber-800 border-amber-300' };
+  if (diffDays <= 5) return { label: 'Idle',    cls: 'bg-orange-100 text-orange-800 border-orange-300' };
+  return                      { label: 'Risk',    cls: 'bg-rose-100 text-rose-800 border-rose-300' };
+};
+
 export default function Leads() {
   const { profile, isOwner, isStaff, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState(INITIAL_LEADS);
@@ -476,6 +552,16 @@ export default function Leads() {
   const [filterProduct, setFilterProduct] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
+  // Dynamic Commodity options state (user can add custom products)
+  const [allCommodityOptions, setAllCommodityOptions] = useState(COMMODITY_PRODUCTS);
+  const [showCustomProductInput, setShowCustomProductInput] = useState(false);
+  const [customProductText, setCustomProductText] = useState('');
+
+  // Dynamic Industry options state (user can add custom industries)
+  const [allIndustryOptions, setAllIndustryOptions] = useState(INDUSTRY_TYPES);
+  const [showCustomIndustryInput, setShowCustomIndustryInput] = useState(false);
+  const [customIndustryText, setCustomIndustryText] = useState('');
+
   // Lead Form Initial State matching user requirements
   const defaultContact = {
     name: '',
@@ -487,24 +573,32 @@ export default function Leads() {
   };
 
   const initForm = {
-    type: 'Export', // Type *
+    type: 'International', // Type * — International or Domestic
     company_name: '', // Company name *
+    industry_type: 'Food & Spice Processing', // Explicit industry type
     contacts: [{ ...defaultContact }], // Contact 1, 2, ...
     whatsapp: '',
     website: '',
+    social_media: '',
+    social_links: [
+      { platform: 'LinkedIn', url: '' },
+      { platform: 'Instagram', url: '' }
+    ],
     country: 'United Arab Emirates 🇦🇪',
     lead_source: 'Direct Inquiry',
     address: '',
+    credit_rating: 'AA',
+    turnover: '',
     stage: 'Requirement Understood',
     // Product
-    products: [], // Empty array by default - no forced Turmeric
+    products: [], // Empty array by default
     quantity: 0,
     price: 0, // Price ($)
     product_notes: '',
     // Trade & Shipping terms
     incoterm: 'CIF',
     port_delivery: '',
-    payment_days: 'CAD on BL copy',
+    payment_days: 'LC at Sight (Letter of Credit)',
     // Assignment
     assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
     agent_name: isStaff ? (profile?.name || 'Staff Member') : 'Athish',
@@ -514,7 +608,25 @@ export default function Leads() {
 
   const [form, setForm] = useState(initForm);
 
-  // Load from API on mount
+  // Lead Dossier interactive activity, follow-up remark, & document state
+  const [dossierActivityType, setDossierActivityType] = useState('Call initiated');
+  const [dossierActivityNote, setDossierActivityNote] = useState('');
+  const [dossierFollowUpDate, setDossierFollowUpDate] = useState('');
+  const [dossierRemarkText, setDossierRemarkText] = useState('');
+  const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+
+  // Persistence helper: saves to React state and localStorage
+  const updateAndPersistLeads = (updater) => {
+    setLeads((prev) => {
+      const next = typeof updater === 'function' ? updater(prev) : updater;
+      try {
+        localStorage.setItem('oneroot_leads_v3', JSON.stringify(next));
+      } catch (e) {}
+      return next;
+    });
+  };
+
+  // Load from LocalStorage and API on mount
   useEffect(() => {
     loadLeads();
     if (isOwner && getTeamMembers) {
@@ -527,15 +639,143 @@ export default function Leads() {
   const loadLeads = async () => {
     try {
       setLoading(true);
-      const res = await api.getLeads();
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        setLeads(res.data);
+      // 1. Check local storage for persistent leads
+      let localData = [];
+      try {
+        const stored = localStorage.getItem('oneroot_leads_v3');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length >= 50) {
+            localData = parsed;
+          }
+        }
+      } catch (e) {
+        console.warn('Error reading local leads:', e);
       }
+
+      // If local storage is empty or has fewer than 50 leads, initialize with 263 SEED_LEADS
+      if (localData.length < 50) {
+        localData = SEED_LEADS;
+        try {
+          localStorage.setItem('oneroot_leads_v3', JSON.stringify(SEED_LEADS));
+        } catch (e) {}
+      }
+
+      // 2. Fetch from remote API if available to merge user created leads
+      try {
+        const res = await api.getLeads();
+        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+          const serverIds = new Set(res.data.map((l) => l.id));
+          const merged = [
+            ...res.data,
+            ...localData.filter((l) => !serverIds.has(l.id)),
+          ];
+          setLeads(merged);
+          try {
+            localStorage.setItem('oneroot_leads_v3', JSON.stringify(merged));
+          } catch (e) {}
+          return;
+        }
+      } catch (apiErr) {
+        // API offline or error, use localData
+      }
+
+      setLeads(localData);
     } catch {
-      // Keep initialized leads on API failure
+      setLeads(SEED_LEADS);
     } finally {
       setLoading(false);
     }
+  };
+
+  // Dossier Action Handlers
+  const handleLogDossierActivity = () => {
+    if (!activeDetailLead || !dossierActivityType) return;
+    const newEntry = {
+      activity: dossierActivityType,
+      note: dossierActivityNote.trim() || 'Activity logged',
+      date: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
+      author: `by ${profile?.name || 'adric'}`,
+    };
+
+    const updatedHistory = [newEntry, ...(activeDetailLead.activity_history || [])];
+    const updatedLead = {
+      ...activeDetailLead,
+      activity_history: updatedHistory,
+      notes: dossierActivityNote.trim() || activeDetailLead.notes,
+    };
+
+    setActiveDetailLead(updatedLead);
+    setDossierActivityNote('');
+    updateAndPersistLeads((prev) =>
+      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
+    );
+    showNotification(`Activity "${dossierActivityType}" logged successfully!`, 'success');
+  };
+
+  const handleSaveDossierFollowUp = () => {
+    if (!activeDetailLead) return;
+    const dateToSave = dossierFollowUpDate || activeDetailLead.follow_up_date;
+    const updatedRemarks = dossierRemarkText.trim()
+      ? [
+          {
+            remark: dossierRemarkText.trim(),
+            date: new Date().toLocaleString(),
+            author: profile?.name || 'adric',
+          },
+          ...(activeDetailLead.previous_remarks || []),
+        ]
+      : (activeDetailLead.previous_remarks || []);
+
+    const updatedLead = {
+      ...activeDetailLead,
+      follow_up_date: dateToSave,
+      previous_remarks: updatedRemarks,
+    };
+
+    setActiveDetailLead(updatedLead);
+    setDossierRemarkText('');
+    updateAndPersistLeads((prev) =>
+      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
+    );
+    showNotification('Follow-up date and remarks saved!', 'success');
+  };
+
+  const handleUploadDossierDoc = (e) => {
+    const file = e.target.files?.[0];
+    if (!file || !activeDetailLead) return;
+    setIsUploadingDoc(true);
+    setTimeout(() => {
+      const newDoc = {
+        id: 'doc_' + Date.now(),
+        name: file.name,
+        size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
+        upload_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      };
+      const updatedLead = {
+        ...activeDetailLead,
+        documents: [newDoc, ...(activeDetailLead.documents || [])],
+      };
+      setActiveDetailLead(updatedLead);
+      updateAndPersistLeads((prev) =>
+        prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
+      );
+      setIsUploadingDoc(false);
+      showNotification(`Document "${file.name}" uploaded successfully!`, 'success');
+    }, 400);
+  };
+
+  const handleDeleteDossierDoc = (docId) => {
+    if (!activeDetailLead) return;
+    const updatedLead = {
+      ...activeDetailLead,
+      documents: (activeDetailLead.documents || []).filter((d) => d.id !== docId),
+    };
+    setActiveDetailLead(updatedLead);
+    updateAndPersistLeads((prev) =>
+      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
+    );
+    showNotification('Document removed.', 'success');
   };
 
   // Contact person dynamic helpers
@@ -588,6 +828,73 @@ export default function Leads() {
     setForm({ ...form, products: current });
   };
 
+  // Add custom commodity handler (Owner only)
+  const handleAddCustomCommodity = () => {
+    if (!isOwner) {
+      showNotification('Permission Denied: Only Company Owners/Admins can add new commodities or products.', 'error');
+      return;
+    }
+    const trimmed = customProductText.trim();
+    if (!trimmed) return;
+    if (!allCommodityOptions.includes(trimmed)) {
+      setAllCommodityOptions((prev) => [...prev, trimmed]);
+    }
+    if (!form.products.includes(trimmed)) {
+      setForm((prev) => ({ ...prev, products: [...prev.products, trimmed] }));
+    }
+    setCustomProductText('');
+    setShowCustomProductInput(false);
+    showNotification(`Commodity "${trimmed}" added and selected!`, 'success');
+  };
+
+  // Add custom industry handler (Owner only)
+  const handleAddCustomIndustry = () => {
+    if (!isOwner) {
+      showNotification('Permission Denied: Only Company Owners/Admins can add new industry types.', 'error');
+      return;
+    }
+    const trimmed = customIndustryText.trim();
+    if (!trimmed) return;
+    if (!allIndustryOptions.includes(trimmed)) {
+      setAllIndustryOptions((prev) => [...prev, trimmed]);
+    }
+    setForm((prev) => ({ ...prev, industry_type: trimmed }));
+    setCustomIndustryText('');
+    setShowCustomIndustryInput(false);
+    showNotification(`Industry "${trimmed}" selected!`, 'success');
+  };
+
+  // Social link helpers
+  const handleAddSocialLink = () => {
+    setForm((prev) => ({
+      ...prev,
+      social_links: [...(prev.social_links || []), { platform: 'Instagram', url: '' }],
+    }));
+  };
+
+  const handleUpdateSocialLink = (index, field, value) => {
+    setForm((prev) => {
+      const updated = [...(prev.social_links || [])];
+      updated[index] = { ...updated[index], [field]: value };
+      return {
+        ...prev,
+        social_links: updated,
+        social_media: updated[0]?.url || prev.social_media,
+      };
+    });
+  };
+
+  const handleRemoveSocialLink = (index) => {
+    setForm((prev) => {
+      const updated = (prev.social_links || []).filter((_, i) => i !== index);
+      return {
+        ...prev,
+        social_links: updated,
+        social_media: updated[0]?.url || '',
+      };
+    });
+  };
+
   // Quick Stage Update from Table or Card
   const handleQuickStageChange = async (leadId, newStage) => {
     setLeads((prev) =>
@@ -605,6 +912,10 @@ export default function Leads() {
   const openCreate = () => {
     setEditingLead(null);
     setActiveFormTab('basic');
+    setShowCustomProductInput(false);
+    setCustomProductText('');
+    setShowCustomIndustryInput(false);
+    setCustomIndustryText('');
     setForm({
       ...initForm,
       assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || 'usr_athish'),
@@ -631,6 +942,11 @@ export default function Leads() {
 
     setEditingLead(lead);
     setActiveFormTab('basic');
+    setShowCustomProductInput(false);
+    setCustomProductText('');
+    setShowCustomIndustryInput(false);
+    setCustomIndustryText('');
+
     const existingContacts = Array.isArray(lead.contacts) && lead.contacts.length > 0
       ? lead.contacts
       : [
@@ -650,14 +966,32 @@ export default function Leads() {
       ? lead.product.split(',').map((p) => p.trim())
       : [];
 
+    if (leadProducts.length > 0) {
+      setAllCommodityOptions((prev) => Array.from(new Set([...prev, ...leadProducts])));
+    }
+
+    const leadIndustry = lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type || 'Food & Spice Processing';
+    if (leadIndustry && !allIndustryOptions.includes(leadIndustry)) {
+      setAllIndustryOptions((prev) => Array.from(new Set([...prev, leadIndustry])));
+    }
+
+    const leadSocialLinks = Array.isArray(lead.social_links) && lead.social_links.length > 0
+      ? lead.social_links
+      : lead.social_media
+      ? [{ platform: 'LinkedIn', url: lead.social_media }]
+      : [{ platform: 'LinkedIn', url: lead.contacts?.[0]?.linkedin || '' }];
+
     const exp = lead.export_requirements || {};
 
     setForm({
-      type: lead.type || 'Export',
+      type: lead.type || 'International',
       company_name: lead.company_name || lead.name || '',
+      industry_type: leadIndustry,
       contacts: existingContacts,
       whatsapp: lead.whatsapp || lead.phone || '',
       website: lead.website || '',
+      social_media: lead.social_media || '',
+      social_links: leadSocialLinks,
       country: lead.country || 'India 🇮🇳',
       lead_source: lead.source || 'Direct Inquiry',
       address: lead.address || '',
@@ -670,7 +1004,7 @@ export default function Leads() {
       product_notes: exp.product_notes || lead.product_notes || '',
       incoterm: exp.incoterm || 'CIF',
       port_delivery: exp.port_delivery || '',
-      payment_days: exp.payment_days || 'CAD on BL copy',
+      payment_days: exp.payment_days || 'LC at Sight (Letter of Credit)',
       assigned_to: lead.assigned_to || (isStaff ? profile?.id : 'usr_athish'),
       agent_name: lead.agent_name || (isStaff ? profile?.name : 'Athish'),
       follow_up_date: lead.follow_up_date || '',
@@ -682,6 +1016,10 @@ export default function Leads() {
   // Open Details Modal
   const openDetails = (lead) => {
     setActiveDetailLead(lead);
+    setDossierFollowUpDate(lead.follow_up_date || '');
+    setDossierRemarkText('');
+    setDossierActivityNote('');
+    setDossierActivityType(lead.activity_history?.[0]?.activity || 'Call initiated');
     setDetailModalOpen(true);
   };
 
@@ -713,19 +1051,22 @@ export default function Leads() {
       type: form.type,
       company_name: form.company_name,
       name: form.company_name,
+      industry_type: form.industry_type,
       contacts: form.contacts,
       contact_person: primary.name,
       email: primary.email,
       phone: primary.phone,
       whatsapp: form.whatsapp,
       website: form.website,
+      social_media: form.social_media || form.social_links?.[0]?.url || '',
+      social_links: form.social_links || [],
       country: form.country,
       source: form.lead_source,
       address: form.address,
       credit_rating: form.credit_rating,
       turnover: form.turnover,
       sourcing_region: form.sourcing_region,
-      legacy_industry_type: form.legacy_industry_type,
+      legacy_industry_type: form.industry_type,
       products: form.products,
       product: form.products.join(', '),
       quantity: Number(form.quantity) || 0,
@@ -735,6 +1076,7 @@ export default function Leads() {
       status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
       lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
       export_requirements: {
+        industry_type: form.industry_type,
         incoterm: form.incoterm,
         port_delivery: form.port_delivery,
         payment_days: form.payment_days,
@@ -1206,6 +1548,13 @@ export default function Leads() {
 
   const totalValue = filteredLeads.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
   const totalVolumeMT = filteredLeads.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) / 1000;
+  const totalValueLakhs = (totalValue * 86.5) / 100000;
+  const atRiskLeadsList = filteredLeads.filter((l) => {
+    const isClosed = ['Closed Won', 'Closed Lost'].includes(l.stage || l.status);
+    if (isClosed) return false;
+    return l.follow_up_date && new Date(l.follow_up_date) < new Date('2026-09-20');
+  });
+  const atRiskValueLakhs = atRiskLeadsList.reduce((sum, l) => sum + (((Number(l.price) || Number(l.value) || 0) * 86.5) / 100000), 0);
 
   return (
     <div className="w-full space-y-5 pb-12">
@@ -1292,9 +1641,17 @@ export default function Leads() {
       {/* KPI Stats Overview (Clean Light Theme) */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
-          <div className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Pipeline Value</div>
-          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1">
-            ${totalValue.toLocaleString()}
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Pipeline Value</span>
+            {atRiskValueLakhs > 0 && (
+              <span className="text-[10px] font-extrabold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200" title="Delayed follow-ups">
+                ⚠️ ₹{atRiskValueLakhs.toFixed(1)}L At-Risk
+              </span>
+            )}
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-2">
+            <span>{totalValueLakhs >= 100 ? `₹${(totalValueLakhs / 100).toFixed(2)} Cr` : `₹${totalValueLakhs.toFixed(1)} L`}</span>
+            <span className="text-xs font-semibold text-slate-400">(${totalValue.toLocaleString()})</span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1">
             <TrendingUp size={12} /> {isStaff ? 'My Active Value' : 'Global Portfolio Value'}
@@ -1562,16 +1919,27 @@ export default function Leads() {
                             {lead.type || 'Export'}
                           </span>
                         </div>
+                        {(lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type) && (
+                          <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
+                            <Factory size={10} className="shrink-0 text-emerald-600" />
+                            <span className="truncate max-w-[210px]">{lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type}</span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Contact Person */}
                       <td className="py-3.5 px-4 text-slate-700">
                         <div className="font-semibold text-slate-900">{lead.contact_person || '—'}</div>
-                        <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
+                        <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
                           {lead.phone && <span>{lead.phone}</span>}
                           {lead.whatsapp && (
                             <span className="text-emerald-600 font-semibold flex items-center gap-0.5">
                               <MessageCircle size={10} /> WA
+                            </span>
+                          )}
+                          {(lead.social_links?.filter(s => s.url).length > 0 || lead.social_media) && (
+                            <span className="text-blue-600 font-semibold flex items-center gap-0.5 text-[10px] bg-blue-50 px-1.5 py-0.2 rounded border border-blue-200">
+                              <Share2 size={9} /> Social
                             </span>
                           )}
                         </div>
@@ -1596,9 +1964,26 @@ export default function Leads() {
                         <div className="font-bold text-slate-900">
                           {Number(lead.quantity).toLocaleString()} kg
                         </div>
-                        <div className="text-[11px] font-bold text-emerald-600">
-                          ${(Number(lead.price) || Number(lead.value) || 0).toLocaleString()}
-                        </div>
+                        {(() => {
+                          const usd = Number(lead.price) || Number(lead.value) || 0;
+                          const lakhs = ((usd * 86.5) / 100000).toFixed(1);
+                          const isOverdue = lead.follow_up_date && new Date(lead.follow_up_date) < new Date('2026-09-20');
+                          const isClosed = ['Closed Won', 'Closed Lost'].includes(lead.stage || lead.status);
+                          const atRisk = isOverdue && !isClosed && Number(lakhs) >= 10;
+                          return (
+                            <div className="mt-0.5">
+                              <div className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
+                                <span>₹{lakhs} Lakhs</span>
+                                <span className="text-[10px] text-slate-400 font-normal">(${usd.toLocaleString()})</span>
+                              </div>
+                              {atRisk && (
+                                <span className="mt-0.5 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
+                                  ⚠️ Slippage Risk (₹{lakhs}L)
+                                </span>
+                              )}
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Assigned Rep */}
@@ -1609,12 +1994,24 @@ export default function Leads() {
                         </span>
                       </td>
 
-                      {/* Follow-up date */}
+                      {/* Follow-up date + health badge */}
                       <td className="py-3.5 px-4 text-slate-600 font-medium whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Calendar size={12} className="text-slate-400" />
-                          <span>{lead.follow_up_date || 'dd-mm-yyyy'}</span>
-                        </div>
+                        {(() => {
+                          const health = getFollowUpHealth(lead.follow_up_date);
+                          return (
+                            <div className="space-y-1">
+                              {health && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ${health.cls}`}>
+                                  {health.label}
+                                </span>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <Calendar size={12} className="text-slate-400" />
+                                <span className="text-[11px]">{lead.follow_up_date || '—'}</span>
+                              </div>
+                            </div>
+                          );
+                        })()}
                       </td>
 
                       {/* Interactive Stage Dropdown */}
@@ -1637,20 +2034,13 @@ export default function Leads() {
 
                       {/* Actions */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1">
+                        <div className="flex items-center justify-end gap-1.5">
                           <button
                             onClick={() => openDetails(lead)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 transition-colors"
-                            title="View Lead Details"
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            title="View & Edit Customer Details"
                           >
-                            <Eye size={14} />
-                          </button>
-                          <button
-                            onClick={() => openEdit(lead)}
-                            className="p-1.5 rounded-lg text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
-                            title="Edit Lead"
-                          >
-                            <Edit3 size={14} />
+                            <Edit3 size={12} /> Edit
                           </button>
                           {isOwner && (
                             <button
@@ -1724,19 +2114,37 @@ export default function Leads() {
                   </div>
 
                   {/* Quantity & Deal Value */}
-                  <div className="flex items-center justify-between text-xs bg-slate-50 p-2.5 rounded-xl">
-                    <div>
-                      <span className="text-slate-400">Qty:</span>{' '}
-                      <span className="font-bold text-slate-800">
-                        {Number(lead.quantity).toLocaleString()} kg
-                      </span>
+                  <div className="text-xs bg-slate-50 p-2.5 rounded-xl space-y-1">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <span className="text-slate-400">Qty:</span>{' '}
+                        <span className="font-bold text-slate-800">
+                          {Number(lead.quantity).toLocaleString()} kg
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <div className="font-black text-emerald-700">
+                          ₹{(((Number(lead.price) || Number(lead.value) || 0) * 86.5) / 100000).toFixed(1)} Lakhs
+                        </div>
+                        <div className="text-[10px] text-slate-400">
+                          ${(Number(lead.price) || Number(lead.value) || 0).toLocaleString()}
+                        </div>
+                      </div>
                     </div>
-                    <div>
-                      <span className="text-slate-400">Price:</span>{' '}
-                      <span className="font-bold text-emerald-600">
-                        ${(Number(lead.price) || Number(lead.value) || 0).toLocaleString()}
-                      </span>
-                    </div>
+                    {(() => {
+                      const isOverdue = lead.follow_up_date && new Date(lead.follow_up_date) < new Date('2026-09-20');
+                      const isClosed = ['Closed Won', 'Closed Lost'].includes(lead.stage || lead.status);
+                      const lakhs = (((Number(lead.price) || Number(lead.value) || 0) * 86.5) / 100000).toFixed(1);
+                      if (isOverdue && !isClosed && Number(lakhs) >= 10) {
+                        return (
+                          <div className="pt-1 border-t border-rose-100 flex items-center justify-between text-[10px] font-bold text-rose-700">
+                            <span>⚠️ Slippage Risk (Overdue Follow-up)</span>
+                            <span>Loss: ₹{lakhs}L</span>
+                          </div>
+                        );
+                      }
+                      return null;
+                    })()}
                   </div>
 
                   {/* Contact & Follow up */}
@@ -1797,82 +2205,83 @@ export default function Leads() {
         bodyClassName="p-4 sm:p-6 overflow-y-auto"
       >
         <form onSubmit={handleSave} className="space-y-5">
-          {/* STEP / CATEGORY NAVIGATION TABS */}
-          <div className="flex border-b border-slate-200 overflow-x-auto gap-1 pb-1">
+          {/* QUICK-JUMP SECTION ANCHORS (SMOOTH SCROLL) */}
+          <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs py-2 px-1 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none">
+            <span className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold mr-1 shrink-0">Sections:</span>
             <button
               type="button"
-              onClick={() => setActiveFormTab('basic')}
-              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                activeFormTab === 'basic'
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => document.getElementById('form-sec-company')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
             >
-              <Building2 size={14} className={activeFormTab === 'basic' ? 'text-emerald-600' : 'text-slate-400'} />
+              <Building2 size={13} className="text-emerald-600" />
               <span>1. Company & Source</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveFormTab('contact')}
-              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                activeFormTab === 'contact'
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => document.getElementById('form-sec-contacts')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
             >
-              <User size={14} className={activeFormTab === 'contact' ? 'text-emerald-600' : 'text-slate-400'} />
+              <User size={13} className="text-emerald-600" />
               <span>2. Contacts ({form.contacts.length})</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveFormTab('deal')}
-              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                activeFormTab === 'deal'
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => document.getElementById('form-sec-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
             >
-              <Layers size={14} className={activeFormTab === 'deal' ? 'text-emerald-600' : 'text-slate-400'} />
+              <Layers size={13} className="text-emerald-600" />
               <span>3. Products & Deal</span>
             </button>
             <button
               type="button"
-              onClick={() => setActiveFormTab('export')}
-              className={`pb-2.5 px-3.5 text-xs font-bold whitespace-nowrap transition-all border-b-2 flex items-center gap-1.5 cursor-pointer ${
-                activeFormTab === 'export'
-                  ? 'border-emerald-600 text-emerald-700 bg-emerald-50/50 rounded-t-lg'
-                  : 'border-transparent text-slate-500 hover:text-slate-800'
-              }`}
+              onClick={() => document.getElementById('form-sec-shipping')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+              className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-slate-700 dark:text-slate-200 hover:text-emerald-700 dark:hover:text-emerald-400 transition-colors flex items-center gap-1.5 whitespace-nowrap cursor-pointer shrink-0"
             >
-              <Ship size={14} className={activeFormTab === 'export' ? 'text-emerald-600' : 'text-slate-400'} />
+              <Ship size={13} className="text-emerald-600" />
               <span>4. Shipping & Assignment</span>
             </button>
           </div>
 
-          {/* TAB 1: BASIC & COMPANY */}
-          {activeFormTab === 'basic' && (
-            <div className="space-y-4 animate-fadeIn">
-              {/* Type Selection */}
+          {/* ALL 4 SECTIONS RENDERED SEQUENTIALLY FOR CONTINUOUS SCROLLING */}
+          <div className="space-y-6 pt-1">
+            {/* SECTION 1: BASIC & COMPANY */}
+            <div id="form-sec-company" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-7 h-7 rounded-xl bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 flex items-center justify-center font-black text-xs">
+                  1
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Company & Trade Source</h3>
+                  <p className="text-[11px] text-slate-400">Trade classification, buyer company name, and location</p>
+                </div>
+              </div>
+
+              {/* Type Selection — International or Domestic only */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Trade Type *
                 </label>
-                <div className="grid grid-cols-3 gap-2.5 max-w-md">
-                  {['Export', 'Import', 'Domestic'].map((t) => (
+                <div className="grid grid-cols-2 gap-2.5 max-w-xs">
+                  {['International', 'Domestic'].map((t) => (
                     <button
                       type="button"
                       key={t}
                       onClick={() => setForm({ ...form, type: t })}
-                      className={`py-2 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
+                      className={`py-2.5 text-xs font-bold rounded-xl border transition-all cursor-pointer ${
                         form.type === t
-                          ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20'
+                          ? t === 'International'
+                            ? 'bg-emerald-600 text-white border-emerald-600 shadow-sm shadow-emerald-600/20'
+                            : 'bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20'
                           : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50'
                       }`}
                     >
-                      {t}
+                      {t === 'International' ? '🌐 International' : '🏠 Domestic'}
                     </button>
                   ))}
                 </div>
+                <p className="text-[11px] text-slate-400 mt-1.5">
+                  {form.type === 'International' ? 'Cross-border export/import trade lead' : 'India domestic trade lead'}
+                </p>
               </div>
 
               {/* Company Name & Country */}
@@ -1906,6 +2315,80 @@ export default function Leads() {
                       </option>
                     ))}
                   </select>
+                </div>
+              </div>
+
+              {/* Industry Type & Custom Industry Creation */}
+              <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                    <Factory size={13} className="text-emerald-600" />
+                    <span>Industry Type <span className="text-rose-500">*</span></span>
+                  </label>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomIndustryInput(!showCustomIndustryInput)}
+                      className="text-xs font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Plus size={13} /> {showCustomIndustryInput ? 'Select from standard list' : '+ Add Custom Industry'}
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1" title="Only Company Owners/Admins can add industry types">
+                      <Lock size={11} className="text-slate-400" />
+                      <span>Owner only</span>
+                    </span>
+                  )}
+                </div>
+
+                {!showCustomIndustryInput ? (
+                  <select
+                    value={form.industry_type || 'Food & Spice Processing'}
+                    onChange={(e) => setForm({ ...form, industry_type: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-semibold text-slate-800 dark:text-slate-100"
+                  >
+                    {allIndustryOptions.map((ind) => (
+                      <option key={ind} value={ind}>{ind}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter custom industry (e.g. Edible Oils, Seeds, Bio-plastics)"
+                      value={customIndustryText}
+                      onChange={(e) => setCustomIndustryText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomIndustry();
+                        }
+                      }}
+                      className="flex-1 px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomIndustry}
+                      className="px-3.5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl cursor-pointer shrink-0 transition-colors shadow-xs"
+                    >
+                      Save & Select
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomIndustryInput(false);
+                        setCustomIndustryText('');
+                      }}
+                      className="p-2 text-slate-400 hover:text-slate-600 rounded-xl cursor-pointer"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                )}
+                <div className="flex items-center justify-between text-[11px] text-slate-400">
+                  <span>Selected Industry: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{form.industry_type || 'Food & Spice Processing'}</strong></span>
+                  <span className="text-[10px] text-slate-400">Export sector category</span>
                 </div>
               </div>
 
@@ -1975,23 +2458,36 @@ export default function Leads() {
                 />
               </div>
             </div>
-          )}
 
-          {/* TAB 2: CONTACTS */}
-          {activeFormTab === 'contact' && (
-            <div className="space-y-4 animate-fadeIn">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-700">Buyer Contact Personnel</span>
-                <span className="text-[11px] text-slate-400">Add key buyers & sourcing managers</span>
+            {/* SECTION 2: CONTACTS */}
+            <div id="form-sec-contacts" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="flex items-center gap-2">
+                  <div className="w-7 h-7 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-800 dark:text-blue-300 flex items-center justify-center font-black text-xs">
+                    2
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Buyer Contact Personnel</h3>
+                    <p className="text-[11px] text-slate-400">Add key buyers & sourcing managers</p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={addAnotherContact}
+                  className="px-3 py-1.5 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 rounded-xl transition-colors flex items-center gap-1 cursor-pointer"
+                >
+                  <Plus size={13} /> Add Person
+                </button>
               </div>
 
               {/* Contact Cards */}
               <div className="space-y-3">
                 {form.contacts.map((contact, cIdx) => (
-                  <div key={cIdx} className="bg-slate-50/80 p-4 rounded-xl border border-slate-200 space-y-3">
+                  <div key={cIdx} className="bg-slate-50/80 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
                     <div className="flex items-center justify-between">
-                      <span className="text-xs font-extrabold text-slate-800 flex items-center gap-1.5">
-                        <span className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-800 text-[10px] flex items-center justify-center font-black">
+                      <span className="text-xs font-extrabold text-slate-800 dark:text-slate-200 flex items-center gap-1.5">
+                        <span className="w-5 h-5 rounded-full bg-emerald-100 dark:bg-emerald-900/60 text-emerald-800 dark:text-emerald-300 text-[10px] flex items-center justify-center font-black">
                           {cIdx + 1}
                         </span>
                         <span>{contact.name || `Contact Person #${cIdx + 1}`}</span>
@@ -2054,7 +2550,7 @@ export default function Leads() {
                     <button
                       type="button"
                       onClick={() => addExtraPhone(cIdx)}
-                      className="text-[11px] font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                      className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
                     >
                       <Plus size={13} /> Add alternate phone number
                     </button>
@@ -2095,53 +2591,189 @@ export default function Leads() {
                     </div>
                   </div>
                 ))}
-
-                <button
-                  type="button"
-                  onClick={addAnotherContact}
-                  className="w-full py-2.5 border-2 border-dashed border-slate-300 rounded-xl text-xs font-bold text-slate-600 hover:text-emerald-700 hover:border-emerald-400 transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <Plus size={14} /> + Add Another Contact Person
-                </button>
               </div>
 
-              {/* Direct WhatsApp field */}
+              {/* Direct WhatsApp Field */}
               <div className="pt-2">
-                <label className="block text-xs font-bold text-slate-700 mb-1">Direct WhatsApp Number</label>
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
+                  <span>📱 Direct WhatsApp Number</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(With country code)</span>
+                </label>
                 <input
                   type="text"
                   placeholder="+971 50 892 4110"
                   value={form.whatsapp}
                   onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  className="w-full sm:max-w-sm px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                 />
               </div>
-            </div>
-          )}
 
-          {/* TAB 3: PRODUCTS & DEAL */}
-          {activeFormTab === 'deal' && (
-            <div className="space-y-4 animate-fadeIn">
+              {/* Multi-Social Media Links Manager */}
+              <div className="bg-slate-50/90 dark:bg-slate-800/40 p-4 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1.5">
+                    <Share2 size={14} className="text-emerald-600" />
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                      Social Media & Online Links
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
+                      (LinkedIn, Instagram, Twitter/X, WeChat, Facebook, etc.)
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleAddSocialLink}
+                    className="px-2.5 py-1 text-xs font-bold text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 rounded-lg transition-colors flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={12} /> Add Social Link
+                  </button>
+                </div>
+
+                <div className="space-y-2.5">
+                  {(form.social_links && form.social_links.length > 0 ? form.social_links : [{ platform: 'LinkedIn', url: '' }]).map((link, sIdx) => {
+                    const matchedPlatform = SOCIAL_PLATFORMS.find((p) => p.id === link.platform) || SOCIAL_PLATFORMS[0];
+                    return (
+                      <div key={sIdx} className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                        {/* Platform Selector */}
+                        <div className="relative w-full sm:w-44 shrink-0">
+                          <select
+                            value={link.platform || 'LinkedIn'}
+                            onChange={(e) => handleUpdateSocialLink(sIdx, 'platform', e.target.value)}
+                            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-semibold text-slate-800 dark:text-slate-100"
+                          >
+                            {SOCIAL_PLATFORMS.map((p) => (
+                              <option key={p.id} value={p.id}>
+                                {p.icon} {p.label}
+                              </option>
+                            ))}
+                          </select>
+                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none">
+                            {matchedPlatform.icon}
+                          </span>
+                        </div>
+
+                        {/* URL / ID Input */}
+                        <div className="flex-1 relative">
+                          <input
+                            type="text"
+                            placeholder={matchedPlatform.placeholder}
+                            value={link.url || ''}
+                            onChange={(e) => handleUpdateSocialLink(sIdx, 'url', e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
+
+                        {/* Remove Button */}
+                        {(form.social_links?.length > 1) && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveSocialLink(sIdx)}
+                            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg cursor-pointer transition-colors self-end sm:self-center"
+                            title="Remove this social link"
+                          >
+                            <X size={14} />
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* SECTION 3: PRODUCTS & DEAL */}
+            <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 flex items-center justify-center font-black text-xs">
+                  3
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Target Commodities & Deal Specifications</h3>
+                  <p className="text-[11px] text-slate-400">Commodity requirements, volume quantities, and deal values</p>
+                </div>
+              </div>
+
               <div>
-                <label className="block text-xs font-bold text-slate-700 mb-2">
-                  Target Commodities <span className="text-rose-500">*</span> (Select all that apply)
-                </label>
+                <div className="flex items-center justify-between mb-2">
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                    Target Commodities <span className="text-rose-500">*</span> (Select all that apply)
+                  </label>
+                  {isOwner ? (
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomProductInput(!showCustomProductInput)}
+                      className="text-xs font-bold text-amber-600 hover:text-amber-700 flex items-center gap-1 cursor-pointer transition-colors"
+                    >
+                      <Plus size={13} /> {showCustomProductInput ? 'Cancel custom' : '+ Add Other Commodity / Product'}
+                    </button>
+                  ) : (
+                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1" title="Only Company Owners/Admins can add new commodities">
+                      <Lock size={11} className="text-slate-400" />
+                      <span>Owner only</span>
+                    </span>
+                  )}
+                </div>
+
+                {/* Inline Custom Commodity / Product Creator */}
+                {showCustomProductInput && (
+                  <div className="mb-3 p-3 bg-amber-50/90 dark:bg-amber-950/30 rounded-xl border border-amber-300 dark:border-amber-700/60 flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Enter commodity/product name (e.g. Cumin, Cardamom, Basmati Rice, Mustard Seed)..."
+                      value={customProductText}
+                      onChange={(e) => setCustomProductText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddCustomCommodity();
+                        }
+                      }}
+                      className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-amber-400 rounded-lg focus:ring-2 focus:ring-amber-500/30 focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddCustomCommodity}
+                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 rounded-lg cursor-pointer shrink-0 transition-colors shadow-xs"
+                    >
+                      Add & Select
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowCustomProductInput(false);
+                        setCustomProductText('');
+                      }}
+                      className="p-1.5 text-slate-400 hover:text-slate-600 rounded-lg cursor-pointer"
+                    >
+                      <X size={15} />
+                    </button>
+                  </div>
+                )}
+
+                {/* Commodity Tag Buttons */}
                 <div className="flex flex-wrap gap-2">
-                  {COMMODITY_PRODUCTS.map((prod) => {
+                  {allCommodityOptions.map((prod) => {
                     const isSelected = form.products.includes(prod);
+                    const isCustom = !COMMODITY_PRODUCTS.includes(prod);
                     return (
                       <button
                         type="button"
                         key={prod}
                         onClick={() => toggleProduct(prod)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
                           isSelected
                             ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
-                            : 'bg-white text-slate-700 border-slate-300 hover:bg-slate-50'
+                            : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        {isSelected ? '✓ ' : '+ '}
-                        {prod}
+                        <span>{isSelected ? '✓ ' : '+ '}</span>
+                        <span>{prod}</span>
+                        {isCustom && (
+                          <span className="text-[10px] ml-0.5 px-1 py-0.2 rounded bg-amber-400/30 text-amber-950 dark:text-amber-200 font-normal">
+                            custom
+                          </span>
+                        )}
                       </button>
                     );
                   })}
@@ -2167,9 +2799,14 @@ export default function Leads() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Deal Value / Price ($ USD)
-                  </label>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700">
+                      Deal Value / Price ($ USD)
+                    </label>
+                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                      ≈ ₹{(((Number(form.price) || 0) * 86.5) / 100000).toFixed(2)} Lakhs
+                    </span>
+                  </div>
                   <input
                     type="number"
                     min="0"
@@ -2178,6 +2815,9 @@ export default function Leads() {
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   />
+                  <span className="text-[10px] text-slate-400 mt-1 block">
+                    Calculated at ₹86.5/USD • ₹{(((Number(form.price) || 0) * 86.5) / 100000).toFixed(2)} Lakhs INR
+                  </span>
                 </div>
               </div>
 
@@ -2194,11 +2834,19 @@ export default function Leads() {
                 />
               </div>
             </div>
-          )}
 
-          {/* TAB 4: EXPORT SPECS & ASSIGNMENT */}
-          {activeFormTab === 'export' && (
-            <div className="space-y-4 animate-fadeIn">
+            {/* SECTION 4: EXPORT SPECS & ASSIGNMENT */}
+            <div id="form-sec-shipping" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+              <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
+                <div className="w-7 h-7 rounded-xl bg-purple-100 dark:bg-purple-900/60 text-purple-800 dark:text-purple-300 flex items-center justify-center font-black text-xs">
+                  4
+                </div>
+                <div>
+                  <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">Shipping, Terms & Staff Assignment</h3>
+                  <p className="text-[11px] text-slate-400">Incoterms, port delivery, payment milestones, and responsible representative</p>
+                </div>
+              </div>
+
               {/* Shipping & Trade Terms */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
@@ -2226,21 +2874,23 @@ export default function Leads() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Days</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. CAD on BL copy"
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Terms</label>
+                  <select
                     value={form.payment_days}
                     onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
                     className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
+                  >
+                    {PAYMENT_TERMS.map((term) => (
+                      <option key={term} value={term}>{term}</option>
+                    ))}
+                  </select>
                 </div>
               </div>
 
               {/* Lead Pipeline Stage */}
-              <div className="bg-slate-50 p-3.5 rounded-xl border border-slate-200">
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
                 <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-800">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
                     Lead Pipeline Stage <span className="text-rose-500">*</span>
                   </label>
                   <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(form.stage)}`}>
@@ -2264,10 +2914,10 @@ export default function Leads() {
               </div>
 
               {/* Assignment & Next Follow-up Card */}
-              <div className="bg-emerald-50/70 p-4 rounded-xl border border-emerald-200 space-y-3">
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-emerald-950 mb-1">
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
                       Assign Rep / Staff <span className="text-rose-500">*</span>
                     </label>
                     {isOwner ? (
@@ -2303,7 +2953,7 @@ export default function Leads() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-emerald-950 mb-1">
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
                       Next Follow-up Date
                     </label>
                     <input
@@ -2316,7 +2966,7 @@ export default function Leads() {
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-emerald-950 mb-1">Notes & Next Actions</label>
+                  <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">Notes & Next Actions</label>
                   <textarea
                     rows={2}
                     placeholder="Enter discussion notes, sample requirements, lab report status..."
@@ -2327,41 +2977,25 @@ export default function Leads() {
                 </div>
               </div>
             </div>
-          )}
+          </div>
 
-          {/* ACTION BUTTONS: STICKY AT BOTTOM */}
-          <div className="flex items-center justify-between pt-4 border-t border-slate-200 mt-6 bg-white sticky bottom-0">
+          {/* ACTION BUTTONS: STICKY AT BOTTOM FOR IMMEDIATE ACCESS */}
+          <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 mt-6 bg-white dark:bg-slate-900 sticky bottom-0 z-20 pb-1">
             <button
               type="button"
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
             >
               Cancel
             </button>
 
-            <div className="flex items-center gap-2">
-              {activeFormTab !== 'export' && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (activeFormTab === 'basic') setActiveFormTab('contact');
-                    else if (activeFormTab === 'contact') setActiveFormTab('deal');
-                    else if (activeFormTab === 'deal') setActiveFormTab('export');
-                  }}
-                  className="px-4 py-2 text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition-colors cursor-pointer"
-                >
-                  Next Step &rarr;
-                </button>
-              )}
-
-              <button
-                type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
-              >
-                <CheckCircle2 size={14} />
-                <span>{editingLead ? 'Update Lead' : 'Save Export Lead'}</span>
-              </button>
-            </div>
+            <button
+              type="submit"
+              className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/25 transition-all cursor-pointer flex items-center gap-2"
+            >
+              <CheckCircle2 size={16} />
+              <span>{editingLead ? 'Update Lead Specifications' : 'Save Export Lead'}</span>
+            </button>
           </div>
         </form>
       </Modal>
@@ -2498,154 +3132,551 @@ export default function Leads() {
       </Modal>
 
       {/* DETAIL MODAL: VIEW FULL COMMODITY SPECIFICATIONS */}
+      {/* DETAIL MODAL: VIEW & EDIT CUSTOMER FULL DOSSIER */}
       {activeDetailLead && (
         <Modal
           isOpen={detailModalOpen}
           onClose={() => setDetailModalOpen(false)}
-          title={`Lead Dossier: ${activeDetailLead.company_name || activeDetailLead.name}`}
-          subtitle="Detailed trade requirements, contacts, and contract specifications"
-          maxWidth="max-w-3xl"
+          title={activeDetailLead.company_name || activeDetailLead.name}
+          subtitle={`View & edit customer · Created ${activeDetailLead.created_at ? new Date(activeDetailLead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Sep 23, 2026'}`}
+          maxWidth="max-w-4xl"
         >
-          <div className="space-y-4 text-xs">
-            {/* Header info */}
-            <div className="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200">
-              <div>
-                <span className="font-bold text-slate-900 text-sm">
-                  {activeDetailLead.company_name || activeDetailLead.name}
+          <div className="space-y-5 text-xs max-h-[78vh] overflow-y-auto pr-1">
+            {/* Header Status Badges Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-2.5 p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+                  📅 Created {activeDetailLead.created_at ? new Date(activeDetailLead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : 'Sep 23, 2026'}
                 </span>
-                <div className="text-[11px] text-slate-500 mt-0.5">
-                  {activeDetailLead.country} • {activeDetailLead.type || 'Export'}
-                </div>
-              </div>
-              <span
-                className={`px-3 py-1 rounded-full font-bold text-[11px] border ${getStatusBadge(
-                  activeDetailLead.stage || activeDetailLead.status
-                )}`}
-              >
-                {activeDetailLead.stage || activeDetailLead.status}
-              </span>
-            </div>
-
-            {/* Products & Deal */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="p-3 bg-amber-50/70 border border-amber-200 rounded-xl">
-                <div className="text-[10px] font-bold uppercase text-amber-800">Products</div>
-                <div className="font-black text-amber-950 text-sm mt-0.5">
-                  {Array.isArray(activeDetailLead.products)
-                    ? activeDetailLead.products.join(', ')
-                    : activeDetailLead.product}
-                </div>
-              </div>
-              <div className="p-3 bg-emerald-50/70 border border-emerald-200 rounded-xl">
-                <div className="text-[10px] font-bold uppercase text-emerald-800">Contract Value & Qty</div>
-                <div className="font-black text-emerald-950 text-sm mt-0.5">
-                  ${(Number(activeDetailLead.price) || Number(activeDetailLead.value) || 0).toLocaleString()} • {Number(activeDetailLead.quantity).toLocaleString()} kg
-                </div>
-              </div>
-            </div>
-
-            {/* Contacts list */}
-            <div className="space-y-2">
-              <div className="font-bold text-slate-900 border-b border-slate-200 pb-1">
-                Contacts
-              </div>
-              {Array.isArray(activeDetailLead.contacts) && activeDetailLead.contacts.length > 0 ? (
-                activeDetailLead.contacts.map((c, i) => (
-                  <div key={i} className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 space-y-1">
-                    <div className="font-bold text-slate-900 flex justify-between">
-                      <span>{c.name || 'Contact'} ({c.designation || 'Representative'})</span>
-                      <span className="text-[10px] font-medium text-slate-400">Contact {i + 1}</span>
-                    </div>
-                    <div className="text-slate-600 flex flex-wrap gap-3 text-[11px]">
-                      {c.phone && <span>📞 {c.phone}</span>}
-                      {c.email && <span>✉️ {c.email}</span>}
-                      {c.linkedin && (
-                        <a href={c.linkedin} target="_blank" rel="noreferrer" className="text-blue-600 underline">
-                          LinkedIn
-                        </a>
-                      )}
-                    </div>
-                  </div>
-                ))
-              ) : (
-                <div className="text-slate-600">
-                  <span>Contact: {activeDetailLead.contact_person}</span> • <span>{activeDetailLead.phone}</span>
-                </div>
-              )}
-            </div>
-
-            {/* Trade & Shipping Specs */}
-            {(activeDetailLead.export_requirements || activeDetailLead.product_notes) && (
-              <div className="space-y-2">
-                <div className="font-bold text-slate-900 border-b border-slate-200 pb-1 flex items-center gap-1.5">
-                  <Ship size={14} className="text-emerald-600" /> Trade & Shipping Specifications
-                </div>
-                <div className="grid grid-cols-3 gap-2 text-[11px]">
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Incoterm</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.incoterm || 'CIF'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Port Delivery</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.port_delivery || '—'}</span>
-                  </div>
-                  <div className="bg-slate-50 p-2 rounded-lg border border-slate-200">
-                    <span className="text-slate-400 block">Payment Terms</span>
-                    <span className="font-bold text-slate-800">{activeDetailLead.export_requirements?.payment_days || '—'}</span>
-                  </div>
-                </div>
-                {(activeDetailLead.export_requirements?.product_notes || activeDetailLead.product_notes) && (
-                  <div className="bg-slate-50 p-2.5 rounded-lg border border-slate-200 text-[11px]">
-                    <span className="text-slate-400 block font-semibold mb-0.5">Commodity & Packaging Specifications:</span>
-                    <span className="text-slate-700 font-medium">{activeDetailLead.export_requirements?.product_notes || activeDetailLead.product_notes}</span>
-                  </div>
+                <span className={`px-2.5 py-1 rounded-xl text-[11px] font-extrabold border ${getStatusBadge(activeDetailLead.stage || activeDetailLead.status)}`}>
+                  {activeDetailLead.stage || activeDetailLead.status || 'Requirement Understood'}
+                </span>
+                <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                  {activeDetailLead.type === 'Domestic' ? '🏠 Domestic' : '🌐 Export'}
+                </span>
+                {activeDetailLead.follow_up_date && (
+                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border ${new Date(activeDetailLead.follow_up_date) < new Date('2026-09-25') ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                    ⏰ Follow-up: {new Date(activeDetailLead.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(activeDetailLead.follow_up_date) < new Date('2026-09-25') ? '· Overdue' : ''}
+                  </span>
+                )}
+                {activeDetailLead.activity_history?.[0] && (
+                  <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-amber-50 dark:bg-amber-950/40 text-amber-800 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                    ⚡ Daily activity: {activeDetailLead.activity_history[0].activity}
+                  </span>
                 )}
               </div>
-            )}
 
-            {/* Assignment & Notes */}
-            <div className="p-3 bg-emerald-50 rounded-xl border border-emerald-200 flex items-center justify-between text-xs">
-              <div>
-                <span className="text-emerald-900 font-bold block">Assigned Representative</span>
-                <span className="text-emerald-700 font-semibold">{activeDetailLead.agent_name || 'Athish'}</span>
-              </div>
-              <div>
-                <span className="text-emerald-900 font-bold block">Follow-Up</span>
-                <span className="text-emerald-700 font-semibold">{activeDetailLead.follow_up_date || 'Not scheduled'}</span>
-              </div>
-            </div>
-
-            {activeDetailLead.notes && (
-              <div className="p-2.5 bg-slate-50 rounded-xl border border-slate-200 text-xs text-slate-600">
-                <span className="font-bold text-slate-800 block mb-1">Notes:</span>
-                {activeDetailLead.notes}
-              </div>
-            )}
-
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200">
-              {(isOwner ||
-                activeDetailLead.assigned_to === profile?.id ||
-                activeDetailLead.agent_name === profile?.name ||
-                activeDetailLead.assigned_to === profile?.name ||
-                (profile?.name?.toLowerCase().includes('athish') && (activeDetailLead.assigned_to === 'usr_athish' || activeDetailLead.agent_name === 'Athish'))) && (
+              <div className="flex items-center gap-1.5 shrink-0">
                 <button
                   type="button"
                   onClick={() => {
                     setDetailModalOpen(false);
                     openEdit(activeDetailLead);
                   }}
-                  className="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-100/80 hover:bg-emerald-200 transition-colors flex items-center gap-1 cursor-pointer"
                 >
-                  Edit Lead
+                  <Edit3 size={13} /> Edit Customer
                 </button>
+              </div>
+            </div>
+
+            {/* Products & Deal Cards */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="p-3.5 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 rounded-2xl">
+                <div className="text-[10px] font-bold uppercase text-amber-800 dark:text-amber-400">Target Commodities</div>
+                <div className="flex flex-wrap gap-1.5 mt-1.5">
+                  {(Array.isArray(activeDetailLead.products) && activeDetailLead.products.length > 0
+                    ? activeDetailLead.products
+                    : (activeDetailLead.product ? activeDetailLead.product.split(',').map(p => p.trim()) : ['Rice DDGS'])
+                  ).map((p, idx) => (
+                    <span key={idx} className="px-2.5 py-1 rounded-lg text-xs font-black bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-200 border border-amber-300 shadow-2xs">
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              </div>
+
+              <div className="p-3.5 bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800 rounded-2xl">
+                <div className="text-[10px] font-bold uppercase text-emerald-800 dark:text-emerald-400">Contract Value & Quantity</div>
+                {(() => {
+                  const dealVal = Number(activeDetailLead.price) || Number(activeDetailLead.value) || 0;
+                  const dealQty = Number(activeDetailLead.quantity) || 0;
+                  const lakhs = ((dealVal * 86.5) / 100000).toFixed(2);
+                  return (
+                    <div className="mt-1">
+                      <div className="text-base font-black text-emerald-950 dark:text-emerald-200">
+                        {dealVal > 0 ? `₹${lakhs} Lakhs` : '$0 (Unpriced inquiry)'}
+                      </div>
+                      <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
+                        ${dealVal.toLocaleString()} USD • {dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+
+            {/* Customer Details & Contacts */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="font-extrabold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <User size={14} className="text-emerald-600" /> Customer & Buyer Details
+                </span>
+                <span className="text-[11px] text-slate-400 font-normal">
+                  {activeDetailLead.country} • Source: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.source || 'Self/own'}</strong>
+                </span>
+              </div>
+
+              {/* Contacts */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {Array.isArray(activeDetailLead.contacts) && activeDetailLead.contacts.length > 0 ? (
+                  activeDetailLead.contacts.map((c, i) => (
+                    <div key={i} className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-1.5">
+                      <div className="font-extrabold text-slate-900 dark:text-slate-100 flex justify-between items-center">
+                        <span className="text-xs">{c.name || 'Contact Person'}</span>
+                        <span className="text-[10px] text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded font-bold">
+                          {c.designation || 'Buyer'}
+                        </span>
+                      </div>
+                      <div className="text-slate-600 dark:text-slate-300 text-[11px] space-y-1">
+                        {c.phone && (
+                          <div className="flex items-center justify-between">
+                            <span>📞 {c.phone}</span>
+                            <a
+                              href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
+                            >
+                              <MessageCircle size={10} /> Chat WA
+                            </a>
+                          </div>
+                        )}
+                        {c.email && (
+                          <div>
+                            <a href={`mailto:${c.email}`} className="text-blue-600 hover:underline">
+                              ✉️ {c.email}
+                            </a>
+                          </div>
+                        )}
+                        {c.linkedin && (
+                          <div>
+                            <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline inline-flex items-center gap-1">
+                              💼 LinkedIn Profile <ExternalLink size={10} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-3 bg-slate-50 rounded-xl border text-slate-600 text-[11px]">
+                    <strong>{activeDetailLead.contact_person || 'Mr Duy'}</strong> • {activeDetailLead.phone || '0913108364'} • {activeDetailLead.email || 'email@example.com'}
+                  </div>
+                )}
+
+                {/* Additional Company Profile */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1.5">
+                  <div className="font-bold text-slate-800 dark:text-slate-200">Company Profile & Location</div>
+                  <div className="text-slate-600 dark:text-slate-400">
+                    <span className="font-semibold text-slate-700 dark:text-slate-300">Address: </span>
+                    {activeDetailLead.address || 'Room 302A, Floor 3, 241 Dien Bien Phu St., Ho Chi Minh City, Vietnam'}
+                  </div>
+                  {activeDetailLead.website && (
+                    <div className="flex items-center gap-1 pt-0.5">
+                      <Globe size={11} className="text-slate-400" />
+                      <a href={activeDetailLead.website.startsWith('http') ? activeDetailLead.website : `https://${activeDetailLead.website}`} target="_blank" rel="noreferrer" className="text-emerald-700 dark:text-emerald-400 font-bold underline">
+                        {activeDetailLead.website}
+                      </a>
+                    </div>
+                  )}
+                  <div className="flex flex-wrap gap-2 pt-1 text-[10px] text-slate-500">
+                    <span>Credit: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.credit_rating || 'AA'}</strong></span>
+                    <span>•</span>
+                    <span>Turnover: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.turnover || '50 cr'}</strong></span>
+                    <span>•</span>
+                    <span>Industry: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.industry_type || 'Animal Feed'}</strong></span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Social Channels */}
+              {((activeDetailLead.social_links && activeDetailLead.social_links.filter(s => s.url).length > 0) || activeDetailLead.social_media) && (
+                <div className="pt-2 flex flex-wrap gap-2">
+                  {Array.isArray(activeDetailLead.social_links) && activeDetailLead.social_links.filter(s => s.url).map((s, idx) => (
+                    <a
+                      key={idx}
+                      href={s.url.startsWith('http') ? s.url : `https://${s.url}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl text-[11px] font-bold bg-blue-50 text-blue-800 border border-blue-200 hover:bg-blue-100"
+                    >
+                      <Share2 size={10} /> {s.platform}: {s.url.replace(/^https?:\/\/(www\.)?/, '').slice(0, 22)}
+                      <ExternalLink size={9} />
+                    </a>
+                  ))}
+                </div>
               )}
-              <button
-                type="button"
-                onClick={() => setDetailModalOpen(false)}
-                className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
-              >
-                Close
-              </button>
+            </div>
+
+            {/* ASSIGNMENT & STATUS SECTION - EXACT ONEROOT MATCH */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="font-extrabold text-slate-900 dark:text-white flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <span className="flex items-center gap-1.5 text-xs">
+                  <User size={14} className="text-emerald-600" /> Assignment & Status
+                </span>
+                <span className="text-[10px] text-slate-400">
+                  Only admins can reassign this lead to another user.
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Reassign to <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    disabled={!isOwner}
+                    value={activeDetailLead.agent_name || 'adric'}
+                    onChange={(e) => {
+                      const newAgent = e.target.value;
+                      const updatedLead = { ...activeDetailLead, agent_name: newAgent, assigned_to: newAgent };
+                      setActiveDetailLead(updatedLead);
+                      updateAndPersistLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+                      showNotification(`Lead reassigned to ${newAgent}`, 'success');
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  >
+                    {['adric', 'Athish', 'David', 'Rohan', 'Shiva'].map((name) => (
+                      <option key={name} value={name}>{name}</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-slate-400 mt-1">Only admins can reassign this lead to another user.</p>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Status <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    value={activeDetailLead.stage || activeDetailLead.status || 'Closed Lost'}
+                    onChange={(e) => {
+                      const newStage = e.target.value;
+                      const updatedLead = { ...activeDetailLead, stage: newStage, status: newStage, lead_stage: newStage };
+                      setActiveDetailLead(updatedLead);
+                      updateAndPersistLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+                      showNotification(`Lead status updated to ${newStage}`, 'success');
+                    }}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold"
+                  >
+                    {PIPELINE_STAGES.map((s) => (
+                      <option key={s} value={s}>{s}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+
+            {/* DAILY ACTIVITY SECTION - EXACT SPECIFICATION MATCH */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 space-y-3.5">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+                    ⚡
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Daily Activity & Interactions</h4>
+                    <p className="text-[10px] text-slate-400">Log calls, discussions, samples, and sent quotations</p>
+                  </div>
+                </div>
+                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+                  {activeDetailLead.activity_history?.length || 0} logged activities
+                </span>
+              </div>
+
+              {/* Select Activities checklist pills */}
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+                  Select activity:
+                </label>
+                <div className="flex flex-wrap gap-1.5">
+                  {AVAILABLE_ACTIVITIES.map((act) => {
+                    const isSelected = dossierActivityType === act;
+                    return (
+                      <button
+                        type="button"
+                        key={act}
+                        onClick={() => setDossierActivityType(act)}
+                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                          isSelected
+                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                        }`}
+                      >
+                        {isSelected ? '✓ ' : ''}{act}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Activity Note & Submit */}
+              <div className="space-y-2">
+                <textarea
+                  rows={2}
+                  placeholder="Write what happened with this lead… (e.g. today their purchasers don't stay at office, requested protein > 45%)..."
+                  value={dossierActivityNote}
+                  onChange={(e) => setDossierActivityNote(e.target.value)}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none"
+                />
+                <div className="flex items-center justify-between">
+                  <span className="text-[10px] text-slate-400">
+                    Tick an activity above — a note on its own is not saved.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleLogDossierActivity}
+                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+                  >
+                    <Send size={12} /> Log Activity
+                  </button>
+                </div>
+              </div>
+
+              {/* Activity History Timeline */}
+              {activeDetailLead.activity_history && activeDetailLead.activity_history.length > 0 && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+                  <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                    <History size={13} className="text-slate-400" />
+                    <span>Activity history ({activeDetailLead.activity_history.length})</span>
+                  </div>
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                    {activeDetailLead.activity_history.map((hist, hIdx) => (
+                      <div key={hIdx} className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between">
+                          <span className="font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800 text-[10px]">
+                            {hist.activity}
+                          </span>
+                          <span className="text-[10px] text-slate-400">
+                            {hist.date}
+                          </span>
+                        </div>
+                        <div className="text-slate-700 dark:text-slate-200 font-medium">
+                          {hist.note}
+                        </div>
+                        <div className="text-[10px] text-slate-400 text-right font-semibold">
+                          {hist.author}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* FOLLOW-UP & REMARKS SECTION - EXACT SPECIFICATION MATCH */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center font-black text-xs">
+                    📅
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Follow-up Schedule & Remarks</h4>
+                    <p className="text-[10px] text-slate-400">Track client reminders and follow-up history</p>
+                  </div>
+                </div>
+                <span className="text-[11px] font-bold text-emerald-700">
+                  Current: {activeDetailLead.follow_up_date || 'None'}
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Follow-up date
+                  </label>
+                  <input
+                    type="date"
+                    value={dossierFollowUpDate || activeDetailLead.follow_up_date || ''}
+                    onChange={(e) => setDossierFollowUpDate(e.target.value)}
+                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                  />
+                </div>
+
+                <div className="sm:col-span-2">
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Remarks *
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="Write a remark about this follow-up (e.g. call back)..."
+                      value={dossierRemarkText}
+                      onChange={(e) => setDossierRemarkText(e.target.value)}
+                      className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSaveDossierFollowUp}
+                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer shrink-0 shadow-xs"
+                    >
+                      Save Follow-up
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              <p className="text-[10px] text-slate-400">
+                Changing the follow-up date counts once per lead per day in Outreach. Daily Activity is reflected in the Outreach tab.
+              </p>
+
+              {/* Previous Remarks list */}
+              {activeDetailLead.previous_remarks && activeDetailLead.previous_remarks.length > 0 && (
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                  <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
+                    Previous remarks ({activeDetailLead.previous_remarks.length})
+                  </div>
+                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                    {activeDetailLead.previous_remarks.map((r, rIdx) => (
+                      <div key={rIdx} className="p-2 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/80 text-[11px] flex items-center justify-between">
+                        <span className="font-semibold text-slate-800 dark:text-slate-200">{r.remark}</span>
+                        <span className="text-[10px] text-slate-400 font-medium">{r.date} · {r.author}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* DOCUMENTS SECTION - EXACT SPECIFICATION MATCH */}
+            <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                <div className="flex items-center gap-2">
+                  <div className="w-6 h-6 rounded-lg bg-blue-100 text-blue-700 flex items-center justify-center font-black text-xs">
+                    📁
+                  </div>
+                  <div>
+                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Documents & Specifications</h4>
+                    <p className="text-[10px] text-slate-400">Images, PDF, Office docs, text, ZIP · max 20 MB</p>
+                  </div>
+                </div>
+                <label className="px-3 py-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-blue-200 dark:border-blue-800">
+                  <Upload size={13} />
+                  <span>{isUploadingDoc ? 'Uploading...' : 'Upload Document'}</span>
+                  <input
+                    type="file"
+                    className="hidden"
+                    onChange={handleUploadDossierDoc}
+                    disabled={isUploadingDoc}
+                  />
+                </label>
+              </div>
+
+              {/* Document List */}
+              {activeDetailLead.documents && activeDetailLead.documents.length > 0 ? (
+                <div className="space-y-2">
+                  {activeDetailLead.documents.map((doc) => (
+                    <div key={doc.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 flex items-center justify-between text-xs">
+                      <div className="flex items-center gap-2">
+                        <FileText size={16} className="text-blue-600" />
+                        <div>
+                          <div className="font-bold text-slate-900 dark:text-slate-100">{doc.name}</div>
+                          <div className="text-[10px] text-slate-400">{doc.size} • Uploaded {doc.upload_date}</div>
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => showNotification(`Downloading ${doc.name}...`, 'success')}
+                          className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg cursor-pointer"
+                          title="Download document"
+                        >
+                          <Download size={14} />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDossierDoc(doc.id)}
+                          className="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg cursor-pointer"
+                          title="Delete document"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400">
+                  <Paperclip size={20} className="mx-auto text-slate-300 mb-1" />
+                  <p className="text-xs font-semibold">No documents uploaded yet.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Click 'Upload Document' to attach trade agreements, COA, or lab test certificates</p>
+                </div>
+              )}
+            </div>
+
+            {/* Trade & Export Specifications Details */}
+            {(activeDetailLead.export_requirements || activeDetailLead.product_notes) && (
+              <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-2.5">
+                <div className="font-bold text-slate-900 dark:text-white border-b border-slate-100 dark:border-slate-800 pb-1.5 flex items-center gap-1.5 text-xs">
+                  <Ship size={14} className="text-emerald-600" />
+                  <span>Trade, Shipping & Export Specifications</span>
+                </div>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                    <span className="text-slate-400 block text-[10px]">Incoterm</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.incoterm || 'CIF'}</span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                    <span className="text-slate-400 block text-[10px]">Port Delivery</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.port_delivery || 'Hai Phong / Cat Lai Port'}</span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                    <span className="text-slate-400 block text-[10px]">Payment Terms</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.payment_days || 'CAD on BL copy'}</span>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                    <span className="text-slate-400 block text-[10px]">Polish / Treatment</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.polish_level || 'Machine Cleaned'}</span>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Bottom Actions Bar with Delete Lead option */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-3 border-t border-slate-200 dark:border-slate-800">
+              {isOwner ? (
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => handleDelete(activeDetailLead.id)}
+                    className="px-3 py-1.5 text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 rounded-xl transition-colors cursor-pointer border border-rose-200 flex items-center gap-1"
+                  >
+                    <Trash2 size={13} /> Delete lead
+                  </button>
+                  <span className="text-[10px] text-slate-400 hidden sm:inline">
+                    Deleting removes this lead for everyone and cannot be undone.
+                  </span>
+                </div>
+              ) : <div />}
+
+              <div className="flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setDetailModalOpen(false);
+                    openEdit(activeDetailLead);
+                  }}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 cursor-pointer flex items-center gap-1"
+                >
+                  <Edit3 size={13} /> Edit Lead
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDetailModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 cursor-pointer"
+                >
+                  Close
+                </button>
+              </div>
             </div>
           </div>
         </Modal>
