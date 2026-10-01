@@ -34,9 +34,31 @@ const getFollowUps = async (req, res) => {
  * Create new follow-up
  */
 const createFollowUp = async (req, res) => {
-  const { lead_id, client_name, company, scheduled_date, scheduled_time, type, agenda, assigned_to } = req.body;
+  const {
+    lead_id,
+    client_name,
+    company,
+    scheduled_date,
+    scheduled_time,
+    type,
+    agenda,
+    assigned_to,
+    lead_name,
+    contact_person,
+    date,
+    time,
+    channel,
+    note,
+    remark,
+  } = req.body;
 
-  if (!client_name || !scheduled_date) {
+  const finalClientName = client_name || lead_name || contact_person;
+  const finalScheduledDate = scheduled_date || date;
+  const finalScheduledTime = scheduled_time || time || '10:00 AM';
+  const finalType = type || channel || 'Phone Call';
+  const finalAgenda = agenda || note || remark || 'General Follow-up';
+
+  if (!finalClientName || !finalScheduledDate) {
     return ApiResponse.error(res, 'Client name and scheduled date are required', 400);
   }
 
@@ -47,14 +69,21 @@ const createFollowUp = async (req, res) => {
   const newFollowUp = {
     id: generateId('flw'),
     lead_id: lead_id || null,
-    client_name,
+    client_name: finalClientName,
+    lead_name: finalClientName,
     company: company || '',
-    scheduled_date,
-    scheduled_time: scheduled_time || '10:00 AM',
-    type: type || 'Phone Call',
-    agenda: agenda || 'General Follow-up',
-    status: 'Scheduled',
+    scheduled_date: finalScheduledDate,
+    date: finalScheduledDate,
+    scheduled_time: finalScheduledTime,
+    time: finalScheduledTime,
+    type: finalType,
+    channel: finalType,
+    agenda: finalAgenda,
+    note: finalAgenda,
+    remark: remark || '',
+    status: req.body.status || 'Scheduled',
     assigned_to: finalAssignedTo,
+    created_at: new Date().toISOString(),
   };
 
   dataStore.followUps.unshift(newFollowUp);

@@ -14,10 +14,19 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 
-export default function UsersSection({ users = [], onCreateUser, onUpdateRole, onToggleStatus }) {
+export default function UsersSection({
+  users = [],
+  onCreateUser,
+  onUpdateRole,
+  onToggleStatus,
+  onUpdateStaffLimit,
+}) {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('all');
   const [isAddUserModalOpen, setIsAddUserModalOpen] = useState(false);
+  const [editingStaffLimitUser, setEditingStaffLimitUser] = useState(null);
+  const [newStaffLimitValue, setNewStaffLimitValue] = useState(3);
+  const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
 
   // Form state
   const [newUser, setNewUser] = useState({
@@ -66,6 +75,25 @@ export default function UsersSection({ users = [], onCreateUser, onUpdateRole, o
       });
     } catch (err) {
       setErrorMsg(err.message || 'Failed to create user');
+    }
+  };
+
+  const handleOpenStaffLimitModal = (user) => {
+    setEditingStaffLimitUser(user);
+    setNewStaffLimitValue(user.staff_limit !== undefined ? user.staff_limit : 3);
+  };
+
+  const handleSaveStaffLimit = async (e) => {
+    e.preventDefault();
+    if (!editingStaffLimitUser || !onUpdateStaffLimit) return;
+    setIsUpdatingLimit(true);
+    try {
+      await onUpdateStaffLimit(editingStaffLimitUser.id, newStaffLimitValue);
+      setEditingStaffLimitUser(null);
+    } catch (err) {
+      console.error('Failed to update staff limit:', err);
+    } finally {
+      setIsUpdatingLimit(false);
     }
   };
 
@@ -236,19 +264,29 @@ export default function UsersSection({ users = [], onCreateUser, onUpdateRole, o
                       </select>
                     </div>
 
-                    <button
-                      onClick={() => onToggleStatus(u.id)}
-                      disabled={isOwner}
-                      className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
-                        isOwner
-                          ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                          : u.is_active
-                          ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
-                          : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                      }`}
-                    >
-                      {u.is_active ? 'Deactivate' : 'Activate'}
-                    </button>
+                    {isOwner ? (
+                      <button
+                        onClick={() => handleOpenStaffLimitModal(u)}
+                        className="px-3 py-1.5 rounded-xl text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200 transition-colors cursor-pointer flex items-center gap-1.5"
+                      >
+                        <Crown size={12} className="text-amber-700" />
+                        <span>Quota: {u.staff_limit !== undefined ? u.staff_limit : 3} Seats</span>
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => onToggleStatus(u.id)}
+                        disabled={isOwner}
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-colors ${
+                          isOwner
+                            ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                            : u.is_active
+                            ? 'border-slate-200 bg-white text-slate-700 hover:bg-slate-100'
+                            : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                        }`}
+                      >
+                        {u.is_active ? 'Deactivate' : 'Activate'}
+                      </button>
+                    )}
                   </div>
                 </div>
               );
@@ -350,19 +388,30 @@ export default function UsersSection({ users = [], onCreateUser, onUpdateRole, o
                       </td>
 
                       <td className="py-3.5 text-right pr-2">
-                        <button
-                          onClick={() => onToggleStatus(u.id)}
-                          disabled={isOwner}
-                          className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
-                            isOwner
-                              ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
-                              : u.is_active
-                              ? 'border-slate-200 text-slate-600 hover:bg-slate-100'
-                              : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
-                          }`}
-                        >
-                          {u.is_active ? 'Deactivate' : 'Activate'}
-                        </button>
+                        {isOwner ? (
+                          <button
+                            onClick={() => handleOpenStaffLimitModal(u)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg text-[11px] font-bold bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-300 transition-all cursor-pointer shadow-xs"
+                            title="Super Admin: Click to increase or adjust staff limit for this Owner"
+                          >
+                            <Crown size={12} className="text-amber-600" />
+                            <span>Quota: {u.staff_limit !== undefined ? u.staff_limit : 3} Seats</span>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => onToggleStatus(u.id)}
+                            disabled={isOwner}
+                            className={`px-3 py-1 rounded-lg text-[11px] font-bold border transition-colors ${
+                              isOwner
+                                ? 'opacity-40 cursor-not-allowed border-slate-200 text-slate-400'
+                                : u.is_active
+                                ? 'border-slate-200 text-slate-600 hover:bg-slate-100'
+                                : 'border-emerald-200 text-emerald-700 bg-emerald-50 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {u.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        )}
                       </td>
                     </tr>
                   );
@@ -473,6 +522,78 @@ export default function UsersSection({ users = [], onCreateUser, onUpdateRole, o
               className="px-5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition-all cursor-pointer"
             >
               Save Member
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Modal: Adjust Owner Staff Seat Limit (Super Admin Control) */}
+      <Modal
+        isOpen={!!editingStaffLimitUser}
+        onClose={() => setEditingStaffLimitUser(null)}
+        title={`Adjust Staff Seat Limit: ${editingStaffLimitUser?.name || 'Owner'}`}
+      >
+        <form onSubmit={handleSaveStaffLimit} className="space-y-4">
+          <div className="p-3.5 rounded-2xl bg-amber-50 border border-amber-200 flex items-start gap-3 text-xs text-amber-900">
+            <Crown size={18} className="text-amber-700 shrink-0 mt-0.5" />
+            <div>
+              <div className="font-extrabold text-amber-950">Super Admin Authority</div>
+              <p className="mt-0.5 text-amber-800 leading-relaxed">
+                By default, free company owners can register up to <strong>3 employees</strong>. As Super Admin, you have full authority to increase or set any custom staff quota limit for this company.
+              </p>
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Allowed Staff Seats Count *
+            </label>
+            <input
+              type="number"
+              min="1"
+              max="9999"
+              required
+              value={newStaffLimitValue}
+              onChange={(e) => setNewStaffLimitValue(Math.max(1, parseInt(e.target.value) || 1))}
+              className="w-full px-3.5 py-2.5 text-sm font-bold rounded-xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-500/20 focus:border-amber-500"
+            />
+          </div>
+
+          {/* Quick Presets */}
+          <div>
+            <div className="text-[11px] font-bold text-slate-500 mb-2">Quick Presets:</div>
+            <div className="flex flex-wrap gap-2">
+              {[3, 5, 10, 15, 25, 50, 100].map((preset) => (
+                <button
+                  key={preset}
+                  type="button"
+                  onClick={() => setNewStaffLimitValue(preset)}
+                  className={`px-3 py-1.5 text-xs font-bold rounded-lg border transition-all cursor-pointer ${
+                    newStaffLimitValue === preset
+                      ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                      : 'bg-slate-50 text-slate-700 border-slate-200 hover:bg-slate-100'
+                  }`}
+                >
+                  {preset} Seats {preset === 3 && '(Free)'}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2 pt-3 border-t border-slate-100">
+            <button
+              type="button"
+              onClick={() => setEditingStaffLimitUser(null)}
+              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-100 transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={isUpdatingLimit}
+              className="px-5 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold shadow-md shadow-amber-600/20 transition-all cursor-pointer flex items-center gap-2"
+            >
+              {isUpdatingLimit ? 'Saving...' : 'Update Staff Limit'}
             </button>
           </div>
         </form>

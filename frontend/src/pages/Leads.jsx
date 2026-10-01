@@ -626,16 +626,6 @@ export default function Leads() {
     });
   };
 
-  // Load from LocalStorage and API on mount
-  useEffect(() => {
-    loadLeads();
-    if (isOwner && getTeamMembers) {
-      getTeamMembers().then((res) => {
-        if (Array.isArray(res) && res.length > 0) setTeamList(res);
-      }).catch(() => {});
-    }
-  }, [profile?.id, isOwner]);
-
   const loadLeads = async () => {
     try {
       setLoading(true);
@@ -687,6 +677,16 @@ export default function Leads() {
       setLoading(false);
     }
   };
+
+  // Load from LocalStorage and API on mount
+  useEffect(() => {
+    loadLeads();
+    if (isOwner && getTeamMembers) {
+      getTeamMembers().then((res) => {
+        if (Array.isArray(res) && res.length > 0) setTeamList(res);
+      }).catch(() => {});
+    }
+  }, [profile?.id, isOwner]);
 
   // Dossier Action Handlers
   const handleLogDossierActivity = () => {
@@ -1175,8 +1175,12 @@ export default function Leads() {
     return parsedRows;
   };
 
-  // Export current leads as CSV
+  // Export current leads as CSV (Company Owner Security Protection)
   const handleExportCSV = () => {
+    if (!isOwner) {
+      showNotification('Access Denied: Only Company Owner has authority to export lead data.', 'error');
+      return;
+    }
     const exportData = filteredLeads.length > 0 ? filteredLeads : leads;
     if (!exportData || exportData.length === 0) {
       showNotification('No leads to export', 'error');
@@ -1577,15 +1581,17 @@ export default function Leads() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
-          {/* Export CSV */}
-          <button
-            onClick={handleExportCSV}
-            className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer"
-            title="Download leads as CSV spreadsheet"
-          >
-            <Download size={14} className="text-slate-500" />
-            <span>Export CSV</span>
-          </button>
+          {/* Export CSV - Owner Security Protection */}
+          {isOwner && (
+            <button
+              onClick={handleExportCSV}
+              className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-xs hover:border-slate-300 transition-all cursor-pointer"
+              title="Download leads as CSV spreadsheet"
+            >
+              <Download size={14} className="text-slate-500" />
+              <span>Export CSV</span>
+            </button>
+          )}
 
           {/* Bulk Import */}
           <button

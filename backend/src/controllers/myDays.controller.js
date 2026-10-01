@@ -15,20 +15,24 @@ const getMyDays = async (req, res) => {
  * Add a new item to MyDays planner
  */
 const addMyDayItem = async (req, res) => {
-  const { task, priority, time_slot, category } = req.body;
+  const { task, text, summary, title, priority, time_slot, category, date } = req.body;
+  const taskText = task || text || summary || title;
 
-  if (!task) {
+  if (!taskText) {
     return ApiResponse.error(res, 'Task description is required', 400);
   }
 
   const newItem = {
     id: generateId('day'),
     user_id: req.user ? req.user.id : 'usr_admin_1',
-    task,
+    task: taskText,
+    text: taskText,
     priority: priority || 'medium',
     completed: false,
     time_slot: time_slot || 'Today',
     category: category || 'Work',
+    date: date || new Date().toISOString().split('T')[0],
+    created_at: new Date().toISOString(),
   };
 
   dataStore.myDays.push(newItem);

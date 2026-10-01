@@ -292,6 +292,7 @@ const toggleUserStatus = async (req, res) => {
   }
 
   user.is_active = !user.is_active;
+  user.status = user.is_active ? 'active' : 'suspended';
   dbSync.saveUser(user);
 
   // Audit log
@@ -467,6 +468,7 @@ const getSubscriptionInfo = async (req, res) => {
     res,
     {
       currentPlan,
+      plan: dataStore.company.plan,
       usage: {
         staffCount,
         maxStaff: dataStore.company.maxStaff,
@@ -485,22 +487,23 @@ const getSubscriptionInfo = async (req, res) => {
  * Upgrade or modify company subscription plan
  */
 const upgradePlan = async (req, res) => {
-  const { planId, maxStaff } = req.body;
+  const { planId, maxStaff, plan } = req.body;
+  const targetPlan = planId || plan;
 
-  if (!planId || !dataStore.plans[planId]) {
+  if (!targetPlan || !dataStore.plans[targetPlan]) {
     return ApiResponse.error(res, 'Invalid planId. Options: starter, growth, enterprise', 400);
   }
 
-  const selectedPlan = dataStore.plans[planId];
+  const selectedPlan = dataStore.plans[targetPlan];
   const oldPlan = dataStore.company.plan;
 
-  dataStore.company.plan = planId;
+  dataStore.company.plan = targetPlan;
   dataStore.company.maxStaff = maxStaff !== undefined ? Number(maxStaff) : selectedPlan.maxStaff;
 
   // Keep primary tenant in sync
   const primaryTenant = dataStore.tenants.find((t) => t.id === 'comp_stellarsync_1');
   if (primaryTenant) {
-    primaryTenant.plan = planId;
+    primaryTenant.plan = targetPlan;
     primaryTenant.maxStaff = dataStore.company.maxStaff;
     primaryTenant.monthlyRevenue = selectedPlan.priceMonthly;
   }
@@ -513,7 +516,7 @@ const upgradePlan = async (req, res) => {
     actor_name: req.user ? req.user.name : 'System Owner',
     actor_id: req.user ? req.user.id : 'usr_admin_1',
     action: 'SUBSCRIPTION_PLAN_UPGRADED',
-    details: `Upgraded subscription from ${oldPlan.toUpperCase()} to ${planId.toUpperCase()} (${selectedPlan.priceMonthly}/mo, ${dataStore.company.maxStaff} staff seats)`,
+    details: `Upgraded subscription from ${oldPlan.toUpperCase()} to ${targetPlan.toUpperCase()} (${selectedPlan.priceMonthly}/mo, ${dataStore.company.maxStaff} staff seats)`,
     ip_address: req.ip || '127.0.0.1',
     timestamp: new Date().toISOString(),
   };
@@ -522,7 +525,7 @@ const upgradePlan = async (req, res) => {
 
   return ApiResponse.success(
     res,
-    { company: dataStore.company, plan: selectedPlan },
+    { company: dataStore.company, plan: targetPlan, planDetails: selectedPlan },
     `Plan successfully upgraded to ${selectedPlan.name}!`
   );
 };
@@ -556,11 +559,12 @@ const getAllTenants = async (req, res) => {
  * Create a new tenant organization
  */
 const createTenant = async (req, res) => {
-  const { name, domain, owner_name, owner_email, plan } = req.body;
-  if (!name || !owner_email) {
-    return ApiResponse.error(res, 'Organization name and Owner email are required', 400);
+  const { name, domain, owner_name, owner_email, email, plan } = req.body;
+  if (!name) {
+    return ApiResponse.error(res, 'Organization name is required', 400);
   }
 
+  const finalOwnerEmail = owner_email || email || `admin@${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`;
   const selectedPlanKey = (plan && dataStore.plans[plan]) ? plan : 'starter';
   const planDetails = dataStore.plans[selectedPlanKey];
 
@@ -569,7 +573,7 @@ const createTenant = async (req, res) => {
     name,
     domain: domain || `${name.toLowerCase().replace(/[^a-z0-9]/g, '')}.com`,
     owner_name: owner_name || 'Founder',
-    owner_email,
+    owner_email: finalOwnerEmail,
     plan: selectedPlanKey,
     maxStaff: planDetails.maxStaff,
     currentStaff: 1,

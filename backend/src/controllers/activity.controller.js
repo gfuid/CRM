@@ -48,6 +48,7 @@ const createActivity = async (req, res) => {
     user_id: req.user ? req.user.id : 'usr_agent_1',
     duration_minutes: duration_minutes ? Number(duration_minutes) : null,
     timestamp: new Date().toISOString(),
+    created_at: new Date().toISOString(),
   };
 
   dataStore.activities.unshift(newActivity);

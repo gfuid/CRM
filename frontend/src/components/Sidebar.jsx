@@ -7,7 +7,7 @@ import {
   Table,
   Calendar,
   CalendarClock,
-  UserPlus
+  UserPlus,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
   const { isOwner, isStaff, profile } = useAuth();
 
+  const userPerms = profile?.permissions || {};
   const canViewAnalytics = isOwner || userPerms.view_analytics !== false;
   const canViewLeads = isOwner || userPerms.view_leads !== false;
   const canViewTasks = isOwner || userPerms.view_tasks !== false;
@@ -73,11 +74,10 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
-              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${
-                isActive
+              className={`flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 cursor-pointer ${isActive
                   ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 font-bold border-l-4 border-emerald-500 shadow-sm'
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-50 dark:hover:bg-slate-800/60'
-              }`}
+                }`}
             >
               <div className="flex items-center gap-3">
                 <Icon

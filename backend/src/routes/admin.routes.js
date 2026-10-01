@@ -14,6 +14,7 @@ router.post('/users', asyncHandler(adminController.createUser));
 router.patch('/users/:id', asyncHandler(adminController.updateUser));
 router.patch('/users/:id/role', asyncHandler(adminController.updateUserRole));
 router.patch('/users/:id/status', asyncHandler(adminController.toggleUserStatus));
+router.patch('/users/:id/staff-limit', asyncHandler(adminController.updateStaffLimit));
 router.delete('/users/:id', asyncHandler(adminController.deleteUser));
 
 // Consolidated Overview Summary

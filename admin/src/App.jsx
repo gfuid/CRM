@@ -142,6 +142,28 @@ export default function App() {
     }
   };
 
+  const handleUpdateStaffLimit = async (id, staff_limit) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}/staff-limit`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ staff_limit: Number(staff_limit) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Staff limit updated to ${staff_limit} seats!`);
+        fetchAllData();
+        return true;
+      } else {
+        showToast(data.message || 'Error updating staff limit', 'error');
+        return false;
+      }
+    } catch (err) {
+      showToast('Network error updating staff limit', 'error');
+      return false;
+    }
+  };
+
   const handleUpdateSettings = async (settingsData) => {
     try {
       const res = await fetch(`${API_BASE}/settings`, {
@@ -218,6 +240,7 @@ export default function App() {
                   onCreateUser={handleCreateUser}
                   onUpdateRole={handleUpdateRole}
                   onToggleStatus={handleToggleStatus}
+                  onUpdateStaffLimit={handleUpdateStaffLimit}
                 />
               )}
 
