@@ -225,6 +225,7 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding, initial
               </span>
             </>
           )}
+        </div>
       </div>
     </div>
   );
