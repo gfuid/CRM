@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff, Users, ArrowRight } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
@@ -89,9 +89,25 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
             </h1>
           </div>
         </div>
-        <p className="text-sm text-slate-500 mb-5">
+        <p className="text-sm text-slate-500 mb-4">
           Setup your company account and start closing commodity trade deals with precision.
         </p>
+
+        {/* Staff/Employee Callout: Directly solve confusion for employees landing here */}
+        <div className="p-3 mb-3 bg-indigo-50/90 border border-indigo-200 rounded-xl flex items-center justify-between text-xs gap-2">
+          <div className="flex items-center gap-2 text-indigo-900 font-medium">
+            <Users size={16} className="text-indigo-600 shrink-0" />
+            <span>Are you a <strong>Staff member / Employee</strong>?</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onSwitchToLogin && onSwitchToLogin('staff')}
+            className="font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
+          >
+            <span>Sign In as Staff</span>
+            <ArrowRight size={12} />
+          </button>
+        </div>
 
         {/* Free Forever Banner */}
         <div className="p-3 mb-5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">

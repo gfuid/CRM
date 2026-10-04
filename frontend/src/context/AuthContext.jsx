@@ -28,36 +28,51 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Initialize session on mount
+  // Initialize session on mount with resilient persistence
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem('crm_token');
-      if (token) {
-        // If it was a local session token
-        if (token.startsWith('local_session_')) {
-          const localUsers = getLocalUsers();
-          if (localUsers.length > 0) {
-            const lastUser = localUsers[localUsers.length - 1];
-            setUser(lastUser);
-            setProfile({ ...lastUser, full_name: lastUser.name });
-            setCompany(lastUser.company || { name: 'Travel-Trade', plan: 'growth' });
-            setLoading(false);
-            return;
-          }
+      const isExplicitLogout = localStorage.getItem('crm_logged_out') === 'true';
+
+      if (token && !isExplicitLogout) {
+        // Quick restore from cached session so UI is immediately responsive
+        const cachedSessionStr = localStorage.getItem('crm_user_session');
+        if (cachedSessionStr) {
+          try {
+            const cached = JSON.parse(cachedSessionStr);
+            if (cached && cached.user) {
+              setUser(cached.user);
+              setProfile(cached.profile || { ...cached.user, full_name: cached.user.name });
+              setCompany(cached.company || { name: 'Travel-Trade', plan: 'growth' });
+            }
+          } catch (e) {}
         }
 
+        // Verify with backend
         try {
           const res = await api.getProfile();
           if (res && res.success && res.data.user) {
             const u = res.data.user;
+            const comp = res.data.company || { name: 'Travel-Trade', plan: 'growth' };
             setUser(u);
             setProfile({ ...u, full_name: u.name });
-            setCompany(res.data.company || { name: 'Travel-Trade', plan: 'growth' });
+            setCompany(comp);
+            localStorage.setItem('crm_user_session', JSON.stringify({
+              user: u,
+              profile: { ...u, full_name: u.name },
+              company: comp,
+            }));
             setLoading(false);
             return;
           }
         } catch (err) {
-          console.warn('Stored token validation error, checking local fallback:', err.message);
+          console.warn('Backend profile check warning:', err.message);
+          // If we had a cached session, preserve it! Do NOT abruptly logout on backend cold start
+          if (cachedSessionStr) {
+            setLoading(false);
+            return;
+          }
+
           const localUsers = getLocalUsers();
           if (localUsers.length > 0) {
             const lastUser = localUsers[localUsers.length - 1];
@@ -67,7 +82,6 @@ export function AuthProvider({ children }) {
             setLoading(false);
             return;
           }
-          localStorage.removeItem('crm_token');
         }
       }
 
@@ -90,9 +104,15 @@ export function AuthProvider({ children }) {
         if (token) {
           localStorage.setItem('crm_token', token);
         }
+        const comp = res.data.company || { name: 'Travel-Trade', plan: 'growth' };
         setUser(u);
         setProfile({ ...u, full_name: u.name });
-        setCompany(res.data.company || { name: 'Travel-Trade', plan: 'growth' });
+        setCompany(comp);
+        localStorage.setItem('crm_user_session', JSON.stringify({
+          user: u,
+          profile: { ...u, full_name: u.name },
+          company: comp,
+        }));
         return res.data;
       }
       if (res && !res.success) {
@@ -111,6 +131,11 @@ export function AuthProvider({ children }) {
           setUser(localMatch);
           setProfile({ ...localMatch, full_name: localMatch.name });
           setCompany(localMatch.company || { name: 'Travel-Trade', plan: 'growth' });
+          localStorage.setItem('crm_user_session', JSON.stringify({
+            user: localMatch,
+            profile: { ...localMatch, full_name: localMatch.name },
+            company: localMatch.company || { name: 'Travel-Trade', plan: 'growth' },
+          }));
           return { user: localMatch, company: localMatch.company };
         } else {
           throw new Error('Invalid credentials. Please check your password.');
@@ -126,6 +151,11 @@ export function AuthProvider({ children }) {
           setUser(staffMatch);
           setProfile({ ...staffMatch, full_name: staffMatch.name });
           setCompany({ name: 'Travel-Trade', plan: 'growth' });
+          localStorage.setItem('crm_user_session', JSON.stringify({
+            user: staffMatch,
+            profile: { ...staffMatch, full_name: staffMatch.name },
+            company: { name: 'Travel-Trade', plan: 'growth' },
+          }));
           return { user: staffMatch };
         } else {
           throw new Error('Invalid credentials. Please check your password.');
@@ -307,6 +337,7 @@ export function AuthProvider({ children }) {
   // Sign out - terminates session and returns to login/landing
   const signOut = () => {
     localStorage.removeItem('crm_token');
+    localStorage.removeItem('crm_user_session');
     localStorage.setItem('crm_logged_out', 'true');
     setUser(null);
     setProfile(null);

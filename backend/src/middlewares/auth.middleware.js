@@ -87,7 +87,23 @@ const authenticate = async (req, res, next) => {
     }
 
     if (!user) {
-      return ApiResponse.error(res, 'User account no longer exists.', 401);
+      // Resilient session recovery: If JWT is cryptographically valid, reconstruct session user
+      // so users are not unexpectedly logged out when serverless or in-memory stores restart
+      if (decoded.id && (decoded.email || decoded.name)) {
+        user = {
+          id: decoded.id,
+          name: decoded.name || decoded.email?.split('@')[0] || 'Team Member',
+          email: decoded.email,
+          role: decoded.role || 'agent',
+          persona: decoded.persona || (decoded.role === 'admin' ? 'owner' : 'staff'),
+          company_id: decoded.company_id || 'comp_1',
+          department: decoded.department || 'Commodity Sales & Export Operations',
+          is_active: true,
+        };
+        dataStore.users.push(user);
+      } else {
+        return ApiResponse.error(res, 'User account no longer exists.', 401);
+      }
     }
 
     if (!user.is_active) {

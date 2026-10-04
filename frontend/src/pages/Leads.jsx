@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
@@ -72,48 +72,48 @@ export const SOCIAL_PLATFORMS = [
   { id: 'Website', label: 'Website / Other', icon: '🌐', placeholder: 'https://...' },
 ];
 
-// Comprehensive Countries with Flags
+// Comprehensive Countries with Flags — Alphabetically Sorted A to Z
 export const COUNTRIES_WITH_FLAGS = [
-  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
-  { code: 'IN', name: 'India', flag: '🇮🇳' },
-  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
-  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
-  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
-  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
-  { code: 'US', name: 'United States', flag: '🇺🇸' },
-  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-  { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
-  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
-  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
-  { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
-  { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
-  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
-  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
-  { code: 'FR', name: 'France', flag: '🇫🇷' },
-  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
-  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
-  { code: 'OM', name: 'Oman', flag: '🇴🇲' },
-  { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
-  { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
-  { code: 'BH', name: 'Bahrain', flag: '🇧🇭' },
-  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
-  { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
-  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
-  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
-  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
-  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
   { code: 'AU', name: 'Australia', flag: '🇦🇺' },
-  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
-  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
-  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
-  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
-  { code: 'CN', name: 'China', flag: '🇨🇳' },
-  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
-  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
-  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'BH', name: 'Bahrain', flag: '🇧🇭' },
+  { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
   { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
+  { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
+  { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'IN', name: 'India', flag: '🇮🇳' },
+  { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
+  { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
+  { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+  { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
+  { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
   { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
-];
+  { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'OM', name: 'Oman', flag: '🇴🇲' },
+  { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
+  { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
+  { code: 'RU', name: 'Russia', flag: '🇷🇺' },
+  { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+  { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
+  { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'ES', name: 'Spain', flag: '🇪🇸' },
+  { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
+  { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
+  { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+  { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
+  { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
+].sort((a, b) => a.name.localeCompare(b.name));
 
 export const COMMODITY_PRODUCTS = [
   'Turmeric',
@@ -512,6 +512,99 @@ const getFollowUpHealth = (followUpDate) => {
   return                      { label: 'Risk',    cls: 'bg-rose-100 text-rose-800 border-rose-300' };
 };
 
+// Searchable Country Dropdown Component (A to Z with instant search)
+function SearchableCountrySelect({ value, onChange, className = '' }) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [search, setSearch] = useState('');
+  const wrapperRef = useRef(null);
+
+  const filteredCountries = useMemo(() => {
+    if (!search.trim()) return COUNTRIES_WITH_FLAGS;
+    const q = search.toLowerCase().trim();
+    return COUNTRIES_WITH_FLAGS.filter(
+      (c) => c.name.toLowerCase().includes(q) || c.code.toLowerCase().includes(q)
+    );
+  }, [search]);
+
+  useEffect(() => {
+    const handleClickOutside = (e) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target)) {
+        setIsOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const selectedObj = COUNTRIES_WITH_FLAGS.find(
+    (c) => value && (value.includes(c.name) || value === c.name || value === `${c.name} ${c.flag}`)
+  );
+
+  return (
+    <div className={`relative ${className}`} ref={wrapperRef}>
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none flex items-center justify-between text-left cursor-pointer transition-colors shadow-2xs"
+      >
+        <span className="flex items-center gap-2 truncate">
+          {selectedObj ? (
+            <>
+              <span className="text-sm leading-none">{selectedObj.flag}</span>
+              <span className="font-semibold text-slate-800 dark:text-slate-100">{selectedObj.name}</span>
+            </>
+          ) : (
+            <span className="text-slate-600 dark:text-slate-300 font-medium">{value || 'Select Country (A-Z)'}</span>
+          )}
+        </span>
+        <ChevronDown size={14} className={`text-slate-400 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+      </button>
+
+      {isOpen && (
+        <div className="absolute z-50 mt-1 w-full bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl overflow-hidden animate-in fade-in duration-100">
+          <div className="p-2 border-b border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-800/60">
+            <div className="relative">
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input
+                type="text"
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Search country (A-Z)..."
+                className="w-full pl-8 pr-2.5 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-700 rounded-lg focus:outline-none focus:ring-1 focus:ring-emerald-500 text-slate-800 dark:text-slate-100"
+                autoFocus
+              />
+            </div>
+          </div>
+          <div className="max-h-52 overflow-y-auto divide-y divide-slate-50 dark:divide-slate-800/40">
+            {filteredCountries.length === 0 ? (
+              <div className="p-3 text-center text-xs text-slate-400">No matching country found</div>
+            ) : (
+              filteredCountries.map((c) => (
+                <button
+                  type="button"
+                  key={c.code}
+                  onClick={() => {
+                    onChange(`${c.name} ${c.flag}`);
+                    setIsOpen(false);
+                    setSearch('');
+                  }}
+                  className="w-full px-3 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
+                >
+                  <span className="flex items-center gap-2">
+                    <span className="text-sm leading-none">{c.flag}</span>
+                    <span className="font-semibold text-slate-800 dark:text-slate-200">{c.name}</span>
+                  </span>
+                  <span className="text-[10px] text-slate-400 font-mono">{c.code}</span>
+                </button>
+              ))
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function Leads() {
   const { profile, isOwner, isStaff, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState(INITIAL_LEADS);
@@ -552,8 +645,17 @@ export default function Leads() {
   const [filterProduct, setFilterProduct] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
 
-  // Dynamic Commodity options state (user can add custom products)
-  const [allCommodityOptions, setAllCommodityOptions] = useState(COMMODITY_PRODUCTS);
+  // Dynamic Commodity options state (user can add & remove products)
+  const [allCommodityOptions, setAllCommodityOptions] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_user_commodities');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return COMMODITY_PRODUCTS;
+  });
   const [showCustomProductInput, setShowCustomProductInput] = useState(false);
   const [customProductText, setCustomProductText] = useState('');
 
@@ -561,6 +663,34 @@ export default function Leads() {
   const [allIndustryOptions, setAllIndustryOptions] = useState(INDUSTRY_TYPES);
   const [showCustomIndustryInput, setShowCustomIndustryInput] = useState(false);
   const [customIndustryText, setCustomIndustryText] = useState('');
+
+  // Dynamic Payment Terms options state (user can add custom payment terms)
+  const [allPaymentTerms, setAllPaymentTerms] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_user_payment_terms');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return PAYMENT_TERMS;
+  });
+  const [showCustomPaymentInput, setShowCustomPaymentInput] = useState(false);
+  const [customPaymentText, setCustomPaymentText] = useState('');
+
+  // Dynamic Incoterms / Shipping terms options state
+  const [allIncoterms, setAllIncoterms] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_user_incoterms');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return INCOTERMS;
+  });
+  const [showCustomIncotermInput, setShowCustomIncotermInput] = useState(false);
+  const [customIncotermText, setCustomIncotermText] = useState('');
 
   // Lead Form Initial State matching user requirements
   const defaultContact = {
@@ -599,9 +729,12 @@ export default function Leads() {
     incoterm: 'CIF',
     port_delivery: '',
     payment_days: 'LC at Sight (Letter of Credit)',
-    // Assignment
+    // Assignment & Creator Info (Requirement 4 & 6)
     assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
     agent_name: isStaff ? (profile?.name || 'Staff Member') : 'Athish',
+    created_by_id: profile?.id || 'usr_staff_creator',
+    created_by_name: profile?.name || profile?.full_name || 'Deepak',
+    created_at: new Date().toISOString(),
     follow_up_date: '',
     notes: '',
   };
@@ -836,8 +969,11 @@ export default function Leads() {
     }
     const trimmed = customProductText.trim();
     if (!trimmed) return;
+    let nextList = allCommodityOptions;
     if (!allCommodityOptions.includes(trimmed)) {
-      setAllCommodityOptions((prev) => [...prev, trimmed]);
+      nextList = [...allCommodityOptions, trimmed];
+      setAllCommodityOptions(nextList);
+      try { localStorage.setItem('crm_user_commodities', JSON.stringify(nextList)); } catch {}
     }
     if (!form.products.includes(trimmed)) {
       setForm((prev) => ({ ...prev, products: [...prev.products, trimmed] }));
@@ -845,6 +981,53 @@ export default function Leads() {
     setCustomProductText('');
     setShowCustomProductInput(false);
     showNotification(`Commodity "${trimmed}" added and selected!`, 'success');
+  };
+
+  // Remove commodity category handler
+  const handleRemoveCommodity = (prodToRemove) => {
+    if (allCommodityOptions.length <= 1) {
+      showNotification('At least one commodity must remain in list', 'error');
+      return;
+    }
+    const updated = allCommodityOptions.filter((p) => p !== prodToRemove);
+    setAllCommodityOptions(updated);
+    try { localStorage.setItem('crm_user_commodities', JSON.stringify(updated)); } catch {}
+    if (form.products.includes(prodToRemove)) {
+      setForm((prev) => ({ ...prev, products: prev.products.filter((p) => p !== prodToRemove) }));
+    }
+    showNotification(`Commodity "${prodToRemove}" removed from options.`, 'info');
+  };
+
+  // Add custom payment term handler
+  const handleAddCustomPaymentTerm = () => {
+    const trimmed = customPaymentText.trim();
+    if (!trimmed) return;
+    let nextList = allPaymentTerms;
+    if (!allPaymentTerms.includes(trimmed)) {
+      nextList = [...allPaymentTerms, trimmed];
+      setAllPaymentTerms(nextList);
+      try { localStorage.setItem('crm_user_payment_terms', JSON.stringify(nextList)); } catch {}
+    }
+    setForm((prev) => ({ ...prev, payment_days: trimmed }));
+    setCustomPaymentText('');
+    setShowCustomPaymentInput(false);
+    showNotification(`Payment term "${trimmed}" added and selected!`, 'success');
+  };
+
+  // Add custom shipping / incoterm handler
+  const handleAddCustomIncoterm = () => {
+    const trimmed = customIncotermText.trim();
+    if (!trimmed) return;
+    let nextList = allIncoterms;
+    if (!allIncoterms.includes(trimmed)) {
+      nextList = [...allIncoterms, trimmed];
+      setAllIncoterms(nextList);
+      try { localStorage.setItem('crm_user_incoterms', JSON.stringify(nextList)); } catch {}
+    }
+    setForm((prev) => ({ ...prev, incoterm: trimmed }));
+    setCustomIncotermText('');
+    setShowCustomIncotermInput(false);
+    showNotification(`Shipping term "${trimmed}" added and selected!`, 'success');
   };
 
   // Add custom industry handler (Owner only)
@@ -1007,6 +1190,9 @@ export default function Leads() {
       payment_days: exp.payment_days || 'LC at Sight (Letter of Credit)',
       assigned_to: lead.assigned_to || (isStaff ? profile?.id : 'usr_athish'),
       agent_name: lead.agent_name || (isStaff ? profile?.name : 'Athish'),
+      created_by_id: lead.created_by_id || 'usr_staff_creator',
+      created_by_name: lead.created_by_name || lead.agent_name || 'Deepak',
+      created_at: lead.created_at || new Date().toISOString(),
       follow_up_date: lead.follow_up_date || '',
       notes: lead.notes || '',
     });
@@ -1047,6 +1233,17 @@ export default function Leads() {
       }
     }
 
+    // Preserve original creator info (Task 6): If Deepak created, creator remains Deepak even if assigned to Japneet!
+    const originalCreatorName = editingLead
+      ? (editingLead.created_by_name || form.created_by_name || 'Deepak')
+      : (profile?.name || profile?.full_name || 'Deepak');
+    const originalCreatorId = editingLead
+      ? (editingLead.created_by_id || form.created_by_id || profile?.id)
+      : (profile?.id || 'usr_staff_creator');
+    const originalCreatedAt = editingLead
+      ? (editingLead.created_at || form.created_at || new Date().toISOString())
+      : new Date().toISOString();
+
     const leadPayload = {
       type: form.type,
       company_name: form.company_name,
@@ -1084,6 +1281,9 @@ export default function Leads() {
       },
       assigned_to: finalAssignedTo,
       agent_name: finalAgentName,
+      created_by_id: originalCreatorId,
+      created_by_name: originalCreatorName,
+      created_at: originalCreatedAt,
       follow_up_date: form.follow_up_date,
       notes: form.notes,
     };
@@ -1492,10 +1692,13 @@ export default function Leads() {
           (profile?.name?.toLowerCase().includes('athish') && (lead.assigned_to === 'usr_athish' || lead.agent_name === 'Athish'));
         if (!isAssignedToMe) return false;
       } else if (filterStaff) {
-        // Owner filtering by specific staff member
+        // Owner filtering by specific staff member (e.g. Deepak, Japneet, Athish)
+        const staffQ = filterStaff.toLowerCase();
         const matchesStaff =
           lead.assigned_to === filterStaff ||
-          lead.agent_name === filterStaff;
+          lead.agent_name === filterStaff ||
+          (lead.agent_name && lead.agent_name.toLowerCase().includes(staffQ)) ||
+          (lead.assigned_to && String(lead.assigned_to).toLowerCase().includes(staffQ));
         if (!matchesStaff) return false;
       }
 
@@ -1870,10 +2073,16 @@ export default function Leads() {
               <option value="">All Staff Activity</option>
               <option value={profile?.id || 'owner'}>{profile?.name || 'Owner'} (Direct)</option>
               {teamList.map((tm) => (
-                <option key={tm.id} value={tm.id}>
+                <option key={tm.id} value={tm.name}>
                   {tm.name} ({tm.department || tm.role || 'Staff'})
                 </option>
               ))}
+              {!teamList.some((t) => (t.name || '').toLowerCase().includes('deepak')) && (
+                <option value="Deepak">Deepak (Staff)</option>
+              )}
+              {!teamList.some((t) => (t.name || '').toLowerCase().includes('japneet')) && (
+                <option value="Japneet">Japneet (Staff)</option>
+              )}
             </select>
           )}
         </div>
@@ -1890,7 +2099,7 @@ export default function Leads() {
                 <th className="py-3.5 px-4">Contact Person</th>
                 <th className="py-3.5 px-4">Products</th>
                 <th className="py-3.5 px-4">Quantity / Deal</th>
-                <th className="py-3.5 px-4">Assigned Rep</th>
+                <th className="py-3.5 px-4">Created By & Date</th>
                 <th className="py-3.5 px-4">Follow-Up</th>
                 <th className="py-3.5 px-4 text-center">Stage</th>
                 <th className="py-3.5 px-4 text-right">Actions</th>
@@ -1911,22 +2120,27 @@ export default function Leads() {
                     : (lead.product || '').split(',').map((p) => p.trim());
 
                   return (
-                    <tr key={lead.id} className="hover:bg-slate-50/70 transition-colors">
+                    <tr
+                      key={lead.id}
+                      onClick={() => openDetails(lead)}
+                      className="hover:bg-emerald-50/40 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                      title="Click anywhere to view full lead specifications & dossier"
+                    >
                       {/* Company & Country */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 flex items-center gap-1.5">
+                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 group-hover:text-emerald-700 dark:group-hover:text-emerald-400 transition-colors">
                           <span>{lead.company_name || lead.name}</span>
                         </div>
                         <div className="text-[11px] text-slate-500 flex items-center gap-1 mt-0.5">
                           <Globe size={11} className="text-slate-400" />
                           <span>{lead.country}</span>
                           <span className="text-slate-300">•</span>
-                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 font-semibold text-slate-600">
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-100 dark:bg-slate-800 font-semibold text-slate-600 dark:text-slate-400">
                             {lead.type || 'Export'}
                           </span>
                         </div>
                         {(lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type) && (
-                          <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1 mt-0.5">
+                          <div className="text-[10px] text-emerald-700 dark:text-emerald-400 font-medium flex items-center gap-1 mt-0.5">
                             <Factory size={10} className="shrink-0 text-emerald-600" />
                             <span className="truncate max-w-[210px]">{lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type}</span>
                           </div>
@@ -1935,7 +2149,7 @@ export default function Leads() {
 
                       {/* Contact Person */}
                       <td className="py-3.5 px-4 text-slate-700">
-                        <div className="font-semibold text-slate-900">{lead.contact_person || '—'}</div>
+                        <div className="font-semibold text-slate-900 dark:text-slate-100">{lead.contact_person || '—'}</div>
                         <div className="text-[11px] text-slate-400 flex flex-wrap items-center gap-2 mt-0.5">
                           {lead.phone && <span>{lead.phone}</span>}
                           {lead.whatsapp && (
@@ -1967,7 +2181,7 @@ export default function Leads() {
 
                       {/* Quantity & Deal */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900">
+                        <div className="font-bold text-slate-900 dark:text-slate-100">
                           {Number(lead.quantity).toLocaleString()} kg
                         </div>
                         {(() => {
@@ -1992,12 +2206,22 @@ export default function Leads() {
                         })()}
                       </td>
 
-                      {/* Assigned Rep */}
-                      <td className="py-3.5 px-4">
-                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-emerald-50 text-emerald-700 font-bold text-[11px] border border-emerald-200">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          {lead.agent_name || 'Athish'}
-                        </span>
+                      {/* Created By & Date (Requirement 4 & 5: Assigned rep replaced with Created By & Date) */}
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
+                          <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center text-[10px] font-black shrink-0">
+                            {(lead.created_by_name || lead.agent_name || 'D')[0]?.toUpperCase()}
+                          </span>
+                          <span className="truncate max-w-[125px]">{lead.created_by_name || lead.agent_name || 'Deepak'}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 font-medium">
+                          <Calendar size={10} className="text-slate-400" />
+                          <span>
+                            {lead.created_at
+                              ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
+                              : '04 Oct 2026'}
+                          </span>
+                        </div>
                       </td>
 
                       {/* Follow-up date + health badge */}
@@ -2024,6 +2248,7 @@ export default function Leads() {
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <select
                           value={lead.stage || lead.status || 'Requirement Understood'}
+                          onClick={(e) => e.stopPropagation()}
                           onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
                           className={`px-2.5 py-1 rounded-full font-bold text-[10px] border cursor-pointer outline-none transition-all shadow-xs ${getStatusBadge(
                             lead.stage || lead.status
@@ -2038,20 +2263,30 @@ export default function Leads() {
                         </select>
                       </td>
 
-                      {/* Actions */}
+                      {/* Actions: View (Requirement 8) & Edit & Delete */}
                       <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
+                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                           <button
+                            type="button"
                             onClick={() => openDetails(lead)}
-                            className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs transition-all flex items-center gap-1 cursor-pointer"
-                            title="View & Edit Customer Details"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-all flex items-center gap-1 cursor-pointer"
+                            title="View Full Lead Specifications & Dossier"
+                          >
+                            <Eye size={12} /> View
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEdit(lead)}
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            title="Edit Lead Details"
                           >
                             <Edit3 size={12} /> Edit
                           </button>
                           {isOwner && (
                             <button
+                              type="button"
                               onClick={() => handleDelete(lead.id)}
-                              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors"
+                              className="p-1.5 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 transition-colors cursor-pointer"
                               title="Delete Lead (Owner Only)"
                             >
                               <Trash2 size={14} />
@@ -2080,20 +2315,25 @@ export default function Leads() {
                 : (lead.product || '').split(',').map((p) => p.trim());
 
               return (
-                <div key={lead.id} className="p-4 space-y-3">
+                <div
+                  key={lead.id}
+                  onClick={() => openDetails(lead)}
+                  className="p-4 space-y-3 cursor-pointer hover:bg-emerald-50/30 dark:hover:bg-slate-800/50 transition-colors"
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div>
-                      <div className="font-extrabold text-sm text-slate-900">
+                      <div className="font-extrabold text-sm text-slate-900 dark:text-slate-100">
                         {lead.company_name || lead.name}
                       </div>
                       <div className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                         <span>{lead.country}</span>
                         <span>•</span>
-                        <span className="font-semibold text-emerald-700">{lead.type || 'Export'}</span>
+                        <span className="font-semibold text-emerald-700 dark:text-emerald-400">{lead.type || 'Export'}</span>
                       </div>
                     </div>
                     <select
                       value={lead.stage || lead.status || 'Requirement Understood'}
+                      onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
                       className={`px-2 py-0.5 rounded-full font-bold text-[10px] border cursor-pointer outline-none transition-all ${getStatusBadge(
                         lead.stage || lead.status
@@ -2120,16 +2360,16 @@ export default function Leads() {
                   </div>
 
                   {/* Quantity & Deal Value */}
-                  <div className="text-xs bg-slate-50 p-2.5 rounded-xl space-y-1">
+                  <div className="text-xs bg-slate-50 dark:bg-slate-850 p-2.5 rounded-xl space-y-1">
                     <div className="flex items-center justify-between">
                       <div>
                         <span className="text-slate-400">Qty:</span>{' '}
-                        <span className="font-bold text-slate-800">
+                        <span className="font-bold text-slate-800 dark:text-slate-200">
                           {Number(lead.quantity).toLocaleString()} kg
                         </span>
                       </div>
                       <div className="text-right">
-                        <div className="font-black text-emerald-700">
+                        <div className="font-black text-emerald-700 dark:text-emerald-400">
                           ₹{(((Number(lead.price) || Number(lead.value) || 0) * 86.5) / 100000).toFixed(1)} Lakhs
                         </div>
                         <div className="text-[10px] text-slate-400">
@@ -2154,7 +2394,7 @@ export default function Leads() {
                   </div>
 
                   {/* Contact & Follow up */}
-                  <div className="flex items-center justify-between text-xs text-slate-600 pt-1">
+                  <div className="flex items-center justify-between text-xs text-slate-600 dark:text-slate-300 pt-1">
                     <div className="flex items-center gap-1">
                       <User size={12} className="text-slate-400" />
                       <span>{lead.contact_person || '—'}</span>
@@ -2165,28 +2405,36 @@ export default function Leads() {
                     </div>
                   </div>
 
-                  {/* Actions */}
-                  <div className="flex items-center justify-between pt-2 border-t border-slate-100">
-                    <span className="text-[11px] font-bold text-emerald-700">
-                      Assigned: {lead.agent_name || 'Athish'}
-                    </span>
-                    <div className="flex items-center gap-2">
+                  {/* Creator Info (Requirement 4 & 5) & Actions */}
+                  <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
+                    <div className="text-[10px]">
+                      <span className="font-bold text-slate-800 dark:text-slate-200">
+                        Created by: {lead.created_by_name || lead.agent_name || 'Deepak'}
+                      </span>
+                      <span className="text-slate-400 block">
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '04 Oct 2026'}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1.5">
                       <button
+                        type="button"
                         onClick={() => openDetails(lead)}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200"
+                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 cursor-pointer"
                       >
                         View
                       </button>
                       <button
+                        type="button"
                         onClick={() => openEdit(lead)}
-                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 text-slate-700"
+                        className="px-2.5 py-1 text-xs font-bold rounded-lg bg-slate-100 text-slate-700 cursor-pointer"
                       >
                         Edit
                       </button>
                       {isOwner && (
                         <button
+                          type="button"
                           onClick={() => handleDelete(lead.id)}
-                          className="p-1 text-rose-500"
+                          className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer"
                           title="Delete Lead (Owner Only)"
                         >
                           <Trash2 size={15} />
@@ -2310,17 +2558,10 @@ export default function Leads() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Country <span className="text-rose-500">*</span>
                   </label>
-                  <select
+                  <SearchableCountrySelect
                     value={form.country}
-                    onChange={(e) => setForm({ ...form, country: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {COUNTRIES_WITH_FLAGS.map((c) => (
-                      <option key={c.code} value={`${c.name} ${c.flag}`}>
-                        {c.flag} {c.name}
-                      </option>
-                    ))}
-                  </select>
+                    onChange={(selectedCountry) => setForm({ ...form, country: selectedCountry })}
+                  />
                 </div>
               </div>
 
@@ -2763,24 +3004,38 @@ export default function Leads() {
                     const isSelected = form.products.includes(prod);
                     const isCustom = !COMMODITY_PRODUCTS.includes(prod);
                     return (
-                      <button
-                        type="button"
+                      <div
                         key={prod}
                         onClick={() => toggleProduct(prod)}
-                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1 ${
+                        className={`px-3 py-1.5 rounded-xl text-xs font-bold border transition-all cursor-pointer flex items-center gap-1.5 select-none ${
                           isSelected
                             ? 'bg-amber-500 text-white border-amber-500 shadow-sm'
                             : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
                         }`}
                       >
-                        <span>{isSelected ? '✓ ' : '+ '}</span>
+                        <span>{isSelected ? '✓' : '+'}</span>
                         <span>{prod}</span>
                         {isCustom && (
-                          <span className="text-[10px] ml-0.5 px-1 py-0.2 rounded bg-amber-400/30 text-amber-950 dark:text-amber-200 font-normal">
+                          <span className="text-[10px] px-1 py-0.2 rounded bg-amber-400/30 text-amber-950 dark:text-amber-200 font-normal">
                             custom
                           </span>
                         )}
-                      </button>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveCommodity(prod);
+                          }}
+                          className={`ml-1 p-0.5 rounded-full transition-colors cursor-pointer ${
+                            isSelected
+                              ? 'text-amber-100 hover:bg-amber-600 hover:text-white'
+                              : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
+                          }`}
+                          title={`Delete / Remove "${prod}" category`}
+                        >
+                          <X size={12} />
+                        </button>
+                      </div>
                     );
                   })}
                 </div>
@@ -2855,41 +3110,113 @@ export default function Leads() {
 
               {/* Shipping & Trade Terms */}
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Incoterms / Shipping Terms with Custom Input */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Incoterm</label>
-                  <select
-                    value={form.incoterm}
-                    onChange={(e) => setForm({ ...form, incoterm: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {INCOTERMS.map((term) => (
-                      <option key={term} value={term}>{term}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Incoterm</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomIncotermInput(!showCustomIncotermInput)}
+                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                    >
+                      {showCustomIncotermInput ? 'Standard' : '+ Custom'}
+                    </button>
+                  </div>
+                  {!showCustomIncotermInput ? (
+                    <select
+                      value={form.incoterm}
+                      onChange={(e) => setForm({ ...form, incoterm: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    >
+                      {allIncoterms.map((term) => (
+                        <option key={term} value={term}>{term}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="e.g. DDP Air, FOB Mundra"
+                        value={customIncotermText}
+                        onChange={(e) => setCustomIncotermText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomIncoterm();
+                          }
+                        }}
+                        className="flex-1 px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-lg focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomIncoterm}
+                        className="px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-lg shrink-0 cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
                 </div>
 
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Port Delivery</label>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">Port Delivery</label>
                   <input
                     type="text"
                     placeholder="e.g. Jebel Ali / Nhava Sheva"
                     value={form.port_delivery}
                     onChange={(e) => setForm({ ...form, port_delivery: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   />
                 </div>
 
+                {/* Payment Terms with Custom Input */}
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">Payment Terms</label>
-                  <select
-                    value={form.payment_days}
-                    onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {PAYMENT_TERMS.map((term) => (
-                      <option key={term} value={term}>{term}</option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Payment Terms</label>
+                    <button
+                      type="button"
+                      onClick={() => setShowCustomPaymentInput(!showCustomPaymentInput)}
+                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                    >
+                      {showCustomPaymentInput ? 'Standard' : '+ Custom'}
+                    </button>
+                  </div>
+                  {!showCustomPaymentInput ? (
+                    <select
+                      value={form.payment_days}
+                      onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    >
+                      {allPaymentTerms.map((term) => (
+                        <option key={term} value={term}>{term}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <div className="flex items-center gap-1.5">
+                      <input
+                        type="text"
+                        placeholder="e.g. 50% Adv + 50% LC"
+                        value={customPaymentText}
+                        onChange={(e) => setCustomPaymentText(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddCustomPaymentTerm();
+                          }
+                        }}
+                        className="flex-1 px-2.5 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-lg focus:outline-none"
+                        autoFocus
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddCustomPaymentTerm}
+                        className="px-2.5 py-1.5 text-xs font-bold text-white bg-emerald-600 rounded-lg shrink-0 cursor-pointer"
+                      >
+                        Add
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -3335,6 +3662,33 @@ export default function Leads() {
                   Only admins can reassign this lead to another user.
                 </span>
               </div>
+
+              {/* Creator vs Assignee Card (Requirement 4 & 6) */}
+              <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black flex items-center justify-center text-xs shrink-0">
+                    {(activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Deepak')[0]?.toUpperCase()}
+                  </div>
+                  <div>
+                    <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
+                      <span>Created by:</span>
+                      <span className="text-emerald-700 dark:text-emerald-400 font-black">
+                        {activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Deepak'}
+                      </span>
+                    </div>
+                    <div className="text-[11px] text-slate-500 dark:text-slate-400">
+                      Record created on {activeDetailLead.created_at ? new Date(activeDetailLead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '04 Oct 2026'}
+                    </div>
+                  </div>
+                </div>
+                <div className="sm:text-right">
+                  <div className="text-[10px] uppercase font-bold text-slate-400">Current Assignee</div>
+                  <div className="font-extrabold text-indigo-700 dark:text-indigo-400 text-xs">
+                    {activeDetailLead.agent_name || 'Staff Member'}
+                  </div>
+                </div>
+              </div>
+
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
@@ -3352,9 +3706,11 @@ export default function Leads() {
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                   >
-                    {['adric', 'Athish', 'David', 'Rohan', 'Shiva'].map((name) => (
-                      <option key={name} value={name}>{name}</option>
-                    ))}
+                    {['Deepak', 'Japneet', 'Athish', 'adric', 'David', 'Rohan', 'Shiva', ...teamList.map((t) => t.name)]
+                      .filter((val, idx, self) => self.indexOf(val) === idx)
+                      .map((name) => (
+                        <option key={name} value={name}>{name}</option>
+                      ))}
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">Only admins can reassign this lead to another user.</p>
                 </div>

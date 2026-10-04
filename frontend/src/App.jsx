@@ -110,22 +110,31 @@ function AppContent() {
     );
   }
 
+  const [loginInitialPersona, setLoginInitialPersona] = useState('owner');
+
   // Public Dedicated Routes: Landing (/), Login (/login), Register (/signup)
   if (!user || !profile) {
     return (
       <Suspense fallback={<PageSkeleton />}>
         {authMode === 'landing' ? (
           <LandingPage
-            onLoginClick={() => navigateAuth('login')}
+            onLoginClick={() => {
+              setLoginInitialPersona('owner');
+              navigateAuth('login');
+            }}
             onRegisterClick={() => navigateAuth('register')}
           />
         ) : authMode === 'register' ? (
           <RegisterPage
-            onSwitchToLogin={() => navigateAuth('login')}
+            onSwitchToLogin={(persona) => {
+              if (persona) setLoginInitialPersona(persona);
+              navigateAuth('login');
+            }}
             onBackToLanding={() => navigateAuth('landing')}
           />
         ) : (
           <LoginPage
+            initialPersona={loginInitialPersona}
             onSwitchToRegister={() => navigateAuth('register')}
             onBackToLanding={() => navigateAuth('landing')}
           />

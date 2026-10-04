@@ -179,13 +179,14 @@ export default function TopBar({
               </div>
             </button>
 
-            {/* Quick Sign Out */}
+            {/* Quick Prominent Sign Out */}
             <button
               onClick={signOut}
-              className="w-7 h-7 rounded-lg flex items-center justify-center text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
-              title="Sign Out"
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 border border-rose-200/80 dark:border-rose-900/60 shadow-xs transition-all cursor-pointer"
+              title="Sign Out of Travel-Trade CRM"
             >
               <LogOut size={14} />
+              <span className="inline">Logout</span>
             </button>
           </div>
         </div>

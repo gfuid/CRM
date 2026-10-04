@@ -8,12 +8,13 @@ import {
   Calendar,
   CalendarClock,
   UserPlus,
+  LogOut,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
-  const { isOwner, isStaff, profile } = useAuth();
+  const { isOwner, isStaff, profile, signOut } = useAuth();
 
   const userPerms = profile?.permissions || {};
   const canViewAnalytics = isOwner || userPerms.view_analytics !== false;
@@ -119,17 +120,27 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
         )}
       </nav>
 
-      {/* Footer / Logged In Role Banner */}
-      <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-        <div className="flex items-center gap-2">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-          <span className="font-semibold text-slate-600 dark:text-slate-400">
-            {profile?.name || 'Online'}
+      {/* Footer / Logged In Role Banner & Prominent Logout */}
+      <div className="p-3.5 border-t border-slate-100 dark:border-slate-800 space-y-2">
+        <div className="flex items-center justify-between text-xs text-slate-500">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[125px]">
+              {profile?.name || 'Online'}
+            </span>
+          </div>
+          <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-600">
+            {isOwner ? 'Owner' : 'Staff'}
           </span>
         </div>
-        <span className="font-mono text-[10px] font-bold px-2 py-0.5 bg-slate-100 dark:bg-slate-800 rounded text-slate-600">
-          {isOwner ? 'Owner' : 'Staff'}
-        </span>
+        <button
+          type="button"
+          onClick={signOut}
+          className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 border border-rose-200/80 dark:border-rose-900/60 shadow-xs transition-all cursor-pointer"
+        >
+          <LogOut size={13} />
+          <span>Sign Out / Logout</span>
+        </button>
       </div>
     </aside>
   );

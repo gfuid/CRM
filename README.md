@@ -81,3 +81,19 @@ You can run services concurrently or independently:
 - **Frontend & Admin**: React 19, Vite, Tailwind CSS, Lucide Icons
 - **Backend**: Node.js, Express, Async error handling, Bcrypt, JWT
 - **Database Support**: MongoDB Atlas, Supabase, and resilient in-memory fallback store
+
+
+
+📋 Ab hamare paas total 11 Points ki Complete List hai:
+#	Feature / Bug Fix	Description
+1	Country $\rightarrow$ A-Z with Search	Country list ko A-Z sort karna aur fast real-time search box dena.
+2	Target Commodities Remove Option	Categories/Commodities ko delete/remove karne ka option ($\times$ button).
+3	Custom Payment & Shipping Terms	Payment terms aur shipping terms me "Add More / Other" custom terms add karne ka option.
+4	Leads me Date & Created By	Leads table me Creation Date aur kisne lead banayi (Created By) saaf dikhna.
+5	Assigned Rep ko hatana	Leads table se purana "Assigned Rep" column hata kar "Created By" aur Date show karna.
+6	Creator vs Assignee Persistence	Deepak ne create kiya to hamesha Created By: Deepak hi rahega, bhale hi admin baad me Japneet ko assign kar de. Japneet ke filter me lead aayegi par Created By me Deepak hi dikhega.
+7	Role/Designation Add & Remove	Staff management me naye Role/Designation add karne aur unwanted remove karne ka option.
+8	Clickable Leads (View All Data)	Leads row par click karte hi full data dossier modal khulna.
+9	Token Session / Expiry Fix	Login ke turant baad token expire ya unexpected logout hone ka issue fix karna (long-lived 30-day session + solid session recovery).
+10	Easy Logout	Header/TopBar aur mobile menu me clear aur bada "Logout" button dena.
+11	Owner vs Employee Login Distinction	Login screen par Owner vs Staff/Employee switch/tabs aur Registration page par direct Staff Login link.

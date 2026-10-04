@@ -124,12 +124,61 @@ export default function StaffManagementModal({ isOpen, onClose }) {
   const [error, setError] = useState('');
   const [successMsg, setSuccessMsg] = useState('');
 
+  const DEFAULT_DESIGNATIONS = [
+    'Commodity Sales Executive',
+    'Export Sourcing Specialist',
+    'International Trade Rep',
+    'Logistics & Port Coordinator',
+    'Quality Inspection Officer',
+    'Documentation & LC Specialist',
+    'Junior Commodity Trader',
+  ];
+
+  const [designations, setDesignations] = useState(() => {
+    try {
+      const saved = localStorage.getItem('crm_custom_designations');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      }
+    } catch {}
+    return DEFAULT_DESIGNATIONS;
+  });
+  const [showAddRoleInput, setShowAddRoleInput] = useState(false);
+  const [newRoleText, setNewRoleText] = useState('');
+
+  const handleAddNewRole = () => {
+    const trimmed = newRoleText.trim();
+    if (!trimmed) return;
+    if (!designations.includes(trimmed)) {
+      const updated = [...designations, trimmed];
+      setDesignations(updated);
+      try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch {}
+    }
+    setForm((prev) => ({ ...prev, department: trimmed }));
+    setNewRoleText('');
+    setShowAddRoleInput(false);
+  };
+
+  const handleRemoveRole = (roleToRemove) => {
+    if (designations.length <= 1) {
+      alert('At least one role/designation must be available.');
+      return;
+    }
+    const updated = designations.filter((d) => d !== roleToRemove);
+    setDesignations(updated);
+    try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch {}
+    if (form.department === roleToRemove) {
+      setForm((prev) => ({ ...prev, department: updated[0] }));
+    }
+  };
+
   const [form, setForm] = useState({
     name: '',
     email: '',
     password: '',
     role: 'agent',
-    department: 'Commodity Sales & Export Outreach',
+    department: 'Commodity Sales Executive',
     phone: '',
     avatar_url: PRESET_AVATARS[0],
     data_scope: 'own_only', // 'own_only' | 'all'
@@ -412,20 +461,87 @@ export default function StaffManagementModal({ isOpen, onClose }) {
               </div>
 
               <div>
-                <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  Role / Designation <span className="text-rose-500">*</span>
-                </label>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200">
+                    Role / Designation <span className="text-rose-500">*</span>
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddRoleInput(!showAddRoleInput)}
+                    className="text-[11px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-0.5 cursor-pointer"
+                  >
+                    <Plus size={12} /> {showAddRoleInput ? 'Cancel' : '+ Add Role'}
+                  </button>
+                </div>
+
+                {showAddRoleInput && (
+                  <div className="mb-2 flex items-center gap-1.5 p-1.5 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-300 dark:border-emerald-800 rounded-xl">
+                    <input
+                      type="text"
+                      placeholder="e.g. Documentation Head, Lead Sourcing Manager..."
+                      value={newRoleText}
+                      onChange={(e) => setNewRoleText(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddNewRole();
+                        }
+                      }}
+                      className="flex-1 px-2.5 py-1 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-lg focus:outline-none"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddNewRole}
+                      className="px-2.5 py-1 text-[11px] font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg cursor-pointer shrink-0 shadow-2xs"
+                    >
+                      Add
+                    </button>
+                  </div>
+                )}
+
                 <select
                   value={form.department}
                   onChange={(e) => setForm({ ...form, department: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
                 >
-                  <option value="Commodity Sales Executive">Commodity Sales Executive</option>
-                  <option value="Export Sourcing Specialist">Export Sourcing Specialist</option>
-                  <option value="International Trade Rep">International Trade Rep</option>
-                  <option value="Logistics & Port Coordinator">Logistics & Port Coordinator</option>
-                  <option value="Quality Inspection Officer">Quality Inspection Officer</option>
+                  {designations.map((desig) => (
+                    <option key={desig} value={desig}>{desig}</option>
+                  ))}
                 </select>
+
+                {/* Removable Role Tags below selector */}
+                <div className="flex flex-wrap gap-1 mt-1.5 max-h-20 overflow-y-auto pr-0.5">
+                  {designations.map((desig) => (
+                    <span
+                      key={desig}
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
+                        form.department === desig
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300'
+                          : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
+                      }`}
+                    >
+                      <span
+                        onClick={() => setForm({ ...form, department: desig })}
+                        className="cursor-pointer hover:underline"
+                        title="Click to select this role"
+                      >
+                        {desig}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveRole(desig);
+                        }}
+                        className="text-slate-400 hover:text-rose-600 cursor-pointer p-0.5"
+                        title={`Remove "${desig}" role`}
+                      >
+                        <X size={10} />
+                      </button>
+                    </span>
+                  ))}
+                </div>
               </div>
 
               <div>
