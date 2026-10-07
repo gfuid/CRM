@@ -53,6 +53,36 @@ function AppContent() {
   const [authMode, setAuthMode] = useState(getInitialAuthMode);
   const [taskBadgeCount, setTaskBadgeCount] = useState(1);
   const [staffModalOpen, setStaffModalOpen] = useState(false);
+  const [staffToEdit, setStaffToEdit] = useState(null);
+  const [loginInitialPersona, setLoginInitialPersona] = useState('owner');
+
+  const handleOpenStaffModal = (staff = null) => {
+    setStaffToEdit(staff);
+    setStaffModalOpen(true);
+  };
+
+  // Staff Section Access Enforcement: ensure staff lands on an allowed tab
+  useEffect(() => {
+    if (isStaff && profile?.permissions) {
+      const perms = profile.permissions;
+      const isAllowed = (tab) => {
+        if (tab === 'analytics') return Boolean(perms.view_analytics);
+        if (tab === 'leads') return perms.view_leads !== false;
+        if (tab === 'tasks') return Boolean(perms.view_tasks);
+        if (tab === 'activity') return Boolean(perms.view_activity);
+        if (tab === 'outreach') return Boolean(perms.view_outreach);
+        if (tab === 'mydays') return Boolean(perms.view_mydays);
+        if (tab === 'followup') return Boolean(perms.view_followup);
+        return true;
+      };
+
+      if (!isAllowed(activeTab)) {
+        const priorityOrder = ['leads', 'tasks', 'followup', 'activity', 'outreach', 'mydays', 'analytics'];
+        const fallback = priorityOrder.find((t) => isAllowed(t)) || 'leads';
+        setActiveTab(fallback);
+      }
+    }
+  }, [isStaff, profile, activeTab]);
 
   const navigateAuth = (mode) => {
     setAuthMode(mode);
@@ -69,6 +99,68 @@ function AppContent() {
     };
     window.addEventListener('popstate', handlePopState);
     return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
+  // Purge all legacy dummy/seed data from browser localStorage on load
+  useEffect(() => {
+    try {
+      // 1. Clean fake leads
+      const storedLeads = localStorage.getItem('oneroot_leads_v3');
+      if (storedLeads) {
+        const parsed = JSON.parse(storedLeads);
+        if (Array.isArray(parsed)) {
+          const clean = parsed.filter(
+            (l) =>
+              !l.id?.startsWith('lead_') &&
+              l.company_name !== 'Gk Optotorg LLC' &&
+              l.company_name !== 'Baltimport LLC' &&
+              l.company_name !== 'Al-Barakah Global Agro Foods LLC' &&
+              l.name !== 'Gk Optotorg LLC'
+          );
+          if (clean.length !== parsed.length) {
+            localStorage.setItem('oneroot_leads_v3', JSON.stringify(clean));
+          }
+        }
+      }
+
+      // 2. Clean fake tasks
+      const storedTasks = localStorage.getItem('oneroot_tasks_v3');
+      if (storedTasks) {
+        const parsedTasks = JSON.parse(storedTasks);
+        if (Array.isArray(parsedTasks)) {
+          const cleanTasks = parsedTasks.filter((t) => !t.id?.startsWith('task_'));
+          if (cleanTasks.length !== parsedTasks.length) {
+            localStorage.setItem('oneroot_tasks_v3', JSON.stringify(cleanTasks));
+          }
+        }
+      }
+
+      // 3. Clean fake outreach logs
+      const storedOutreach = localStorage.getItem('oneroot_outreach_v1');
+      if (storedOutreach) {
+        const parsedOutreach = JSON.parse(storedOutreach);
+        if (Array.isArray(parsedOutreach)) {
+          const cleanOutreach = parsedOutreach.filter((o) => !o.id?.startsWith('out_'));
+          if (cleanOutreach.length !== parsedOutreach.length) {
+            localStorage.setItem('oneroot_outreach_v1', JSON.stringify(cleanOutreach));
+          }
+        }
+      }
+
+      // 4. Clean fake mydays reports
+      const storedMyDays = localStorage.getItem('oneroot_mydays_v1');
+      if (storedMyDays) {
+        const parsedMyDays = JSON.parse(storedMyDays);
+        if (Array.isArray(parsedMyDays)) {
+          const cleanMyDays = parsedMyDays.filter((m) => !m.id?.startsWith('report_'));
+          if (cleanMyDays.length !== parsedMyDays.length) {
+            localStorage.setItem('oneroot_mydays_v1', JSON.stringify(cleanMyDays));
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Storage purge error:', e);
+    }
   }, []);
 
   // Count overdue/due-soon tasks for badge
@@ -110,7 +202,6 @@ function AppContent() {
     );
   }
 
-  const [loginInitialPersona, setLoginInitialPersona] = useState('owner');
 
   // Public Dedicated Routes: Landing (/), Login (/login), Register (/signup)
   if (!user || !profile) {
@@ -179,13 +270,13 @@ function AppContent() {
         setActiveTab={setActiveTab}
         companyName={company?.name || 'Travel-Trade'}
         taskBadgeCount={taskBadgeCount}
-        onOpenStaffModal={() => setStaffModalOpen(true)}
+        onOpenStaffModal={handleOpenStaffModal}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">
         {/* Mobile Top Header: Slim, Clean Light Theme with Brand & Actions */}
         <MobileTopHeader
           companyName={company?.name || 'Travel-Trade'}
-          onOpenStaffModal={() => setStaffModalOpen(true)}
+          onOpenStaffModal={handleOpenStaffModal}
         />
         
         {/* Desktop TopBar */}
@@ -193,7 +284,7 @@ function AppContent() {
           <TopBar
             breadcrumb={`${breadcrumbPrefix} / ${tabNames[activeTab] || 'Dashboard'}`}
             onCustomizeWidget={() => {}}
-            onOpenStaffModal={() => setStaffModalOpen(true)}
+            onOpenStaffModal={handleOpenStaffModal}
           />
         </div>
 
@@ -209,7 +300,7 @@ function AppContent() {
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           taskBadgeCount={taskBadgeCount}
-          onOpenStaffModal={() => setStaffModalOpen(true)}
+          onOpenStaffModal={handleOpenStaffModal}
         />
       </div>
 
@@ -217,7 +308,11 @@ function AppContent() {
       {isOwner && (
         <StaffManagementModal
           isOpen={staffModalOpen}
-          onClose={() => setStaffModalOpen(false)}
+          onClose={() => {
+            setStaffModalOpen(false);
+            setStaffToEdit(null);
+          }}
+          initialEditStaff={staffToEdit}
         />
       )}
     </div>

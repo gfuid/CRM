@@ -62,7 +62,15 @@ const login = async (req, res) => {
   }
 
   const token = jwt.sign(
-    { id: user.id, email: user.email, role: user.role, persona: user.persona || 'staff' },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      persona: user.persona || 'staff',
+      company_id: user.company_id || '',
+      data_scope: user.data_scope || 'own_only',
+      permissions: user.permissions || {},
+    },
     config.jwtSecret,
     { expiresIn: config.jwtExpiresIn }
   );
@@ -77,6 +85,10 @@ const login = async (req, res) => {
     phone: user.phone || '',
     is_active: user.is_active,
     avatar_url: user.avatar_url,
+    company_id: user.company_id || '',
+    created_by: user.created_by || '',
+    data_scope: user.data_scope || 'own_only',
+    permissions: user.permissions || {},
     last_login: user.last_login,
     created_at: user.created_at,
   };

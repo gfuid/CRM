@@ -12,6 +12,8 @@ const followUpSchema = new mongoose.Schema(
     agenda: { type: String, default: '' },
     status: { type: String, enum: ['Scheduled', 'Pending', 'Completed', 'Cancelled', 'Rescheduled'], default: 'Scheduled' },
     assigned_to: { type: String, index: true },
+    today_remarks: { type: String, default: '' },
+    next_follow_up_action: { type: String, default: '' },
   },
   { timestamps: true }
 );

@@ -99,3 +99,6 @@ You can run services concurrently or independently:
 | 9 | **Token Session / Expiry Fix** | 30-day JWT validity + resilient cold-start session recovery (unexpected logout fixed) | ✅ Done |
 | 10 | **Easy Logout** | Header, Sidebar footer, aur Mobile top bar me prominent red [Logout] button | ✅ Done |
 | 11 | **Owner vs Employee Login Distinction** | Login screen par segmented Owner vs Staff switch aur Register page par direct Staff Login link | ✅ Done |
+
+
+enhe remove bhi kr seke jo unse related nhi h and employee jha create  ho rhe h bhai ye bhi dekh 

@@ -5,8 +5,27 @@ const { dataStore } = require('../repositories/dataStore');
  * Get aggregated analytics, KPIs, pipeline metrics, and sales velocity
  */
 const getAnalytics = async (req, res) => {
-  const leads = dataStore.leads;
-  const tasks = dataStore.tasks;
+  let leads = [...dataStore.leads];
+  let tasks = [...dataStore.tasks];
+
+  // Role-Based Isolation & Multi-tenant scoping
+  if (req.user && req.user.role !== 'admin') {
+    leads = leads.filter(
+      (l) =>
+        l.assigned_to === req.user.id ||
+        l.assigned_to === req.user.email ||
+        l.assigned_to === req.user.name ||
+        l.created_by_id === req.user.id
+    );
+    tasks = tasks.filter((t) => t.assigned_to === req.user.id);
+  } else if (req.user && req.user.company_id) {
+    leads = leads.filter((l) => l.company_id === req.user.company_id || !l.company_id);
+    const companyUserIds = dataStore.users
+      .filter((u) => u.company_id === req.user.company_id || u.created_by === req.user.id)
+      .map((u) => u.id);
+    companyUserIds.push(req.user.id);
+    tasks = tasks.filter((t) => companyUserIds.includes(t.assigned_to) || !t.assigned_to);
+  }
 
   const totalLeads = leads.length;
   const totalPipelineValue = leads.reduce((acc, curr) => acc + (curr.value || 0), 0);
@@ -52,6 +71,18 @@ const getAnalytics = async (req, res) => {
     return new Date(t.due_date) < today;
   }).length;
 
+  // Dynamic sources breakdown from actual leads
+  const sourceMap = {};
+  leads.forEach((l) => {
+    const s = l.source || l.lead_source || 'Direct Inquiry';
+    sourceMap[s] = (sourceMap[s] || 0) + 1;
+  });
+  const leadSources = Object.entries(sourceMap).map(([source, count]) => ({
+    source,
+    count,
+    share: totalLeads > 0 ? `${Math.round((count / totalLeads) * 100)}%` : '0%',
+  }));
+
   return ApiResponse.success(res, {
     kpis: {
       totalLeads,
@@ -65,12 +96,7 @@ const getAnalytics = async (req, res) => {
       activeTeamMembers: dataStore.users.filter((u) => u.is_active).length,
     },
     stageBreakdown,
-    leadSources: [
-      { source: 'LinkedIn Inbound', count: 18, share: '38%' },
-      { source: 'Cold Outreach', count: 14, share: '29%' },
-      { source: 'Partner Referral', count: 10, share: '21%' },
-      { source: 'Webinar', count: 6, share: '12%' },
-    ],
+    leadSources,
   });
 };
 

@@ -506,7 +506,10 @@ const dbSync = {
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
-        await models.User.findOneAndUpdate({ id: user.id }, user, { upsert: true, new: true });
+        const query = user.id ? { $or: [{ id: user.id }, { email: user.email }] } : { email: user.email };
+        const toSave = { ...user };
+        delete toSave._id;
+        await models.User.findOneAndUpdate(query, toSave, { upsert: true, returnDocument: 'after' });
       } catch (e) {
         console.warn('[DB User Sync]:', e.message);
       }
@@ -516,7 +519,7 @@ const dbSync = {
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
-        await models.User.findOneAndDelete({ id });
+        await models.User.findOneAndDelete({ $or: [{ id }, { email: id }] });
       } catch (e) {}
     }
   },

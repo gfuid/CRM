@@ -18,6 +18,8 @@ import {
   Check,
   AlertCircle,
   Calendar,
+  CalendarDays,
+  Target,
   MessageSquare,
   Lock
 } from 'lucide-react';
@@ -155,17 +157,32 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [activeChecks, setActiveChecks] = useState([]);
   const [activityNote, setActivityNote] = useState('');
 
-  // Follow-up
+  // Follow-up & Dual Remarks (Current vs. Future)
   const [followUpDate, setFollowUpDate] = useState(lead.follow_up_date || '2026-05-27');
-  const [newRemark, setNewRemark] = useState('');
+  const [todayRemarks, setTodayRemarks] = useState(lead.today_remarks || '');
+  const [nextFollowUpAction, setNextFollowUpAction] = useState(lead.next_follow_up_action || '');
   const [previousRemarks, setPreviousRemarks] = useState(
-    lead.previous_remarks || [
-      {
-        text: 'Sent mail no response also call not connected try again',
-        timestamp: '5/25/2026, 4:32:20 PM'
-      }
-    ]
+    Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0
+      ? lead.previous_remarks
+      : [
+          {
+            text: 'Sent mail no response also call not connected try again',
+            timestamp: '5/25/2026, 4:32:20 PM'
+          }
+        ]
   );
+
+  // Sync state if lead prop changes
+  useEffect(() => {
+    if (lead) {
+      setFollowUpDate(lead.follow_up_date || '2026-05-27');
+      setTodayRemarks(lead.today_remarks || '');
+      setNextFollowUpAction(lead.next_follow_up_action || '');
+      if (Array.isArray(lead.previous_remarks)) {
+        setPreviousRemarks(lead.previous_remarks);
+      }
+    }
+  }, [lead]);
 
   // Documents
   const [documents, setDocuments] = useState(lead.documents || []);
@@ -190,13 +207,42 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
     e.preventDefault();
 
     let updatedRemarks = [...previousRemarks];
-    if (newRemark.trim()) {
+    const hasToday = todayRemarks && todayRemarks.trim().length > 0;
+    const hasFuture = nextFollowUpAction && nextFollowUpAction.trim().length > 0;
+
+    if (hasToday || hasFuture) {
       const now = new Date();
+      const formattedTimestamp = now.toLocaleString('en-US');
+      const formattedDate = now.toLocaleDateString('en-IN', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+      });
+
+      const entryText = [
+        hasToday ? `[Today's Interaction]: ${todayRemarks.trim()}` : null,
+        hasFuture ? `[Planned Action on ${followUpDate}]: ${nextFollowUpAction.trim()}` : null,
+      ].filter(Boolean).join(' | ');
+
       updatedRemarks.unshift({
-        text: newRemark.trim(),
-        timestamp: now.toLocaleString('en-US')
+        today_remark: todayRemarks.trim(),
+        planned_action: nextFollowUpAction.trim(),
+        text: entryText,
+        remark: entryText,
+        follow_up_date: followUpDate,
+        timestamp: formattedTimestamp,
+        date: formattedDate,
+        author: assignedTo || 'User',
       });
     }
+
+    const compositeNotes = [
+      hasToday ? `[Today's Interaction]: ${todayRemarks.trim()}` : null,
+      hasFuture ? `[Planned Action on ${followUpDate}]: ${nextFollowUpAction.trim()}` : null,
+      lead.notes || null,
+    ].filter(Boolean).join('\n\n') || lead.notes || '';
 
     const updatedLead = {
       ...lead,
@@ -240,8 +286,10 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
       status: status,
       lead_stage: status,
       follow_up_date: followUpDate,
+      today_remarks: todayRemarks.trim() || lead.today_remarks || '',
+      next_follow_up_action: nextFollowUpAction.trim() || lead.next_follow_up_action || '',
       previous_remarks: updatedRemarks,
-      notes: newRemark.trim() || lead.notes,
+      notes: compositeNotes,
       documents
     };
 
@@ -1017,57 +1065,168 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
             </div>
           </div>
 
-          {/* Section 9: FOLLOW-UP */}
-          <div className="space-y-4 pt-2 border-t border-slate-200">
-            <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-              FOLLOW-UP
-            </h3>
+          {/* Section 9: FOLLOW-UP & SEPARATE REMARKS (Current vs. Future) */}
+          <div className="space-y-4 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <div className="w-6 h-6 rounded-lg bg-purple-100 text-purple-700 flex items-center justify-center font-bold text-xs">
+                  <CalendarDays size={13} />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-wider text-slate-800">
+                    Follow-up Schedule & Remarks
+                  </h3>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    Separate logs for today's interaction vs. planned action for the future follow-up
+                  </p>
+                </div>
+              </div>
+              <div className="text-[11px] font-bold text-purple-700 bg-purple-50 px-2.5 py-1 rounded-lg border border-purple-200">
+                Next Follow-up: {followUpDate || 'Not set'}
+              </div>
+            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Follow-up date
-                </label>
-                <input
-                  type="date"
-                  value={followUpDate}
-                  onChange={(e) => setFollowUpDate(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
+            {/* Follow-up Date Input */}
+            <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
+              <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
+                <Calendar size={13} className="text-purple-600" />
+                <span>Next Follow-up Date</span>
+                <span className="text-rose-500 font-bold">*</span>
+              </label>
+              <input
+                type="date"
+                required
+                value={followUpDate}
+                onChange={(e) => setFollowUpDate(e.target.value)}
+                className="w-full sm:w-64 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+              />
+              <p className="text-[10px] text-slate-400 font-medium mt-1.5">
+                Changing the follow-up date counts once per lead per day in Outreach.
+              </p>
+            </div>
+
+            {/* Two Separate Text/Remark Fields */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* Field 1: Remarks/notes for today's interaction */}
+              <div className="p-3.5 rounded-xl border border-blue-200/80 bg-blue-50/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
+                    <MessageCircle size={13} className="text-blue-600" />
+                    <span>Remarks / Notes for Today's Interaction</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
+                    Today's Log
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  What was discussed, agreed, or discovered during today's call or meeting with this client.
+                </p>
+                <textarea
+                  rows={3}
+                  placeholder="e.g. Called client today. Discussed 50 MT double-polish turmeric specs and CAD payment terms. Client requested updated CIF quote..."
+                  value={todayRemarks}
+                  onChange={(e) => setTodayRemarks(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                 />
               </div>
 
-              <div>
-                <label className="text-xs font-bold text-slate-700 block mb-1">
-                  Remarks <span className="text-rose-500">*</span>
-                </label>
+              {/* Field 2: Planned action/remarks for the future follow-up date */}
+              <div className="p-3.5 rounded-xl border border-purple-200/80 bg-purple-50/30 space-y-2">
+                <div className="flex items-center justify-between">
+                  <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
+                    <Target size={13} className="text-purple-600" />
+                    <span>Planned Action / Remarks for Future Date</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full">
+                    {followUpDate ? `For ${followUpDate}` : 'Future Task'}
+                  </span>
+                </div>
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Dedicated task or action item that must be executed on that specific scheduled future date.
+                </p>
                 <textarea
-                  rows={2}
-                  placeholder="Write a remark about this follow-up…"
-                  value={newRemark}
-                  onChange={(e) => setNewRemark(e.target.value)}
-                  className="w-full px-3.5 py-2 bg-white border border-slate-200 rounded-xl text-xs"
+                  rows={3}
+                  placeholder="e.g. Share revised proforma invoice with 3.5% curcumin certificate, follow up on draft LC approval with procurement head..."
+                  value={nextFollowUpAction}
+                  onChange={(e) => setNextFollowUpAction(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
                 />
               </div>
             </div>
-            <p className="text-[10px] text-slate-400 font-medium">
-              Changing the follow-up date counts once per lead per day in Outreach. Daily Activity is reflected in the Outreach tab.
-            </p>
           </div>
 
-          {/* Section 10: PREVIOUS REMARKS (matching screenshot 1) */}
-          <div className="space-y-2.5 pt-2 border-t border-slate-200">
-            <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
-              <MessageSquare size={14} className="text-purple-600" />
-              <span>Previous remarks</span>
+          {/* Section 10: PREVIOUS REMARKS & FOLLOW-UP HISTORY */}
+          <div className="space-y-2.5 pt-3 border-t border-slate-200">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-xs font-bold text-purple-700">
+                <MessageSquare size={14} className="text-purple-600" />
+                <span>Follow-up & Remarks History ({previousRemarks.length})</span>
+              </div>
+              <span className="text-[10px] font-medium text-slate-400">
+                Chronological timeline of interactions & scheduled plans
+              </span>
             </div>
 
-            <div className="p-4 rounded-xl border border-slate-200 bg-white space-y-2 shadow-2xs">
-              {previousRemarks.map((rem, idx) => (
-                <div key={idx} className="space-y-1">
-                  <p className="text-xs font-medium text-slate-800">{rem.text}</p>
-                  <p className="text-[10px] text-slate-400 font-semibold">{rem.timestamp}</p>
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/50 space-y-3 max-h-64 overflow-y-auto">
+              {previousRemarks.length === 0 ? (
+                <div className="text-center py-4 text-xs text-slate-400 font-medium">
+                  No previous remarks recorded yet.
                 </div>
-              ))}
+              ) : (
+                previousRemarks.map((rem, idx) => {
+                  const hasSplit = rem.today_remark || rem.planned_action;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-xl border border-slate-200 bg-white shadow-2xs space-y-2 text-xs"
+                    >
+                      {/* Meta header */}
+                      <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold border-b border-slate-100 pb-1.5">
+                        <span className="text-slate-700 font-bold">
+                          {rem.author || 'Sales Representative'}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          {rem.follow_up_date && (
+                            <span className="text-purple-700 font-bold bg-purple-50 px-2 py-0.5 rounded border border-purple-200/60">
+                              📅 Target: {rem.follow_up_date}
+                            </span>
+                          )}
+                          <span>{rem.timestamp || rem.date}</span>
+                        </div>
+                      </div>
+
+                      {hasSplit ? (
+                        <div className="space-y-1.5 pt-0.5">
+                          {rem.today_remark && (
+                            <div className="p-2 rounded-lg bg-blue-50/60 border border-blue-100 text-slate-800">
+                              <span className="font-bold text-blue-900 block text-[10px] uppercase tracking-wider mb-0.5">
+                                💬 Today's Interaction Notes
+                              </span>
+                              <p className="text-slate-800 font-medium text-xs whitespace-pre-wrap">
+                                {rem.today_remark}
+                              </p>
+                            </div>
+                          )}
+                          {rem.planned_action && (
+                            <div className="p-2 rounded-lg bg-purple-50/60 border border-purple-100 text-slate-800">
+                              <span className="font-bold text-purple-900 block text-[10px] uppercase tracking-wider mb-0.5">
+                                🎯 Planned Action for {rem.follow_up_date || 'Future Follow-up'}
+                              </span>
+                              <p className="text-slate-800 font-medium text-xs whitespace-pre-wrap">
+                                {rem.planned_action}
+                              </p>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <p className="text-slate-800 font-medium text-xs whitespace-pre-wrap">
+                          {rem.text || rem.remark}
+                        </p>
+                      )}
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
 

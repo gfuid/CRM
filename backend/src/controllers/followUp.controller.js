@@ -50,13 +50,17 @@ const createFollowUp = async (req, res) => {
     channel,
     note,
     remark,
+    today_remarks,
+    next_follow_up_action,
   } = req.body;
 
   const finalClientName = client_name || lead_name || contact_person;
   const finalScheduledDate = scheduled_date || date;
   const finalScheduledTime = scheduled_time || time || '10:00 AM';
   const finalType = type || channel || 'Phone Call';
-  const finalAgenda = agenda || note || remark || 'General Follow-up';
+  const finalAgenda = next_follow_up_action || agenda || note || remark || 'General Follow-up';
+  const finalTodayRemarks = today_remarks || remark || note || '';
+  const finalPlannedAction = next_follow_up_action || agenda || '';
 
   if (!finalClientName || !finalScheduledDate) {
     return ApiResponse.error(res, 'Client name and scheduled date are required', 400);
@@ -81,6 +85,8 @@ const createFollowUp = async (req, res) => {
     agenda: finalAgenda,
     note: finalAgenda,
     remark: remark || '',
+    today_remarks: finalTodayRemarks,
+    next_follow_up_action: finalPlannedAction,
     status: req.body.status || 'Scheduled',
     assigned_to: finalAssignedTo,
     created_at: new Date().toISOString(),
@@ -88,6 +94,30 @@ const createFollowUp = async (req, res) => {
 
   dataStore.followUps.unshift(newFollowUp);
   dbSync.saveFollowUp(newFollowUp);
+
+  // If connected to a lead, sync follow_up_date, today_remarks, next_follow_up_action and previous_remarks
+  if (lead_id) {
+    const lead = dataStore.leads.find((l) => l.id === lead_id);
+    if (lead) {
+      lead.follow_up_date = finalScheduledDate;
+      if (finalTodayRemarks) lead.today_remarks = finalTodayRemarks;
+      if (finalPlannedAction) lead.next_follow_up_action = finalPlannedAction;
+
+      const newRemarkHistory = {
+        today_remark: finalTodayRemarks,
+        planned_action: finalPlannedAction,
+        remark: [
+          finalTodayRemarks ? `Interaction: ${finalTodayRemarks}` : null,
+          finalPlannedAction ? `Planned for ${finalScheduledDate}: ${finalPlannedAction}` : null,
+        ].filter(Boolean).join(' | '),
+        follow_up_date: finalScheduledDate,
+        date: new Date().toISOString(),
+        author: req.user ? (req.user.name || req.user.full_name) : 'User',
+      };
+      lead.previous_remarks = [newRemarkHistory, ...(lead.previous_remarks || [])];
+      dbSync.saveLead(lead);
+    }
+  }
 
   return ApiResponse.created(res, newFollowUp, 'Follow-up scheduled successfully');
 };

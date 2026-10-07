@@ -27,7 +27,6 @@ import {
   ExternalLink,
   ChevronDown
 } from 'lucide-react';
-import { SEED_LEADS } from '../data/seedLeads';
 
 const STAGES = [
   'Lead Generation',
@@ -100,7 +99,7 @@ const RESPONSIBLE_PERSONS_ORDER = [
 
 export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays }) {
   const { profile } = useAuth();
-  const [leads, setLeads] = useState(SEED_LEADS);
+  const [leads, setLeads] = useState([]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -113,22 +112,40 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
   // Detailed Modal state ("eys clik pr sab trah ke details")
   const [selectedLead, setSelectedLead] = useState(null);
 
-  // Load leads from storage or default to SEED_LEADS
+  // Load leads from API and purge legacy dummy leads from storage
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem('oneroot_leads_v3');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length >= 200) {
-          setLeads(parsed);
-          return;
+    const fetchActivities = async () => {
+      try {
+        const stored = localStorage.getItem('oneroot_leads_v3');
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed)) {
+            const clean = parsed.filter(
+              (l) =>
+                !l.id?.startsWith('lead_') &&
+                l.company_name !== 'Gk Optotorg LLC' &&
+                l.company_name !== 'Baltimport LLC' &&
+                l.company_name !== 'Al-Barakah Global Agro Foods LLC'
+            );
+            setLeads(clean);
+          }
         }
+      } catch {}
+
+      try {
+        const res = await api.getLeads();
+        if (res && res.success && Array.isArray(res.data)) {
+          setLeads(res.data);
+          try {
+            localStorage.setItem('oneroot_leads_v3', JSON.stringify(res.data));
+          } catch {}
+        }
+      } catch (err) {
+        console.warn('Activity API fetch error:', err.message);
       }
-      localStorage.setItem('oneroot_leads_v3', JSON.stringify(SEED_LEADS));
-      setLeads(SEED_LEADS);
-    } catch {
-      setLeads(SEED_LEADS);
-    }
+    };
+
+    fetchActivities();
   }, []);
 
   const saveLeads = (newLeads) => {

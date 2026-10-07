@@ -11,9 +11,34 @@ const getLeads = async (req, res) => {
   const { stage, priority, search, assigned_to, product, country } = req.query;
   let list = [...dataStore.leads];
 
-  // Role-Based Isolation: Staff members only see leads assigned to them
+  // Role-Based Isolation & Data Scope
   if (req.user && req.user.role !== 'admin') {
-    list = list.filter((l) => l.assigned_to === req.user.id);
+    if (req.user.data_scope === 'all') {
+      // Allowed to see company-wide leads
+      list = list.filter(
+        (l) =>
+          l.company_id === req.user.company_id ||
+          l.created_by_id === req.user.created_by ||
+          l.created_by_id === req.user.id
+      );
+    } else {
+      // Strictly own assigned leads only
+      list = list.filter(
+        (l) =>
+          l.assigned_to === req.user.id ||
+          l.assigned_to === req.user.email ||
+          l.assigned_to === req.user.name ||
+          l.created_by_id === req.user.id
+      );
+    }
+  } else if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin')) {
+    // Owner sees all leads of their company
+    if (req.user.company_id) {
+      list = list.filter((l) => l.company_id === req.user.company_id || !l.company_id);
+    }
+    if (assigned_to) {
+      list = list.filter((l) => l.assigned_to === assigned_to);
+    }
   } else if (assigned_to) {
     list = list.filter((l) => l.assigned_to === assigned_to);
   }
@@ -130,12 +155,33 @@ const createLead = async (req, res) => {
     export_requirements,
     assigned_to,
     follow_up_date,
+    today_remarks,
+    next_follow_up_action,
+    previous_remarks,
     notes,
   } = req.body;
 
   const leadName = name || company_name;
   if (!leadName) {
     return ApiResponse.error(res, 'Company name is required', 400);
+  }
+
+  if (!follow_up_date) {
+    return ApiResponse.error(res, 'Follow-up date is mandatory', 400);
+  }
+
+  // Deduplication guard: prevent accidental double-click within 5 seconds
+  const creatorId = req.body.created_by_id || (req.user ? req.user.id : null);
+  const now = Date.now();
+  const recentDuplicate = dataStore.leads.find((l) => {
+    const isSameName = (l.name || l.company_name || '').toLowerCase().trim() === leadName.toLowerCase().trim();
+    const isSameCreator = !creatorId || l.created_by_id === creatorId;
+    const isRecent = l.created_at && (now - new Date(l.created_at).getTime() < 5000);
+    return isSameName && isSameCreator && isRecent;
+  });
+
+  if (recentDuplicate) {
+    return ApiResponse.success(res, recentDuplicate, 'Lead already registered (duplicate submission ignored)', 200);
   }
 
   const primaryContact = Array.isArray(contacts) && contacts[0] ? contacts[0] : null;
@@ -169,8 +215,25 @@ const createLead = async (req, res) => {
     assigned_to: (req.user && req.user.role !== 'admin') ? req.user.id : (assigned_to || 'usr_athish'),
     created_by_id: req.body.created_by_id || (req.user ? req.user.id : 'usr_owner_1'),
     created_by_name: req.body.created_by_name || (req.user ? (req.user.name || req.user.full_name) : 'Deepak'),
-    follow_up_date: follow_up_date || '',
-    notes: notes || '',
+    follow_up_date: follow_up_date,
+    today_remarks: today_remarks || '',
+    next_follow_up_action: next_follow_up_action || '',
+    previous_remarks: (Array.isArray(previous_remarks) && previous_remarks.length > 0)
+      ? previous_remarks
+      : (today_remarks || next_follow_up_action)
+        ? [{
+            today_remark: today_remarks || '',
+            planned_action: next_follow_up_action || '',
+            remark: [
+              today_remarks ? `Interaction: ${today_remarks}` : null,
+              next_follow_up_action ? `Planned for ${follow_up_date}: ${next_follow_up_action}` : null,
+            ].filter(Boolean).join(' | '),
+            follow_up_date: follow_up_date,
+            date: new Date().toISOString(),
+            author: req.user ? (req.user.name || req.user.full_name) : 'User',
+          }]
+        : [],
+    notes: notes || today_remarks || '',
     created_at: req.body.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };

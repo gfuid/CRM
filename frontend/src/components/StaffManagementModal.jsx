@@ -27,7 +27,8 @@ import {
   PhoneCall,
   Sliders,
   ChevronDown,
-  X
+  X,
+  Edit3
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -43,34 +44,38 @@ const DEFAULT_PERMISSIONS = {
   view_analytics: false, // Default hidden from staff as requested
   view_leads: true,
   view_tasks: true,
+  tasks_assign: false, // STRICT: Default staff CANNOT assign tasks
   view_followup: true,
-  view_outreach: true,
+  view_outreach: false,
   view_activity: true,
   view_mydays: true,
   can_read: true,
   can_create: true,
   can_update: true,
   can_delete: false, // Prevent deleting other staff's or company records
+  can_export: false,
   admin_access: false, // Strict: Never give staff admin panel
 };
 
 const PRESETS = {
   standard: {
     label: 'Standard Sales Rep (Recommended)',
-    desc: 'Own leads only, create & edit enabled, no delete, company analytics hidden',
+    desc: 'Own leads only, create & edit enabled, no delete, company analytics & task assignment hidden',
     data_scope: 'own_only',
     permissions: {
       view_analytics: false,
       view_leads: true,
       view_tasks: true,
+      tasks_assign: false,
       view_followup: true,
-      view_outreach: true,
+      view_outreach: false,
       view_activity: true,
       view_mydays: true,
       can_read: true,
       can_create: true,
       can_update: true,
       can_delete: false,
+      can_export: false,
       admin_access: false,
     },
   },
@@ -82,25 +87,28 @@ const PRESETS = {
       view_analytics: false,
       view_leads: true,
       view_tasks: true,
+      tasks_assign: false,
       view_followup: true,
       view_outreach: false,
       view_activity: true,
-      view_mydays: true,
+      view_mydays: false,
       can_read: true,
       can_create: false,
       can_update: false,
       can_delete: false,
+      can_export: false,
       admin_access: false,
     },
   },
   manager: {
     label: 'Senior Trade Manager',
-    desc: 'Can view all company leads & analytics, can create & edit, no delete',
+    desc: 'Can view all company leads & analytics, can create, edit, & assign tasks, no delete',
     data_scope: 'all',
     permissions: {
       view_analytics: true,
       view_leads: true,
       view_tasks: true,
+      tasks_assign: true,
       view_followup: true,
       view_outreach: true,
       view_activity: true,
@@ -109,12 +117,13 @@ const PRESETS = {
       can_create: true,
       can_update: true,
       can_delete: false,
+      can_export: true,
       admin_access: false,
     },
   },
 };
 
-export default function StaffManagementModal({ isOpen, onClose }) {
+export default function StaffManagementModal({ isOpen, onClose, initialEditStaff }) {
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddForm, setShowAddForm] = useState(false);
@@ -188,12 +197,22 @@ export default function StaffManagementModal({ isOpen, onClose }) {
   useEffect(() => {
     if (isOpen) {
       loadStaff();
-      setShowAddForm(false);
-      setEditingStaff(null);
+      if (initialEditStaff) {
+        setEditingStaff({
+          ...initialEditStaff,
+          data_scope: initialEditStaff.data_scope || 'own_only',
+          permissions: initialEditStaff.permissions || { ...DEFAULT_PERMISSIONS },
+          new_password: '',
+        });
+        setShowAddForm(false);
+      } else {
+        setShowAddForm(false);
+        setEditingStaff(null);
+      }
       setError('');
       setSuccessMsg('');
     }
-  }, [isOpen]);
+  }, [isOpen, initialEditStaff]);
 
   const loadStaff = async () => {
     setLoading(true);
@@ -271,7 +290,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
           email: '',
           password: '',
           role: 'agent',
-          department: 'Commodity Sales & Export Outreach',
+          department: designations[0] || 'Commodity Sales Executive',
           phone: '',
           avatar_url: PRESET_AVATARS[0],
           data_scope: 'own_only',
@@ -279,6 +298,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
         });
         setShowAddForm(false);
         loadStaff();
+        window.dispatchEvent(new Event('crm_staff_updated'));
       }
     } catch (err) {
       setError(err.message || 'Failed to create staff member');
@@ -292,17 +312,27 @@ export default function StaffManagementModal({ isOpen, onClose }) {
     setSuccessMsg('');
 
     try {
-      const res = await api.updateUser(editingStaff.id, {
+      const payload = {
+        name: editingStaff.name ? editingStaff.name.trim() : undefined,
+        email: editingStaff.email ? editingStaff.email.trim().toLowerCase() : undefined,
         department: editingStaff.department,
         data_scope: editingStaff.data_scope,
         permissions: editingStaff.permissions,
-        phone: editingStaff.phone,
-      });
+        phone: editingStaff.phone ? editingStaff.phone.trim() : '',
+        avatar_url: editingStaff.avatar_url,
+      };
+
+      if (editingStaff.new_password && editingStaff.new_password.trim().length >= 6) {
+        payload.password = editingStaff.new_password.trim();
+      }
+
+      const res = await api.updateUser(editingStaff.id, payload);
 
       if (res && res.success) {
-        setSuccessMsg(`Permissions updated for ${editingStaff.name}!`);
+        setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
         setEditingStaff(null);
         loadStaff();
+        window.dispatchEvent(new Event('crm_staff_updated'));
       }
     } catch (err) {
       setError(err.message || 'Failed to update staff permissions');
@@ -313,6 +343,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
     try {
       await api.toggleUserStatus(userId);
       loadStaff();
+      window.dispatchEvent(new Event('crm_staff_updated'));
     } catch {}
   };
 
@@ -322,6 +353,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
       await api.deleteUser(userId);
       setSuccessMsg(`Staff member ${name} removed.`);
       loadStaff();
+      window.dispatchEvent(new Event('crm_staff_updated'));
     } catch (err) {
       setError(err.message || 'Failed to delete staff member');
     }
@@ -738,6 +770,27 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                     </div>
                   </label>
 
+                  {/* Task Assignment Permission (Strict Staff Restriction) */}
+                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                    form.permissions.tasks_assign
+                      ? 'bg-emerald-50 border-emerald-300'
+                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={!!form.permissions.tasks_assign}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, tasks_assign: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block truncate">➕ Assign New Tasks</span>
+                      <span className="text-[10px] text-slate-400 block">{form.permissions.tasks_assign ? 'Allowed' : 'Disabled (Owner Only)'}</span>
+                    </div>
+                  </label>
+
                   {/* Follow-up Toggle */}
                   <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
                     <input
@@ -772,6 +825,40 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                     </div>
                   </label>
 
+                  {/* My Days Toggle */}
+                  <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.permissions.view_mydays !== false}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, view_mydays: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block truncate">📝 My Days</span>
+                      <span className="text-[10px] text-slate-400 block">Daily reports</span>
+                    </div>
+                  </label>
+
+                  {/* Activity Toggle */}
+                  <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={form.permissions.view_activity !== false}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, view_activity: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block truncate">⚡ Activity Log</span>
+                      <span className="text-[10px] text-slate-400 block">Audit timeline</span>
+                    </div>
+                  </label>
+
                   {/* Main Admin Access (Locked) */}
                   <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/70 dark:bg-slate-900/50 flex items-center gap-2 cursor-not-allowed opacity-75">
                     <Lock size={14} className="text-slate-400 shrink-0" />
@@ -788,7 +875,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                 <label className="block text-xs font-bold text-slate-900 dark:text-white">
                   3. CRUD Action Rights <span className="text-emerald-600">(What can they do?)</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                   <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -799,7 +886,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                       })}
                       className="rounded text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="font-semibold">👁️ Read / View</span>
+                    <span className="font-semibold">👁️ Read</span>
                   </label>
 
                   <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
@@ -812,7 +899,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                       })}
                       className="rounded text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="font-semibold">✍️ Create / Add</span>
+                    <span className="font-semibold">✍️ Create</span>
                   </label>
 
                   <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
@@ -825,7 +912,22 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                       })}
                       className="rounded text-emerald-600 focus:ring-emerald-500"
                     />
-                    <span className="font-semibold">✏️ Update / Edit</span>
+                    <span className="font-semibold">✏️ Update</span>
+                  </label>
+
+                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${
+                    form.permissions.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                  }`}>
+                    <input
+                      type="checkbox"
+                      checked={!!form.permissions.can_export}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, can_export: e.target.checked }
+                      })}
+                      className="rounded text-indigo-600 focus:ring-indigo-500"
+                    />
+                    <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
                   </label>
 
                   <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${
@@ -840,7 +942,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                       })}
                       className="rounded text-rose-600 focus:ring-rose-500"
                     />
-                    <span className="font-semibold text-rose-700 dark:text-rose-400">🗑️ Delete Data</span>
+                    <span className="font-semibold text-rose-700 dark:text-rose-400">🗑️ Delete</span>
                   </label>
                 </div>
               </div>
@@ -915,6 +1017,101 @@ export default function StaffManagementModal({ isOpen, onClose }) {
               </div>
             </div>
 
+            {/* Account Details & Credentials */}
+            <div className="p-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+              <div className="font-extrabold text-slate-900 dark:text-white flex items-center gap-1.5 pb-2 border-b border-slate-100 dark:border-slate-800 text-xs">
+                <Briefcase size={14} className="text-emerald-600" />
+                <span>Employee Account Profile & Login Credentials</span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Staff Full Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={editingStaff.name || ''}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, name: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Login Email Address *
+                  </label>
+                  <input
+                    type="email"
+                    value={editingStaff.email || ''}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, email: e.target.value })}
+                    required
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Reset Login Password <span className="text-slate-400 font-normal">(Optional)</span>
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Leave empty to keep existing password"
+                    value={editingStaff.new_password || ''}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, new_password: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    Phone / WhatsApp
+                  </label>
+                  <input
+                    type="tel"
+                    value={editingStaff.phone || ''}
+                    onChange={(e) => setEditingStaff({ ...editingStaff, phone: e.target.value })}
+                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Department / Designation
+                </label>
+                <select
+                  value={editingStaff.department || designations[0]}
+                  onChange={(e) => setEditingStaff({ ...editingStaff, department: e.target.value })}
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                >
+                  {designations.map((d) => (
+                    <option key={d} value={d}>{d}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                  Staff Avatar
+                </label>
+                <div className="flex items-center gap-2">
+                  {PRESET_AVATARS.map((av, idx) => (
+                    <img
+                      key={idx}
+                      src={av}
+                      alt="Preset"
+                      onClick={() => setEditingStaff({ ...editingStaff, avatar_url: av })}
+                      className={`w-7 h-7 rounded-full object-cover cursor-pointer ring-2 transition-all ${
+                        editingStaff.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
+                      }`}
+                    />
+                  ))}
+                </div>
+              </div>
+            </div>
+
             {/* Data Scope */}
             <div>
               <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
@@ -974,9 +1171,9 @@ export default function StaffManagementModal({ isOpen, onClose }) {
             {/* Sections */}
             <div>
               <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-                2. Section Visibility
+                2. Section Visibility <span className="text-emerald-600">(Which sections can this employee see?)</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
                 <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
                   editingStaff.permissions?.view_analytics
                     ? 'bg-emerald-50 border-emerald-300'
@@ -1029,6 +1226,27 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                   </div>
                 </label>
 
+                {/* Tasks Assignment (Restricted) */}
+                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
+                  editingStaff.permissions?.tasks_assign
+                    ? 'bg-emerald-50 border-emerald-300'
+                    : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={!!editingStaff.permissions?.tasks_assign}
+                    onChange={(e) => setEditingStaff({
+                      ...editingStaff,
+                      permissions: { ...editingStaff.permissions, tasks_assign: e.target.checked }
+                    })}
+                    className="rounded text-emerald-600"
+                  />
+                  <div>
+                    <span className="font-bold block">➕ Assign Tasks</span>
+                    <span className="text-[10px] text-slate-400 block">{editingStaff.permissions?.tasks_assign ? 'Allowed' : 'Disabled'}</span>
+                  </div>
+                </label>
+
                 <label className="p-2.5 rounded-xl border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1061,22 +1279,46 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                   </div>
                 </label>
 
-                <div className="p-2.5 rounded-xl border border-slate-200 dark:border-slate-800 bg-slate-100/60 dark:bg-slate-900/50 flex items-center gap-2 cursor-not-allowed opacity-75">
-                  <Lock size={14} className="text-slate-400 shrink-0" />
+                <label className="p-2.5 rounded-xl border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingStaff.permissions?.view_mydays !== false}
+                    onChange={(e) => setEditingStaff({
+                      ...editingStaff,
+                      permissions: { ...editingStaff.permissions, view_mydays: e.target.checked }
+                    })}
+                    className="rounded text-emerald-600"
+                  />
                   <div>
-                    <span className="font-bold block text-slate-500">🛡️ Super Admin</span>
-                    <span className="text-[9px] text-rose-500 font-semibold block">Owner Only</span>
+                    <span className="font-bold block">📝 My Days</span>
+                    <span className="text-[10px] text-slate-400 block">Daily reports</span>
                   </div>
-                </div>
+                </label>
+
+                <label className="p-2.5 rounded-xl border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={editingStaff.permissions?.view_activity !== false}
+                    onChange={(e) => setEditingStaff({
+                      ...editingStaff,
+                      permissions: { ...editingStaff.permissions, view_activity: e.target.checked }
+                    })}
+                    className="rounded text-emerald-600"
+                  />
+                  <div>
+                    <span className="font-bold block">⚡ Activity Log</span>
+                    <span className="text-[10px] text-slate-400 block">Audit trail</span>
+                  </div>
+                </label>
               </div>
             </div>
 
             {/* CRUD */}
             <div>
               <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-                3. Action Rights (CRUD)
+                3. Action Rights (CRUD) <span className="text-emerald-600">(What can they do?)</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
                 <label className="p-2 rounded-lg border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
                   <input
                     type="checkbox"
@@ -1114,6 +1356,20 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                   <span className="font-semibold">✏️ Update</span>
                 </label>
                 <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${
+                  editingStaff.permissions?.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                }`}>
+                  <input
+                    type="checkbox"
+                    checked={!!editingStaff.permissions?.can_export}
+                    onChange={(e) => setEditingStaff({
+                      ...editingStaff,
+                      permissions: { ...editingStaff.permissions, can_export: e.target.checked }
+                    })}
+                    className="rounded text-indigo-600"
+                  />
+                  <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
+                </label>
+                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${
                   editingStaff.permissions?.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
                 }`}>
                   <input
@@ -1142,7 +1398,7 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                 type="submit"
                 className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5"
               >
-                <Check size={14} /> Save Permissions
+                <Check size={14} /> Save Changes & Permissions
               </button>
             </div>
           </form>
@@ -1280,8 +1536,12 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                                     📋 Leads
                                   </span>
 
-                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-blue-50 text-blue-700 border border-blue-200">
-                                    ✅ Tasks
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
+                                    perms.tasks_assign
+                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                                      : 'bg-blue-50 text-blue-700 border-blue-200'
+                                  }`}>
+                                    {perms.tasks_assign ? '✅ Tasks (Can Assign)' : '✅ Tasks (View Only)'}
                                   </span>
 
                                   {perms.can_delete ? (
@@ -1309,11 +1569,13 @@ export default function StaffManagementModal({ isOpen, onClose }) {
                                       ...staff,
                                       data_scope: staff.data_scope || 'own_only',
                                       permissions: staff.permissions || { ...DEFAULT_PERMISSIONS },
+                                      new_password: '',
                                     })}
-                                    className="p-1.5 text-slate-500 hover:text-emerald-700 hover:bg-emerald-50 rounded-lg transition-colors cursor-pointer"
-                                    title="Configure Permissions & Scope"
+                                    className="px-2 py-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                                    title="Edit Staff Account & Permissions"
                                   >
-                                    <Sliders size={14} />
+                                    <Edit3 size={11} />
+                                    <span>Edit</span>
                                   </button>
 
                                   <button

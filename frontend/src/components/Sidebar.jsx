@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   BarChart2,
   Users,
@@ -9,21 +9,44 @@ import {
   CalendarClock,
   UserPlus,
   LogOut,
+  ChevronRight,
+  Shield,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
-  const { isOwner, isStaff, profile, signOut } = useAuth();
+  const { isOwner, isStaff, profile, signOut, getTeamMembers } = useAuth();
+  const [staffList, setStaffList] = useState([]);
+
+  const reloadStaff = () => {
+    if (isOwner && getTeamMembers) {
+      getTeamMembers()
+        .then((members) => {
+          if (Array.isArray(members)) {
+            // Filter to only staff members belonging to this owner
+            setStaffList(members.filter((m) => m.persona !== 'owner'));
+          }
+        })
+        .catch(() => {});
+    }
+  };
+
+  useEffect(() => {
+    reloadStaff();
+    window.addEventListener('crm_staff_updated', reloadStaff);
+    return () => window.removeEventListener('crm_staff_updated', reloadStaff);
+  }, [isOwner, getTeamMembers]);
 
   const userPerms = profile?.permissions || {};
-  const canViewAnalytics = isOwner || userPerms.view_analytics !== false;
-  const canViewLeads = isOwner || userPerms.view_leads !== false;
-  const canViewTasks = isOwner || userPerms.view_tasks !== false;
-  const canViewActivity = isOwner || userPerms.view_activity !== false;
-  const canViewOutreach = isOwner || userPerms.view_outreach !== false;
-  const canViewMyDays = isOwner || userPerms.view_mydays !== false;
-  const canViewFollowUp = isOwner || userPerms.view_followup !== false;
+  // Strict permission enforcement: staff only sees sections owner explicitly granted
+  const canViewAnalytics = isOwner ? true : Boolean(userPerms.view_analytics);
+  const canViewLeads = isOwner ? true : (userPerms.view_leads !== false);
+  const canViewTasks = isOwner ? true : Boolean(userPerms.view_tasks);
+  const canViewActivity = isOwner ? true : Boolean(userPerms.view_activity);
+  const canViewOutreach = isOwner ? true : Boolean(userPerms.view_outreach);
+  const canViewMyDays = isOwner ? true : Boolean(userPerms.view_mydays);
+  const canViewFollowUp = isOwner ? true : Boolean(userPerms.view_followup);
 
   const rawNavItems = [
     { id: 'analytics', label: isStaff ? 'My Analytics' : 'Analytics', icon: BarChart2, visible: canViewAnalytics },
@@ -101,21 +124,80 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
 
         {/* Owner Controls: Team & Staff Management */}
         {isOwner && (
-          <div className="pt-4 mt-3 border-t border-slate-100 space-y-1.5">
-            <div className="px-3 pb-1 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 flex items-center justify-between">
+          <div className="pt-3 mt-3 border-t border-slate-100 dark:border-slate-800 space-y-2">
+            <div className="px-3 pb-0.5 text-[10px] font-extrabold uppercase tracking-wider text-slate-400 dark:text-slate-500 flex items-center justify-between">
               <span>Organization</span>
-              <span className="text-[10px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">Owner</span>
+              <span className="text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800">
+                Owner
+              </span>
             </div>
+
             <button
-              onClick={onOpenStaffModal}
-              className="flex items-center justify-between w-full px-3.5 py-2.5 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer group"
+              onClick={() => onOpenStaffModal && onOpenStaffModal()}
+              className="flex items-center justify-between w-full px-3 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 shadow-sm shadow-emerald-600/20 transition-all cursor-pointer group"
             >
-              <div className="flex items-center gap-2.5">
-                <UserPlus size={16} />
+              <div className="flex items-center gap-2">
+                <UserPlus size={15} />
                 <span>+ Create Staff Member</span>
               </div>
               <span className="text-[10px] bg-emerald-700/80 px-1.5 py-0.5 rounded text-white font-extrabold">Add</span>
             </button>
+
+            {/* Owner Employee Roster & Count */}
+            <div className="bg-slate-50/90 dark:bg-slate-800/60 rounded-xl p-2.5 border border-slate-200/80 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between px-1 text-[11px] font-bold text-slate-700 dark:text-slate-300">
+                <span className="flex items-center gap-1.5">
+                  <Users size={13} className="text-emerald-600 dark:text-emerald-400" />
+                  <span>Employees ({staffList.length})</span>
+                </span>
+                <span className="text-[9px] font-extrabold text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/70 px-1.5 py-0.5 rounded-md">
+                  {staffList.filter((s) => s.is_active !== false).length} Active
+                </span>
+              </div>
+
+              {staffList.length === 0 ? (
+                <div className="px-2 py-2 text-[10px] text-slate-400 text-center italic">
+                  No staff accounts yet. Click above to add staff.
+                </div>
+              ) : (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-0.5">
+                  {staffList.map((st) => (
+                    <div
+                      key={st.id}
+                      className="flex items-center justify-between p-2 rounded-lg bg-white dark:bg-slate-900 border border-slate-200/70 dark:border-slate-800 text-[11px] hover:border-emerald-400 dark:hover:border-emerald-600 transition-all shadow-2xs group"
+                    >
+                      <div className="flex items-center gap-2 min-w-0">
+                        <img
+                          src={st.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60&auto=format&fit=crop&q=80'}
+                          alt={st.name}
+                          className="w-6 h-6 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
+                        />
+                        <div className="min-w-0">
+                          <div className="font-bold text-slate-900 dark:text-white truncate leading-tight flex items-center gap-1">
+                            <span className="truncate">{st.name}</span>
+                            {st.is_active === false && (
+                              <span className="text-[8px] text-rose-500 font-bold">Paused</span>
+                            )}
+                          </div>
+                          <div className="text-[9px] text-slate-400 truncate leading-tight">
+                            {st.department || st.email}
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={() => onOpenStaffModal && onOpenStaffModal(st)}
+                        className="px-2 py-0.5 text-[10px] font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 hover:bg-emerald-100 dark:hover:bg-emerald-900/50 rounded-md border border-emerald-200 dark:border-emerald-800 shrink-0 cursor-pointer transition-all shadow-2xs"
+                        title="Edit Permissions & Scope"
+                      >
+                        Edit
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
         )}
       </nav>

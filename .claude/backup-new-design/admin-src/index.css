@@ -1,0 +1,90 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Design tokens (RGB triplets), copied from the CRM app. Tailwind maps bg-surface, text-ink, etc. to these. */
+:root {
+  --canvas: 246 247 249;
+  --surface: 255 255 255;
+  --subtle: 241 243 246;
+  --line: 226 230 236;
+  --ink: 15 23 42;
+  --muted: 82 94 113;
+  --faint: 134 145 163;
+
+  --primary: 5 150 105;
+  --primary-strong: 4 120 87;
+  --primary-soft: 228 246 238;
+  --primary-ink: 6 95 70;
+
+  --danger: 220 38 38;
+  --danger-soft: 254 236 236;
+  --danger-ink: 153 27 27;
+  --warning: 217 119 6;
+  --warning-soft: 254 243 224;
+  --warning-ink: 146 64 14;
+  --info: 37 99 235;
+  --info-soft: 232 240 254;
+  --info-ink: 30 64 175;
+
+  color-scheme: light;
+}
+
+.dark {
+  --canvas: 10 13 20;
+  --surface: 19 24 33;
+  --subtle: 28 34 46;
+  --line: 44 52 66;
+  --ink: 236 240 246;
+  --muted: 160 171 189;
+  --faint: 112 124 143;
+
+  --primary: 16 185 129;
+  --primary-strong: 52 211 153;
+  --primary-soft: 16 52 42;
+  --primary-ink: 110 231 183;
+
+  --danger: 248 113 113;
+  --danger-soft: 60 24 26;
+  --danger-ink: 252 165 165;
+  --warning: 251 191 36;
+  --warning-soft: 58 42 14;
+  --warning-ink: 253 211 77;
+  --info: 96 165 250;
+  --info-soft: 22 36 66;
+  --info-ink: 147 197 253;
+
+  color-scheme: dark;
+}
+
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-canvas text-ink font-sans antialiased;
+    font-size: 14px;
+  }
+  :focus-visible {
+    @apply outline-none ring-2 ring-primary/60 ring-offset-1 ring-offset-surface;
+  }
+  /* 16px inputs stop iOS from zooming in on focus */
+  @media (max-width: 640px) {
+    input, select, textarea { font-size: 16px !important; }
+  }
+}
+
+@layer components {
+  .tabular { font-variant-numeric: tabular-nums; }
+}
+
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgb(var(--line)); border-radius: 8px; }
+::-webkit-scrollbar-thumb:hover { background: rgb(var(--faint)); }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; transition-duration: 1ms !important; }
+}

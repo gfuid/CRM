@@ -11,6 +11,17 @@ const getAllUsers = async (req, res) => {
   const { role, search, status } = req.query;
   let results = [...dataStore.users];
 
+  // If called by a company owner, only return their own staff members
+  if (req.user && req.user.persona === 'owner') {
+    results = results.filter(
+      (u) =>
+        u.persona !== 'owner' &&
+        (u.company_id === req.user.company_id ||
+          u.created_by === req.user.id ||
+          u.created_by === req.user.email)
+    );
+  }
+
   if (role) {
     results = results.filter((u) => u.role === role);
   }
@@ -206,7 +217,9 @@ const updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, email, role, department, phone, permissions, data_scope, is_active } = req.body;
 
-  const user = dataStore.users.find((u) => u.id === id);
+  const user = dataStore.users.find(
+    (u) => u.id === id || String(u._id) === id || u.email?.toLowerCase() === id?.toLowerCase()
+  );
   if (!user) {
     return ApiResponse.error(res, 'User not found', 404);
   }
@@ -222,6 +235,11 @@ const updateUser = async (req, res) => {
   if (phone !== undefined) user.phone = phone;
   if (is_active !== undefined) user.is_active = is_active;
   if (data_scope !== undefined) user.data_scope = data_scope;
+  if (req.body.avatar_url !== undefined) user.avatar_url = req.body.avatar_url;
+  if (req.body.password && req.body.password.length >= 6) {
+    const salt = await bcrypt.genSalt(10);
+    user.password = await bcrypt.hash(req.body.password, salt);
+  }
   if (permissions !== undefined) {
     user.permissions = {
       ...(user.permissions || {}),

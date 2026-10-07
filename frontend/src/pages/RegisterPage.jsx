@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff, Users, ArrowRight } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff, Users, ArrowRight, AlertCircle } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
@@ -121,8 +121,38 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
         </div>
 
         {error && (
-          <div className="p-3 mb-5 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-medium">
-            {error}
+          <div className="p-3.5 mb-5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs space-y-2.5">
+            <div className="flex items-start gap-2.5">
+              <AlertCircle size={18} className="text-rose-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-bold text-rose-900">
+                  {error.toLowerCase().includes('already exists')
+                    ? 'Yeh Email Pehle Se Registered Hai!'
+                    : 'Registration Error'}
+                </p>
+                <p className="text-rose-700 mt-0.5 leading-relaxed">
+                  {error.toLowerCase().includes('already exists')
+                    ? `"${form.email}" par pehle se account bana hua hai. Naya account banane ke bajaye aap directly login kar sakte hain.`
+                    : error}
+                </p>
+              </div>
+            </div>
+
+            {error.toLowerCase().includes('already exists') && onSwitchToLogin && (
+              <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between gap-2">
+                <span className="text-[11px] text-rose-600 font-medium">
+                  Direct Login karein:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => onSwitchToLogin('owner')}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                >
+                  <span>Sign In as Owner</span>
+                  <ArrowRight size={13} />
+                </button>
+              </div>
+            )}
           </div>
         )}
 

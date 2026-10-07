@@ -13,10 +13,16 @@ const userSchema = new mongoose.Schema(
     phone: { type: String, default: '' },
     is_active: { type: Boolean, default: true },
     avatar_url: { type: String, default: '' },
+    data_scope: { type: String, enum: ['own_only', 'all'], default: 'own_only' },
+    permissions: { type: mongoose.Schema.Types.Mixed, default: {} },
+    company_id: { type: String, default: '' },
+    created_by: { type: String, default: '' },
+    staff_limit: { type: Number, default: 3 },
     last_login: { type: Date, default: Date.now },
     created_at: { type: Date, default: Date.now },
   },
   {
+    strict: false,
     timestamps: true,
     toJSON: {
       transform: (doc, ret) => {

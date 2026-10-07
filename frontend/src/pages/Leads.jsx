@@ -41,7 +41,8 @@ import {
   Send,
   History,
   CalendarDays,
-  Lock
+  Lock,
+  Loader2
 } from 'lucide-react';
 
 export const AVAILABLE_ACTIVITIES = [
@@ -610,6 +611,7 @@ export default function Leads() {
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [activeDetailLead, setActiveDetailLead] = useState(null);
   const [editingLead, setEditingLead] = useState(null);
@@ -735,7 +737,9 @@ export default function Leads() {
     created_by_id: profile?.id || 'usr_staff_creator',
     created_by_name: profile?.name || profile?.full_name || 'Deepak',
     created_at: new Date().toISOString(),
-    follow_up_date: '',
+    follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+    today_remarks: '',
+    next_follow_up_action: '',
     notes: '',
   };
 
@@ -745,7 +749,8 @@ export default function Leads() {
   const [dossierActivityType, setDossierActivityType] = useState('Call initiated');
   const [dossierActivityNote, setDossierActivityNote] = useState('');
   const [dossierFollowUpDate, setDossierFollowUpDate] = useState('');
-  const [dossierRemarkText, setDossierRemarkText] = useState('');
+  const [dossierTodayRemark, setDossierTodayRemark] = useState('');
+  const [dossierFutureAction, setDossierFutureAction] = useState('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
 
   // Persistence helper: saves to React state and localStorage
@@ -762,50 +767,43 @@ export default function Leads() {
   const loadLeads = async () => {
     try {
       setLoading(true);
-      // 1. Check local storage for persistent leads
+      // 1. Check local storage for user leads and filter out legacy dummy leads
       let localData = [];
       try {
         const stored = localStorage.getItem('oneroot_leads_v3');
         if (stored) {
           const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed) && parsed.length >= 50) {
-            localData = parsed;
+          if (Array.isArray(parsed)) {
+            localData = parsed.filter(
+              (l) =>
+                !l.id?.startsWith('lead_') &&
+                l.company_name !== 'Gk Optotorg LLC' &&
+                l.company_name !== 'Baltimport LLC' &&
+                l.company_name !== 'Al-Barakah Global Agro Foods LLC'
+            );
           }
         }
       } catch (e) {
         console.warn('Error reading local leads:', e);
       }
 
-      // If local storage is empty or has fewer than 50 leads, initialize with 263 SEED_LEADS
-      if (localData.length < 50) {
-        localData = SEED_LEADS;
-        try {
-          localStorage.setItem('oneroot_leads_v3', JSON.stringify(SEED_LEADS));
-        } catch (e) {}
-      }
-
-      // 2. Fetch from remote API if available to merge user created leads
+      // 2. Fetch fresh real leads from remote API
       try {
         const res = await api.getLeads();
-        if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-          const serverIds = new Set(res.data.map((l) => l.id));
-          const merged = [
-            ...res.data,
-            ...localData.filter((l) => !serverIds.has(l.id)),
-          ];
-          setLeads(merged);
+        if (res && res.success && Array.isArray(res.data)) {
+          setLeads(res.data);
           try {
-            localStorage.setItem('oneroot_leads_v3', JSON.stringify(merged));
+            localStorage.setItem('oneroot_leads_v3', JSON.stringify(res.data));
           } catch (e) {}
           return;
         }
       } catch (apiErr) {
-        // API offline or error, use localData
+        // API offline or error, use clean localData
       }
 
       setLeads(localData);
     } catch {
-      setLeads(SEED_LEADS);
+      setLeads([]);
     } finally {
       setLoading(false);
     }
@@ -846,32 +844,79 @@ export default function Leads() {
     showNotification(`Activity "${dossierActivityType}" logged successfully!`, 'success');
   };
 
-  const handleSaveDossierFollowUp = () => {
+  const handleSaveDossierFollowUp = async () => {
     if (!activeDetailLead) return;
     const dateToSave = dossierFollowUpDate || activeDetailLead.follow_up_date;
-    const updatedRemarks = dossierRemarkText.trim()
-      ? [
-          {
-            remark: dossierRemarkText.trim(),
-            date: new Date().toLocaleString(),
-            author: profile?.name || 'adric',
-          },
-          ...(activeDetailLead.previous_remarks || []),
-        ]
-      : (activeDetailLead.previous_remarks || []);
+    if (!dateToSave) {
+      showNotification('Follow-up date is mandatory! Please select a follow-up date.', 'error');
+      return;
+    }
+    if (!dossierTodayRemark.trim() && !dossierFutureAction.trim()) {
+      showNotification("Please enter today's interaction remarks or planned action for next follow-up.", 'error');
+      return;
+    }
+
+    const formattedNow = new Date().toLocaleString('en-IN', {
+      day: '2-digit',
+      month: 'short',
+      year: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const newRemarkEntry = {
+      today_remark: dossierTodayRemark.trim(),
+      planned_action: dossierFutureAction.trim(),
+      remark: [
+        dossierTodayRemark.trim() ? `Interaction: ${dossierTodayRemark.trim()}` : null,
+        dossierFutureAction.trim() ? `Planned for ${dateToSave}: ${dossierFutureAction.trim()}` : null,
+      ].filter(Boolean).join(' | '),
+      follow_up_date: dateToSave,
+      date: formattedNow,
+      author: profile?.name || 'User',
+    };
+
+    const updatedRemarks = [
+      newRemarkEntry,
+      ...(activeDetailLead.previous_remarks || []),
+    ];
+
+    const compositeNotes = [
+      dossierTodayRemark.trim() ? `[Today's Interaction - ${formattedNow}]: ${dossierTodayRemark.trim()}` : null,
+      dossierFutureAction.trim() ? `[Planned Action on ${dateToSave}]: ${dossierFutureAction.trim()}` : null,
+      activeDetailLead.notes || '',
+    ].filter(Boolean).join('\n\n');
 
     const updatedLead = {
       ...activeDetailLead,
       follow_up_date: dateToSave,
+      today_remarks: dossierTodayRemark.trim() || activeDetailLead.today_remarks || '',
+      next_follow_up_action: dossierFutureAction.trim() || activeDetailLead.next_follow_up_action || '',
+      notes: compositeNotes,
       previous_remarks: updatedRemarks,
     };
 
     setActiveDetailLead(updatedLead);
-    setDossierRemarkText('');
+    setDossierTodayRemark('');
+    setDossierFutureAction('');
+
     updateAndPersistLeads((prev) =>
       prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
     );
-    showNotification('Follow-up date and remarks saved!', 'success');
+
+    try {
+      await api.updateLead(updatedLead.id, {
+        follow_up_date: dateToSave,
+        today_remarks: updatedLead.today_remarks,
+        next_follow_up_action: updatedLead.next_follow_up_action,
+        notes: compositeNotes,
+        previous_remarks: updatedRemarks,
+      });
+    } catch (apiErr) {
+      console.warn('API update follow-up error:', apiErr);
+    }
+
+    showNotification('Follow-up schedule and remarks saved successfully!', 'success');
   };
 
   const handleUploadDossierDoc = (e) => {
@@ -998,8 +1043,12 @@ export default function Leads() {
     showNotification(`Commodity "${prodToRemove}" removed from options.`, 'info');
   };
 
-  // Add custom payment term handler
+  // Add custom payment term handler - OWNER ONLY
   const handleAddCustomPaymentTerm = () => {
+    if (!isOwner) {
+      showNotification('Permission Denied: Only company owners can add new payment terms.', 'error');
+      return;
+    }
     const trimmed = customPaymentText.trim();
     if (!trimmed) return;
     let nextList = allPaymentTerms;
@@ -1093,23 +1142,30 @@ export default function Leads() {
 
   // Open Create Modal
   const openCreate = () => {
+    setIsSubmitting(false);
     setEditingLead(null);
     setActiveFormTab('basic');
     setShowCustomProductInput(false);
     setCustomProductText('');
     setShowCustomIndustryInput(false);
     setCustomIndustryText('');
+    setShowCustomPaymentInput(false);
+    setCustomPaymentText('');
     setForm({
       ...initForm,
       assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || 'usr_athish'),
       agent_name: isStaff ? (profile?.name || 'Staff Member') : (teamList[0]?.name || 'Athish'),
       follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+      today_remarks: '',
+      next_follow_up_action: '',
+      notes: '',
     });
     setModalOpen(true);
   };
 
   // Open Edit Modal
   const openEdit = (lead) => {
+    setIsSubmitting(false);
     if (isStaff) {
       const isMine =
         lead.assigned_to === profile?.id ||
@@ -1129,6 +1185,8 @@ export default function Leads() {
     setCustomProductText('');
     setShowCustomIndustryInput(false);
     setCustomIndustryText('');
+    setShowCustomPaymentInput(false);
+    setCustomPaymentText('');
 
     const existingContacts = Array.isArray(lead.contacts) && lead.contacts.length > 0
       ? lead.contacts
@@ -1193,7 +1251,9 @@ export default function Leads() {
       created_by_id: lead.created_by_id || 'usr_staff_creator',
       created_by_name: lead.created_by_name || lead.agent_name || 'Deepak',
       created_at: lead.created_at || new Date().toISOString(),
-      follow_up_date: lead.follow_up_date || '',
+      follow_up_date: lead.follow_up_date || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+      today_remarks: lead.today_remarks || lead.notes || '',
+      next_follow_up_action: lead.next_follow_up_action || '',
       notes: lead.notes || '',
     });
     setModalOpen(true);
@@ -1202,8 +1262,9 @@ export default function Leads() {
   // Open Details Modal
   const openDetails = (lead) => {
     setActiveDetailLead(lead);
-    setDossierFollowUpDate(lead.follow_up_date || '');
-    setDossierRemarkText('');
+    setDossierFollowUpDate(lead.follow_up_date || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0]);
+    setDossierTodayRemark(lead.today_remarks || '');
+    setDossierFutureAction(lead.next_follow_up_action || '');
     setDossierActivityNote('');
     setDossierActivityType(lead.activity_history?.[0]?.activity || 'Call initiated');
     setDetailModalOpen(true);
@@ -1212,105 +1273,156 @@ export default function Leads() {
   // Save Lead
   const handleSave = async (e) => {
     e.preventDefault();
+    if (isSubmitting) return; // Prevent double submit
     if (!form.company_name.trim()) {
       alert('Company name is required');
       return;
     }
+    if (!form.follow_up_date) {
+      alert('Follow-up date is mandatory! Please select a next follow-up date.');
+      return;
+    }
 
-    const primary = form.contacts[0] || {};
-    
-    // Role-based assignment resolution
-    let finalAssignedTo = form.assigned_to;
-    let finalAgentName = form.agent_name;
-    if (isStaff) {
-      finalAssignedTo = profile?.id || 'staff';
-      finalAgentName = profile?.name || 'Staff Member';
-    } else {
-      const matched = teamList.find((t) => t.id === form.assigned_to || t.name === form.assigned_to);
-      if (matched) {
-        finalAssignedTo = matched.id;
-        finalAgentName = matched.name;
+    setIsSubmitting(true);
+    try {
+      const primary = form.contacts[0] || {};
+      
+      // Role-based assignment resolution
+      let finalAssignedTo = form.assigned_to;
+      let finalAgentName = form.agent_name;
+      if (isStaff) {
+        finalAssignedTo = profile?.id || 'staff';
+        finalAgentName = profile?.name || 'Staff Member';
+      } else {
+        const matched = teamList.find((t) => t.id === form.assigned_to || t.name === form.assigned_to);
+        if (matched) {
+          finalAssignedTo = matched.id;
+          finalAgentName = matched.name;
+        }
       }
-    }
 
-    // Preserve original creator info (Task 6): If Deepak created, creator remains Deepak even if assigned to Japneet!
-    const originalCreatorName = editingLead
-      ? (editingLead.created_by_name || form.created_by_name || 'Deepak')
-      : (profile?.name || profile?.full_name || 'Deepak');
-    const originalCreatorId = editingLead
-      ? (editingLead.created_by_id || form.created_by_id || profile?.id)
-      : (profile?.id || 'usr_staff_creator');
-    const originalCreatedAt = editingLead
-      ? (editingLead.created_at || form.created_at || new Date().toISOString())
-      : new Date().toISOString();
+      // Preserve original creator info (Task 6): If Deepak created, creator remains Deepak even if assigned to Japneet!
+      const originalCreatorName = editingLead
+        ? (editingLead.created_by_name || form.created_by_name || 'Deepak')
+        : (profile?.name || profile?.full_name || 'Deepak');
+      const originalCreatorId = editingLead
+        ? (editingLead.created_by_id || form.created_by_id || profile?.id)
+        : (profile?.id || 'usr_staff_creator');
+      const originalCreatedAt = editingLead
+        ? (editingLead.created_at || form.created_at || new Date().toISOString())
+        : new Date().toISOString();
 
-    const leadPayload = {
-      type: form.type,
-      company_name: form.company_name,
-      name: form.company_name,
-      industry_type: form.industry_type,
-      contacts: form.contacts,
-      contact_person: primary.name,
-      email: primary.email,
-      phone: primary.phone,
-      whatsapp: form.whatsapp,
-      website: form.website,
-      social_media: form.social_media || form.social_links?.[0]?.url || '',
-      social_links: form.social_links || [],
-      country: form.country,
-      source: form.lead_source,
-      address: form.address,
-      credit_rating: form.credit_rating,
-      turnover: form.turnover,
-      sourcing_region: form.sourcing_region,
-      legacy_industry_type: form.industry_type,
-      products: form.products,
-      product: form.products.join(', '),
-      quantity: Number(form.quantity) || 0,
-      price: Number(form.price) || 0,
-      value: Number(form.price) || 0,
-      stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-      status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-      lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-      export_requirements: {
+      const leadPayload = {
+        type: form.type,
+        company_name: form.company_name,
+        name: form.company_name,
         industry_type: form.industry_type,
-        incoterm: form.incoterm,
-        port_delivery: form.port_delivery,
-        payment_days: form.payment_days,
-        product_notes: form.product_notes,
-      },
-      assigned_to: finalAssignedTo,
-      agent_name: finalAgentName,
-      created_by_id: originalCreatorId,
-      created_by_name: originalCreatorName,
-      created_at: originalCreatedAt,
-      follow_up_date: form.follow_up_date,
-      notes: form.notes,
-    };
-
-    if (editingLead) {
-      try {
-        await api.updateLead(editingLead.id, leadPayload);
-      } catch {}
-      setLeads((prev) =>
-        prev.map((l) => (l.id === editingLead.id ? { ...l, ...leadPayload } : l))
-      );
-    } else {
-      let created = null;
-      try {
-        const res = await api.createLead(leadPayload);
-        if (res && res.data) created = res.data;
-      } catch {}
-
-      const newRecord = created || {
-        ...leadPayload,
-        id: 'lead_' + Date.now(),
-        created_at: new Date().toISOString(),
+        contacts: form.contacts,
+        contact_person: primary.name,
+        email: primary.email,
+        phone: primary.phone,
+        whatsapp: form.whatsapp,
+        website: form.website,
+        social_media: form.social_media || form.social_links?.[0]?.url || '',
+        social_links: form.social_links || [],
+        country: form.country,
+        source: form.lead_source,
+        address: form.address,
+        credit_rating: form.credit_rating,
+        turnover: form.turnover,
+        sourcing_region: form.sourcing_region,
+        legacy_industry_type: form.industry_type,
+        products: form.products,
+        product: form.products.join(', '),
+        quantity: Number(form.quantity) || 0,
+        price: Number(form.price) || 0,
+        value: Number(form.price) || 0,
+        stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+        status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+        lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+        export_requirements: {
+          industry_type: form.industry_type,
+          incoterm: form.incoterm,
+          port_delivery: form.port_delivery,
+          payment_days: form.payment_days,
+          product_notes: form.product_notes,
+        },
+        assigned_to: finalAssignedTo,
+        agent_name: finalAgentName,
+        created_by_id: originalCreatorId,
+        created_by_name: originalCreatorName,
+        created_at: originalCreatedAt,
+        follow_up_date: form.follow_up_date,
+        today_remarks: form.today_remarks || '',
+        next_follow_up_action: form.next_follow_up_action || '',
+        previous_remarks: (form.today_remarks || form.next_follow_up_action)
+          ? [
+              {
+                today_remark: form.today_remarks || '',
+                planned_action: form.next_follow_up_action || '',
+                remark: [
+                  form.today_remarks ? `Interaction: ${form.today_remarks}` : null,
+                  form.next_follow_up_action ? `Planned for ${form.follow_up_date}: ${form.next_follow_up_action}` : null,
+                ].filter(Boolean).join(' | '),
+                follow_up_date: form.follow_up_date,
+                date: new Date().toLocaleString('en-IN', {
+                  day: '2-digit',
+                  month: 'short',
+                  year: 'numeric',
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                author: profile?.name || 'User',
+              },
+              ...(editingLead?.previous_remarks || []),
+            ]
+          : (editingLead?.previous_remarks || []),
+        notes: [
+          form.today_remarks ? `[Today's Notes]: ${form.today_remarks}` : null,
+          form.next_follow_up_action ? `[Planned Action on ${form.follow_up_date}]: ${form.next_follow_up_action}` : null,
+          form.notes || null,
+        ].filter(Boolean).join('\n') || form.notes || '',
       };
-      setLeads((prev) => [newRecord, ...prev]);
-    }
 
-    setModalOpen(false);
+      if (editingLead) {
+        try {
+          await api.updateLead(editingLead.id, leadPayload);
+        } catch (apiErr) {
+          console.warn('API update failed, updating local state:', apiErr);
+        }
+        setLeads((prev) =>
+          prev.map((l) => (l.id === editingLead.id ? { ...l, ...leadPayload } : l))
+        );
+        showNotification('Lead updated successfully!', 'success');
+      } else {
+        let created = null;
+        try {
+          const res = await api.createLead(leadPayload);
+          if (res && res.data) created = res.data;
+        } catch (apiErr) {
+          console.warn('API create failed, falling back to local entry:', apiErr);
+        }
+
+        const newRecord = created || {
+          ...leadPayload,
+          id: 'lead_' + Date.now(),
+          created_at: new Date().toISOString(),
+        };
+        // Avoid duplicate in local state if already present
+        setLeads((prev) => {
+          if (prev.some((l) => l.id === newRecord.id)) return prev;
+          return [newRecord, ...prev];
+        });
+        showNotification('Trade lead created successfully!', 'success');
+      }
+
+      setModalOpen(false);
+    } catch (err) {
+      console.error('Error saving lead:', err);
+      showNotification('Error saving lead. Please try again.', 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Delete Lead - Owner only
@@ -1399,7 +1511,7 @@ export default function Leads() {
       'Website',
       'Products',
       'Quantity (kg)',
-      'Deal Value ($)',
+      'Deal Value (INR)',
       'Stage',
       'Priority',
       'Lead Source',
@@ -1755,13 +1867,13 @@ export default function Leads() {
 
   const totalValue = filteredLeads.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
   const totalVolumeMT = filteredLeads.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) / 1000;
-  const totalValueLakhs = (totalValue * 86.5) / 100000;
+  const totalValueLakhs = totalValue / 100000;
   const atRiskLeadsList = filteredLeads.filter((l) => {
     const isClosed = ['Closed Won', 'Closed Lost'].includes(l.stage || l.status);
     if (isClosed) return false;
     return l.follow_up_date && new Date(l.follow_up_date) < new Date('2026-09-20');
   });
-  const atRiskValueLakhs = atRiskLeadsList.reduce((sum, l) => sum + (((Number(l.price) || Number(l.value) || 0) * 86.5) / 100000), 0);
+  const atRiskValueLakhs = atRiskLeadsList.reduce((sum, l) => sum + ((Number(l.price) || Number(l.value) || 0) / 100000), 0);
 
   return (
     <div className="w-full space-y-5 pb-12">
@@ -1859,8 +1971,16 @@ export default function Leads() {
             )}
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-2">
-            <span>{totalValueLakhs >= 100 ? `₹${(totalValueLakhs / 100).toFixed(2)} Cr` : `₹${totalValueLakhs.toFixed(1)} L`}</span>
-            <span className="text-xs font-semibold text-slate-400">(${totalValue.toLocaleString()})</span>
+            <span>
+              {totalValue >= 10000000
+                ? `₹${(totalValue / 10000000).toFixed(2)} Cr`
+                : totalValue >= 100000
+                ? `₹${(totalValue / 100000).toFixed(2)} L`
+                : `₹${totalValue.toLocaleString('en-IN')}`}
+            </span>
+            <span className="text-xs font-semibold text-slate-400">
+              (₹{totalValue.toLocaleString('en-IN')})
+            </span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1">
             <TrendingUp size={12} /> {isStaff ? 'My Active Value' : 'Global Portfolio Value'}
@@ -2185,22 +2305,18 @@ export default function Leads() {
                           {Number(lead.quantity).toLocaleString()} kg
                         </div>
                         {(() => {
-                          const usd = Number(lead.price) || Number(lead.value) || 0;
-                          const lakhs = ((usd * 86.5) / 100000).toFixed(1);
-                          const isOverdue = lead.follow_up_date && new Date(lead.follow_up_date) < new Date('2026-09-20');
-                          const isClosed = ['Closed Won', 'Closed Lost'].includes(lead.stage || lead.status);
-                          const atRisk = isOverdue && !isClosed && Number(lakhs) >= 10;
+                          const inr = Number(lead.price) || Number(lead.value) || 0;
+                          const lakhs = (inr / 100000).toFixed(2);
                           return (
                             <div className="mt-0.5">
                               <div className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
-                                <span>₹{lakhs} Lakhs</span>
-                                <span className="text-[10px] text-slate-400 font-normal">(${usd.toLocaleString()})</span>
+                                <span>₹{inr.toLocaleString('en-IN')}</span>
+                                {inr >= 100000 && (
+                                  <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 dark:bg-slate-800 px-1 rounded">
+                                    (₹{lakhs} L)
+                                  </span>
+                                )}
                               </div>
-                              {atRisk && (
-                                <span className="mt-0.5 inline-flex items-center px-1.5 py-0.2 rounded text-[9px] font-extrabold bg-rose-50 text-rose-700 border border-rose-200">
-                                  ⚠️ Slippage Risk (₹{lakhs}L)
-                                </span>
-                              )}
                             </div>
                           );
                         })()}
@@ -2370,27 +2486,15 @@ export default function Leads() {
                       </div>
                       <div className="text-right">
                         <div className="font-black text-emerald-700 dark:text-emerald-400">
-                          ₹{(((Number(lead.price) || Number(lead.value) || 0) * 86.5) / 100000).toFixed(1)} Lakhs
+                          ₹{(Number(lead.price) || Number(lead.value) || 0).toLocaleString('en-IN')}
                         </div>
-                        <div className="text-[10px] text-slate-400">
-                          ${(Number(lead.price) || Number(lead.value) || 0).toLocaleString()}
-                        </div>
+                        {(Number(lead.price) || Number(lead.value) || 0) >= 100000 && (
+                          <div className="text-[10px] text-slate-400 font-semibold">
+                            ₹{(((Number(lead.price) || Number(lead.value) || 0)) / 100000).toFixed(2)} Lakhs
+                          </div>
+                        )}
                       </div>
                     </div>
-                    {(() => {
-                      const isOverdue = lead.follow_up_date && new Date(lead.follow_up_date) < new Date('2026-09-20');
-                      const isClosed = ['Closed Won', 'Closed Lost'].includes(lead.stage || lead.status);
-                      const lakhs = (((Number(lead.price) || Number(lead.value) || 0) * 86.5) / 100000).toFixed(1);
-                      if (isOverdue && !isClosed && Number(lakhs) >= 10) {
-                        return (
-                          <div className="pt-1 border-t border-rose-100 flex items-center justify-between text-[10px] font-bold text-rose-700">
-                            <span>⚠️ Slippage Risk (Overdue Follow-up)</span>
-                            <span>Loss: ₹{lakhs}L</span>
-                          </div>
-                        );
-                      }
-                      return null;
-                    })()}
                   </div>
 
                   {/* Contact & Follow up */}
@@ -3061,23 +3165,27 @@ export default function Leads() {
 
                 <div>
                   <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700">
-                      Deal Value / Price ($ USD)
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                      Deal Value / Price (₹ INR)
                     </label>
                     <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                      ≈ ₹{(((Number(form.price) || 0) * 86.5) / 100000).toFixed(2)} Lakhs
+                      {Number(form.price) >= 100000
+                        ? `₹${((Number(form.price) || 0) / 100000).toFixed(2)} Lakhs`
+                        : `₹${(Number(form.price) || 0).toLocaleString('en-IN')}`}
                     </span>
                   </div>
                   <input
                     type="number"
                     min="0"
-                    placeholder="e.g. 84000"
+                    placeholder="e.g. 500000"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block">
-                    Calculated at ₹86.5/USD • ₹{(((Number(form.price) || 0) * 86.5) / 100000).toFixed(2)} Lakhs INR
+                    {Number(form.price) >= 100000
+                      ? `Indian Rupees: ₹${(Number(form.price) || 0).toLocaleString('en-IN')} (₹${((Number(form.price) || 0) / 100000).toFixed(2)} Lakhs)`
+                      : `Indian Rupees: ₹${(Number(form.price) || 0).toLocaleString('en-IN')}`}
                   </span>
                 </div>
               </div>
@@ -3170,19 +3278,23 @@ export default function Leads() {
                   />
                 </div>
 
-                {/* Payment Terms with Custom Input */}
+                {/* Payment Terms with Custom Input - Owner Only Addition */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">Payment Terms</label>
-                    <button
-                      type="button"
-                      onClick={() => setShowCustomPaymentInput(!showCustomPaymentInput)}
-                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
-                    >
-                      {showCustomPaymentInput ? 'Standard' : '+ Custom'}
-                    </button>
+                    {isOwner ? (
+                      <button
+                        type="button"
+                        onClick={() => setShowCustomPaymentInput(!showCustomPaymentInput)}
+                        className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 cursor-pointer"
+                      >
+                        {showCustomPaymentInput ? 'Standard' : '+ Custom'}
+                      </button>
+                    ) : (
+                      <span className="text-[10px] text-slate-400 font-medium">Standard</span>
+                    )}
                   </div>
-                  {!showCustomPaymentInput ? (
+                  {!showCustomPaymentInput || !isOwner ? (
                     <select
                       value={form.payment_days}
                       onChange={(e) => setForm({ ...form, payment_days: e.target.value })}
@@ -3287,26 +3399,45 @@ export default function Leads() {
 
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Next Follow-up Date
+                      Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <input
                       type="date"
+                      required
                       value={form.follow_up_date}
                       onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
                     />
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">Notes & Next Actions</label>
-                  <textarea
-                    rows={2}
-                    placeholder="Enter discussion notes, sample requirements, lab report status..."
-                    value={form.notes}
-                    onChange={(e) => setForm({ ...form, notes: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
-                  />
+                {/* Separate Current vs. Future Remarks */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
+                      Today's Interaction / Discussion Remarks
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="What was discussed / decided on today's call or meeting with the client..."
+                      value={form.today_remarks}
+                      onChange={(e) => setForm({ ...form, today_remarks: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
+                      Planned Action for Next Follow-up Date
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="What specific action needs to be taken on scheduled date (e.g., share quote, verify LC)..."
+                      value={form.next_follow_up_action}
+                      onChange={(e) => setForm({ ...form, next_follow_up_action: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
             </div>
@@ -3316,18 +3447,33 @@ export default function Leads() {
           <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 mt-6 bg-white dark:bg-slate-900 sticky bottom-0 z-20 pb-1">
             <button
               type="button"
+              disabled={isSubmitting}
               onClick={() => setModalOpen(false)}
-              className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
+              className="px-4 py-2.5 text-xs font-bold text-slate-500 hover:text-slate-800 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer disabled:opacity-50"
             >
               Cancel
             </button>
 
             <button
               type="submit"
-              className="px-6 py-2.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/25 transition-all cursor-pointer flex items-center gap-2"
+              disabled={isSubmitting}
+              className={`px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-2 ${
+                isSubmitting
+                  ? 'bg-emerald-400 cursor-not-allowed opacity-80'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/25 cursor-pointer'
+              }`}
             >
-              <CheckCircle2 size={16} />
-              <span>{editingLead ? 'Update Lead Specifications' : 'Save Export Lead'}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 size={16} className="animate-spin" />
+                  <span>{editingLead ? 'Updating Lead...' : 'Creating Lead...'}</span>
+                </>
+              ) : (
+                <>
+                  <CheckCircle2 size={16} />
+                  <span>{editingLead ? 'Update Lead Specifications' : 'Save Export Lead'}</span>
+                </>
+              )}
             </button>
           </div>
         </form>
@@ -3534,14 +3680,14 @@ export default function Leads() {
                 {(() => {
                   const dealVal = Number(activeDetailLead.price) || Number(activeDetailLead.value) || 0;
                   const dealQty = Number(activeDetailLead.quantity) || 0;
-                  const lakhs = ((dealVal * 86.5) / 100000).toFixed(2);
+                  const lakhs = (dealVal / 100000).toFixed(2);
                   return (
                     <div className="mt-1">
                       <div className="text-base font-black text-emerald-950 dark:text-emerald-200">
-                        {dealVal > 0 ? `₹${lakhs} Lakhs` : '$0 (Unpriced inquiry)'}
+                        {dealVal > 0 ? `₹${dealVal.toLocaleString('en-IN')}` : '₹0 (Unpriced inquiry)'}
                       </div>
                       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        ${dealVal.toLocaleString()} USD • {dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                        {dealVal >= 100000 ? `₹${lakhs} Lakhs INR • ` : ''}{dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
                       </div>
                     </div>
                   );
@@ -3851,57 +3997,93 @@ export default function Leads() {
                 </span>
               </div>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              <div className="space-y-3">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Follow-up date
+                    Follow-up date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                   </label>
                   <input
                     type="date"
+                    required
                     value={dossierFollowUpDate || activeDetailLead.follow_up_date || ''}
                     onChange={(e) => setDossierFollowUpDate(e.target.value)}
-                    className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                    className="w-full sm:w-64 px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
                   />
                 </div>
 
-                <div className="sm:col-span-2">
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Remarks *
-                  </label>
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="Write a remark about this follow-up (e.g. call back)..."
-                      value={dossierRemarkText}
-                      onChange={(e) => setDossierRemarkText(e.target.value)}
-                      className="flex-1 px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Today's Interaction / Discussion Remarks <span className="text-rose-500">*</span>
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="What was discussed / done today (e.g. called client, discussed CIF price & sample)..."
+                      value={dossierTodayRemark}
+                      onChange={(e) => setDossierTodayRemark(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                     />
-                    <button
-                      type="button"
-                      onClick={handleSaveDossierFollowUp}
-                      className="px-3.5 py-1.5 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer shrink-0 shadow-xs"
-                    >
-                      Save Follow-up
-                    </button>
                   </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Planned Action for Next Follow-up Date
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="What action to take on future date (e.g. share lab report, check payment receipt)..."
+                      value={dossierFutureAction}
+                      onChange={(e) => setDossierFutureAction(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-[10px] text-slate-400">
+                    Changing the follow-up date counts once per lead per day in Outreach.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveDossierFollowUp}
+                    className="px-4 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl transition-colors cursor-pointer shadow-sm flex items-center gap-1.5"
+                  >
+                    <CalendarDays size={14} />
+                    <span>Save Follow-up & Remarks</span>
+                  </button>
                 </div>
               </div>
 
-              <p className="text-[10px] text-slate-400">
-                Changing the follow-up date counts once per lead per day in Outreach. Daily Activity is reflected in the Outreach tab.
-              </p>
-
-              {/* Previous Remarks list */}
+              {/* Previous Remarks list with clear separation of today's interaction and planned action */}
               {activeDetailLead.previous_remarks && activeDetailLead.previous_remarks.length > 0 && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-1.5">
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
                   <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300">
-                    Previous remarks ({activeDetailLead.previous_remarks.length})
+                    Follow-up & Remarks History ({activeDetailLead.previous_remarks.length})
                   </div>
-                  <div className="space-y-1.5 max-h-36 overflow-y-auto">
+                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
                     {activeDetailLead.previous_remarks.map((r, rIdx) => (
-                      <div key={rIdx} className="p-2 bg-slate-50 dark:bg-slate-800/40 rounded-lg border border-slate-200/80 text-[11px] flex items-center justify-between">
-                        <span className="font-semibold text-slate-800 dark:text-slate-200">{r.remark}</span>
-                        <span className="text-[10px] text-slate-400 font-medium">{r.date} · {r.author}</span>
+                      <div key={rIdx} className="p-2.5 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-200/80 text-[11px] space-y-1">
+                        <div className="flex items-center justify-between text-[10px] text-slate-400 font-medium pb-1 border-b border-slate-200/60 dark:border-slate-700/60">
+                          <span className="font-bold text-slate-600 dark:text-slate-300">{r.author || 'User'}</span>
+                          <span>{r.date}</span>
+                        </div>
+                        {r.today_remark ? (
+                          <div className="text-slate-800 dark:text-slate-200">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400">Interaction: </span>
+                            {r.today_remark}
+                          </div>
+                        ) : r.remark && !r.planned_action ? (
+                          <div className="text-slate-800 dark:text-slate-200">
+                            <span className="font-bold text-emerald-700 dark:text-emerald-400">Remark: </span>
+                            {r.remark}
+                          </div>
+                        ) : null}
+                        {r.planned_action && (
+                          <div className="text-slate-700 dark:text-slate-300 bg-emerald-50/70 dark:bg-emerald-950/40 p-1.5 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60">
+                            <span className="font-bold text-emerald-800 dark:text-emerald-300">🎯 Planned Action ({r.follow_up_date || 'Next Follow-up'}): </span>
+                            {r.planned_action}
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>

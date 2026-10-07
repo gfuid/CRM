@@ -20,58 +20,7 @@ import {
   Sparkles
 } from 'lucide-react';
 
-const MOCK_TASKS = [
-  {
-    id: 'task_1',
-    title: 'Send Pre-Shipment Sample of Curcumin 3.5% Turmeric to Al-Barakah',
-    description: 'Prepare 500g double-polished turmeric finger samples with lab certificate and dispatch via DHL.',
-    priority: 'High',
-    due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-    deadline_time: '18:00',
-    status: 'In Progress',
-    assigned_name: 'Rohan',
-  },
-  {
-    id: 'task_2',
-    title: 'Confirm Phytosanitary Certificate for VietSpices Red Chilli at Chennai Port',
-    description: 'Coordinate with Plant Quarantine department for 2x40ft Teja stemless red chilli containers.',
-    priority: 'High',
-    due_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-    deadline_time: '14:30',
-    status: 'Pending',
-    assigned_name: 'Shiva',
-  },
-  {
-    id: 'task_3',
-    title: 'Review Mundra Port Ocean Freight Rates for Rice DDGS to Rotterdam',
-    description: 'Compare Maersk and MSC 40ft container freight quotes for 120 MT consignment.',
-    priority: 'High',
-    due_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-    deadline_time: '12:00',
-    status: 'Completed',
-    assigned_name: 'David',
-  },
-  {
-    id: 'task_4',
-    title: 'Draft Proforma Invoice for 85 MT Maize Consignment to Dhaka',
-    description: 'Specify CFR Chittagong Port terms and bank routing instructions for irrevocable LC.',
-    priority: 'Medium',
-    due_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-    deadline_time: '17:00',
-    status: 'Pending',
-    assigned_name: 'Preetham',
-  },
-  {
-    id: 'task_5',
-    title: 'Track Reefer Container Temperature Logs for Pollachi Tender Coconut to Colombo',
-    description: 'Confirm pre-cooling at +12°C with shipping line before loading at Tuticorin Port.',
-    priority: 'Medium',
-    due_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-    deadline_time: '16:00',
-    status: 'In Progress',
-    assigned_name: 'Rohan',
-  },
-];
+const MOCK_TASKS = [];
 
 export default function TaskManagement() {
   const { profile, getTeamMembers, isOwner, isStaff } = useAuth();
@@ -114,11 +63,12 @@ export default function TaskManagement() {
   const loadTeam = async () => {
     try {
       const members = await getTeamMembers();
-      if (members && members.length > 0) {
-        setTeamMembers(members);
-      } else if (profile) {
-        setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner' }]);
-      }
+      const staffList = Array.isArray(members) ? members : [];
+      const ownerEntry = profile
+        ? [{ id: profile.id, full_name: `${profile.name || profile.full_name || 'Owner'} (Me / Owner)`, name: profile.name || 'Owner' }]
+        : [];
+      const merged = [...ownerEntry, ...staffList.filter((s) => s.id !== profile?.id && s.persona !== 'owner')];
+      setTeamMembers(merged);
     } catch {
       if (profile) {
         setTeamMembers([{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner' }]);
@@ -126,32 +76,32 @@ export default function TaskManagement() {
     }
   };
 
+  const getStorageKey = () => `crm_tasks_${profile?.id || 'guest'}`;
+
   const loadTasks = async () => {
     setLoading(true);
-    let base = MOCK_TASKS;
+    let base = [];
     try {
-      const stored = localStorage.getItem('oneroot_tasks_v3');
+      const stored = localStorage.getItem(getStorageKey());
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          base = parsed;
+          base = parsed.filter((t) => !t.id?.startsWith('task_'));
         }
       }
     } catch (e) {}
 
     try {
       const res = await api.getTasks();
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        const serverIds = new Set(res.data.map((t) => t.id));
-        const merged = [...res.data, ...base.filter((t) => !serverIds.has(t.id))];
-        setTasks(merged);
+      if (res && res.success && Array.isArray(res.data)) {
+        setTasks(res.data);
         try {
-          localStorage.setItem('oneroot_tasks_v3', JSON.stringify(merged));
+          localStorage.setItem(getStorageKey(), JSON.stringify(res.data));
         } catch {}
         return;
       }
     } catch {
-      // fallback to base
+      // fallback to clean base
     } finally {
       setLoading(false);
     }
@@ -204,22 +154,34 @@ export default function TaskManagement() {
     return `${hours}:${m || '00'} ${suffix}`;
   };
 
-  const alertCounts = {
-    All: tasks.length,
-    Overdue: tasks.filter((t) => getAlert(t).type === 'overdue').length,
-    'Due Soon': tasks.filter((t) => getAlert(t).type === 'due-soon').length,
-    'On Track': tasks.filter((t) => getAlert(t).type === 'on-track').length,
-    Completed: tasks.filter((t) => getAlert(t).type === 'completed').length,
+  const isMineTask = (t) => {
+    if (!profile) return false;
+    return (
+      t.assigned_to === profile.id ||
+      t.assigned_to === profile.name ||
+      t.assigned_to === profile.email ||
+      t.assigned_name === profile.name ||
+      t.assigned_name === profile.full_name
+    );
   };
 
-  const filteredTasks = tasks.filter((t) => {
+  const visibleBaseTasks = tasks.filter((t) => {
     if (isStaff) {
-      const isMine =
-        t.assigned_to === profile?.id ||
-        t.assigned_to === profile?.name ||
-        t.assigned_name === profile?.name;
-      if (!isMine) return false;
-    } else if (filterMember && t.assigned_to !== filterMember) {
+      return isMineTask(t);
+    }
+    return true;
+  });
+
+  const alertCounts = {
+    All: visibleBaseTasks.length,
+    Overdue: visibleBaseTasks.filter((t) => getAlert(t).type === 'overdue').length,
+    'Due Soon': visibleBaseTasks.filter((t) => getAlert(t).type === 'due-soon').length,
+    'On Track': visibleBaseTasks.filter((t) => getAlert(t).type === 'on-track').length,
+    Completed: visibleBaseTasks.filter((t) => getAlert(t).type === 'completed').length,
+  };
+
+  const filteredTasks = visibleBaseTasks.filter((t) => {
+    if (!isStaff && filterMember && t.assigned_to !== filterMember) {
       return false;
     }
     if (activeFilter === 'All') return true;
@@ -275,6 +237,10 @@ export default function TaskManagement() {
   };
 
   const openCreateTask = () => {
+    if (isStaff && !profile?.permissions?.tasks_assign) {
+      showNotification('Permission Denied: Only Company Owners can assign new tasks.', 'error');
+      return;
+    }
     setEditingTask(null);
     setIsCorrectionMode(false);
     setTargetCorrectionTask(null);
@@ -356,7 +322,7 @@ export default function TaskManagement() {
         setTasks((prev) => {
           const next = [correctionTask, ...prev];
           try {
-            localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+            localStorage.setItem(getStorageKey(), JSON.stringify(next));
           } catch {}
           return next;
         });
@@ -389,7 +355,7 @@ export default function TaskManagement() {
         setTasks((prev) => {
           const next = prev.map((t) => (t.id === editingTask.id ? updatedTask : t));
           try {
-            localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+            localStorage.setItem(getStorageKey(), JSON.stringify(next));
           } catch {}
           return next;
         });
@@ -422,7 +388,7 @@ export default function TaskManagement() {
       setTasks((prev) => {
         const next = [createdTask, ...prev];
         try {
-          localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+          localStorage.setItem(getStorageKey(), JSON.stringify(next));
         } catch {}
         return next;
       });
@@ -441,7 +407,7 @@ export default function TaskManagement() {
       setTasks((prev) => {
         const next = [fallbackTask, ...prev];
         try {
-          localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+          localStorage.setItem(getStorageKey(), JSON.stringify(next));
         } catch {}
         return next;
       });
@@ -456,7 +422,7 @@ export default function TaskManagement() {
     setTasks((prev) => {
       const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t));
       try {
-        localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+        localStorage.setItem(getStorageKey(), JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -482,7 +448,7 @@ export default function TaskManagement() {
     setTasks((prev) => {
       const next = prev.filter((t) => t.id !== id);
       try {
-        localStorage.setItem('oneroot_tasks_v3', JSON.stringify(next));
+        localStorage.setItem(getStorageKey(), JSON.stringify(next));
       } catch {}
       return next;
     });
@@ -560,13 +526,15 @@ export default function TaskManagement() {
               : 'Track deadlines, dispatch buyer requests, logistics SLAs, and team action items'}
           </p>
         </div>
-        <button
-          onClick={openCreateTask}
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer shrink-0"
-        >
-          <Plus size={16} />
-          <span>Assign New Task</span>
-        </button>
+        {(!isStaff || Boolean(profile?.permissions?.tasks_assign)) && (
+          <button
+            onClick={openCreateTask}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs sm:text-sm shadow-sm transition-all cursor-pointer shrink-0"
+          >
+            <Plus size={16} />
+            <span>Assign New Task</span>
+          </button>
+        )}
       </div>
 
       {/* Filter and Overview Card */}
@@ -592,19 +560,21 @@ export default function TaskManagement() {
             })}
           </div>
 
-          {/* Team Member Filter */}
-          <select
-            className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
-            value={filterMember}
-            onChange={(e) => setFilterMember(e.target.value)}
-          >
-            <option value="">All team members</option>
-            {teamMembers.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.full_name || m.name}
-              </option>
-            ))}
-          </select>
+          {/* Team Member Filter - Owner Only */}
+          {!isStaff && (
+            <select
+              className="px-3.5 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-emerald-500/20"
+              value={filterMember}
+              onChange={(e) => setFilterMember(e.target.value)}
+            >
+              <option value="">All team members</option>
+              {teamMembers.map((m) => (
+                <option key={m.id} value={m.id}>
+                  {m.full_name || m.name}
+                </option>
+              ))}
+            </select>
+          )}
         </div>
       </div>
 
@@ -639,7 +609,9 @@ export default function TaskManagement() {
               ) : filteredTasks.length === 0 ? (
                 <tr>
                   <td colSpan="7" className="px-5 py-8 text-center text-slate-400">
-                    No tasks found matching filter criteria
+                    {isStaff
+                      ? 'No action items assigned to you yet. Your company owner will assign action items to you.'
+                      : 'No tasks found matching filter criteria'}
                   </td>
                 </tr>
               ) : (
@@ -780,7 +752,11 @@ export default function TaskManagement() {
           {loading ? (
             <div className="p-6 text-center text-slate-400 text-xs">Loading tasks...</div>
           ) : filteredTasks.length === 0 ? (
-            <div className="p-6 text-center text-slate-400 text-xs">No tasks found matching filter criteria</div>
+            <div className="p-6 text-center text-slate-400 text-xs">
+              {isStaff
+                ? 'No action items assigned to you yet. Your company owner will assign action items to you.'
+                : 'No tasks found matching filter criteria'}
+            </div>
           ) : (
             filteredTasks.map((task) => {
               const alert = getAlert(task);
