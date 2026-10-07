@@ -1,0 +1,23 @@
+name: Keep Render Backend Server Awake
+
+on:
+  schedule:
+    # Runs every 14 minutes (Render free tier sleeps after 15 minutes of inactivity)
+    - cron: '*/14 * * * *'
+  workflow_dispatch: # Allows manual trigger anytime from GitHub UI
+
+jobs:
+  ping-backend:
+    name: 💓 Ping Backend Health Endpoint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Health Endpoint
+        run: |
+          echo "Pinging Render backend healthcheck at $(date)..."
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://crm-ep4i.onrender.com/health)
+          echo "HTTP Response Status: $STATUS"
+          if [ "$STATUS" -eq 200 ]; then
+            echo "✅ Render backend is active and awake!"
+          else
+            echo "⚠️ Response was not 200, status code: $STATUS"
+          fi

@@ -1,1 +1,7 @@
-ci/cd implemnetions
+# CRM Task Log
+
+- [x] ci/cd implementations (.github/workflows/ci-cd.yml & root npm run ci)
+- [x] docker containerization (backend/Dockerfile, frontend/Dockerfile, docker-compose.yml)
+- [x] automated database backup & restore drill (npm run backup, npm run restore)
+- [x] interactive API documentation (/api/v1/docs & /api/v1/docs/json)
+- [x] current vs future remarks verification & database persistence

@@ -1,0 +1,15 @@
+{
+  "timestamp": "2026-10-07T10:00:20.279Z",
+  "source": "MongoDB Atlas",
+  "counts": {
+    "users": 8,
+    "leads": 4,
+    "tasks": 1,
+    "followUps": 0,
+    "activities": 5,
+    "myDays": 0,
+    "outreach": 0,
+    "company": 1,
+    "auditLogs": 5
+  }
+}

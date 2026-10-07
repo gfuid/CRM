@@ -1282,6 +1282,14 @@ export default function Leads() {
       alert('Follow-up date is mandatory! Please select a next follow-up date.');
       return;
     }
+    if (!form.today_remarks || !form.today_remarks.trim()) {
+      alert("Today's Interaction / Discussion Remarks is mandatory! Please enter remarks.");
+      return;
+    }
+    if (!form.next_follow_up_action || !form.next_follow_up_action.trim()) {
+      alert("Planned Action for Next Follow-up Date is mandatory! Please enter next planned action.");
+      return;
+    }
 
     setIsSubmitting(true);
     try {
@@ -1511,7 +1519,7 @@ export default function Leads() {
       'Website',
       'Products',
       'Quantity (kg)',
-      'Deal Value (INR)',
+      'Deal Value (USD)',
       'Stage',
       'Priority',
       'Lead Source',
@@ -1873,7 +1881,7 @@ export default function Leads() {
     if (isClosed) return false;
     return l.follow_up_date && new Date(l.follow_up_date) < new Date('2026-09-20');
   });
-  const atRiskValueLakhs = atRiskLeadsList.reduce((sum, l) => sum + ((Number(l.price) || Number(l.value) || 0) / 100000), 0);
+  const atRiskValueUSD = atRiskLeadsList.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
 
   return (
     <div className="w-full space-y-5 pb-12">
@@ -1964,22 +1972,15 @@ export default function Leads() {
         <div className="bg-white rounded-2xl border border-slate-200/80 p-4 shadow-sm">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">Total Pipeline Value</span>
-            {atRiskValueLakhs > 0 && (
+            {atRiskValueUSD > 0 && (
               <span className="text-[10px] font-extrabold text-rose-600 bg-rose-50 px-1.5 py-0.5 rounded border border-rose-200" title="Delayed follow-ups">
-                ⚠️ ₹{atRiskValueLakhs.toFixed(1)}L At-Risk
+                ⚠️ ${atRiskValueUSD.toLocaleString('en-US')} At-Risk
               </span>
             )}
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-2">
             <span>
-              {totalValue >= 10000000
-                ? `₹${(totalValue / 10000000).toFixed(2)} Cr`
-                : totalValue >= 100000
-                ? `₹${(totalValue / 100000).toFixed(2)} L`
-                : `₹${totalValue.toLocaleString('en-IN')}`}
-            </span>
-            <span className="text-xs font-semibold text-slate-400">
-              (₹{totalValue.toLocaleString('en-IN')})
+              ${totalValue.toLocaleString('en-US')}
             </span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 flex items-center gap-1">
@@ -2305,17 +2306,11 @@ export default function Leads() {
                           {Number(lead.quantity).toLocaleString()} kg
                         </div>
                         {(() => {
-                          const inr = Number(lead.price) || Number(lead.value) || 0;
-                          const lakhs = (inr / 100000).toFixed(2);
+                          const val = Number(lead.price) || Number(lead.value) || 0;
                           return (
                             <div className="mt-0.5">
                               <div className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
-                                <span>₹{inr.toLocaleString('en-IN')}</span>
-                                {inr >= 100000 && (
-                                  <span className="text-[10px] text-slate-500 font-semibold bg-slate-100 dark:bg-slate-800 px-1 rounded">
-                                    (₹{lakhs} L)
-                                  </span>
-                                )}
+                                <span>${val.toLocaleString('en-US')}</span>
                               </div>
                             </div>
                           );
@@ -2486,13 +2481,8 @@ export default function Leads() {
                       </div>
                       <div className="text-right">
                         <div className="font-black text-emerald-700 dark:text-emerald-400">
-                          ₹{(Number(lead.price) || Number(lead.value) || 0).toLocaleString('en-IN')}
+                          ${(Number(lead.price) || Number(lead.value) || 0).toLocaleString('en-US')}
                         </div>
-                        {(Number(lead.price) || Number(lead.value) || 0) >= 100000 && (
-                          <div className="text-[10px] text-slate-400 font-semibold">
-                            ₹{(((Number(lead.price) || Number(lead.value) || 0)) / 100000).toFixed(2)} Lakhs
-                          </div>
-                        )}
                       </div>
                     </div>
                   </div>
@@ -3164,28 +3154,19 @@ export default function Leads() {
                 </div>
 
                 <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                      Deal Value / Price (₹ INR)
-                    </label>
-                    <span className="text-[10px] font-black text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
-                      {Number(form.price) >= 100000
-                        ? `₹${((Number(form.price) || 0) / 100000).toFixed(2)} Lakhs`
-                        : `₹${(Number(form.price) || 0).toLocaleString('en-IN')}`}
-                    </span>
-                  </div>
+                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
+                    Deal Value / Price ($ USD)
+                  </label>
                   <input
                     type="number"
                     min="0"
-                    placeholder="e.g. 500000"
+                    placeholder="e.g. 50000"
                     value={form.price}
                     onChange={(e) => setForm({ ...form, price: e.target.value })}
                     className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   />
                   <span className="text-[10px] text-slate-400 mt-1 block">
-                    {Number(form.price) >= 100000
-                      ? `Indian Rupees: ₹${(Number(form.price) || 0).toLocaleString('en-IN')} (₹${((Number(form.price) || 0) / 100000).toFixed(2)} Lakhs)`
-                      : `Indian Rupees: ₹${(Number(form.price) || 0).toLocaleString('en-IN')}`}
+                    US Dollars: ${(Number(form.price) || 0).toLocaleString('en-US')}
                   </span>
                 </div>
               </div>
@@ -3415,10 +3396,11 @@ export default function Leads() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Today's Interaction / Discussion Remarks
+                      Today's Interaction / Discussion Remarks <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       rows={2}
+                      required
                       placeholder="What was discussed / decided on today's call or meeting with the client..."
                       value={form.today_remarks}
                       onChange={(e) => setForm({ ...form, today_remarks: e.target.value })}
@@ -3428,10 +3410,11 @@ export default function Leads() {
 
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Planned Action for Next Follow-up Date
+                      Planned Action for Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       rows={2}
+                      required
                       placeholder="What specific action needs to be taken on scheduled date (e.g., share quote, verify LC)..."
                       value={form.next_follow_up_action}
                       onChange={(e) => setForm({ ...form, next_follow_up_action: e.target.value })}
@@ -3680,14 +3663,13 @@ export default function Leads() {
                 {(() => {
                   const dealVal = Number(activeDetailLead.price) || Number(activeDetailLead.value) || 0;
                   const dealQty = Number(activeDetailLead.quantity) || 0;
-                  const lakhs = (dealVal / 100000).toFixed(2);
                   return (
                     <div className="mt-1">
                       <div className="text-base font-black text-emerald-950 dark:text-emerald-200">
-                        {dealVal > 0 ? `₹${dealVal.toLocaleString('en-IN')}` : '₹0 (Unpriced inquiry)'}
+                        {dealVal > 0 ? `$${dealVal.toLocaleString('en-US')}` : '$0 (Unpriced inquiry)'}
                       </div>
                       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        {dealVal >= 100000 ? `₹${lakhs} Lakhs INR • ` : ''}{dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                        {dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
                       </div>
                     </div>
                   );

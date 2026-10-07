@@ -10,6 +10,7 @@ const activityRoutes = require('./activity.routes');
 const outreachRoutes = require('./outreach.routes');
 const myDaysRoutes = require('./myDays.routes');
 const followUpRoutes = require('./followUp.routes');
+const docsRoutes = require('./docs.routes');
 
 // Mount routes with clean v1 namespace
 router.use('/auth', authRoutes);
@@ -21,5 +22,6 @@ router.use('/activity', activityRoutes);
 router.use('/outreach', outreachRoutes);
 router.use('/mydays', myDaysRoutes);
 router.use('/followup', followUpRoutes);
+router.use('/docs', docsRoutes);
 
 module.exports = router;

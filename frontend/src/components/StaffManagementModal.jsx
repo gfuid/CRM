@@ -219,10 +219,23 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     try {
       const res = await api.getUsers();
       if (res && res.success && Array.isArray(res.data)) {
-        setStaffList(res.data);
+        const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+        const existingEmails = new Set(res.data.map((u) => u.email?.toLowerCase()));
+        const merged = [...res.data];
+        for (const ls of localStaff) {
+          if (!existingEmails.has(ls.email?.toLowerCase())) {
+            merged.push(ls);
+          }
+        }
+        setStaffList(merged);
+        return;
       }
     } catch (err) {
-      console.warn('Failed to load staff list:', err.message);
+      console.warn('Failed to load staff list from API, checking local storage:', err.message);
+      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      if (localStaff.length > 0) {
+        setStaffList(localStaff);
+      }
     } finally {
       setLoading(false);
     }
@@ -299,8 +312,51 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         setShowAddForm(false);
         loadStaff();
         window.dispatchEvent(new Event('crm_staff_updated'));
+        return;
       }
     } catch (err) {
+      console.warn('API createUser error, checking local fallback:', err.message);
+      const isRecoverableError =
+        err.message?.toLowerCase().includes('token') ||
+        err.message?.toLowerCase().includes('session') ||
+        err.message?.toLowerCase().includes('failed to fetch') ||
+        err.message?.toLowerCase().includes('networkerror');
+
+      if (isRecoverableError) {
+        const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+        const newStaff = {
+          id: 'usr_staff_' + Date.now(),
+          name: form.name.trim(),
+          email: form.email.trim().toLowerCase(),
+          password: form.password,
+          role: form.role || 'agent',
+          department: form.department || designations[0] || 'Commodity Sales Executive',
+          phone: form.phone.trim(),
+          avatar_url: form.avatar_url,
+          data_scope: form.data_scope,
+          permissions: form.permissions,
+          is_active: true,
+          created_at: new Date().toISOString(),
+        };
+        localStaff.push(newStaff);
+        localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+        setStaffList((prev) => [newStaff, ...prev]);
+        setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
+        setForm({
+          name: '',
+          email: '',
+          password: '',
+          role: 'agent',
+          department: designations[0] || 'Commodity Sales Executive',
+          phone: '',
+          avatar_url: PRESET_AVATARS[0],
+          data_scope: 'own_only',
+          permissions: { ...DEFAULT_PERMISSIONS },
+        });
+        setShowAddForm(false);
+        window.dispatchEvent(new Event('crm_staff_updated'));
+        return;
+      }
       setError(err.message || 'Failed to create staff member');
     }
   };

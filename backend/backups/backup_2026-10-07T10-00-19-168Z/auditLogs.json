@@ -1,0 +1,67 @@
+[
+  {
+    "_id": "6ab02667a4bad8c45828dd4f",
+    "id": "log_1789929063747_5pgbkq",
+    "actor_name": "punia",
+    "actor_id": "usr_1789924957033_xthwzi",
+    "action": "STAFF_CREATED",
+    "details": "Owner added staff member Sagar Punia (sagarpunia163@gmail.com) with role 'agent', scope: 'own_only'",
+    "ip_address": "127.0.0.1",
+    "timestamp": "2026-09-20T18:31:03.747Z",
+    "createdAt": "2026-09-20T18:31:03.843Z",
+    "updatedAt": "2026-09-20T18:31:03.843Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ac529c7ce3860acc32ee588",
+    "id": "log_1791306183682_czjyt5",
+    "actor_name": "sagarpunia",
+    "actor_id": "usr_1791306043083_9p353t",
+    "action": "STAFF_CREATED",
+    "details": "Owner added staff member papu (papu@gmail.com) with role 'agent', scope: 'own_only'",
+    "ip_address": "127.0.0.1",
+    "timestamp": "2026-10-06T17:03:03.682Z",
+    "createdAt": "2026-10-06T17:03:03.686Z",
+    "updatedAt": "2026-10-06T17:03:03.686Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ac534d0ce3860acc32ee58a",
+    "id": "log_1791309008897_nspj7u",
+    "actor_name": "ambani",
+    "actor_id": "usr_1791308692781_zo9rj5",
+    "action": "STAFF_CREATED",
+    "details": "Owner added staff member sahil (sahil@gmail.com) with role 'agent', scope: 'own_only'",
+    "ip_address": "127.0.0.1",
+    "timestamp": "2026-10-06T17:50:08.897Z",
+    "createdAt": "2026-10-06T17:50:08.900Z",
+    "updatedAt": "2026-10-06T17:50:08.900Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ac540d7d9b922a27eb05459",
+    "id": "log_1791312087981_dxpjze",
+    "actor_name": "sagarpunia",
+    "actor_id": "usr_1791306043083_9p353t",
+    "action": "STAFF_PERMISSIONS_UPDATED",
+    "details": "Updated permissions & data scope for papu (papu@gmail.com)",
+    "ip_address": "127.0.0.1",
+    "timestamp": "2026-10-06T18:41:27.981Z",
+    "createdAt": "2026-10-06T18:41:28.000Z",
+    "updatedAt": "2026-10-06T18:41:28.000Z",
+    "__v": 0
+  },
+  {
+    "_id": "6ac540d8d9b922a27eb0545a",
+    "id": "log_1791312088118_yxan9b",
+    "actor_name": "sagarpunia",
+    "actor_id": "usr_1791306043083_9p353t",
+    "action": "STAFF_PERMISSIONS_UPDATED",
+    "details": "Updated permissions & data scope for papu (papu@gmail.com)",
+    "ip_address": "127.0.0.1",
+    "timestamp": "2026-10-06T18:41:28.118Z",
+    "createdAt": "2026-10-06T18:41:28.122Z",
+    "updatedAt": "2026-10-06T18:41:28.122Z",
+    "__v": 0
+  }
+]

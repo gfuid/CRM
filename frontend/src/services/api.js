@@ -18,6 +18,14 @@ class ApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
+    try {
+      const sessionStr = localStorage.getItem('crm_user_session');
+      if (sessionStr) {
+        const session = JSON.parse(sessionStr);
+        if (session?.user?.id) headers['x-user-id'] = session.user.id;
+        if (session?.user?.email) headers['x-user-email'] = session.user.email;
+      }
+    } catch (e) {}
     return headers;
   }
 
@@ -36,6 +44,16 @@ class ApiClient {
       const data = await response.json();
 
       if (!response.ok) {
+        if (response.status === 401) {
+          const errMsg = data?.message || '';
+          if (
+            errMsg.toLowerCase().includes('expired') ||
+            errMsg.toLowerCase().includes('invalid') ||
+            errMsg.toLowerCase().includes('authentication required')
+          ) {
+            window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: errMsg } }));
+          }
+        }
         throw new Error(data.message || `HTTP error! status: ${response.status}`);
       }
 

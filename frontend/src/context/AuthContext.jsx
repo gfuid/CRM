@@ -28,6 +28,20 @@ export function AuthProvider({ children }) {
     }
   };
 
+  // Listen for session expiration events from API client
+  useEffect(() => {
+    const handleSessionExpired = (e) => {
+      console.warn('Session expired event received:', e?.detail?.message);
+      localStorage.removeItem('crm_token');
+      localStorage.removeItem('crm_user_session');
+      setUser(null);
+      setProfile(null);
+    };
+
+    window.addEventListener('crm_session_expired', handleSessionExpired);
+    return () => window.removeEventListener('crm_session_expired', handleSessionExpired);
+  }, []);
+
   // Initialize session on mount with resilient persistence
   useEffect(() => {
     const initAuth = async () => {
@@ -67,7 +81,23 @@ export function AuthProvider({ children }) {
           }
         } catch (err) {
           console.warn('Backend profile check warning:', err.message);
-          // If we had a cached session, preserve it! Do NOT abruptly logout on backend cold start
+          const errMsg = err.message?.toLowerCase() || '';
+          const isExplicitAuthRejection =
+            errMsg.includes('invalid or expired') ||
+            errMsg.includes('authentication required') ||
+            errMsg.includes('user account no longer exists');
+
+          // If the backend explicitly returned a 401 auth rejection, clear broken session so user isn't stuck
+          if (isExplicitAuthRejection) {
+            localStorage.removeItem('crm_token');
+            localStorage.removeItem('crm_user_session');
+            setUser(null);
+            setProfile(null);
+            setLoading(false);
+            return;
+          }
+
+          // If we had a cached session and backend was just cold starting, preserve it!
           if (cachedSessionStr) {
             setLoading(false);
             return;

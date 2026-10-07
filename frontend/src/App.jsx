@@ -163,6 +163,16 @@ function AppContent() {
     }
   }, []);
 
+  // Keep-alive heartbeat: ping backend health endpoint every 10 minutes so Render free-tier never sleeps during active browser sessions
+  useEffect(() => {
+    const keepAlive = () => {
+      fetch('https://crm-ep4i.onrender.com/health', { mode: 'no-cors' }).catch(() => {});
+    };
+    keepAlive();
+    const interval = setInterval(keepAlive, 10 * 60 * 1000); // every 10 mins
+    return () => clearInterval(interval);
+  }, []);
+
   // Count overdue/due-soon tasks for badge
   useEffect(() => {
     if (!profile) return;

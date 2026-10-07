@@ -1,0 +1,24 @@
+[
+  {
+    "_id": "6aafbb27aecb8143782f84f7",
+    "id": "comp_stellarsync_1",
+    "name": "relience",
+    "domain": "",
+    "owner_name": "",
+    "owner_email": "",
+    "industry": "Travel, Tourism & Trade Services",
+    "currency": "USD",
+    "timezone": "UTC+05:30",
+    "revenueTargetMonthly": 150000,
+    "plan": "enterprise",
+    "maxStaff": 999999,
+    "currentStaff": 4,
+    "status": "active",
+    "monthlyRevenue": 79,
+    "subscriptionStatus": "active",
+    "created_at": "2026-01-01T00:00:00.000Z",
+    "createdAt": "2026-09-20T10:53:27.953Z",
+    "updatedAt": "2026-10-06T17:44:53.032Z",
+    "__v": 0
+  }
+]
