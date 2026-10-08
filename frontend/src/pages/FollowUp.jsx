@@ -49,6 +49,7 @@ export default function FollowUp() {
   const [quickLead, setQuickLead] = useState(null);
   const [quickTodayRemark, setQuickTodayRemark] = useState('');
   const [quickNextDate, setQuickNextDate] = useState('');
+  const [quickNextTime, setQuickNextTime] = useState('10:00');
   const [quickFutureAction, setQuickFutureAction] = useState('');
   const [quickStage, setQuickStage] = useState('');
   const [isSubmittingQuick, setIsSubmittingQuick] = useState(false);
@@ -190,6 +191,7 @@ export default function FollowUp() {
     // Default next date to 2 days from today
     const nextD = new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0];
     setQuickNextDate(nextD);
+    setQuickNextTime(lead.follow_up_time || lead.time || '10:00');
     setQuickFutureAction('');
     setQuickStage(lead.stage || lead.status || 'Requirement Understood');
   };
@@ -217,7 +219,7 @@ export default function FollowUp() {
 
       const entryText = [
         quickTodayRemark.trim() ? `[Today's Interaction]: ${quickTodayRemark.trim()}` : null,
-        quickFutureAction.trim() ? `[Planned Action on ${quickNextDate}]: ${quickFutureAction.trim()}` : null,
+        quickFutureAction.trim() ? `[Planned Action on ${quickNextDate} at ${quickNextTime || '10:00'}]: ${quickFutureAction.trim()}` : null,
       ].filter(Boolean).join(' | ');
 
       const newRemarkEntry = {
@@ -226,6 +228,7 @@ export default function FollowUp() {
         text: entryText,
         remark: entryText,
         follow_up_date: quickNextDate,
+        follow_up_time: quickNextTime || '10:00',
         timestamp: formattedTimestamp,
         date: formattedDate,
         author: quickLead.assigned_to || 'User',
@@ -242,6 +245,7 @@ export default function FollowUp() {
       const updatedLead = {
         ...quickLead,
         follow_up_date: quickNextDate,
+        follow_up_time: quickNextTime || '10:00',
         today_remarks: quickTodayRemark.trim() || quickLead.today_remarks || '',
         next_follow_up_action: quickFutureAction.trim() || quickLead.next_follow_up_action || '',
         stage: quickStage,
@@ -260,6 +264,7 @@ export default function FollowUp() {
       try {
         await api.updateLead(updatedLead.id, {
           follow_up_date: quickNextDate,
+          follow_up_time: quickNextTime || '10:00',
           today_remarks: updatedLead.today_remarks,
           next_follow_up_action: updatedLead.next_follow_up_action,
           stage: quickStage,
@@ -497,12 +502,20 @@ export default function FollowUp() {
 
                       {/* FOLLOW-UP DATE & OVERDUE DAYS */}
                       <td className="py-3.5 px-4 whitespace-nowrap">
-                        <div
-                          className={`font-bold ${
-                            isOverdue ? 'text-rose-600' : 'text-slate-800'
-                          }`}
-                        >
-                          {formatFollowDate(lead.follow_up_date)}
+                        <div className="flex items-center gap-1.5">
+                          <span
+                            className={`font-bold ${
+                              isOverdue ? 'text-rose-600' : 'text-slate-800'
+                            }`}
+                          >
+                            {formatFollowDate(lead.follow_up_date)}
+                          </span>
+                          {lead.follow_up_time && (
+                            <span className="text-[10px] text-purple-700 bg-purple-50 px-1.5 py-0.2 rounded font-bold border border-purple-200/60 flex items-center gap-0.5">
+                              <Clock size={9} />
+                              <span>{lead.follow_up_time}</span>
+                            </span>
+                          )}
                         </div>
                         {isOverdue ? (
                           <div className="text-[10px] font-bold text-rose-500 mt-0.5">
@@ -637,7 +650,7 @@ export default function FollowUp() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
                   <MessageCircle size={13} className="text-blue-600" />
-                  <span>Remarks / Notes for Today's Interaction</span>
+                  <span>Remarks / Notes for Today's Interaction <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
                 </label>
                 <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
                   Today's Call / Note
@@ -656,20 +669,35 @@ export default function FollowUp() {
               />
             </div>
 
-            {/* Next Follow-up Date */}
-            <div className="space-y-1.5">
-              <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
-                <Calendar size={13} className="text-purple-600" />
-                <span>Next Scheduled Follow-up Date</span>
-                <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={quickNextDate}
-                onChange={(e) => setQuickNextDate(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
-              />
+            {/* Next Follow-up Date & Call Timing */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Calendar size={13} className="text-purple-600" />
+                  <span>Next Scheduled Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
+                </label>
+                <input
+                  type="date"
+                  required
+                  value={quickNextDate}
+                  onChange={(e) => setQuickNextDate(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className="text-xs font-bold text-slate-700 flex items-center gap-1.5">
+                  <Clock size={13} className="text-purple-600" />
+                  <span>Call Timing / Scheduled Time <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
+                </label>
+                <input
+                  type="time"
+                  required
+                  value={quickNextTime || '10:00'}
+                  onChange={(e) => setQuickNextTime(e.target.value)}
+                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                />
+              </div>
             </div>
 
             {/* Field 2: Planned action/remarks for future follow-up date */}
@@ -677,7 +705,7 @@ export default function FollowUp() {
               <div className="flex items-center justify-between">
                 <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
                   <Target size={13} className="text-purple-600" />
-                  <span>Planned Action / Remarks for Future Date</span>
+                  <span>Planned Action / Remarks for Future Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
                 </label>
                 <span className="text-[10px] font-bold text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full">
                   Dedicated Action on {quickNextDate || 'Scheduled Date'}

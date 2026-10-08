@@ -575,14 +575,18 @@ export default function Outreach() {
                 {(() => {
                   const dealVal = Number(activePreviewLead.price) || Number(activePreviewLead.value) || 0;
                   const dealQty = Number(activePreviewLead.quantity) || 0;
+                  const unit = activePreviewLead.quantity_unit || (dealQty >= 1000 ? 'kg' : 'MT');
                   const lakhs = (dealVal / 100000).toFixed(2);
+                  const isMT = unit.toLowerCase() === 'mt' || unit.toLowerCase().includes('tonne');
+                  const mt = isMT ? dealQty : (dealQty / 1000);
                   return (
                     <div className="mt-1">
                       <div className="text-base font-black text-rose-950 dark:text-rose-200">
                         {dealVal > 0 ? `₹${dealVal.toLocaleString('en-IN')}` : '₹0 (Unpriced inquiry)'}
                       </div>
                       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        {dealVal >= 100000 ? `₹${lakhs} Lakhs INR • ` : ''}{dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                        {dealVal >= 100000 ? `₹${lakhs} Lakhs INR • ` : ''}
+                        {dealQty.toLocaleString()} {unit} {mt > 0 && !isMT ? `(≈ ${mt.toFixed(1)} MT)` : ''}
                       </div>
                     </div>
                   );

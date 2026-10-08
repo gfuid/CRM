@@ -674,7 +674,7 @@ export default function MyDays() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">
-                  Team Member
+                  Team Member <span className="text-rose-500 font-extrabold">*</span>
                 </label>
                 <select
                   value={newReport.user}
@@ -691,7 +691,7 @@ export default function MyDays() {
 
               <div>
                 <label className="text-[10px] font-black uppercase text-slate-500 block mb-1">
-                  Report Date
+                  Report Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                 </label>
                 <input
                   type="date"

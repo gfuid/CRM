@@ -11,6 +11,7 @@ const leadSchema = new mongoose.Schema(
     value: { type: Number, default: 0 },
     price: { type: Number, default: 0 },
     quantity: { type: Number, default: 0 },
+    quantity_unit: { type: String, default: 'MT' },
     stage: {
       type: String,
       default: 'Requirement Understood',
@@ -23,6 +24,7 @@ const leadSchema = new mongoose.Schema(
     today_remarks: { type: String, default: '' },
     next_follow_up_action: { type: String, default: '' },
     follow_up_date: { type: String, default: '' },
+    follow_up_time: { type: String, default: '10:00 AM' },
     previous_remarks: [{ type: mongoose.Schema.Types.Mixed }],
     tags: [{ type: String }],
   },

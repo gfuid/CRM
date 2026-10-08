@@ -190,7 +190,7 @@ export default function Analytics() {
     return rawLeads.map((l, index) => {
       const date = l.created_at ? l.created_at.split('T')[0] : (l.date || todayStr);
       const priceNum = Number(l.price) || Number(l.value) || 0;
-      const qtyKg = Number(l.quantity) || 0;
+      const rawQty = Number(l.quantity) || 0;
       
       // Calculate INR value in Lakhs directly from INR deal value
       const orderValueLakhs = l.orderValueLakhs !== undefined
@@ -198,7 +198,19 @@ export default function Analytics() {
         : parseFloat((priceNum / 100000).toFixed(2));
       
       const orderValueInr = Math.round(priceNum);
-      const quantityMT = qtyKg > 0 ? (qtyKg / 1000) : (orderValueLakhs * 1.15);
+      const unit = (l.quantity_unit || (rawQty >= 1000 ? 'kg' : 'MT')).toLowerCase();
+      let quantityMT = 0;
+      if (unit === 'mt' || unit === 'tonnes' || unit === 'tones' || unit === 'tonne') {
+        quantityMT = rawQty;
+      } else if (unit === 'quintal' || unit === 'qtl') {
+        quantityMT = rawQty * 0.1;
+      } else if (unit === 'lbs') {
+        quantityMT = rawQty * 0.00045359237;
+      } else if (unit === 'containers' || unit === 'fcl') {
+        quantityMT = rawQty * 25;
+      } else {
+        quantityMT = rawQty > 0 ? (rawQty / 1000) : (orderValueLakhs * 1.15);
+      }
 
       // Extract Clean Country Name
       const cleanCountry = (l.country || 'Global')

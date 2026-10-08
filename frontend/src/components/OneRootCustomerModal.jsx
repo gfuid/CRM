@@ -127,6 +127,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
       : [lead.product || 'Maize']
   );
   const [quantity, setQuantity] = useState(lead.quantity || 0);
+  const [quantityUnit, setQuantityUnit] = useState(lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'));
   const [price, setPrice] = useState(lead.price || 0);
 
   // Export Requirements
@@ -159,6 +160,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
   // Follow-up & Dual Remarks (Current vs. Future)
   const [followUpDate, setFollowUpDate] = useState(lead.follow_up_date || '2026-05-27');
+  const [followUpTime, setFollowUpTime] = useState(lead.follow_up_time || lead.time || '10:00');
   const [todayRemarks, setTodayRemarks] = useState(lead.today_remarks || '');
   const [nextFollowUpAction, setNextFollowUpAction] = useState(lead.next_follow_up_action || '');
   const [previousRemarks, setPreviousRemarks] = useState(
@@ -223,7 +225,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
       const entryText = [
         hasToday ? `[Today's Interaction]: ${todayRemarks.trim()}` : null,
-        hasFuture ? `[Planned Action on ${followUpDate}]: ${nextFollowUpAction.trim()}` : null,
+        hasFuture ? `[Planned Action on ${followUpDate} at ${followUpTime || '10:00'}]: ${nextFollowUpAction.trim()}` : null,
       ].filter(Boolean).join(' | ');
 
       updatedRemarks.unshift({
@@ -232,6 +234,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
         text: entryText,
         remark: entryText,
         follow_up_date: followUpDate,
+        follow_up_time: followUpTime || '10:00',
         timestamp: formattedTimestamp,
         date: formattedDate,
         author: assignedTo || 'User',
@@ -240,7 +243,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
     const compositeNotes = [
       hasToday ? `[Today's Interaction]: ${todayRemarks.trim()}` : null,
-      hasFuture ? `[Planned Action on ${followUpDate}]: ${nextFollowUpAction.trim()}` : null,
+      hasFuture ? `[Planned Action on ${followUpDate} at ${followUpTime || '10:00'}]: ${nextFollowUpAction.trim()}` : null,
       lead.notes || null,
     ].filter(Boolean).join('\n\n') || lead.notes || '';
 
@@ -266,6 +269,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
       products: selectedProducts,
       product: selectedProducts[0] || '',
       quantity: Number(quantity) || 0,
+      quantity_unit: quantityUnit || 'MT',
       price: Number(price) || 0,
       export_requirements: {
         industry_type: reqIndustry,
@@ -275,6 +279,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
         cultivation_method: cultivation,
         preferred_origin: preferredOrigin,
         quantity_needed_kg: quantityNeeded,
+        quantity_unit: quantityUnit || 'MT',
         max_price_inr: maxPrice,
         incoterm,
         port_delivery: portDelivery,
@@ -286,6 +291,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
       status: status,
       lead_stage: status,
       follow_up_date: followUpDate,
+      follow_up_time: followUpTime || '10:00',
       today_remarks: todayRemarks.trim() || lead.today_remarks || '',
       next_follow_up_action: nextFollowUpAction.trim() || lead.next_follow_up_action || '',
       previous_remarks: updatedRemarks,
@@ -560,7 +566,9 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
             {/* Country & Lead source */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Country</label>
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">
+                  Country <span className="text-rose-500 font-bold">*</span>
+                </label>
                 <input
                   type="text"
                   value={country}
@@ -730,14 +738,29 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">Quantity</label>
-                <input
-                  type="number"
-                  min="0"
-                  value={quantity}
-                  onChange={(e) => setQuantity(e.target.value)}
-                  className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
-                />
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Volume Quantity & Unit</label>
+                <div className="flex gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    step="any"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="flex-1 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-semibold"
+                  />
+                  <select
+                    value={quantityUnit}
+                    onChange={(e) => setQuantityUnit(e.target.value)}
+                    className="w-32 px-2.5 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold text-slate-700 cursor-pointer"
+                  >
+                    <option value="MT">Tonnes (MT)</option>
+                    <option value="kg">Kilograms (kg)</option>
+                    <option value="Quintal">Quintals (Qtl)</option>
+                    <option value="lbs">Pounds (lbs)</option>
+                    <option value="Containers">Containers (FCL)</option>
+                    <option value="Bags">Bags (50kg)</option>
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1086,20 +1109,37 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
               </div>
             </div>
 
-            {/* Follow-up Date Input */}
+            {/* Follow-up Date & Call Timing Inputs */}
             <div className="bg-slate-50/70 p-3.5 rounded-xl border border-slate-200/80">
-              <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
-                <Calendar size={13} className="text-purple-600" />
-                <span>Next Follow-up Date</span>
-                <span className="text-rose-500 font-bold">*</span>
-              </label>
-              <input
-                type="date"
-                required
-                value={followUpDate}
-                onChange={(e) => setFollowUpDate(e.target.value)}
-                className="w-full sm:w-64 px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
-              />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
+                    <Calendar size={13} className="text-purple-600" />
+                    <span>Next Follow-up Date <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    value={followUpDate}
+                    onChange={(e) => setFollowUpDate(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-xs font-bold text-slate-700 block mb-1.5 flex items-center gap-1.5">
+                    <Clock size={13} className="text-purple-600" />
+                    <span>Call Timing / Scheduled Time <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    value={followUpTime || '10:00'}
+                    onChange={(e) => setFollowUpTime(e.target.value)}
+                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                  />
+                </div>
+              </div>
               <p className="text-[10px] text-slate-400 font-medium mt-1.5">
                 Changing the follow-up date counts once per lead per day in Outreach.
               </p>
@@ -1112,7 +1152,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
                     <MessageCircle size={13} className="text-blue-600" />
-                    <span>Remarks / Notes for Today's Interaction</span>
+                    <span>Remarks / Notes for Today's Interaction <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
                   </label>
                   <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
                     Today's Log
@@ -1135,7 +1175,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
                     <Target size={13} className="text-purple-600" />
-                    <span>Planned Action / Remarks for Future Date</span>
+                    <span>Planned Action / Remarks for Future Date <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
                   </label>
                   <span className="text-[10px] font-bold text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full">
                     {followUpDate ? `For ${followUpDate}` : 'Future Task'}

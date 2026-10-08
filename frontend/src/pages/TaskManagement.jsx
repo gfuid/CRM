@@ -985,7 +985,7 @@ export default function TaskManagement() {
 
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1">
-              Task Title *
+              Task Title <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
             </label>
             <input
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500"
@@ -1028,7 +1028,7 @@ export default function TaskManagement() {
 
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Assign To Staff *
+                Assign To Staff <span className="text-rose-500 font-extrabold">*</span>
               </label>
               {isOwner ? (
                 <select
@@ -1070,7 +1070,7 @@ export default function TaskManagement() {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1">
-                  Deadline Date *
+                  Deadline Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                 </label>
                 <input
                   type="date"
@@ -1084,7 +1084,7 @@ export default function TaskManagement() {
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1 flex items-center gap-1">
                   <Clock size={12} className="text-emerald-600 dark:text-emerald-400" />
-                  <span>Deadline Time *</span>
+                  <span>Deadline Time <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
                 </label>
                 <input
                   type="time"
@@ -1101,7 +1101,7 @@ export default function TaskManagement() {
           {editingTask && (
             <div>
               <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                Task Status *
+                Task Status <span className="text-rose-500 font-extrabold">*</span>
               </label>
               <select
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 text-xs sm:text-sm bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-emerald-500/20 cursor-pointer font-bold"

@@ -203,6 +203,66 @@ export const CULTIVATION_METHODS = [
   'Natural Sun-Dried Plantation',
 ];
 
+export const QUANTITY_UNITS = [
+  { value: 'MT', label: 'Tonnes (MT)', short: 'MT' },
+  { value: 'kg', label: 'Kilograms (kg)', short: 'kg' },
+  { value: 'Quintal', label: 'Quintals (Qtl)', short: 'Qtl' },
+  { value: 'lbs', label: 'Pounds (lbs)', short: 'lbs' },
+  { value: 'Containers', label: 'Containers (FCL / 20ft)', short: 'FCL' },
+  { value: 'Bags', label: 'Bags (50kg)', short: 'Bags' },
+];
+
+export const getQuantityInMT = (qty, unit = 'MT') => {
+  const q = Number(qty) || 0;
+  if (!q) return 0;
+  const u = (unit || '').toLowerCase();
+  if (u === 'mt' || u === 'tonnes' || u === 'tonne' || u === 'tones' || u === 'tons' || u === 'ton') {
+    return q;
+  }
+  if (u === 'kg' || u === 'kilograms' || u === 'kgs') {
+    return q / 1000;
+  }
+  if (u === 'quintal' || u === 'quintals' || u === 'qtl') {
+    return q * 0.1;
+  }
+  if (u === 'lbs' || u === 'pounds') {
+    return q * 0.00045359237;
+  }
+  if (u === 'containers' || u === 'container' || u === 'fcl') {
+    return q * 25;
+  }
+  if (u === 'bags') {
+    return (q * 50) / 1000;
+  }
+  return q >= 1000 ? q / 1000 : q;
+};
+
+export const formatQuantityEquivalent = (qty, unit = 'MT') => {
+  const q = Number(qty) || 0;
+  if (!q) return 'Enter quantity to preview unit conversions';
+  const mt = getQuantityInMT(q, unit);
+  const kg = mt * 1000;
+  const fcl = (mt / 25).toFixed(1);
+
+  const u = (unit || '').toLowerCase();
+  if (u === 'mt' || u === 'tonnes' || u === 'tones') {
+    return `≈ ${kg.toLocaleString()} kg • ${mt.toLocaleString()} Metric Tonnes (~${fcl} FCL Containers)`;
+  }
+  if (u === 'kg') {
+    return `≈ ${mt.toFixed(2)} Metric Tonnes (MT) • ${kg.toLocaleString()} kg (~${fcl} FCL Containers)`;
+  }
+  if (u === 'quintal' || u === 'qtl') {
+    return `≈ ${kg.toLocaleString()} kg • ${mt.toFixed(2)} MT (~${fcl} FCL Containers)`;
+  }
+  if (u === 'containers' || u === 'fcl') {
+    return `≈ ${mt.toFixed(1)} MT • ${kg.toLocaleString()} kg (~${q} Full Containers)`;
+  }
+  if (u === 'bags') {
+    return `≈ ${kg.toLocaleString()} kg • ${mt.toFixed(2)} MT`;
+  }
+  return `≈ ${kg.toLocaleString()} kg • ${mt.toFixed(2)} MT`;
+};
+
 export const INITIAL_LEADS = SEED_LEADS;
 const _OLD_LEADS_UNUSED = [
   {
@@ -725,6 +785,7 @@ export default function Leads() {
     // Product
     products: [], // Empty array by default
     quantity: 0,
+    quantity_unit: 'MT',
     price: 0, // Price ($)
     product_notes: '',
     // Trade & Shipping terms
@@ -738,6 +799,7 @@ export default function Leads() {
     created_by_name: profile?.name || profile?.full_name || 'Deepak',
     created_at: new Date().toISOString(),
     follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+    follow_up_time: '10:00',
     today_remarks: '',
     next_follow_up_action: '',
     notes: '',
@@ -749,6 +811,7 @@ export default function Leads() {
   const [dossierActivityType, setDossierActivityType] = useState('Call initiated');
   const [dossierActivityNote, setDossierActivityNote] = useState('');
   const [dossierFollowUpDate, setDossierFollowUpDate] = useState('');
+  const [dossierFollowUpTime, setDossierFollowUpTime] = useState('10:00');
   const [dossierTodayRemark, setDossierTodayRemark] = useState('');
   const [dossierFutureAction, setDossierFutureAction] = useState('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
@@ -847,6 +910,7 @@ export default function Leads() {
   const handleSaveDossierFollowUp = async () => {
     if (!activeDetailLead) return;
     const dateToSave = dossierFollowUpDate || activeDetailLead.follow_up_date;
+    const timeToSave = dossierFollowUpTime || activeDetailLead.follow_up_time || '10:00';
     if (!dateToSave) {
       showNotification('Follow-up date is mandatory! Please select a follow-up date.', 'error');
       return;
@@ -869,9 +933,10 @@ export default function Leads() {
       planned_action: dossierFutureAction.trim(),
       remark: [
         dossierTodayRemark.trim() ? `Interaction: ${dossierTodayRemark.trim()}` : null,
-        dossierFutureAction.trim() ? `Planned for ${dateToSave}: ${dossierFutureAction.trim()}` : null,
+        dossierFutureAction.trim() ? `Planned for ${dateToSave} at ${timeToSave}: ${dossierFutureAction.trim()}` : null,
       ].filter(Boolean).join(' | '),
       follow_up_date: dateToSave,
+      follow_up_time: timeToSave,
       date: formattedNow,
       author: profile?.name || 'User',
     };
@@ -883,13 +948,14 @@ export default function Leads() {
 
     const compositeNotes = [
       dossierTodayRemark.trim() ? `[Today's Interaction - ${formattedNow}]: ${dossierTodayRemark.trim()}` : null,
-      dossierFutureAction.trim() ? `[Planned Action on ${dateToSave}]: ${dossierFutureAction.trim()}` : null,
+      dossierFutureAction.trim() ? `[Planned Action on ${dateToSave} at ${timeToSave}]: ${dossierFutureAction.trim()}` : null,
       activeDetailLead.notes || '',
     ].filter(Boolean).join('\n\n');
 
     const updatedLead = {
       ...activeDetailLead,
       follow_up_date: dateToSave,
+      follow_up_time: timeToSave,
       today_remarks: dossierTodayRemark.trim() || activeDetailLead.today_remarks || '',
       next_follow_up_action: dossierFutureAction.trim() || activeDetailLead.next_follow_up_action || '',
       notes: compositeNotes,
@@ -907,6 +973,7 @@ export default function Leads() {
     try {
       await api.updateLead(updatedLead.id, {
         follow_up_date: dateToSave,
+        follow_up_time: timeToSave,
         today_remarks: updatedLead.today_remarks,
         next_follow_up_action: updatedLead.next_follow_up_action,
         notes: compositeNotes,
@@ -1241,6 +1308,7 @@ export default function Leads() {
       stage: lead.stage || lead.status || lead.lead_stage || 'Requirement Understood',
       products: leadProducts,
       quantity: lead.quantity || 0,
+      quantity_unit: lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'),
       price: lead.price || lead.value || 0,
       product_notes: exp.product_notes || lead.product_notes || '',
       incoterm: exp.incoterm || 'CIF',
@@ -1252,6 +1320,7 @@ export default function Leads() {
       created_by_name: lead.created_by_name || lead.agent_name || 'Deepak',
       created_at: lead.created_at || new Date().toISOString(),
       follow_up_date: lead.follow_up_date || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
+      follow_up_time: lead.follow_up_time || '10:00',
       today_remarks: lead.today_remarks || lead.notes || '',
       next_follow_up_action: lead.next_follow_up_action || '',
       notes: lead.notes || '',
@@ -1263,6 +1332,7 @@ export default function Leads() {
   const openDetails = (lead) => {
     setActiveDetailLead(lead);
     setDossierFollowUpDate(lead.follow_up_date || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0]);
+    setDossierFollowUpTime(lead.follow_up_time || '10:00');
     setDossierTodayRemark(lead.today_remarks || '');
     setDossierFutureAction(lead.next_follow_up_action || '');
     setDossierActivityNote('');
@@ -1343,6 +1413,7 @@ export default function Leads() {
         products: form.products,
         product: form.products.join(', '),
         quantity: Number(form.quantity) || 0,
+        quantity_unit: form.quantity_unit || 'MT',
         price: Number(form.price) || 0,
         value: Number(form.price) || 0,
         stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
@@ -1354,6 +1425,7 @@ export default function Leads() {
           port_delivery: form.port_delivery,
           payment_days: form.payment_days,
           product_notes: form.product_notes,
+          quantity_unit: form.quantity_unit || 'MT',
         },
         assigned_to: finalAssignedTo,
         agent_name: finalAgentName,
@@ -1361,6 +1433,7 @@ export default function Leads() {
         created_by_name: originalCreatorName,
         created_at: originalCreatedAt,
         follow_up_date: form.follow_up_date,
+        follow_up_time: form.follow_up_time || '10:00',
         today_remarks: form.today_remarks || '',
         next_follow_up_action: form.next_follow_up_action || '',
         previous_remarks: (form.today_remarks || form.next_follow_up_action)
@@ -1370,9 +1443,10 @@ export default function Leads() {
                 planned_action: form.next_follow_up_action || '',
                 remark: [
                   form.today_remarks ? `Interaction: ${form.today_remarks}` : null,
-                  form.next_follow_up_action ? `Planned for ${form.follow_up_date}: ${form.next_follow_up_action}` : null,
+                  form.next_follow_up_action ? `Planned for ${form.follow_up_date} at ${form.follow_up_time || '10:00'}: ${form.next_follow_up_action}` : null,
                 ].filter(Boolean).join(' | '),
                 follow_up_date: form.follow_up_date,
+                follow_up_time: form.follow_up_time || '10:00',
                 date: new Date().toLocaleString('en-IN', {
                   day: '2-digit',
                   month: 'short',
@@ -1518,7 +1592,8 @@ export default function Leads() {
       'WhatsApp',
       'Website',
       'Products',
-      'Quantity (kg)',
+      'Quantity',
+      'Unit',
       'Deal Value (USD)',
       'Stage',
       'Priority',
@@ -1551,6 +1626,7 @@ export default function Leads() {
       escapeCSV(l.website || ''),
       escapeCSV(Array.isArray(l.products) ? l.products.join(', ') : (l.product || '')),
       escapeCSV(l.quantity || 0),
+      escapeCSV(l.quantity_unit || (Number(l.quantity) >= 1000 ? 'kg' : 'MT')),
       escapeCSV(l.price || l.value || 0),
       escapeCSV(l.stage || 'Requirement Understood'),
       escapeCSV(l.priority || 'High'),
@@ -1591,7 +1667,8 @@ export default function Leads() {
       'WhatsApp',
       'Website',
       'Products',
-      'Quantity kg',
+      'Quantity',
+      'Unit',
       'Deal Value USD',
       'Stage',
       'Incoterm',
@@ -1612,7 +1689,8 @@ export default function Leads() {
         '+971 50 111 2222',
         'https://alzahra.ae',
         'Turmeric',
-        '40000',
+        '40',
+        'MT',
         '68000',
         'Requirement Understood',
         'CIF',
@@ -1631,7 +1709,8 @@ export default function Leads() {
         '+31 20 555 4321',
         'https://globalagri.nl',
         'Rice DDGS, DORB',
-        '80000',
+        '80',
+        'MT',
         '95000',
         'Sample Sent',
         'FOB',
@@ -1718,7 +1797,8 @@ export default function Leads() {
               legacy_industry_type: '',
               products,
               product: products.join(', '),
-              quantity: Number(r.quantitykg || r.quantity) || 0,
+              quantity: Number(r.quantity || r.quantitykg) || 0,
+              quantity_unit: r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT'),
               price: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
               value: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
               stage: r.stage || 'Requirement Understood',
@@ -1730,7 +1810,8 @@ export default function Leads() {
                 min_curcumin: '3.5%',
                 cultivation_method: 'Conventional Cleaned',
                 preferred_origin: '',
-                quantity_needed_kg: Number(r.quantitykg || r.quantity) || 0,
+                quantity_needed_kg: Number(r.quantity || r.quantitykg) || 0,
+                quantity_unit: r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT'),
                 max_price_inr: 0,
                 incoterm: r.incoterm || 'CIF',
                 port_delivery: r.portdelivery || r.port || '',
@@ -1874,7 +1955,10 @@ export default function Leads() {
     });
 
   const totalValue = filteredLeads.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
-  const totalVolumeMT = filteredLeads.reduce((sum, l) => sum + (Number(l.quantity) || 0), 0) / 1000;
+  const totalVolumeMT = filteredLeads.reduce(
+    (sum, l) => sum + getQuantityInMT(l.quantity, l.quantity_unit || (Number(l.quantity) >= 1000 ? 'kg' : 'MT')),
+    0
+  );
   const totalValueLakhs = totalValue / 100000;
   const atRiskLeadsList = filteredLeads.filter((l) => {
     const isClosed = ['Closed Won', 'Closed Lost'].includes(l.stage || l.status);
@@ -2302,15 +2386,27 @@ export default function Leads() {
 
                       {/* Quantity & Deal */}
                       <td className="py-3.5 px-4">
-                        <div className="font-bold text-slate-900 dark:text-slate-100">
-                          {Number(lead.quantity).toLocaleString()} kg
+                        <div className="font-bold text-slate-900 dark:text-slate-100 flex items-center gap-1.5 flex-wrap">
+                          <span>
+                            {Number(lead.quantity).toLocaleString()}{' '}
+                            <span className="text-emerald-700 dark:text-emerald-300 font-extrabold text-[11px] bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-800">
+                              {lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT')}
+                            </span>
+                          </span>
                         </div>
                         {(() => {
                           const val = Number(lead.price) || Number(lead.value) || 0;
+                          const unit = lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT');
+                          const mt = getQuantityInMT(lead.quantity, unit);
                           return (
                             <div className="mt-0.5">
-                              <div className="text-[11px] font-black text-emerald-700 flex items-center gap-1">
+                              <div className="text-[11px] font-black text-emerald-700 dark:text-emerald-400 flex items-center gap-1">
                                 <span>${val.toLocaleString('en-US')}</span>
+                                {mt > 0 && unit.toLowerCase() !== 'mt' && (
+                                  <span className="text-[10px] text-slate-400 font-medium">
+                                    • {mt.toFixed(1)} MT
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
@@ -2346,9 +2442,15 @@ export default function Leads() {
                                   {health.label}
                                 </span>
                               )}
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5">
                                 <Calendar size={12} className="text-slate-400" />
-                                <span className="text-[11px]">{lead.follow_up_date || '—'}</span>
+                                <span className="text-[11px] font-semibold">{lead.follow_up_date || '—'}</span>
+                                {lead.follow_up_time && (
+                                  <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded font-bold border border-emerald-200/60 flex items-center gap-0.5">
+                                    <Clock size={9} />
+                                    <span>{lead.follow_up_time}</span>
+                                  </span>
+                                )}
                               </div>
                             </div>
                           );
@@ -2476,7 +2578,10 @@ export default function Leads() {
                       <div>
                         <span className="text-slate-400">Qty:</span>{' '}
                         <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {Number(lead.quantity).toLocaleString()} kg
+                          {Number(lead.quantity).toLocaleString()}{' '}
+                          <span className="text-emerald-700 dark:text-emerald-400 font-extrabold text-[10px]">
+                            {lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT')}
+                          </span>
                         </span>
                       </div>
                       <div className="text-right">
@@ -2493,9 +2598,15 @@ export default function Leads() {
                       <User size={12} className="text-slate-400" />
                       <span>{lead.contact_person || '—'}</span>
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                       <Calendar size={12} className="text-slate-400" />
                       <span>{lead.follow_up_date || 'dd-mm-yyyy'}</span>
+                      {lead.follow_up_time && (
+                        <span className="text-[10px] text-emerald-700 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.2 rounded font-bold border border-emerald-200/60 flex items-center gap-0.5">
+                          <Clock size={9} />
+                          <span>{lead.follow_up_time}</span>
+                        </span>
+                      )}
                     </div>
                   </div>
 
@@ -2607,7 +2718,7 @@ export default function Leads() {
               {/* Type Selection — International or Domestic only */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
-                  Trade Type *
+                  Trade Type <span className="text-rose-500 font-bold">*</span>
                 </label>
                 <div className="grid grid-cols-2 gap-2.5 max-w-xs">
                   {['International', 'Domestic'].map((t) => (
@@ -2846,7 +2957,9 @@ export default function Leads() {
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Full Name</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Full Name <span className="text-rose-500 font-bold">*</span>
+                        </label>
                         <input
                           type="text"
                           placeholder="e.g. Tariq Mansoor"
@@ -2857,7 +2970,9 @@ export default function Leads() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">Phone Number</label>
+                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                          Phone Number <span className="text-rose-500 font-bold">*</span>
+                        </label>
                         <input
                           type="text"
                           placeholder="+971 50 892 4110"
@@ -3137,19 +3252,41 @@ export default function Leads() {
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 mb-1">
-                    Volume Quantity (kg)
-                  </label>
-                  <input
-                    type="number"
-                    min="0"
-                    placeholder="e.g. 50000 (50 MT)"
-                    value={form.quantity}
-                    onChange={(e) => setForm({ ...form, quantity: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
-                  <span className="text-[10px] text-slate-400 mt-1 block">
-                    Volume: {((Number(form.quantity) || 0) / 1000).toFixed(1)} Metric Tonnes (MT)
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
+                      Volume Quantity & Unit
+                    </label>
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      Commodity Volume
+                    </span>
+                  </div>
+                  <div className="flex gap-2">
+                    <div className="relative flex-1">
+                      <input
+                        type="number"
+                        min="0"
+                        step="any"
+                        placeholder={form.quantity_unit === 'MT' || form.quantity_unit === 'Tonnes' ? "e.g. 50" : "e.g. 50000"}
+                        value={form.quantity}
+                        onChange={(e) => setForm({ ...form, quantity: e.target.value })}
+                        className="w-full px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-semibold text-slate-900 dark:text-white"
+                      />
+                    </div>
+                    <select
+                      value={form.quantity_unit || 'MT'}
+                      onChange={(e) => setForm({ ...form, quantity_unit: e.target.value })}
+                      className="w-36 px-2.5 py-2 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100 cursor-pointer shadow-xs shrink-0"
+                    >
+                      {QUANTITY_UNITS.map((u) => (
+                        <option key={u.value} value={u.value}>
+                          {u.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <span className="text-[10.5px] text-slate-500 dark:text-slate-400 mt-1.5 flex items-center gap-1.5 font-medium">
+                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0 inline-block"></span>
+                    <span>{formatQuantityEquivalent(form.quantity, form.quantity_unit || 'MT')}</span>
                   </span>
                 </div>
 
@@ -3341,7 +3478,7 @@ export default function Leads() {
 
               {/* Assignment & Next Follow-up Card */}
               <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
                       Assign Rep / Staff <span className="text-rose-500">*</span>
@@ -3379,14 +3516,29 @@ export default function Leads() {
                   </div>
 
                   <div>
-                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1 flex items-center gap-1">
+                      <Calendar size={12} className="text-emerald-600" />
+                      <span>Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
                     </label>
                     <input
                       type="date"
                       required
                       value={form.follow_up_date}
                       onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
+                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1 flex items-center gap-1">
+                      <Clock size={12} className="text-emerald-600" />
+                      <span>Call Timing <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={form.follow_up_time || '10:00'}
+                      onChange={(e) => setForm({ ...form, follow_up_time: e.target.value })}
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
                     />
                   </div>
@@ -3663,13 +3815,17 @@ export default function Leads() {
                 {(() => {
                   const dealVal = Number(activeDetailLead.price) || Number(activeDetailLead.value) || 0;
                   const dealQty = Number(activeDetailLead.quantity) || 0;
+                  const unit = activeDetailLead.quantity_unit || (dealQty >= 1000 ? 'kg' : 'MT');
+                  const mt = getQuantityInMT(dealQty, unit);
                   return (
                     <div className="mt-1">
                       <div className="text-base font-black text-emerald-950 dark:text-emerald-200">
                         {dealVal > 0 ? `$${dealVal.toLocaleString('en-US')}` : '$0 (Unpriced inquiry)'}
                       </div>
                       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        {dealQty.toLocaleString()} kg ({dealQty > 0 ? (dealQty / 1000).toFixed(1) + ' MT' : '0 MT'})
+                        {dealQty.toLocaleString()} {unit}{' '}
+                        {dealQty > 0 && unit.toLowerCase() !== 'mt' && `(≈ ${mt.toFixed(1)} MT)`}
+                        {dealQty > 0 && unit.toLowerCase() === 'mt' && `(≈ ${(mt * 1000).toLocaleString()} kg)`}
                       </div>
                     </div>
                   );
@@ -3980,23 +4136,40 @@ export default function Leads() {
               </div>
 
               <div className="space-y-3">
-                <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Follow-up date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={dossierFollowUpDate || activeDetailLead.follow_up_date || ''}
-                    onChange={(e) => setDossierFollowUpDate(e.target.value)}
-                    className="w-full sm:w-64 px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                      <Calendar size={12} className="text-emerald-600" />
+                      <span>Follow-up date <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={dossierFollowUpDate || activeDetailLead.follow_up_date || ''}
+                      onChange={(e) => setDossierFollowUpDate(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1 flex items-center gap-1">
+                      <Clock size={12} className="text-emerald-600" />
+                      <span>Call Timing <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
+                    </label>
+                    <input
+                      type="time"
+                      required
+                      value={dossierFollowUpTime || activeDetailLead.follow_up_time || '10:00'}
+                      onChange={(e) => setDossierFollowUpTime(e.target.value)}
+                      className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
+                    />
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Today's Interaction / Discussion Remarks <span className="text-rose-500">*</span>
+                      Today's Interaction / Discussion Remarks <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       rows={2}
@@ -4009,7 +4182,7 @@ export default function Leads() {
 
                   <div>
                     <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Planned Action for Next Follow-up Date
+                      Planned Action for Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       rows={2}

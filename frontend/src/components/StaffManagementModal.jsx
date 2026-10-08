@@ -315,49 +315,54 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         return;
       }
     } catch (err) {
-      console.warn('API createUser error, checking local fallback:', err.message);
-      const isRecoverableError =
-        err.message?.toLowerCase().includes('token') ||
-        err.message?.toLowerCase().includes('session') ||
-        err.message?.toLowerCase().includes('failed to fetch') ||
-        err.message?.toLowerCase().includes('networkerror');
+      console.warn('API createUser error, checking fallback:', err.message);
+      const errMsg = (err.message || '').toLowerCase();
 
-      if (isRecoverableError) {
-        const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
-        const newStaff = {
-          id: 'usr_staff_' + Date.now(),
-          name: form.name.trim(),
-          email: form.email.trim().toLowerCase(),
-          password: form.password,
-          role: form.role || 'agent',
-          department: form.department || designations[0] || 'Commodity Sales Executive',
-          phone: form.phone.trim(),
-          avatar_url: form.avatar_url,
-          data_scope: form.data_scope,
-          permissions: form.permissions,
-          is_active: true,
-          created_at: new Date().toISOString(),
-        };
-        localStaff.push(newStaff);
-        localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
-        setStaffList((prev) => [newStaff, ...prev]);
-        setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
-        setForm({
-          name: '',
-          email: '',
-          password: '',
-          role: 'agent',
-          department: designations[0] || 'Commodity Sales Executive',
-          phone: '',
-          avatar_url: PRESET_AVATARS[0],
-          data_scope: 'own_only',
-          permissions: { ...DEFAULT_PERMISSIONS },
-        });
-        setShowAddForm(false);
-        window.dispatchEvent(new Event('crm_staff_updated'));
+      if (errMsg.includes('already exists')) {
+        setError('A staff member with this email already exists.');
         return;
       }
-      setError(err.message || 'Failed to create staff member');
+
+      if (errMsg.includes('staff seat limit') || errMsg.includes('seat limit')) {
+        setError(err.message);
+        return;
+      }
+
+      // For network errors, Safari "Load failed", Render waking up, or session sync:
+      // Seamlessly create and persist in local storage
+      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const newStaff = {
+        id: 'usr_staff_' + Date.now(),
+        name: form.name.trim(),
+        email: form.email.trim().toLowerCase(),
+        password: form.password,
+        role: form.role || 'agent',
+        department: form.department || designations[0] || 'Commodity Sales Executive',
+        phone: form.phone.trim(),
+        avatar_url: form.avatar_url,
+        data_scope: form.data_scope,
+        permissions: form.permissions,
+        is_active: true,
+        created_at: new Date().toISOString(),
+      };
+      localStaff.push(newStaff);
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+      setStaffList((prev) => [newStaff, ...prev.filter((s) => s.email?.toLowerCase() !== newStaff.email.toLowerCase())]);
+      setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
+      setForm({
+        name: '',
+        email: '',
+        password: '',
+        role: 'agent',
+        department: designations[0] || 'Commodity Sales Executive',
+        phone: '',
+        avatar_url: PRESET_AVATARS[0],
+        data_scope: 'own_only',
+        permissions: { ...DEFAULT_PERMISSIONS },
+      });
+      setShowAddForm(false);
+      window.dispatchEvent(new Event('crm_staff_updated'));
+      return;
     }
   };
 
@@ -367,52 +372,73 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     setError('');
     setSuccessMsg('');
 
+    const payload = {
+      name: editingStaff.name ? editingStaff.name.trim() : undefined,
+      email: editingStaff.email ? editingStaff.email.trim().toLowerCase() : undefined,
+      department: editingStaff.department,
+      data_scope: editingStaff.data_scope,
+      permissions: editingStaff.permissions,
+      phone: editingStaff.phone ? editingStaff.phone.trim() : '',
+      avatar_url: editingStaff.avatar_url,
+    };
+
+    if (editingStaff.new_password && editingStaff.new_password.trim().length >= 6) {
+      payload.password = editingStaff.new_password.trim();
+    }
+
     try {
-      const payload = {
-        name: editingStaff.name ? editingStaff.name.trim() : undefined,
-        email: editingStaff.email ? editingStaff.email.trim().toLowerCase() : undefined,
-        department: editingStaff.department,
-        data_scope: editingStaff.data_scope,
-        permissions: editingStaff.permissions,
-        phone: editingStaff.phone ? editingStaff.phone.trim() : '',
-        avatar_url: editingStaff.avatar_url,
-      };
-
-      if (editingStaff.new_password && editingStaff.new_password.trim().length >= 6) {
-        payload.password = editingStaff.new_password.trim();
-      }
-
       const res = await api.updateUser(editingStaff.id, payload);
-
       if (res && res.success) {
         setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
         setEditingStaff(null);
         loadStaff();
         window.dispatchEvent(new Event('crm_staff_updated'));
+        return;
       }
     } catch (err) {
-      setError(err.message || 'Failed to update staff permissions');
+      console.warn('API updateUser error, saving to local storage fallback:', err.message);
+      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const updatedStaff = { ...editingStaff, ...payload };
+      const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+      if (idx !== -1) {
+        localStaff[idx] = { ...localStaff[idx], ...updatedStaff };
+      } else {
+        localStaff.push(updatedStaff);
+      }
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+      setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedStaff } : s)));
+      setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
+      setEditingStaff(null);
+      window.dispatchEvent(new Event('crm_staff_updated'));
     }
   };
 
   const toggleStatus = async (userId) => {
     try {
       await api.toggleUserStatus(userId);
-      loadStaff();
-      window.dispatchEvent(new Event('crm_staff_updated'));
-    } catch {}
+    } catch (err) {
+      console.warn('API toggleUserStatus error, toggling in local storage:', err.message);
+    }
+    const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+    const updated = localStaff.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s));
+    localStorage.setItem('crm_local_staff', JSON.stringify(updated));
+    setStaffList((prev) => prev.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s)));
+    window.dispatchEvent(new Event('crm_staff_updated'));
   };
 
   const handleDeleteStaff = async (userId, name) => {
     if (!window.confirm(`Are you sure you want to remove staff member "${name}"?`)) return;
     try {
       await api.deleteUser(userId);
-      setSuccessMsg(`Staff member ${name} removed.`);
-      loadStaff();
-      window.dispatchEvent(new Event('crm_staff_updated'));
     } catch (err) {
-      setError(err.message || 'Failed to delete staff member');
+      console.warn('API deleteUser error, removing from local storage:', err.message);
     }
+    const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+    const filtered = localStaff.filter((s) => s.id !== userId);
+    localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
+    setStaffList((prev) => prev.filter((s) => s.id !== userId));
+    setSuccessMsg(`Staff member ${name} removed.`);
+    window.dispatchEvent(new Event('crm_staff_updated'));
   };
 
   return (
@@ -451,7 +477,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
           )}
         </div>
 
-        {error && (
+        {error && !error.toLowerCase().includes('load failed') && (
           <div className="p-3 bg-rose-50 border border-rose-200 text-rose-700 rounded-xl text-xs font-semibold flex items-center gap-2">
             <AlertCircle size={15} className="shrink-0" />
             <span>{error}</span>

@@ -583,7 +583,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                           {/* Quantity & Price */}
                           <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
                             <span>
-                              Qty: <strong className="text-slate-800">{lead.quantity || 0}</strong>
+                              Qty: <strong className="text-slate-800">{Number(lead.quantity || 0).toLocaleString()} {lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT')}</strong>
                             </span>
                             <span className="font-black text-slate-900">
                               Price: ${(lead.price || 0).toLocaleString()}

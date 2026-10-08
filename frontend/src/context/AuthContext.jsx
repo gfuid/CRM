@@ -203,7 +203,13 @@ export function AuthProvider({ children }) {
         throw new Error('Invalid email or password. No account found with this email.');
       }
 
-      if (rawMsg && !rawMsg.includes('Failed to fetch') && !rawMsg.includes('NetworkError')) {
+      if (
+        rawMsg &&
+        !rawMsg.includes('Failed to fetch') &&
+        !rawMsg.includes('NetworkError') &&
+        !rawMsg.toLowerCase().includes('load failed') &&
+        !rawMsg.toLowerCase().includes('network')
+      ) {
         throw new Error(rawMsg);
       }
 

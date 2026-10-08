@@ -23,7 +23,6 @@ class ApiClient {
       if (sessionStr) {
         const session = JSON.parse(sessionStr);
         if (session?.user?.id) headers['x-user-id'] = session.user.id;
-        if (session?.user?.email) headers['x-user-email'] = session.user.email;
       }
     } catch (e) {}
     return headers;
@@ -60,6 +59,19 @@ class ApiClient {
       return data;
     } catch (error) {
       console.warn(`[API Warning] ${endpoint}:`, error.message);
+      const msg = error.message || '';
+      if (
+        msg === 'Load failed' ||
+        msg === 'Failed to fetch' ||
+        msg.toLowerCase().includes('load failed') ||
+        msg.toLowerCase().includes('failed to fetch') ||
+        msg.toLowerCase().includes('networkerror')
+      ) {
+        const netErr = new Error('Network connection issue or backend server is spinning up. Local offline mode enabled.');
+        netErr.isNetworkError = true;
+        netErr.originalMessage = msg;
+        throw netErr;
+      }
       throw error;
     }
   }
