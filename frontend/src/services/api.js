@@ -40,7 +40,18 @@ class ApiClient {
 
     try {
       const response = await fetch(url, config);
-      const data = await response.json();
+      let data = null;
+      const contentType = response.headers.get('content-type') || '';
+      if (contentType.includes('application/json')) {
+        data = await response.json();
+      } else {
+        const text = await response.text();
+        try {
+          data = JSON.parse(text);
+        } catch {
+          data = { message: `Server temporarily unavailable (${response.status})` };
+        }
+      }
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -53,23 +64,25 @@ class ApiClient {
             window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: errMsg } }));
           }
         }
-        throw new Error(data.message || `HTTP error! status: ${response.status}`);
+        throw new Error(data?.message || `HTTP error! status: ${response.status}`);
       }
 
       return data;
     } catch (error) {
       console.warn(`[API Warning] ${endpoint}:`, error.message);
-      const msg = error.message || '';
+      const msg = (error.message || '').toLowerCase();
       if (
-        msg === 'Load failed' ||
-        msg === 'Failed to fetch' ||
-        msg.toLowerCase().includes('load failed') ||
-        msg.toLowerCase().includes('failed to fetch') ||
-        msg.toLowerCase().includes('networkerror')
+        msg.includes('load failed') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror') ||
+        msg.includes('unexpected token') ||
+        msg.includes('not valid json') ||
+        msg.includes('network request failed') ||
+        msg.includes('network')
       ) {
         const netErr = new Error('Network connection issue or backend server is spinning up. Local offline mode enabled.');
         netErr.isNetworkError = true;
-        netErr.originalMessage = msg;
+        netErr.originalMessage = error.message;
         throw netErr;
       }
       throw error;

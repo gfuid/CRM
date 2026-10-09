@@ -1095,8 +1095,12 @@ export default function Leads() {
     showNotification(`Commodity "${trimmed}" added and selected!`, 'success');
   };
 
-  // Remove commodity category handler
+  // Remove commodity category handler (Owner only)
   const handleRemoveCommodity = (prodToRemove) => {
+    if (!isOwner) {
+      showNotification('Permission Denied: Only Company Owners/Admins can delete commodity categories.', 'error');
+      return;
+    }
     if (allCommodityOptions.length <= 1) {
       showNotification('At least one commodity must remain in list', 'error');
       return;
@@ -2958,7 +2962,7 @@ export default function Leads() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          Full Name <span className="text-rose-500 font-bold">*</span>
+                          Full Name
                         </label>
                         <input
                           type="text"
@@ -2971,7 +2975,7 @@ export default function Leads() {
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">
-                          Phone Number <span className="text-rose-500 font-bold">*</span>
+                          Phone Number
                         </label>
                         <input
                           type="text"
@@ -3152,7 +3156,7 @@ export default function Leads() {
               <div>
                 <div className="flex items-center justify-between mb-2">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200">
-                    Target Commodities <span className="text-rose-500">*</span> (Select all that apply)
+                    Target Commodities (Select all that apply)
                   </label>
                   {isOwner ? (
                     <button
@@ -3229,21 +3233,23 @@ export default function Leads() {
                             custom
                           </span>
                         )}
-                        <button
-                          type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleRemoveCommodity(prod);
-                          }}
-                          className={`ml-1 p-0.5 rounded-full transition-colors cursor-pointer ${
-                            isSelected
-                              ? 'text-amber-100 hover:bg-amber-600 hover:text-white'
-                              : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
-                          }`}
-                          title={`Delete / Remove "${prod}" category`}
-                        >
-                          <X size={12} />
-                        </button>
+                        {isOwner && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleRemoveCommodity(prod);
+                            }}
+                            className={`ml-1 p-0.5 rounded-full transition-colors cursor-pointer ${
+                              isSelected
+                                ? 'text-amber-100 hover:bg-amber-600 hover:text-white'
+                                : 'text-slate-400 hover:bg-rose-50 hover:text-rose-600'
+                            }`}
+                            title={`Delete / Remove "${prod}" category (Owner only)`}
+                          >
+                            <X size={12} />
+                          </button>
+                        )}
                       </div>
                     );
                   })}
