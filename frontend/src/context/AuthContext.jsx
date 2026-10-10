@@ -397,7 +397,11 @@ export function AuthProvider({ children }) {
     return [];
   };
 
-  const isOwner = Boolean(profile && (profile.role === 'admin' || profile.persona === 'owner' || profile.role !== 'agent'));
+  const isOwner = Boolean(
+    profile &&
+    (profile.persona === 'owner' || profile.role === 'admin') &&
+    profile.persona !== 'staff'
+  );
   const isStaff = !isOwner;
 
   const value = {

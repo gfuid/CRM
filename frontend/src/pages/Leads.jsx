@@ -1097,7 +1097,7 @@ export default function Leads() {
 
   // Remove commodity category handler (Owner only)
   const handleRemoveCommodity = (prodToRemove) => {
-    if (!isOwner) {
+    if (!isOwner || isStaff) {
       showNotification('Permission Denied: Only Company Owners/Admins can delete commodity categories.', 'error');
       return;
     }
@@ -3233,7 +3233,7 @@ export default function Leads() {
                             custom
                           </span>
                         )}
-                        {isOwner && (
+                        {!isStaff && isOwner && (
                           <button
                             type="button"
                             onClick={(e) => {

@@ -139,18 +139,28 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
             </div>
 
             {error.toLowerCase().includes('already exists') && onSwitchToLogin && (
-              <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between gap-2">
+              <div className="pt-2 border-t border-rose-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-[11px] text-rose-600 font-medium">
                   Direct Sign In:
                 </span>
-                <button
-                  type="button"
-                  onClick={() => onSwitchToLogin('owner')}
-                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-                >
-                  <span>Sign In as Owner</span>
-                  <ArrowRight size={13} />
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => onSwitchToLogin('owner', form.email)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                  >
+                    <span>Sign In as Owner</span>
+                    <ArrowRight size={13} />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onSwitchToLogin('staff', form.email)}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                  >
+                    <span>Sign In as Staff</span>
+                    <ArrowRight size={13} />
+                  </button>
+                </div>
               </div>
             )}
           </div>

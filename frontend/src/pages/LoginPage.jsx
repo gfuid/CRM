@@ -3,15 +3,23 @@ import { useAuth } from '../context/AuthContext';
 import { ArrowLeft, Sparkles, Lock, Mail, Eye, EyeOff, Building2, UserCheck, Users, ShieldCheck } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
-export default function LoginPage({ onSwitchToRegister, onBackToLanding, initialPersona = 'owner' }) {
+export default function LoginPage({ onSwitchToRegister, onBackToLanding, initialPersona = 'owner', initialEmail = '' }) {
   const { signIn } = useAuth();
   const [loginPersona, setLoginPersona] = useState(initialPersona); // 'owner' | 'staff'
-  const [email, setEmail] = useState(() => localStorage.getItem('crm_remembered_email') || '');
+  const [email, setEmail] = useState(() => initialEmail || localStorage.getItem('crm_remembered_email') || '');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('crm_remembered_email')));
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  React.useEffect(() => {
+    if (initialPersona) setLoginPersona(initialPersona);
+  }, [initialPersona]);
+
+  React.useEffect(() => {
+    if (initialEmail) setEmail(initialEmail);
+  }, [initialEmail]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();

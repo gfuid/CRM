@@ -18,9 +18,15 @@ const lazyWithRetry = (importFn) =>
       return await importFn();
     } catch (error) {
       console.warn('Lazy chunk load failed, retrying once:', error);
-      const reloaded = sessionStorage.getItem('chunk_reload_' + window.location.pathname);
-      if (!reloaded) {
-        sessionStorage.setItem('chunk_reload_' + window.location.pathname, 'true');
+      try {
+        const key = 'chunk_reload_' + window.location.pathname;
+        const reloaded = sessionStorage.getItem(key);
+        if (!reloaded) {
+          sessionStorage.setItem(key, 'true');
+          window.location.reload();
+          return new Promise(() => {});
+        }
+      } catch {
         window.location.reload();
         return new Promise(() => {});
       }
@@ -72,6 +78,7 @@ function AppContent() {
   const [staffModalOpen, setStaffModalOpen] = useState(false);
   const [staffToEdit, setStaffToEdit] = useState(null);
   const [loginInitialPersona, setLoginInitialPersona] = useState('owner');
+  const [loginPrefillEmail, setLoginPrefillEmail] = useState('');
 
   const handleOpenStaffModal = (staff = null) => {
     setStaffToEdit(staff);
@@ -244,8 +251,9 @@ function AppContent() {
           />
         ) : authMode === 'register' ? (
           <RegisterPage
-            onSwitchToLogin={(persona) => {
+            onSwitchToLogin={(persona, email) => {
               if (persona) setLoginInitialPersona(persona);
+              if (email) setLoginPrefillEmail(email);
               navigateAuth('login');
             }}
             onBackToLanding={() => navigateAuth('landing')}
@@ -253,6 +261,7 @@ function AppContent() {
         ) : (
           <LoginPage
             initialPersona={loginInitialPersona}
+            initialEmail={loginPrefillEmail}
             onSwitchToRegister={() => navigateAuth('register')}
             onBackToLanding={() => navigateAuth('landing')}
           />

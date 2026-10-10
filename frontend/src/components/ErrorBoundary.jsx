@@ -23,16 +23,22 @@ export class ErrorBoundary extends React.Component {
       errorStr.includes('chunkloaderror')
     ) {
       console.warn('Detected stale chunk load error. Triggering automatic reload...');
-      const hasReloaded = sessionStorage.getItem('crm_chunk_reload');
-      if (!hasReloaded) {
-        sessionStorage.setItem('crm_chunk_reload', 'true');
+      try {
+        const hasReloaded = sessionStorage.getItem('crm_chunk_reload');
+        if (!hasReloaded) {
+          sessionStorage.setItem('crm_chunk_reload', 'true');
+          window.location.reload();
+        }
+      } catch {
         window.location.reload();
       }
     }
   }
 
   handleReload = () => {
-    sessionStorage.removeItem('crm_chunk_reload');
+    try {
+      sessionStorage.removeItem('crm_chunk_reload');
+    } catch {}
     window.location.reload();
   };
 

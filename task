@@ -5,3 +5,7 @@
 - [x] automated database backup & restore drill (npm run backup, npm run restore)
 - [x] interactive API documentation (/api/v1/docs & /api/v1/docs/json)
 - [x] current vs future remarks verification & database persistence
+- [x] iPad / Vercel blank screen crash fix (ErrorBoundary, lazy chunk auto-recovery, and SPA rewrites)
+- [x] registration duplicate email banner UX polish (clean English + dual Owner & Staff direct sign-in with email forward)
+- [x] target commodities permission guard (staff strictly prevented from seeing delete buttons or removing categories)
+- [x] buyer contact personnel optionality (Full Name & Phone Number non-mandatory without blocking validation)
