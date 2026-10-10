@@ -8,19 +8,36 @@ import MobileTopHeader from './components/MobileTopHeader';
 import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
+import ErrorBoundary from './components/ErrorBoundary';
 import './index.css';
 
-// Performance Optimization: React Lazy Loading & Code Splitting
-const LandingPage = lazy(() => import('./pages/LandingPage'));
-const Analytics = lazy(() => import('./pages/Analytics'));
-const Leads = lazy(() => import('./pages/Leads'));
-const TaskManagement = lazy(() => import('./pages/TaskManagement'));
-const Activity = lazy(() => import('./pages/Activity'));
-const Outreach = lazy(() => import('./pages/Outreach'));
-const MyDays = lazy(() => import('./pages/MyDays'));
-const FollowUp = lazy(() => import('./pages/FollowUp'));
-const LoginPage = lazy(() => import('./pages/LoginPage'));
-const RegisterPage = lazy(() => import('./pages/RegisterPage'));
+// Performance Optimization: React Lazy Loading with Automatic Chunk-Retry
+const lazyWithRetry = (importFn) =>
+  lazy(async () => {
+    try {
+      return await importFn();
+    } catch (error) {
+      console.warn('Lazy chunk load failed, retrying once:', error);
+      const reloaded = sessionStorage.getItem('chunk_reload_' + window.location.pathname);
+      if (!reloaded) {
+        sessionStorage.setItem('chunk_reload_' + window.location.pathname, 'true');
+        window.location.reload();
+        return new Promise(() => {});
+      }
+      throw error;
+    }
+  });
+
+const LandingPage = lazyWithRetry(() => import('./pages/LandingPage'));
+const Analytics = lazyWithRetry(() => import('./pages/Analytics'));
+const Leads = lazyWithRetry(() => import('./pages/Leads'));
+const TaskManagement = lazyWithRetry(() => import('./pages/TaskManagement'));
+const Activity = lazyWithRetry(() => import('./pages/Activity'));
+const Outreach = lazyWithRetry(() => import('./pages/Outreach'));
+const MyDays = lazyWithRetry(() => import('./pages/MyDays'));
+const FollowUp = lazyWithRetry(() => import('./pages/FollowUp'));
+const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
+const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 
 const tabNames = {
   analytics: 'Analytics',
@@ -300,9 +317,11 @@ function AppContent() {
 
         {/* Main Content Area - with bottom padding on mobile so bottom bar never obscures content */}
         <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
-          <Suspense fallback={<PageSkeleton />}>
-            {renderPage()}
-          </Suspense>
+          <ErrorBoundary>
+            <Suspense fallback={<PageSkeleton />}>
+              {renderPage()}
+            </Suspense>
+          </ErrorBoundary>
         </main>
 
         {/* Mobile Bottom Tab Bar: Native App Bottom Nav */}

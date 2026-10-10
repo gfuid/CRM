@@ -127,12 +127,12 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
               <div className="flex-1">
                 <p className="font-bold text-rose-900">
                   {error.toLowerCase().includes('already exists')
-                    ? 'Yeh Email Pehle Se Registered Hai!'
+                    ? 'Email Already Registered!'
                     : 'Registration Error'}
                 </p>
                 <p className="text-rose-700 mt-0.5 leading-relaxed">
                   {error.toLowerCase().includes('already exists')
-                    ? `"${form.email}" par pehle se account bana hua hai. Naya account banane ke bajaye aap directly login kar sakte hain.`
+                    ? `An account already exists for "${form.email}". Instead of creating a new account, you can sign in directly.`
                     : error}
                 </p>
               </div>
@@ -141,7 +141,7 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
             {error.toLowerCase().includes('already exists') && onSwitchToLogin && (
               <div className="pt-2 border-t border-rose-200/80 flex items-center justify-between gap-2">
                 <span className="text-[11px] text-rose-600 font-medium">
-                  Direct Login karein:
+                  Direct Sign In:
                 </span>
                 <button
                   type="button"

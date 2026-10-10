@@ -242,7 +242,7 @@ export default function Analytics() {
         status: statusName,
         agent: agentName,
         type: l.type || 'Export',
-        value: orderValueUsd,
+        value: orderValueInr,
         orderValueLakhs,
         company: companyName,
         quantityMT,
