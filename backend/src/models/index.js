@@ -7,6 +7,7 @@ const FollowUp = require('./FollowUp');
 const MyDay = require('./MyDay');
 const Outreach = require('./Outreach');
 const AuditLog = require('./AuditLog');
+const Notification = require('./Notification');
 
 module.exports = {
   User,
@@ -18,4 +19,5 @@ module.exports = {
   MyDay,
   Outreach,
   AuditLog,
+  Notification,
 };

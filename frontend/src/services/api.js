@@ -299,6 +299,23 @@ class ApiClient {
       body: JSON.stringify(settings),
     });
   }
+
+  // Notifications API
+  getNotifications() {
+    return this.request('/notifications');
+  }
+
+  markNotificationRead(id) {
+    return this.request(`/notifications/${id}/read`, {
+      method: 'PATCH',
+    });
+  }
+
+  markAllNotificationsRead() {
+    return this.request('/notifications/read-all', {
+      method: 'PATCH',
+    });
+  }
 }
 
 export const api = new ApiClient();

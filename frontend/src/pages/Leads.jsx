@@ -87,6 +87,8 @@ export const COUNTRIES_WITH_FLAGS = [
   { code: 'DE', name: 'Germany', flag: '🇩🇪' },
   { code: 'IN', name: 'India', flag: '🇮🇳' },
   { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
+  { code: 'IR', name: 'Iran', flag: '🇮🇷' },
+  { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
   { code: 'IT', name: 'Italy', flag: '🇮🇹' },
   { code: 'JP', name: 'Japan', flag: '🇯🇵' },
   { code: 'KE', name: 'Kenya', flag: '🇰🇪' },

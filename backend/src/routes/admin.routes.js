@@ -36,5 +36,10 @@ router.get('/tenants', asyncHandler(adminController.getAllTenants));
 router.post('/tenants', asyncHandler(adminController.createTenant));
 router.patch('/tenants/:id', asyncHandler(adminController.updateTenant));
 
+// Admin Broadcast Notifications
+router.post('/notifications', asyncHandler(adminController.sendNotification));
+router.get('/notifications', asyncHandler(adminController.getAdminNotifications));
+router.delete('/notifications/:id', asyncHandler(adminController.deleteAdminNotification));
+
 module.exports = router;
 

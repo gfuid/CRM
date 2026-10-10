@@ -265,10 +265,25 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     }
   };
 
+  const currentUser = (() => {
+    try {
+      return JSON.parse(localStorage.getItem('crm_user') || '{}');
+    } catch {
+      return {};
+    }
+  })();
+  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 2;
+  const isLimitReached = staffList.length >= staffQuota;
+
   const handleCreateStaff = async (e) => {
     e.preventDefault();
     setError('');
     setSuccessMsg('');
+
+    if (staffList.length >= staffQuota) {
+      setError(`Staff limit reached (${staffList.length}/${staffQuota} seats used). Business owners are allowed a maximum of ${staffQuota} staff members by default. Please contact the administrator to increase your staff quota.`);
+      return;
+    }
 
     if (!form.name.trim()) {
       setError('Staff full name is required');
@@ -323,14 +338,17 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         return;
       }
 
-      if (errMsg.includes('staff seat limit') || errMsg.includes('seat limit')) {
+      if (errMsg.includes('staff seat limit') || errMsg.includes('seat limit') || errMsg.includes('staff limit')) {
         setError(err.message);
         return;
       }
 
-      // For network errors, Safari "Load failed", Render waking up, or session sync:
-      // Seamlessly create and persist in local storage
+      // For network errors or offline sync:
       const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      if (localStaff.length >= staffQuota) {
+        setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
+        return;
+      }
       const newStaff = {
         id: 'usr_staff_' + Date.now(),
         name: form.name.trim(),
@@ -450,27 +468,44 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       maxWidth="max-w-4xl"
     >
       <div className="space-y-4 max-h-[82vh] overflow-y-auto pr-1 text-xs">
-        {/* Top Info Banner */}
+        {/* Top Info Banner with Quota Indicator */}
         <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50/80 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
-            <div className="font-extrabold text-emerald-950 text-xs flex items-center gap-1.5">
+            <div className="font-extrabold text-emerald-950 text-xs flex flex-wrap items-center gap-1.5">
               <ShieldCheck size={16} className="text-emerald-700" />
               <span>Granular Staff Access & Data Privacy Controls</span>
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                isLimitReached 
+                  ? 'bg-amber-100 text-amber-900 border-amber-300' 
+                  : 'bg-emerald-100 text-emerald-800 border-emerald-300'
+              }`}>
+                Quota: {staffList.length}/{staffQuota} Seats {isLimitReached ? '(Limit Reached)' : ''}
+              </span>
             </div>
             <div className="text-[11px] text-emerald-800 mt-0.5 max-w-xl">
-              Strictly prevent staff from viewing or tampering with other employees' leads. Keep company analytics and financial controls private to the owner.
+              By default, business owners can add up to {staffQuota} staff members. Contact the platform administrator to increase this quota.
             </div>
           </div>
           {!showAddForm && !editingStaff && (
             <button
               type="button"
+              disabled={isLimitReached}
               onClick={() => {
+                if (isLimitReached) {
+                  setError(`Staff limit of ${staffQuota} seats reached. Please contact your platform administrator to increase this quota.`);
+                  return;
+                }
                 setShowAddForm(true);
                 setEditingStaff(null);
                 setError('');
                 setSuccessMsg('');
               }}
-              className="px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-md shadow-emerald-600/20 flex items-center gap-1.5 cursor-pointer shrink-0 transition-all"
+              title={isLimitReached ? `Staff quota full (${staffQuota}/${staffQuota}). Contact administrator.` : 'Add a new staff member'}
+              className={`px-3.5 py-2 rounded-xl text-white font-bold text-xs shadow-md flex items-center gap-1.5 shrink-0 transition-all ${
+                isLimitReached
+                  ? 'bg-slate-400 opacity-60 cursor-not-allowed shadow-none'
+                  : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 cursor-pointer'
+              }`}
             >
               <Plus size={15} /> + Add New Staff
             </button>

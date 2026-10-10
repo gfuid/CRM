@@ -140,6 +140,7 @@ const register = async (req, res) => {
     password: hashedPassword,
     role: isOwner ? 'admin' : 'agent',
     persona: isOwner ? 'owner' : 'staff',
+    staff_limit: isOwner ? 2 : undefined,
     department: department || (isOwner ? 'Executive Management' : 'Sales Outreach'),
     phone: phone || '',
     is_active: true,

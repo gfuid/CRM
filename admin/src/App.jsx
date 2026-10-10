@@ -5,6 +5,7 @@ import AdminLoginPage from './pages/AdminLoginPage';
 import OverviewSection from './pages/OverviewSection';
 import UsersSection from './pages/UsersSection';
 import SettingsSection from './pages/SettingsSection';
+import BroadcastNotificationModal from './components/BroadcastNotificationModal';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
 const API_BASE = import.meta.env.VITE_API_URL
@@ -26,6 +27,7 @@ export default function App() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [isBroadcastModalOpen, setIsBroadcastModalOpen] = useState(false);
 
   // Core Platform Data State
   const [users, setUsers] = useState([]);
@@ -196,7 +198,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#f8fafc] text-slate-900 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#eef1f6] text-slate-900 font-sans antialiased">
       {/* Responsive Sidebar */}
       <AdminSidebar
         activeSection={activeSection}
@@ -215,6 +217,7 @@ export default function App() {
           refreshing={refreshing}
           onOpenMobileMenu={() => setMobileMenuOpen(true)}
           onSignOut={handleSignOut}
+          onOpenNotificationModal={() => setIsBroadcastModalOpen(true)}
         />
 
         <main className="flex-1 p-4 sm:p-8 overflow-y-auto">
@@ -231,6 +234,9 @@ export default function App() {
                   users={users}
                   company={subscription?.company}
                   onNavigate={setActiveSection}
+                  onUpdateStaffLimit={handleUpdateStaffLimit}
+                  onUpdateRole={handleUpdateRole}
+                  onToggleStatus={handleToggleStatus}
                 />
               )}
 
@@ -254,6 +260,16 @@ export default function App() {
           )}
         </main>
       </div>
+
+      {/* Broadcast Notification Modal */}
+      <BroadcastNotificationModal
+        isOpen={isBroadcastModalOpen}
+        onClose={() => setIsBroadcastModalOpen(false)}
+        users={users}
+        apiBase={API_BASE}
+        getHeaders={getHeaders}
+        onNotificationSent={() => showToast('Notification broadcast successfully sent to Owner Dashboard!')}
+      />
 
       {/* Toast Notification Alert */}
       {toast && (

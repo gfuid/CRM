@@ -63,6 +63,8 @@ const COUNTRY_METADATA = {
   'Saudi Arabia': { code: 'SA', flag: '🇸🇦', name: 'Saudi Arabia', badgeBg: 'bg-cyan-600', badgeText: 'text-white', port: 'Jeddah Port', region: 'Middle East' },
   'United Arab Emirates': { code: 'AE', flag: '🇦🇪', name: 'United Arab Emirates', badgeBg: 'bg-emerald-600', badgeText: 'text-white', port: 'Jebel Ali Port', region: 'Middle East' },
   'Greece': { code: 'GR', flag: '🇬🇷', name: 'Greece', badgeBg: 'bg-sky-600', badgeText: 'text-white', port: 'Piraeus Port', region: 'Europe' },
+  'Iran': { code: 'IR', flag: '🇮🇷', name: 'Iran', badgeBg: 'bg-emerald-700', badgeText: 'text-white', port: 'Bandar Abbas Port', region: 'Middle East' },
+  'Iraq': { code: 'IQ', flag: '🇮🇶', name: 'Iraq', badgeBg: 'bg-amber-600', badgeText: 'text-white', port: 'Umm Qasr Port', region: 'Middle East' },
 };
 
 const COUNTRY_FLAGS = {
@@ -78,6 +80,8 @@ const COUNTRY_FLAGS = {
   'Saudi Arabia': '🇸🇦',
   'United Arab Emirates': '🇦🇪',
   'Greece': '🇬🇷',
+  'Iran': '🇮🇷',
+  'Iraq': '🇮🇶',
 };
 
 // Commodity specs
@@ -2178,7 +2182,9 @@ export default function Analytics() {
                       'Indonesia': '#fb7185',
                       'Saudi Arabia': '#06b6d4',
                       'United Arab Emirates': '#059669',
-                      'Greece': '#38bdf8'
+                      'Greece': '#38bdf8',
+                      'Iran': '#10b981',
+                      'Iraq': '#f59e0b'
                     };
 
                     const totalCount = displayCountries.reduce((sum, c) => sum + c.count, 0) || 1;

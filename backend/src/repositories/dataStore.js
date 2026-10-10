@@ -14,9 +14,9 @@ const SUBSCRIPTION_PLANS = {
     id: 'starter',
     name: 'Starter Tier',
     priceMonthly: 29,
-    maxStaff: 3,
+    maxStaff: 2,
     maxLeads: 500,
-    features: ['Up to 3 Staff Seats', '500 Leads Storage', 'Standard Analytics', 'Task Management', 'Email Notifications'],
+    features: ['Up to 2 Staff Seats', '500 Leads Storage', 'Standard Analytics', 'Task Management', 'Email Notifications'],
     badge: 'Popular for Solo & Small Teams',
   },
   growth: {
@@ -58,6 +58,7 @@ const dataStore = {
 
   tenants: [],
   users: [],
+  notifications: [],
 
   leads: [
     {
@@ -620,6 +621,24 @@ const dbSync = {
     if (isConnected && models && models.AuditLog) {
       try {
         await models.AuditLog.create(log);
+      } catch (e) {}
+    }
+  },
+  saveNotification: async (notif) => {
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.Notification) {
+      try {
+        await models.Notification.findOneAndUpdate({ id: notif.id }, notif, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB Notification Sync]:', e.message);
+      }
+    }
+  },
+  deleteNotification: async (id) => {
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.Notification) {
+      try {
+        await models.Notification.findOneAndDelete({ id });
       } catch (e) {}
     }
   },

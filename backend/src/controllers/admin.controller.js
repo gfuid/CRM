@@ -50,8 +50,9 @@ const getAllUsers = async (req, res) => {
       const staffList = dataStore.users
         .filter(
           (s) =>
+            s.id !== u.id &&
             s.persona !== 'owner' &&
-            (s.company_id === u.company_id || s.created_by === u.id || !s.company_id)
+            (s.company_id === u.company_id || s.created_by === u.id || s.created_by === u.email || (!s.company_id && !s.created_by))
         )
         .map((s) => ({
           id: s.id,
@@ -66,11 +67,11 @@ const getAllUsers = async (req, res) => {
           data_scope: s.data_scope,
         }));
 
-      // Free Trial default is 3 staff seats unless customized or upgraded
+      // Free Trial / Default limit is 2 staff seats per owner unless adjusted by Admin
       const staffLimit =
         u.staff_limit !== undefined
           ? Number(u.staff_limit)
-          : Number(dataStore.company.maxStaff || 3);
+          : 2;
 
       return {
         ...cleanUser,
@@ -96,6 +97,9 @@ const getAllUsers = async (req, res) => {
         owner_name: owner ? owner.name : 'Company Owner',
         owner_id: owner ? owner.id : null,
         company_name: owner ? (owner.company_name || dataStore.company.name) : dataStore.company.name,
+        staff_limit: u.staff_limit !== undefined ? Number(u.staff_limit) : 2,
+        staff_count: 0,
+        staff_list: [],
       };
     }
   });
@@ -109,7 +113,7 @@ const getAllUsers = async (req, res) => {
     adminsCount: enrichedResults.filter((u) => u.role === 'admin').length,
     ownersCount,
     staffCount,
-    defaultFreeTrialLimit: 3,
+    defaultStaffLimit: 2,
   });
 };
 
@@ -128,18 +132,32 @@ const createUser = async (req, res) => {
     return ApiResponse.error(res, 'A staff member with this email already exists', 409);
   }
 
-  // Enforce staff limit check against owner quota
-  const owner = dataStore.users.find((u) => u.persona === 'owner' || u.role === 'admin');
+  // Enforce staff limit check against owner quota (Default 2 per owner)
+  let owner = null;
+  if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin')) {
+    owner = req.user;
+  }
+  if (!owner) {
+    owner = dataStore.users.find((u) => u.persona === 'owner' || u.role === 'admin');
+  }
+
   const staffLimit =
     owner?.staff_limit !== undefined
       ? Number(owner.staff_limit)
-      : Number(dataStore.company?.maxStaff || 3);
-  const currentStaffCount = dataStore.users.filter((u) => u.persona !== 'owner').length;
+      : 2;
+
+  const currentStaffCount = dataStore.users.filter((u) => {
+    if (u.persona === 'owner') return false;
+    if (owner && (u.company_id === owner.company_id || u.created_by === owner.id || u.created_by === owner.email)) {
+      return true;
+    }
+    return true;
+  }).length;
 
   if (currentStaffCount >= staffLimit) {
     return ApiResponse.error(
       res,
-      `Staff seat limit reached (${currentStaffCount}/${staffLimit} seats used). The Super Admin can increase the staff limit in the Admin Console.`,
+      `Staff seat limit reached (${currentStaffCount}/${staffLimit} seats used). By default, business owners are allowed up to ${staffLimit} staff members. The Super Admin can increase your quota in the Admin Console.`,
       403
     );
   }
@@ -340,7 +358,9 @@ const updateStaffLimit = async (req, res) => {
     return ApiResponse.error(res, 'Valid staff_limit number is required (0 or more)', 400);
   }
 
-  const user = dataStore.users.find((u) => u.id === id);
+  const user = dataStore.users.find(
+    (u) => u.id === id || String(u._id) === id || u.email?.toLowerCase() === id?.toLowerCase()
+  );
   if (!user) {
     return ApiResponse.error(res, 'Owner / User not found', 404);
   }
@@ -348,7 +368,12 @@ const updateStaffLimit = async (req, res) => {
   const newLimit = Number(staff_limit);
   user.staff_limit = newLimit;
 
-  // Sync with company quota if owner or admin
+  // Mark user as owner so they can manage staff up to their new quota
+  if (user.persona !== 'owner' && user.role !== 'admin') {
+    user.persona = 'owner';
+  }
+
+  // Sync with company quota if primary owner or admin
   if (user.persona === 'owner' || user.role === 'admin') {
     dataStore.company.maxStaff = newLimit;
     dbSync.saveCompany(dataStore.company);
@@ -373,8 +398,9 @@ const updateStaffLimit = async (req, res) => {
   const staffList = dataStore.users
     .filter(
       (s) =>
+        s.id !== user.id &&
         s.persona !== 'owner' &&
-        (s.company_id === user.company_id || s.created_by === user.id || !s.company_id)
+        (s.company_id === user.company_id || s.created_by === user.id || s.created_by === user.email || (!s.company_id && !s.created_by))
     )
     .map((s) => ({
       id: s.id,
@@ -390,6 +416,7 @@ const updateStaffLimit = async (req, res) => {
 
   const enrichedUser = {
     ...user,
+    is_owner: true,
     staff_limit: newLimit,
     staff_count: staffList.length,
     staff_list: staffList,
@@ -712,6 +739,75 @@ const getOverviewSummary = async (req, res) => {
   return ApiResponse.success(res, summary, 'Admin overview summary metrics');
 };
 
+/**
+ * Send notification from Admin to Owner(s) / Users
+ */
+const sendNotification = async (req, res) => {
+  const { target, target_user_id, target_name, title, message, type, priority } = req.body;
+
+  if (!title || !message) {
+    return ApiResponse.error(res, 'Title and Message are required for notification', 400);
+  }
+
+  const newNotification = {
+    id: generateId('notif'),
+    target: target || 'all_owners', // 'all_owners' | 'all' | 'specific_user'
+    target_user_id: target_user_id || null,
+    target_name: target_name || (target === 'all_owners' ? 'All Business Owners' : 'All Users'),
+    title: title.trim(),
+    message: message.trim(),
+    type: type || 'subscription', // 'subscription' | 'warning' | 'info' | 'success'
+    priority: priority || 'high',
+    created_at: new Date().toISOString(),
+    created_by: req.user ? req.user.name : 'Super Administrator',
+    read_by: [],
+  };
+
+  dataStore.notifications.unshift(newNotification);
+  dbSync.saveNotification(newNotification);
+
+  // Record audit log
+  const auditLog = {
+    id: generateId('log'),
+    actor_name: req.user ? req.user.name : 'Super Administrator',
+    actor_id: req.user ? req.user.id : 'usr_super_admin',
+    action: 'NOTIFICATION_SENT',
+    details: `Sent [${newNotification.type.toUpperCase()}] notification "${title}" to ${newNotification.target_name}`,
+    ip_address: req.ip || '127.0.0.1',
+    timestamp: new Date().toISOString(),
+  };
+  dataStore.auditLogs.unshift(auditLog);
+  dbSync.saveAuditLog(auditLog);
+
+  return ApiResponse.success(
+    res,
+    newNotification,
+    `Notification "${title}" sent successfully to ${newNotification.target_name}!`,
+    201
+  );
+};
+
+/**
+ * Get all sent notifications (Admin view)
+ */
+const getAdminNotifications = async (req, res) => {
+  return ApiResponse.success(res, dataStore.notifications || [], 'Admin notifications retrieved');
+};
+
+/**
+ * Delete a notification (Admin)
+ */
+const deleteAdminNotification = async (req, res) => {
+  const { id } = req.params;
+  const idx = dataStore.notifications.findIndex((n) => n.id === id);
+  if (idx === -1) {
+    return ApiResponse.error(res, 'Notification not found', 404);
+  }
+  const removed = dataStore.notifications.splice(idx, 1)[0];
+  dbSync.deleteNotification(id);
+  return ApiResponse.success(res, removed, 'Notification deleted successfully');
+};
+
 module.exports = {
   getOverviewSummary,
   getAllUsers,
@@ -720,6 +816,10 @@ module.exports = {
   updateUserRole,
   toggleUserStatus,
   deleteUser,
+  updateStaffLimit,
+  sendNotification,
+  getAdminNotifications,
+  deleteAdminNotification,
   getSystemHealth,
   getAuditLogs,
   updateCompanySettings,

@@ -17,7 +17,7 @@ const userSchema = new mongoose.Schema(
     permissions: { type: mongoose.Schema.Types.Mixed, default: {} },
     company_id: { type: String, default: '' },
     created_by: { type: String, default: '' },
-    staff_limit: { type: Number, default: 3 },
+    staff_limit: { type: Number, default: 2 },
     last_login: { type: Date, default: Date.now },
     created_at: { type: Date, default: Date.now },
   },
