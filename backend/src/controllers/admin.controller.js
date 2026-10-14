@@ -208,6 +208,7 @@ const createUser = async (req, res) => {
   };
 
     const ownerCompanyId = owner?.company_id || req.user?.company_id || owner?.id || 'comp_traveltrade_1';
+    const ownerCompanyName = owner?.company_name || req.user?.company_name || 'My Organization';
     const ownerId = owner?.id || req.user?.id || 'usr_admin_1';
 
     const newUser = {
@@ -228,6 +229,7 @@ const createUser = async (req, res) => {
         ? { ...defaultPermissions, ...permissions, admin_access: false }
         : defaultPermissions,
       company_id: ownerCompanyId,
+      company_name: ownerCompanyName,
       created_by: ownerId,
       last_login: null,
       created_at: new Date().toISOString(),
@@ -249,7 +251,7 @@ const createUser = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  const cleanUser = { ...newUser, staff_password: rawPassword };
+  const cleanUser = { ...newUser, staff_password: rawPassword, company_name: ownerCompanyName };
   delete cleanUser.password;
 
   return ApiResponse.created(res, cleanUser, 'Staff member created successfully');

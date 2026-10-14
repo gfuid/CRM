@@ -20,7 +20,7 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
             <div>
               <div className="flex items-center gap-1.5">
                 <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
-                  {companyName || 'Travel-Trade'}
+                  {companyName || 'My Organization'}
                 </span>
                 <span
                   className={`text-[9px] font-extrabold uppercase px-1.5 py-0.2 rounded-full border ${

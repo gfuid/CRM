@@ -28,7 +28,7 @@ export function AuthProvider({ children }) {
     }
   };
 
-  // Listen for session expiration events from API client
+  // Listen for session expiration and live permission update events
   useEffect(() => {
     const handleSessionExpired = (e) => {
       console.warn('Session expired event received:', e?.detail?.message);
@@ -38,8 +38,52 @@ export function AuthProvider({ children }) {
       setProfile(null);
     };
 
+    const handlePermissionsUpdate = (e) => {
+      const updated = e?.detail;
+      if (!updated) return;
+      setUser((prevUser) => {
+        if (!prevUser) return prevUser;
+        const matchesId = updated.id && (prevUser.id === updated.id || String(prevUser._id) === String(updated.id));
+        const matchesEmail = updated.email && prevUser.email?.toLowerCase() === updated.email?.toLowerCase();
+        if (matchesId || matchesEmail) {
+          const updatedPermissions = updated.permissions || prevUser.permissions;
+          const updatedScope = updated.data_scope || prevUser.data_scope;
+          const updatedDept = updated.department || prevUser.department;
+          const updatedPhone = updated.phone !== undefined ? updated.phone : prevUser.phone;
+          const updatedAvatar = updated.avatar_url || prevUser.avatar_url;
+          const updatedUser = {
+            ...prevUser,
+            permissions: updatedPermissions,
+            data_scope: updatedScope,
+            department: updatedDept,
+            phone: updatedPhone,
+            avatar_url: updatedAvatar,
+          };
+          setProfile((prevProf) => ({
+            ...(prevProf || {}),
+            ...updatedUser,
+            full_name: updatedUser.name || prevProf?.name,
+          }));
+          const session = JSON.parse(localStorage.getItem('crm_user_session') || '{}');
+          if (session.user) {
+            session.user = { ...session.user, ...updatedUser };
+            session.profile = { ...(session.profile || {}), ...updatedUser };
+            localStorage.setItem('crm_user_session', JSON.stringify(session));
+          }
+          return updatedUser;
+        }
+        return prevUser;
+      });
+    };
+
     window.addEventListener('crm_session_expired', handleSessionExpired);
-    return () => window.removeEventListener('crm_session_expired', handleSessionExpired);
+    window.addEventListener('crm_permissions_updated', handlePermissionsUpdate);
+    window.addEventListener('crm_staff_updated', handlePermissionsUpdate);
+    return () => {
+      window.removeEventListener('crm_session_expired', handleSessionExpired);
+      window.removeEventListener('crm_permissions_updated', handlePermissionsUpdate);
+      window.removeEventListener('crm_staff_updated', handlePermissionsUpdate);
+    };
   }, []);
 
   // Initialize session on mount with resilient persistence
@@ -55,9 +99,17 @@ export function AuthProvider({ children }) {
           try {
             const cached = JSON.parse(cachedSessionStr);
             if (cached && cached.user) {
-              setUser(cached.user);
-              setProfile(cached.profile || { ...cached.user, full_name: cached.user.name });
-              setCompany(cached.company || { name: 'Travel-Trade', plan: 'growth' });
+              const u = cached.user;
+              let compName = cached.company?.name;
+              if (!compName || compName === 'Travel-Trade') {
+                const localUsers = getLocalUsers();
+                const owner = localUsers.find((o) => o.persona === 'owner' || o.role === 'admin');
+                compName = u.company_name || owner?.company_name || owner?.company?.name || (compName !== 'Travel-Trade' ? compName : 'My Organization');
+              }
+              const comp = { name: compName, plan: cached.company?.plan || 'growth' };
+              setUser(u);
+              setProfile(cached.profile || { ...u, full_name: u.name, company_name: compName });
+              setCompany(comp);
             }
           } catch (e) {}
         }
@@ -67,13 +119,19 @@ export function AuthProvider({ children }) {
           const res = await api.getProfile();
           if (res && res.success && res.data.user) {
             const u = res.data.user;
-            const comp = res.data.company || { name: 'Travel-Trade', plan: 'growth' };
+            let compName = res.data.company?.name || u.company_name;
+            if (!compName || compName === 'Travel-Trade') {
+              const localUsers = getLocalUsers();
+              const owner = localUsers.find((o) => o.persona === 'owner' || o.role === 'admin');
+              compName = u.company_name || owner?.company_name || owner?.company?.name || 'My Organization';
+            }
+            const comp = { name: compName, plan: res.data.company?.plan || 'growth' };
             setUser(u);
-            setProfile({ ...u, full_name: u.name });
+            setProfile({ ...u, full_name: u.name, company_name: compName });
             setCompany(comp);
             localStorage.setItem('crm_user_session', JSON.stringify({
               user: u,
-              profile: { ...u, full_name: u.name },
+              profile: { ...u, full_name: u.name, company_name: compName },
               company: comp,
             }));
             setLoading(false);
@@ -106,9 +164,10 @@ export function AuthProvider({ children }) {
           const localUsers = getLocalUsers();
           if (localUsers.length > 0) {
             const lastUser = localUsers[localUsers.length - 1];
+            const compName = lastUser.company_name || lastUser.company?.name || 'My Organization';
             setUser(lastUser);
-            setProfile({ ...lastUser, full_name: lastUser.name });
-            setCompany(lastUser.company || { name: 'Travel-Trade', plan: 'growth' });
+            setProfile({ ...lastUser, full_name: lastUser.name, company_name: compName });
+            setCompany({ name: compName, plan: 'growth' });
             setLoading(false);
             return;
           }
@@ -134,13 +193,19 @@ export function AuthProvider({ children }) {
         if (token) {
           localStorage.setItem('crm_token', token);
         }
-        const comp = res.data.company || { name: 'Travel-Trade', plan: 'growth' };
+        let compName = res.data.company?.name || u.company_name;
+        if (!compName || compName === 'Travel-Trade') {
+          const localUsers = getLocalUsers();
+          const owner = localUsers.find((o) => o.persona === 'owner' || o.role === 'admin');
+          compName = u.company_name || owner?.company_name || owner?.company?.name || 'My Organization';
+        }
+        const comp = { name: compName, plan: res.data.company?.plan || 'growth' };
         setUser(u);
-        setProfile({ ...u, full_name: u.name });
+        setProfile({ ...u, full_name: u.name, company_name: compName });
         setCompany(comp);
         localStorage.setItem('crm_user_session', JSON.stringify({
           user: u,
-          profile: { ...u, full_name: u.name },
+          profile: { ...u, full_name: u.name, company_name: compName },
           company: comp,
         }));
         return res.data;
@@ -158,15 +223,17 @@ export function AuthProvider({ children }) {
       if (localMatch) {
         if (!password || localMatch.password === password) {
           localStorage.setItem('crm_token', 'local_session_' + Date.now());
+          const compName = localMatch.company_name || localMatch.company?.name || 'My Organization';
+          const comp = { name: compName, plan: localMatch.company?.plan || 'growth' };
           setUser(localMatch);
-          setProfile({ ...localMatch, full_name: localMatch.name });
-          setCompany(localMatch.company || { name: 'Travel-Trade', plan: 'growth' });
+          setProfile({ ...localMatch, full_name: localMatch.name, company_name: compName });
+          setCompany(comp);
           localStorage.setItem('crm_user_session', JSON.stringify({
             user: localMatch,
-            profile: { ...localMatch, full_name: localMatch.name },
-            company: localMatch.company || { name: 'Travel-Trade', plan: 'growth' },
+            profile: { ...localMatch, full_name: localMatch.name, company_name: compName },
+            company: comp,
           }));
-          return { user: localMatch, company: localMatch.company };
+          return { user: localMatch, company: comp };
         } else {
           throw new Error('Invalid credentials. Please check your password.');
         }
@@ -178,15 +245,18 @@ export function AuthProvider({ children }) {
       if (staffMatch) {
         if (!password || staffMatch.password === password) {
           localStorage.setItem('crm_token', 'local_session_' + Date.now());
+          const owner = localUsers.find((o) => o.persona === 'owner' || o.role === 'admin');
+          const resolvedCompName = staffMatch.company_name || staffMatch.company?.name || owner?.company_name || owner?.company?.name || 'My Organization';
+          const comp = { name: resolvedCompName, plan: 'growth' };
           setUser(staffMatch);
-          setProfile({ ...staffMatch, full_name: staffMatch.name });
-          setCompany({ name: 'Travel-Trade', plan: 'growth' });
+          setProfile({ ...staffMatch, full_name: staffMatch.name, company_name: resolvedCompName });
+          setCompany(comp);
           localStorage.setItem('crm_user_session', JSON.stringify({
             user: staffMatch,
-            profile: { ...staffMatch, full_name: staffMatch.name },
-            company: { name: 'Travel-Trade', plan: 'growth' },
+            profile: { ...staffMatch, full_name: staffMatch.name, company_name: resolvedCompName },
+            company: comp,
           }));
-          return { user: staffMatch };
+          return { user: staffMatch, company: comp };
         } else {
           throw new Error('Invalid credentials. Please check your password.');
         }

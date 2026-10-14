@@ -303,20 +303,25 @@ function AppContent() {
   };
 
   const breadcrumbPrefix = isStaff ? 'Staff Portal' : 'Main Menu';
+  const displayCompanyName =
+    profile?.company_name ||
+    user?.company_name ||
+    (company?.name && company.name !== 'Travel-Trade' ? company.name : null) ||
+    'Global Export Trade';
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 flex flex-col md:flex-row antialiased text-slate-900 dark:text-slate-100 transition-colors">
       <Sidebar
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        companyName={company?.name || 'Travel-Trade'}
+        companyName={displayCompanyName}
         taskBadgeCount={taskBadgeCount}
         onOpenStaffModal={handleOpenStaffModal}
       />
       <div className="flex-1 flex flex-col min-w-0 md:pl-64">
         {/* Mobile Top Header: Slim, Clean Light Theme with Brand & Actions */}
         <MobileTopHeader
-          companyName={company?.name || 'Travel-Trade'}
+          companyName={displayCompanyName}
           onOpenStaffModal={handleOpenStaffModal}
         />
         

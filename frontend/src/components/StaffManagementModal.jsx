@@ -29,7 +29,8 @@ import {
   ChevronDown,
   X,
   Edit3,
-  Key
+  Key,
+  Loader2
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -200,6 +201,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
   const [quickResetPassword, setQuickResetPassword] = useState('');
   const [showQuickPassword, setShowQuickPassword] = useState(false);
   const [quickResetLoading, setQuickResetLoading] = useState(false);
+  const [creatingStaff, setCreatingStaff] = useState(false);
+  const [savingPermissions, setSavingPermissions] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
   const [showEditCurrentPassword, setShowEditCurrentPassword] = useState(false);
   const [showQuickCurrentPassword, setShowQuickCurrentPassword] = useState(false);
@@ -368,6 +371,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       return;
     }
 
+    setCreatingStaff(true);
     try {
       const res = await api.createUser({
         name: form.name.trim(),
@@ -421,6 +425,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
         return;
       }
+      const ownerCompanyName = currentUser?.company_name || currentUser?.company?.name || 'My Organization';
       const newStaff = {
         id: 'usr_staff_' + Date.now(),
         name: form.name.trim(),
@@ -433,11 +438,21 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         avatar_url: form.avatar_url,
         data_scope: form.data_scope,
         permissions: form.permissions,
+        company_name: ownerCompanyName,
         is_active: true,
         created_at: new Date().toISOString(),
       };
       localStaff.push(newStaff);
       localStorage.setItem(ownerKey, JSON.stringify(localStaff));
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+
+      // Also persist to crm_local_users so offline login works smoothly
+      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
+      if (!localUsers.some((u) => u.email.toLowerCase() === newStaff.email.toLowerCase())) {
+        localUsers.push(newStaff);
+        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
+      }
+
       setStaffList((prev) => [newStaff, ...prev.filter((s) => s.email?.toLowerCase() !== newStaff.email.toLowerCase())]);
       setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
       setForm({
@@ -454,6 +469,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       setShowAddForm(false);
       window.dispatchEvent(new Event('crm_staff_updated'));
       return;
+    } finally {
+      setCreatingStaff(false);
     }
   };
 
@@ -482,15 +499,53 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       payload.staff_password = editingStaff.new_password.trim();
     }
 
+    setSavingPermissions(true);
     try {
       const res = await api.updateUser(editingStaff.id, payload);
-      if (res && res.success) {
-        setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
-        setEditingStaff(null);
-        loadStaff();
-        window.dispatchEvent(new Event('crm_staff_updated'));
-        return;
+      const updatedUser = (res && res.success && res.data) ? res.data : { ...editingStaff, ...payload };
+
+      // Sync across all local storage caches
+      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+      if (idx !== -1) {
+        localStaff[idx] = { ...localStaff[idx], ...updatedUser };
+      } else {
+        localStaff.push(updatedUser);
       }
+      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+
+      // Sync crm_local_users
+      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
+      const uIdx = localUsers.findIndex((u) => u.id === editingStaff.id || u.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+      if (uIdx !== -1) {
+        localUsers[uIdx] = { ...localUsers[uIdx], ...updatedUser };
+        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
+      }
+
+      // Live update active session if currently logged in as this staff member
+      const sessionStr = localStorage.getItem('crm_user_session');
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session?.user && (session.user.id === editingStaff.id || session.user.email?.toLowerCase() === editingStaff.email?.toLowerCase())) {
+            session.user = { ...session.user, ...updatedUser };
+            if (session.profile) {
+              session.profile = { ...session.profile, ...updatedUser };
+            }
+            localStorage.setItem('crm_user_session', JSON.stringify(session));
+          }
+        } catch (e) {}
+      }
+
+      setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedUser } : s)));
+      setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
+      setEditingStaff(null);
+      loadStaff();
+      window.dispatchEvent(new CustomEvent('crm_permissions_updated', { detail: updatedUser }));
+      window.dispatchEvent(new Event('crm_staff_updated'));
+      return;
     } catch (err) {
       console.warn('API updateUser error, saving to local storage fallback:', err.message);
       const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
@@ -507,10 +562,38 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         localStaff.push(updatedStaff);
       }
       localStorage.setItem(ownerKey, JSON.stringify(localStaff));
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+
+      // Sync crm_local_users
+      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
+      const uIdx = localUsers.findIndex((u) => u.id === editingStaff.id || u.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+      if (uIdx !== -1) {
+        localUsers[uIdx] = { ...localUsers[uIdx], ...updatedStaff };
+        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
+      }
+
+      // Live update active session if currently logged in as this staff member
+      const sessionStr = localStorage.getItem('crm_user_session');
+      if (sessionStr) {
+        try {
+          const session = JSON.parse(sessionStr);
+          if (session?.user && (session.user.id === editingStaff.id || session.user.email?.toLowerCase() === editingStaff.email?.toLowerCase())) {
+            session.user = { ...session.user, ...updatedStaff };
+            if (session.profile) {
+              session.profile = { ...session.profile, ...updatedStaff };
+            }
+            localStorage.setItem('crm_user_session', JSON.stringify(session));
+          }
+        } catch (e) {}
+      }
+
       setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedStaff } : s)));
       setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
       setEditingStaff(null);
+      window.dispatchEvent(new CustomEvent('crm_permissions_updated', { detail: updatedStaff }));
       window.dispatchEvent(new Event('crm_staff_updated'));
+    } finally {
+      setSavingPermissions(false);
     }
   };
 
@@ -1162,9 +1245,20 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5"
+                disabled={creatingStaff}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5 transition-all"
               >
-                <Plus size={14} /> Create Staff Account
+                {creatingStaff ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Creating Staff Account...</span>
+                  </>
+                ) : (
+                  <>
+                    <Plus size={14} />
+                    <span>Create Staff Account</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -1328,8 +1422,17 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                           className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
                           title="Instantly update password without saving other form fields"
                         >
-                          <Key size={10} />
-                          <span>{quickResetLoading ? 'Updating...' : 'Update Now'}</span>
+                          {quickResetLoading ? (
+                            <>
+                              <Loader2 size={10} className="animate-spin" />
+                              <span>Updating...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Key size={10} />
+                              <span>Update Now</span>
+                            </>
+                          )}
                         </button>
                       )}
                     </div>
@@ -1696,9 +1799,20 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </button>
               <button
                 type="submit"
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5"
+                disabled={savingPermissions}
+                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5 transition-all"
               >
-                <Check size={14} /> Save Changes & Permissions
+                {savingPermissions ? (
+                  <>
+                    <Loader2 size={14} className="animate-spin" />
+                    <span>Saving Permissions...</span>
+                  </>
+                ) : (
+                  <>
+                    <Check size={14} />
+                    <span>Save Changes & Permissions</span>
+                  </>
+                )}
               </button>
             </div>
           </form>
@@ -2103,9 +2217,18 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   disabled={quickResetLoading || quickResetPassword.length < 6}
                   className="px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                  <Key size={13} />
-                  <span>{quickResetLoading ? 'Updating...' : 'Set New Password'}</span>
-                </button>
+                {quickResetLoading ? (
+                  <>
+                    <Loader2 size={13} className="animate-spin" />
+                    <span>Updating Password...</span>
+                  </>
+                ) : (
+                  <>
+                    <Key size={13} />
+                    <span>Set New Password</span>
+                  </>
+                )}
+              </button>
               </div>
             </div>
           </div>

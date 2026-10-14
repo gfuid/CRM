@@ -69,7 +69,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
         <BrandLogo size={32} />
         <div className="min-w-0">
           <div className="text-base font-extrabold text-slate-900 dark:text-white truncate tracking-tight flex items-center gap-1.5">
-            <span>{companyName || 'Travel-Trade'}</span>
+            <span>{companyName || 'My Organization'}</span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
             <span>Export & Trade CRM</span>

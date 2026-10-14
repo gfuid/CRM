@@ -21,7 +21,8 @@ import {
   LogOut,
   AlertCircle,
   Eye,
-  EyeOff
+  EyeOff,
+  Loader2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -68,10 +69,10 @@ export default function UserProfileModal({ isOpen, onClose }) {
     if (!isOpen) return;
 
     setFormData({
-      name: profile?.name || profile?.full_name || user?.name || 'punia',
-      phone: profile?.phone || user?.phone || '+91 98765 43210',
-      department: profile?.department || (isOwner ? 'Executive / Commodity Export Desk' : 'Sales & Trade Operations'),
-      avatar_url: profile?.avatar_url || '',
+      name: profile?.name || profile?.full_name || user?.name || '',
+      phone: profile?.phone || user?.phone || '',
+      department: profile?.department || user?.department || (isOwner ? 'Executive / Commodity Export Desk' : 'Sales & Trade Operations'),
+      avatar_url: profile?.avatar_url || user?.avatar_url || '',
     });
     setStatusMsg({ type: '', text: '' });
     setPassMsg({ type: '', text: '' });
@@ -161,9 +162,14 @@ export default function UserProfileModal({ isOpen, onClose }) {
     }
   };
 
-  const displayName = profile?.name || profile?.full_name || user?.name || 'punia';
-  const displayEmail = profile?.email || user?.email || 'owner@travel-trade.com';
+  const displayName = profile?.name || profile?.full_name || user?.name || 'User';
+  const displayEmail = profile?.email || user?.email || '';
   const roleName = isOwner ? 'Super Admin / Owner' : (profile?.role || 'Sales Executive');
+  const workspaceName =
+    profile?.company_name ||
+    user?.company_name ||
+    (company?.name && company.name !== 'Travel-Trade' ? company.name : null) ||
+    'Global Export Trade';
 
   return (
     <div
@@ -213,7 +219,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                 </span>
                 <span>•</span>
                 <span className="flex items-center gap-1">
-                  <Building size={12} /> {company?.name || 'Travel-Trade'}
+                  <Building size={12} /> {workspaceName}
                 </span>
               </div>
             </div>
@@ -345,7 +351,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Company / Workspace</span>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5 block flex items-center gap-1.5">
                       <Building size={14} className="text-emerald-600 dark:text-emerald-400" />
-                      {company?.name || 'Travel-Trade'}
+                      {workspaceName}
                     </span>
                   </div>
                 </div>
@@ -419,8 +425,17 @@ export default function UserProfileModal({ isOpen, onClose }) {
                       disabled={saving}
                       className="flex items-center gap-1.5 px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold transition-all shadow-sm cursor-pointer disabled:opacity-50"
                     >
-                      <Save size={14} />
-                      <span>{saving ? 'Saving...' : 'Save Profile'}</span>
+                      {saving ? (
+                        <>
+                          <Loader2 size={14} className="animate-spin" />
+                          <span>Saving Profile...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save size={14} />
+                          <span>Save Profile</span>
+                        </>
+                      )}
                     </button>
                   </div>
                 </form>
@@ -430,7 +445,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
               <div className="p-4 rounded-xl bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-200/60 dark:border-emerald-800/40 flex items-center justify-between">
                 <div>
                   <span className="text-xs font-extrabold text-emerald-900 dark:text-emerald-300 block">
-                    Global Export Trade Organization
+                    {workspaceName}
                   </span>
                   <span className="text-[11px] text-emerald-700 dark:text-emerald-400 block mt-0.5">
                     Plan: Enterprise Pro Exporter • Unlimited Commodities & Trade Inquiries

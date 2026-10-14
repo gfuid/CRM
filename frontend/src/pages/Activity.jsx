@@ -578,7 +578,10 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                                 onChange={(e) => handleAssigneeChange(lead.id, e.target.value, e)}
                                 className="appearance-none bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 pr-4 rounded-md border border-slate-200/80 cursor-pointer focus:outline-none"
                               >
-                                {RESPONSIBLE_PERSONS_ORDER.map((p) => (
+                                {assigned && !responsiblePersons.includes(assigned) && (
+                                  <option value={assigned}>{assigned}</option>
+                                )}
+                                {responsiblePersons.map((p) => (
                                   <option key={p} value={p}>
                                     {p}
                                   </option>

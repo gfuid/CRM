@@ -366,14 +366,15 @@
       "is_active": true,
       "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Keerthana%20Ponni%20K",
       "data_scope": "own_only",
-      "company_id": "",
+      "company_id": "comp_bioniversio_1",
       "created_by": "",
       "staff_limit": 2,
-      "last_login": "2026-10-14T16:32:08.770Z",
+      "last_login": "2026-10-14T17:41:56.631Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
-      "updatedAt": "2026-10-14T16:32:08.776Z",
-      "__v": 0
+      "updatedAt": "2026-10-14T17:41:56.635Z",
+      "__v": 0,
+      "company_name": "Bioniversio Biologics"
     },
     {
       "_id": "6ace51f8f02c6edd77867ad6",
@@ -493,6 +494,79 @@
       "role": "agent",
       "staff_limit": 2,
       "updatedAt": "2026-10-14T16:26:54.985Z"
+    },
+    {
+      "_id": "6acfbaf20c69b3b6f17167e2",
+      "email": "demo1@gmail.com",
+      "__v": 0,
+      "company_id": "comp_bioniversio_1",
+      "company_name": "Bioniversio Biologics",
+      "created_by": "usr_1791814468302_hoa08z",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "id": "usr_staff_demo1",
+      "is_active": true,
+      "name": "Sagar Punia",
+      "password": "$2a$10$4uZvAsqHOKwkTpx3OT8ksO.o40jm51JiFoFnbL3GiEdT3it.uYFWC",
+      "permissions": {
+        "view_analytics": true,
+        "view_leads": true,
+        "view_tasks": true,
+        "tasks_assign": false,
+        "view_followup": true,
+        "view_outreach": false,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "can_export": false,
+        "admin_access": false
+      },
+      "persona": "staff",
+      "phone": "+91 98765 43210",
+      "role": "agent",
+      "staff_password": "123456"
+    },
+    {
+      "_id": "6acfc0b20c69b3b6f1717b56",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_bioniversio_1",
+      "createdAt": "2026-10-14T17:49:37.932Z",
+      "created_at": "2026-10-14T17:49:37.928Z",
+      "created_by": "usr_1791814468302_hoa08z",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "anand@gmail.com",
+      "id": "usr_1792000177928_2tzyr0",
+      "is_active": true,
+      "last_login": "2026-10-14T17:53:24.132Z",
+      "name": "Anand",
+      "password": "$2a$10$SiekFiEmmorNHBcc755pqu/vdi369p.pCJzEIgGSlqcDHCzZdCX.C",
+      "permissions": {
+        "view_analytics": true,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": true,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 2,
+      "staff_password": "123456",
+      "updatedAt": "2026-10-14T17:53:24.133Z"
     }
   ],
   "leads": [
@@ -4204,6 +4278,19 @@
       "createdAt": "2026-10-14T16:37:35.480Z",
       "updatedAt": "2026-10-14T16:37:35.480Z",
       "__v": 0
+    },
+    {
+      "_id": "6acfc0b140b19d6b9bf4cd95",
+      "id": "log_1792000177929_t7wi8e",
+      "actor_name": "Keerthana Ponni K",
+      "actor_id": "usr_1791814468302_hoa08z",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Anand (anand@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T17:49:37.929Z",
+      "createdAt": "2026-10-14T17:49:37.934Z",
+      "updatedAt": "2026-10-14T17:49:37.934Z",
+      "__v": 0
     }
   ],
   "company": {
@@ -4228,5 +4315,5 @@
     "updatedAt": "2026-10-14T14:32:33.656Z",
     "__v": 0
   },
-  "timestamp": "2026-10-14T16:57:24.948Z"
+  "timestamp": "2026-10-14T17:54:37.954Z"
 }

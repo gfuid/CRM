@@ -7,7 +7,6 @@ import {
   Bell,
   SlidersHorizontal,
   LogOut,
-  UserPlus,
   Sun,
   Moon,
   User as UserIcon,
@@ -142,17 +141,7 @@ export default function TopBar({
             <span>Customize Widget</span>
           </button>
 
-          {/* Prominent + Add Staff Member Button */}
-          {isOwner && (
-            <button
-              onClick={onOpenStaffModal}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs shadow-emerald-600/20 transition-all cursor-pointer shrink-0"
-              title="Create and manage staff accounts"
-            >
-              <UserPlus size={14} />
-              <span>+ Add Staff</span>
-            </button>
-          )}
+
 
           {/* User Profile Avatar & Signout with Panel Opener */}
           <div className="flex items-center gap-1.5 pl-2 sm:pl-3 border-l border-slate-200 dark:border-slate-800 shrink-0">

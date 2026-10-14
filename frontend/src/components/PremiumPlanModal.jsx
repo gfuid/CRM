@@ -3,7 +3,7 @@ import { Crown, CheckCircle2, ShieldCheck, Zap, Download, X, Globe, Sparkles } f
 import { useAuth } from '../context/AuthContext';
 
 export default function PremiumPlanModal({ isOpen, onClose }) {
-  const { company } = useAuth();
+  const { company, profile, user } = useAuth();
 
   if (!isOpen) return null;
 
@@ -54,7 +54,9 @@ export default function PremiumPlanModal({ isOpen, onClose }) {
           <div className="grid grid-cols-2 gap-2 mt-4 pt-3 border-t border-white/20 text-xs">
             <div>
               <span className="text-amber-100/80 text-[10px] uppercase font-bold block">Organization</span>
-              <span className="font-bold truncate block">{company?.name || 'Travel-Trade'}</span>
+              <span className="font-bold truncate block">
+                {profile?.company_name || user?.company_name || (company?.name && company.name !== 'Travel-Trade' ? company.name : null) || 'Global Export Trade'}
+              </span>
             </div>
             <div>
               <span className="text-amber-100/80 text-[10px] uppercase font-bold block">Valid Through</span>

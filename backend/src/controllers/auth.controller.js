@@ -76,6 +76,25 @@ const login = async (req, res) => {
     { expiresIn: config.jwtExpiresIn }
   );
 
+  // Resolve accurate company name for owner or staff
+  let companyName = user.company_name || '';
+  if (!companyName && user.persona === 'staff') {
+    const owner = dataStore.users.find(
+      (o) =>
+        (o.persona === 'owner' || o.role === 'admin') &&
+        ((user.company_id && o.company_id === user.company_id) || o.id === user.created_by || o.email === user.created_by)
+    );
+    if (owner && owner.company_name) {
+      companyName = owner.company_name;
+    }
+  }
+  if (!companyName && user.persona === 'owner') {
+    companyName = user.company_name || (user.name ? `${user.name}'s Workspace` : 'My Organization');
+  }
+  if (!companyName) {
+    companyName = dataStore.company?.name || 'Global Export Trade';
+  }
+
   const cleanUser = {
     id: user.id,
     name: user.name,
@@ -87,6 +106,7 @@ const login = async (req, res) => {
     is_active: user.is_active,
     avatar_url: user.avatar_url,
     company_id: user.company_id || '',
+    company_name: companyName,
     created_by: user.created_by || '',
     data_scope: user.data_scope || 'own_only',
     permissions: user.permissions || {},
@@ -94,7 +114,13 @@ const login = async (req, res) => {
     created_at: user.created_at,
   };
 
-  return ApiResponse.success(res, { user: cleanUser, token }, 'Logged in successfully');
+  const companyData = {
+    id: user.company_id || 'comp_1',
+    name: companyName,
+    plan: user.plan || dataStore.company?.plan || 'growth',
+  };
+
+  return ApiResponse.success(res, { user: cleanUser, token, company: companyData }, 'Logged in successfully');
 };
 
 /**
@@ -135,6 +161,7 @@ const register = async (req, res) => {
 
   const newId = generateId('usr');
   const companyId = isOwner ? generateId('comp') : (req.user?.company_id || '');
+  const cleanCompanyName = company_name ? company_name.trim() : (isOwner ? `${name.trim()}'s Workspace` : 'Global Export Trade');
   const newUser = {
     id: newId,
     name: name.trim(),
@@ -143,6 +170,7 @@ const register = async (req, res) => {
     role: isOwner ? 'admin' : 'agent',
     persona: isOwner ? 'owner' : 'staff',
     company_id: companyId,
+    company_name: cleanCompanyName,
     created_by: isOwner ? '' : (req.user?.id || ''),
     staff_limit: isOwner ? 2 : undefined,
     department: department || (isOwner ? 'Executive Management' : 'Sales Outreach'),
@@ -195,16 +223,49 @@ const register = async (req, res) => {
   const cleanUser = { ...newUser };
   delete cleanUser.password;
 
-  return ApiResponse.created(res, { user: cleanUser, token, company: dataStore.company }, 'Registered successfully');
+  const companyPayload = {
+    id: companyId,
+    name: cleanCompanyName,
+    plan: chosenPlan,
+  };
+
+  return ApiResponse.created(res, { user: cleanUser, token, company: companyPayload }, 'Registered successfully');
 };
 
 /**
  * Get current authenticated user profile
  */
 const getProfile = async (req, res) => {
+  let companyName = req.user.company_name || '';
+  if (!companyName && req.user.persona === 'staff') {
+    const owner = dataStore.users.find(
+      (o) =>
+        (o.persona === 'owner' || o.role === 'admin') &&
+        ((req.user.company_id && o.company_id === req.user.company_id) || o.id === req.user.created_by || o.email === req.user.created_by)
+    );
+    if (owner && owner.company_name) {
+      companyName = owner.company_name;
+    }
+  }
+  if (!companyName && req.user.persona === 'owner') {
+    companyName = req.user.company_name || (req.user.name ? `${req.user.name}'s Workspace` : 'My Organization');
+  }
+  if (!companyName) {
+    companyName = dataStore.company?.name || 'Global Export Trade';
+  }
+
+  const userWithCompany = {
+    ...req.user,
+    company_name: companyName,
+  };
+
   return ApiResponse.success(res, {
-    user: req.user,
-    company: dataStore.company,
+    user: userWithCompany,
+    company: {
+      id: req.user.company_id || 'comp_1',
+      name: companyName,
+      plan: req.user.plan || dataStore.company?.plan || 'growth',
+    },
   });
 };
 
