@@ -505,9 +505,32 @@ const getDb = () => {
   }
 };
 
+const saveSnapshot = () => {
+  try {
+    const fs = require('fs');
+    const path = require('path');
+    const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
+    const payload = {
+      users: dataStore.users,
+      leads: dataStore.leads,
+      tasks: dataStore.tasks,
+      activities: dataStore.activities,
+      followUps: dataStore.followUps,
+      myDays: dataStore.myDays,
+      outreach: dataStore.outreach,
+      auditLogs: dataStore.auditLogs,
+      company: dataStore.company,
+    };
+    fs.writeFileSync(snapshotPath, JSON.stringify(payload, null, 2), 'utf-8');
+  } catch (err) {
+    console.warn('[Snapshot Persistence Warning]:', err.message);
+  }
+};
+
 // Persistence helpers that sync updates directly to MongoDB Atlas
 const dbSync = {
   saveUser: async (user) => {
+    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
@@ -521,6 +544,7 @@ const dbSync = {
     }
   },
   deleteUser: async (id) => {
+    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
@@ -697,6 +721,80 @@ try {
     if (snap.outreach && snap.outreach.length > 0) dataStore.outreach = snap.outreach;
     if (snap.auditLogs && snap.auditLogs.length > 0) dataStore.auditLogs = snap.auditLogs;
     if (snap.company) dataStore.company = snap.company;
+
+    // Ensure company staff for Bioniversio Biologics (Keerthana Ponni K)
+    const sagar = dataStore.users.find(
+      (u) => u.email === 'sagarpunia163@gmail.com' || u.id === 'usr_1789929063747_allpa4'
+    );
+    if (sagar) {
+      sagar.company_id = 'comp_bioniversio_1';
+      sagar.company_name = 'Bioniversio Biologics';
+      sagar.created_by = 'usr_1791814468302_hoa08z';
+      sagar.staff_password = 'staff123';
+      sagar.persona = 'staff';
+      sagar.role = 'agent';
+      sagar.department = 'Commodity Sales Executive';
+      sagar.is_active = true;
+    }
+
+    const hasRahul = dataStore.users.some(
+      (u) => (u.name && u.name.toLowerCase() === 'rahul') || u.email === 'rahul@gmail.com'
+    );
+    if (!hasRahul) {
+      dataStore.users.push({
+        _id: '6acfc5ba40b19d6b9bf4cd97',
+        id: 'usr_1792001466336_wwykxg',
+        name: 'Rahul',
+        email: 'rahul@gmail.com',
+        password: '$2a$10$q3fhgmN8HX2nK9qFm.wqeeHUfl2M2VlBdPgN809vPWMPrZxSWgsR2',
+        staff_password: 'staff123',
+        role: 'agent',
+        persona: 'staff',
+        department: 'Commodity Sales Executive',
+        phone: '+91 98765 43210',
+        is_active: true,
+        avatar_url:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        data_scope: 'own_only',
+        company_id: 'comp_bioniversio_1',
+        company_name: 'Bioniversio Biologics',
+        created_by: 'usr_1791814468302_hoa08z',
+        permissions: {
+          view_analytics: false,
+          view_leads: true,
+          view_tasks: true,
+          tasks_assign: false,
+          view_followup: true,
+          view_outreach: false,
+          view_activity: true,
+          view_mydays: true,
+          can_read: true,
+          can_create: true,
+          can_update: true,
+          can_delete: false,
+          can_export: false,
+          admin_access: false,
+        },
+        last_login: null,
+        created_at: '2026-10-14T18:11:06.337Z',
+        createdAt: '2026-10-14T18:11:06.424Z',
+        updatedAt: '2026-10-14T18:11:06.424Z',
+        __v: 0,
+      });
+    }
+
+    const keerthana = dataStore.users.find(
+      (u) =>
+        u.id === 'usr_1791814468302_hoa08z' ||
+        u.email === 'bioniversiobiologics@arggroups.com'
+    );
+    if (keerthana) {
+      keerthana.staff_limit = 10;
+      keerthana.company_id = 'comp_bioniversio_1';
+      keerthana.company_name = 'Bioniversio Biologics';
+    }
+
+    saveSnapshot();
   }
 } catch (e) {}
 
@@ -704,4 +802,5 @@ module.exports = {
   dataStore,
   generateId,
   dbSync,
+  saveSnapshot,
 };

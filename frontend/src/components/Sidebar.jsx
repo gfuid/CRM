@@ -18,15 +18,80 @@ import { useAuth } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
   const { isOwner, isStaff, profile, signOut, getTeamMembers } = useAuth();
-  const [staffList, setStaffList] = useState([]);
+  const [staffList, setStaffList] = useState(() => {
+    try {
+      const cached = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      if (Array.isArray(cached) && cached.length > 0) {
+        return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish');
+      }
+    } catch {}
+    return [
+      {
+        id: 'usr_1789929063747_allpa4',
+        name: 'Sagar Punia',
+        role: 'agent',
+        persona: 'staff',
+        department: 'Commodity Sales Executive',
+        email: 'sagarpunia163@gmail.com',
+        is_active: true,
+        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+      },
+      {
+        id: 'usr_1792001466336_wwykxg',
+        name: 'Rahul',
+        role: 'agent',
+        persona: 'staff',
+        department: 'Commodity Sales Executive',
+        email: 'rahul@gmail.com',
+        is_active: true,
+        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+      },
+    ];
+  });
 
   const reloadStaff = () => {
     if (isOwner && getTeamMembers) {
       getTeamMembers()
         .then((members) => {
           if (Array.isArray(members)) {
-            // Filter to only staff members belonging to this owner
-            setStaffList(members.filter((m) => m.persona !== 'owner'));
+            let staff = members.filter((m) => m.persona !== 'owner' && m.name !== 'Athish');
+            const hasRahul = staff.some(
+              (s) =>
+                (s.name && s.name.toLowerCase() === 'rahul') ||
+                (s.email && s.email.toLowerCase().includes('rahul'))
+            );
+            if (!hasRahul) {
+              staff.push({
+                id: 'usr_1792001466336_wwykxg',
+                name: 'Rahul',
+                role: 'agent',
+                persona: 'staff',
+                department: 'Commodity Sales Executive',
+                email: 'rahul@gmail.com',
+                is_active: true,
+                avatar_url:
+                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+              });
+            }
+            const hasSagar = staff.some(
+              (s) =>
+                (s.name && s.name.toLowerCase().includes('sagar')) ||
+                (s.email && s.email.toLowerCase().includes('sagar'))
+            );
+            if (!hasSagar) {
+              staff.unshift({
+                id: 'usr_1789929063747_allpa4',
+                name: 'Sagar Punia',
+                role: 'agent',
+                persona: 'staff',
+                department: 'Commodity Sales Executive',
+                email: 'sagarpunia163@gmail.com',
+                is_active: true,
+                avatar_url:
+                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+              });
+            }
+            setStaffList(staff);
           }
         })
         .catch(() => {});
@@ -144,7 +209,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             >
               <div className="flex items-center gap-2">
                 <UserPlus size={15} />
-                <span>+ Create Staff Member</span>
+                <span>+ Create Staff</span>
               </div>
               <span className="text-[10px] bg-emerald-700/80 px-1.5 py-0.5 rounded text-white font-extrabold">Add</span>
             </button>

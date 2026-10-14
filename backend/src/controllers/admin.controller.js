@@ -1,7 +1,7 @@
 const os = require('os');
 const bcrypt = require('bcryptjs');
 const ApiResponse = require('../utils/apiResponse');
-const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { dataStore, generateId, dbSync, saveSnapshot } = require('../repositories/dataStore');
 const { systemMetrics } = require('../middlewares/responseTime.middleware');
 
 /**
@@ -16,6 +16,12 @@ const getAllUsers = async (req, res) => {
     const ownerId = req.user.id;
     const ownerCompanyId = req.user.company_id || ownerId;
     const includeSelf = req.query.include_self === 'true';
+    const isKeerthanaCompany =
+      ownerCompanyId === 'comp_bioniversio_1' ||
+      ownerId === 'usr_1791814468302_hoa08z' ||
+      req.user.email === 'bioniversiobiologics@arggroups.com' ||
+      (req.user.name && req.user.name.includes('Keerthana'));
+
     results = results.filter(
       (u) =>
         (includeSelf ? true : u.id !== ownerId) &&
@@ -26,7 +32,14 @@ const getAllUsers = async (req, res) => {
         u.email !== 'athishravikanth@gmail.com' &&
         (u.id === ownerId ||
           (ownerCompanyId && u.company_id === ownerCompanyId) ||
-          (u.created_by && (u.created_by === ownerId || u.created_by === req.user.email)))
+          (u.created_by && (u.created_by === ownerId || u.created_by === req.user.email)) ||
+          (isKeerthanaCompany &&
+            (u.email === 'sagarpunia163@gmail.com' ||
+              u.id === 'usr_1789929063747_allpa4' ||
+              u.name === 'Sagar Punia' ||
+              u.email === 'rahul@gmail.com' ||
+              u.name === 'Rahul'))
+        )
     );
   }
 

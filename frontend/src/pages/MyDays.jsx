@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Calendar as CalendarIcon,
   List,
@@ -21,12 +21,42 @@ import {
   X
 } from 'lucide-react';
 import Modal from '../components/Modal';
+import { useAuth } from '../context/AuthContext';
 import { TEAM_MEMBERS, INITIAL_MY_DAYS_REPORTS } from '../data/myDaysData';
 
 export default function MyDays() {
+  const { isOwner, isStaff, profile, getTeamMembers } = useAuth();
   const [reports, setReports] = useState(INITIAL_MY_DAYS_REPORTS);
   const [selectedMember, setSelectedMember] = useState('All users');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
+  const [teamMembers, setTeamMembers] = useState(['Sagar Punia', 'Rahul']);
+
+  // Fetch verified active team members
+  useEffect(() => {
+    if (getTeamMembers) {
+      getTeamMembers()
+        .then((res) => {
+          if (Array.isArray(res) && res.length > 0) {
+            const names = res
+              .map((u) => u.name?.trim())
+              .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'));
+            if (names.length > 0) setTeamMembers(names);
+          }
+        })
+        .catch(() => {});
+    }
+  }, [getTeamMembers]);
+
+  // Dynamic filter buttons and select options: ['All users', 'Sagar Punia', 'Rahul']
+  const memberList = useMemo(() => {
+    const list = ['All users'];
+    teamMembers.forEach((m) => {
+      if (!list.includes(m)) list.push(m);
+    });
+    if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
+    if (!list.includes('Rahul')) list.push('Rahul');
+    return list;
+  }, [teamMembers]);
 
   // Calendar state - Default to September 2026
   const [currentYear, setCurrentYear] = useState(2026);
@@ -38,7 +68,7 @@ export default function MyDays() {
 
   // New report form state
   const [newReport, setNewReport] = useState({
-    user: 'Shiva',
+    user: 'Sagar Punia',
     date_iso: '2026-09-27',
     leads: 1,
     status: 0,
@@ -50,18 +80,30 @@ export default function MyDays() {
     task_note: '',
   });
 
-  // Load from localStorage on mount
+  // Load from localStorage on mount & ensure My Days starts clean at 0 until user manually logs reports
   useEffect(() => {
     try {
       const stored = localStorage.getItem('oneroot_mydays_v3');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          setReports(parsed);
+          // Strictly keep ONLY genuine user-logged reports (having id starting with 'report_')
+          // Purge any prefilled mock data like rep_1, rep_2, etc. or legacy demo names
+          const realReports = parsed.filter(
+            (r) =>
+              r &&
+              r.id &&
+              !r.id.startsWith('rep_') &&
+              r.id.startsWith('report_') &&
+              !['adric', 'shiva', 'rohan', 'david'].includes((r.user || '').toLowerCase())
+          );
+          setReports(realReports);
+          localStorage.setItem('oneroot_mydays_v3', JSON.stringify(realReports));
           return;
         }
       }
-      localStorage.setItem('oneroot_mydays_v3', JSON.stringify(INITIAL_MY_DAYS_REPORTS));
+      setReports([]);
+      localStorage.setItem('oneroot_mydays_v3', JSON.stringify([]));
     } catch {}
   }, []);
 
@@ -192,7 +234,7 @@ export default function MyDays() {
     setIsAddModalOpen(false);
     setSelectedReport(created);
     setNewReport({
-      user: 'Shiva',
+      user: 'Sagar Punia',
       date_iso: '2026-09-27',
       leads: 1,
       status: 0,
@@ -208,16 +250,14 @@ export default function MyDays() {
   // User pill colors
   const getUserBadge = (user) => {
     switch (user) {
-      case 'Shiva':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'adric':
-        return 'bg-cyan-100 text-cyan-800 border-cyan-200';
-      case 'Rohan':
+      case 'Sagar Punia':
         return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'David':
-        return 'bg-amber-100 text-amber-800 border-amber-200';
-      default:
+      case 'Rahul':
+        return 'bg-purple-100 text-purple-800 border-purple-200';
+      case 'Keerthana Ponni K':
         return 'bg-blue-100 text-blue-800 border-blue-200';
+      default:
+        return 'bg-slate-100 text-slate-800 border-slate-200';
     }
   };
 
@@ -226,7 +266,12 @@ export default function MyDays() {
       {/* Header with Title and Mode Switcher */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Days</h1>
+          <div className="flex items-center gap-2.5">
+            <h1 className="text-2xl font-black text-slate-900 tracking-tight">My Days</h1>
+            <span className="px-2.5 py-0.5 rounded-full text-xs font-black bg-slate-100 text-slate-600 border border-slate-200">
+              {filteredReports.length} {filteredReports.length === 1 ? 'report' : 'reports'}
+            </span>
+          </div>
           <p className="text-xs text-slate-500 mt-1 font-medium">
             View sales team daily reports (admin days are not tracked)
           </p>
@@ -287,7 +332,7 @@ export default function MyDays() {
           </div>
           <div className="overflow-x-auto pb-1 scrollbar-thin">
             <div className="flex items-center gap-2 min-w-max">
-              {TEAM_MEMBERS.map((member) => {
+              {memberList.map((member) => {
                 const isSelected = selectedMember.toLowerCase() === member.toLowerCase();
                 return (
                   <button
@@ -328,8 +373,20 @@ export default function MyDays() {
               <tbody className="divide-y divide-slate-100">
                 {filteredReports.length === 0 ? (
                   <tr>
-                    <td colSpan={8} className="py-12 text-center text-slate-400 font-medium">
-                      No reports found for {selectedMember}
+                    <td colSpan={8} className="py-16 text-center">
+                      <div className="flex flex-col items-center justify-center space-y-2">
+                        <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
+                          <FileText size={22} />
+                        </div>
+                        <p className="text-sm font-bold text-slate-700">
+                          No daily reports logged yet (0 reports)
+                        </p>
+                        <p className="text-xs text-slate-400 max-w-md">
+                          {selectedMember === 'All users'
+                            ? 'Abhi tak koi daily report add nahi hui hai. Sales team jab daily task complete karegi ya aap "+ Log Day Report" karenge tab yahan record aayega.'
+                            : `No reports logged yet for ${selectedMember}.`}
+                        </p>
+                      </div>
                     </td>
                   </tr>
                 ) : (
@@ -681,7 +738,7 @@ export default function MyDays() {
                   onChange={(e) => setNewReport({ ...newReport, user: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  {TEAM_MEMBERS.filter((m) => m !== 'All users').map((m) => (
+                  {memberList.filter((m) => m !== 'All users').map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

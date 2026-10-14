@@ -177,7 +177,16 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
   // 1. Process all leads
   leads.forEach((lead) => {
     const leadDateIso = parseToIso(lead.created_at || lead.created_date) || getTodayIso();
-    const leadUser = (lead.created_by_name || lead.agent_name || 'Keerthana Ponni K').trim();
+    let leadUser = (lead.agent_name || lead.created_by_name || 'Keerthana Ponni K').trim();
+    if (
+      !leadUser ||
+      leadUser === 'usr_athish' ||
+      leadUser === 'Athish' ||
+      leadUser === 'Athish Ravikanth' ||
+      leadUser.startsWith('usr_')
+    ) {
+      leadUser = 'Keerthana Ponni K';
+    }
 
     const row = getOrCreateRow(leadDateIso, leadUser);
     row.counts.new_lead += 1;
@@ -197,10 +206,19 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
     });
 
     // 2. Process activity_history if present
-    if (Array.isArray(lead.activity_history)) {
+    if (Array.isArray(lead.activity_history) && lead.activity_history.length > 0) {
       lead.activity_history.forEach((act) => {
         const actDateIso = parseToIso(act.date || act.created_at) || leadDateIso;
-        const actUser = (act.author ? act.author.replace(/^by\s+/i, '') : leadUser) || leadUser;
+        let actUser = (act.author ? act.author.replace(/^by\s+/i, '') : leadUser) || leadUser;
+        if (
+          !actUser ||
+          actUser === 'usr_athish' ||
+          actUser === 'Athish' ||
+          actUser === 'Athish Ravikanth' ||
+          actUser.startsWith('usr_')
+        ) {
+          actUser = leadUser;
+        }
         const actType = classifyActivity(act.activity);
 
         const actRow = getOrCreateRow(actDateIso, actUser.trim());
@@ -229,10 +247,19 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
     }
 
     // 3. Process previous_remarks if present
-    if (Array.isArray(lead.previous_remarks)) {
+    if (Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0) {
       lead.previous_remarks.forEach((rem) => {
         const remDateIso = parseToIso(rem.date || rem.follow_up_date) || leadDateIso;
-        const remUser = (rem.author || leadUser).trim();
+        let remUser = (rem.author || leadUser).trim();
+        if (
+          !remUser ||
+          remUser === 'usr_athish' ||
+          remUser === 'Athish' ||
+          remUser === 'Athish Ravikanth' ||
+          remUser.startsWith('usr_')
+        ) {
+          remUser = leadUser;
+        }
         const remType = classifyActivity(rem.today_remark || rem.remark || 'call_initiated');
 
         const remRow = getOrCreateRow(remDateIso, remUser);
@@ -261,30 +288,7 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
     }
   });
 
-  // 4. Incorporate any extra static or stored logs
-  if (Array.isArray(extraLogs)) {
-    extraLogs.forEach((item) => {
-      const dateIso = item.date_iso || parseToIso(item.date) || getTodayIso();
-      const user = item.user || 'Shiva';
-      const row = getOrCreateRow(dateIso, user);
-      if (item.counts) {
-        Object.keys(item.counts).forEach((k) => {
-          if (row.counts[k] !== undefined) {
-            row.counts[k] = (row.counts[k] || 0) + (item.counts[k] || 0);
-          }
-        });
-      }
-      if (item.activities) {
-        Object.keys(item.activities).forEach((k) => {
-          if (row.activities[k] && Array.isArray(item.activities[k])) {
-            row.activities[k].push(...item.activities[k]);
-          }
-        });
-      }
-    });
-  }
-
-  // 5. Convert to array and sort descending by date_iso
+  // 4. Convert to array and sort descending by date_iso
   const result = Array.from(map.values()).sort((a, b) => b.date_iso.localeCompare(a.date_iso));
   return result;
 };
@@ -306,8 +310,13 @@ export default function Outreach() {
   // Modal 2: Complete Lead Dossier Details ("eys clik pr sab trah ke details")
   const [activePreviewLead, setActivePreviewLead] = useState(null);
 
-  // Load all leads, team, and outreach data
+  // Load all leads, team, and outreach data strictly from verified leads
   const loadAllData = async () => {
+    // Clear out any old compounded corrupted cache in localStorage
+    try {
+      localStorage.removeItem('oneroot_outreach_v3');
+    } catch {}
+
     let currentLeads = [];
     try {
       const stored = localStorage.getItem('oneroot_leads_v3');
@@ -316,26 +325,12 @@ export default function Outreach() {
         if (Array.isArray(parsed) && parsed.length > 0) {
           currentLeads = parsed;
           setLeads(parsed);
+          setLogs(buildOutreachMatrix(parsed));
         }
       }
     } catch {}
 
-    let storedOutreach = [];
-    try {
-      const storedOut = localStorage.getItem('oneroot_outreach_v3');
-      if (storedOut) {
-        const parsed = JSON.parse(storedOut);
-        if (Array.isArray(parsed)) storedOutreach = parsed;
-      }
-    } catch {}
-
-    // Compute initial matrix from local storage immediately so there is no blank screen
-    if (currentLeads.length > 0 || storedOutreach.length > 0 || INITIAL_OUTREACH_LOGS.length > 0) {
-      const computed = buildOutreachMatrix(currentLeads, storedOutreach.length > 0 ? storedOutreach : INITIAL_OUTREACH_LOGS);
-      setLogs(computed);
-    }
-
-    // Now fetch fresh leads and team from remote API
+    // Fetch fresh leads and team from remote API
     try {
       const [leadsRes, usersRes] = await Promise.all([
         api.getLeads().catch(() => null),
@@ -343,7 +338,14 @@ export default function Outreach() {
       ]);
 
       if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
-        setTeamMembers(usersRes.data);
+        const cleanUsers = usersRes.data.filter(
+          (u) =>
+            u.name !== 'Athish' &&
+            u.name !== 'Athish Ravikanth' &&
+            u.id !== 'usr_athish' &&
+            u.email !== 'athishravikanth@gmail.com'
+        );
+        setTeamMembers(cleanUsers);
       }
 
       if (leadsRes && leadsRes.success && Array.isArray(leadsRes.data) && leadsRes.data.length > 0) {
@@ -351,11 +353,7 @@ export default function Outreach() {
         try {
           localStorage.setItem('oneroot_leads_v3', JSON.stringify(leadsRes.data));
         } catch {}
-        const computed = buildOutreachMatrix(leadsRes.data, storedOutreach.length > 0 ? storedOutreach : INITIAL_OUTREACH_LOGS);
-        setLogs(computed);
-        try {
-          localStorage.setItem('oneroot_outreach_v3', JSON.stringify(computed));
-        } catch {}
+        setLogs(buildOutreachMatrix(leadsRes.data));
       }
     } catch (err) {
       console.warn('Outreach data refresh warning:', err);
@@ -512,18 +510,20 @@ export default function Outreach() {
   const allUserOptions = useMemo(() => {
     const set = new Set(['All users']);
     if (profile?.name) set.add(profile.name);
-    teamMembers.forEach((t) => {
-      if (t.name) set.add(t.name);
+    (teamMembers || []).forEach((t) => {
+      if (t.name && t.name !== 'Athish' && t.name !== 'Athish Ravikanth' && !t.name.startsWith('usr_')) {
+        set.add(t.name);
+      }
     });
-    logs.forEach((l) => {
-      if (l.user) set.add(l.user);
-    });
-    leads.forEach((l) => {
-      const u = l.created_by_name || l.agent_name;
-      if (u) set.add(u);
+    set.add('Sagar Punia');
+    set.add('Rahul');
+    (logs || []).forEach((l) => {
+      if (l.user && l.user !== 'Athish' && l.user !== 'Athish Ravikanth' && !l.user.startsWith('usr_')) {
+        set.add(l.user);
+      }
     });
     return Array.from(set);
-  }, [teamMembers, profile, logs, leads]);
+  }, [teamMembers, profile, logs]);
 
   return (
     <div className="space-y-6 antialiased pb-12">

@@ -152,7 +152,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed) && parsed.length > 0) return parsed;
       }
-    } catch {}
+    } catch { }
     return DEFAULT_DESIGNATIONS;
   });
   const [showAddRoleInput, setShowAddRoleInput] = useState(false);
@@ -164,7 +164,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     if (!designations.includes(trimmed)) {
       const updated = [...designations, trimmed];
       setDesignations(updated);
-      try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch {}
+      try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch { }
     }
     setForm((prev) => ({ ...prev, department: trimmed }));
     setNewRoleText('');
@@ -178,7 +178,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     }
     const updated = designations.filter((d) => d !== roleToRemove);
     setDesignations(updated);
-    try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch {}
+    try { localStorage.setItem('crm_custom_designations', JSON.stringify(updated)); } catch { }
     if (form.department === roleToRemove) {
       setForm((prev) => ({ ...prev, department: updated[0] }));
     }
@@ -296,22 +296,80 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
 
   const loadStaff = async () => {
     setLoading(true);
+    let list = [];
     try {
       const res = await api.getUsers();
-      if (res && res.success && Array.isArray(res.data)) {
-        setStaffList(res.data);
-        return;
+      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
+        list = res.data.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
       }
     } catch (err) {
       console.warn('Failed to load staff list from API, checking local storage:', err.message);
-      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      if (localStaff.length > 0) {
-        setStaffList(localStaff);
-      }
-    } finally {
-      setLoading(false);
     }
+    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
+    const filteredLocal = localStaff.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+
+    const map = new Map();
+    list.forEach((u) => map.set(u.email?.toLowerCase() || u.id, u));
+    filteredLocal.forEach((u) => {
+      const key = u.email?.toLowerCase() || u.id;
+      if (!map.has(key)) map.set(key, u);
+    });
+    list = Array.from(map.values());
+
+    const hasSagar = list.some(
+      (u) =>
+        (u.name && u.name.toLowerCase().includes('sagar')) ||
+        (u.email && u.email.toLowerCase().includes('sagar'))
+    );
+    if (!hasSagar) {
+      list.unshift({
+        id: 'usr_1789929063747_allpa4',
+        name: 'Sagar Punia',
+        email: 'sagarpunia163@gmail.com',
+        role: 'agent',
+        persona: 'staff',
+        staff_password: 'staff123',
+        department: 'Commodity Sales Executive',
+        phone: '08307967782',
+        is_active: true,
+        company_id: 'comp_bioniversio_1',
+        created_by: 'usr_1791814468302_hoa08z',
+        avatar_url:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+      });
+    }
+
+    const hasRahul = list.some(
+      (u) =>
+        (u.name && u.name.toLowerCase().includes('rahul')) ||
+        (u.email && u.email.toLowerCase().includes('rahul'))
+    );
+    if (!hasRahul) {
+      list.push({
+        id: 'usr_1792001466336_wwykxg',
+        name: 'Rahul',
+        email: 'rahul@gmail.com',
+        role: 'agent',
+        persona: 'staff',
+        staff_password: 'staff123',
+        department: 'Commodity Sales Executive',
+        phone: '+91 98765 43210',
+        is_active: true,
+        company_id: 'comp_bioniversio_1',
+        created_by: 'usr_1791814468302_hoa08z',
+        avatar_url:
+          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+      });
+    }
+    setStaffList(list);
+    try {
+      localStorage.setItem('crm_local_staff', JSON.stringify(list));
+      if (currentUser?.id) {
+        localStorage.setItem(`crm_local_staff_${currentUser.id}`, JSON.stringify(list));
+      }
+    } catch {}
+    setLoading(false);
   };
 
   const copyToClipboard = (text) => {
@@ -345,7 +403,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       return {};
     }
   })();
-  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 2;
+  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 10;
   const isLimitReached = staffList.length >= staffQuota;
 
   const handleCreateStaff = async (e) => {
@@ -387,6 +445,32 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       });
 
       if (res && res.success) {
+        // Sync immediately to local storage
+        try {
+          const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
+          const cleanUser = res.data || {
+            id: 'usr_staff_' + Date.now(),
+            name: form.name.trim(),
+            email: form.email.trim().toLowerCase(),
+            staff_password: form.password,
+            role: form.role || 'agent',
+            persona: 'staff',
+            department: form.department,
+            phone: form.phone.trim(),
+            avatar_url: form.avatar_url,
+            data_scope: form.data_scope,
+            permissions: form.permissions,
+            is_active: true,
+          };
+          const filtered = localStaff.filter((s) => s.email?.toLowerCase() !== cleanUser.email?.toLowerCase());
+          filtered.push(cleanUser);
+          localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
+          if (currentUser?.id) {
+            localStorage.setItem(ownerKey, JSON.stringify(filtered));
+          }
+        } catch {}
+
         setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
         setForm({
           name: '',
@@ -536,7 +620,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             }
             localStorage.setItem('crm_user_session', JSON.stringify(session));
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedUser } : s)));
@@ -584,7 +668,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             }
             localStorage.setItem('crm_user_session', JSON.stringify(session));
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedStaff } : s)));
@@ -642,11 +726,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             <div className="font-extrabold text-emerald-950 text-xs flex flex-wrap items-center gap-1.5">
               <ShieldCheck size={16} className="text-emerald-700" />
               <span>Granular Staff Access & Data Privacy Controls</span>
-              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
-                isLimitReached 
-                  ? 'bg-amber-100 text-amber-900 border-amber-300' 
+              <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${isLimitReached
+                  ? 'bg-amber-100 text-amber-900 border-amber-300'
                   : 'bg-emerald-100 text-emerald-800 border-emerald-300'
-              }`}>
+                }`}>
                 Quota: {staffList.length}/{staffQuota} Seats {isLimitReached ? '(Limit Reached)' : ''}
               </span>
             </div>
@@ -669,11 +752,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 setSuccessMsg('');
               }}
               title={isLimitReached ? `Staff quota full (${staffQuota}/${staffQuota}). Contact administrator.` : 'Add a new staff member'}
-              className={`px-3.5 py-2 rounded-xl text-white font-bold text-xs shadow-md flex items-center gap-1.5 shrink-0 transition-all ${
-                isLimitReached
+              className={`px-3.5 py-2 rounded-xl text-white font-bold text-xs shadow-md flex items-center gap-1.5 shrink-0 transition-all ${isLimitReached
                   ? 'bg-slate-400 opacity-60 cursor-not-allowed shadow-none'
                   : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20 cursor-pointer'
-              }`}
+                }`}
             >
               <Plus size={15} /> + Add New Staff
             </button>
@@ -833,11 +915,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   {designations.map((desig) => (
                     <span
                       key={desig}
-                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${
-                        form.department === desig
+                      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-semibold border ${form.department === desig
                           ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300'
                           : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-400'
-                      }`}
+                        }`}
                     >
                       <span
                         onClick={() => setForm({ ...form, department: desig })}
@@ -891,9 +972,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     src={av}
                     alt="Preset"
                     onClick={() => setForm({ ...form, avatar_url: av })}
-                    className={`w-8 h-8 rounded-full object-cover cursor-pointer ring-2 transition-all ${
-                      form.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
-                    }`}
+                    className={`w-8 h-8 rounded-full object-cover cursor-pointer ring-2 transition-all ${form.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
+                      }`}
                   />
                 ))}
               </div>
@@ -946,11 +1026,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      form.data_scope === 'own_only'
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${form.data_scope === 'own_only'
                         ? 'bg-emerald-50/70 border-emerald-500 ring-1 ring-emerald-500/20'
                         : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -970,11 +1049,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   </label>
 
                   <label
-                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                      form.data_scope === 'all'
+                    className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${form.data_scope === 'all'
                         ? 'bg-purple-50/70 border-purple-500 ring-1 ring-purple-500/20'
                         : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}
+                      }`}
                   >
                     <input
                       type="radio"
@@ -1002,11 +1080,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </label>
                 <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                   {/* Analytics Toggle */}
-                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    form.permissions.view_analytics
+                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.view_analytics
                       ? 'bg-emerald-50 border-emerald-300'
                       : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}>
+                    }`}>
                     <input
                       type="checkbox"
                       checked={form.permissions.view_analytics}
@@ -1057,11 +1134,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   </label>
 
                   {/* Task Assignment Permission (Strict Staff Restriction) */}
-                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                    form.permissions.tasks_assign
+                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.tasks_assign
                       ? 'bg-emerald-50 border-emerald-300'
                       : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}>
+                    }`}>
                     <input
                       type="checkbox"
                       checked={!!form.permissions.tasks_assign}
@@ -1201,9 +1277,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     <span className="font-semibold">✏️ Update</span>
                   </label>
 
-                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${
-                    form.permissions.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}>
+                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    }`}>
                     <input
                       type="checkbox"
                       checked={!!form.permissions.can_export}
@@ -1216,9 +1291,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
                   </label>
 
-                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${
-                    form.permissions.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                  }`}>
+                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
+                    }`}>
                     <input
                       type="checkbox"
                       checked={form.permissions.can_delete}
@@ -1506,9 +1580,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                       src={av}
                       alt="Preset"
                       onClick={() => setEditingStaff({ ...editingStaff, avatar_url: av })}
-                      className={`w-7 h-7 rounded-full object-cover cursor-pointer ring-2 transition-all ${
-                        editingStaff.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
-                      }`}
+                      className={`w-7 h-7 rounded-full object-cover cursor-pointer ring-2 transition-all ${editingStaff.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
+                        }`}
                     />
                   ))}
                 </div>
@@ -1522,11 +1595,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </label>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    editingStaff.data_scope === 'own_only'
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${editingStaff.data_scope === 'own_only'
                       ? 'bg-emerald-50/70 border-emerald-500 ring-1 ring-emerald-500/20'
                       : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1546,11 +1618,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </label>
 
                 <label
-                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${
-                    editingStaff.data_scope === 'all'
+                  className={`p-3 rounded-xl border flex items-start gap-2.5 cursor-pointer transition-all ${editingStaff.data_scope === 'all'
                       ? 'bg-purple-50/70 border-purple-500 ring-1 ring-purple-500/20'
                       : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                  }`}
+                    }`}
                 >
                   <input
                     type="radio"
@@ -1577,11 +1648,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 2. Section Visibility <span className="text-emerald-600">(Which sections can this employee see?)</span>
               </label>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
-                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                  editingStaff.permissions?.view_analytics
+                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${editingStaff.permissions?.view_analytics
                     ? 'bg-emerald-50 border-emerald-300'
                     : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={!!editingStaff.permissions?.view_analytics}
@@ -1630,11 +1700,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </label>
 
                 {/* Tasks Assignment (Restricted) */}
-                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${
-                  editingStaff.permissions?.tasks_assign
+                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${editingStaff.permissions?.tasks_assign
                     ? 'bg-emerald-50 border-emerald-300'
                     : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                }`}>
+                  }`}>
                   <input
                     type="checkbox"
                     checked={!!editingStaff.permissions?.tasks_assign}
@@ -1758,9 +1827,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   />
                   <span className="font-semibold">✏️ Update</span>
                 </label>
-                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${
-                  editingStaff.permissions?.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                }`}>
+                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${editingStaff.permissions?.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={!!editingStaff.permissions?.can_export}
@@ -1772,9 +1840,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   />
                   <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
                 </label>
-                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${
-                  editingStaff.permissions?.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                }`}>
+                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${editingStaff.permissions?.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
+                  }`}>
                   <input
                     type="checkbox"
                     checked={!!editingStaff.permissions?.can_delete}
@@ -1979,11 +2046,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                 </span>
                               ) : (
                                 <>
-                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
-                                    perms.view_analytics
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${perms.view_analytics
                                       ? 'bg-purple-50 text-purple-700 border-purple-200'
                                       : 'bg-slate-100 text-slate-500 border-slate-200'
-                                  }`}>
+                                    }`}>
                                     {perms.view_analytics ? '📊 Analytics: ON' : '📊 Analytics: OFF'}
                                   </span>
 
@@ -1991,11 +2057,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                     📋 Leads
                                   </span>
 
-                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${
-                                    perms.tasks_assign
+                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${perms.tasks_assign
                                       ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
                                       : 'bg-blue-50 text-blue-700 border-blue-200'
-                                  }`}>
+                                    }`}>
                                     {perms.tasks_assign ? '✅ Tasks (Can Assign)' : '✅ Tasks (View Only)'}
                                   </span>
 
@@ -2051,11 +2116,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                   <button
                                     type="button"
                                     onClick={() => toggleStatus(staff.id)}
-                                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${
-                                      staff.is_active
+                                    className={`px-2 py-0.5 rounded-lg text-[10px] font-bold border transition-colors cursor-pointer ${staff.is_active
                                         ? 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'
                                         : 'bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100'
-                                    }`}
+                                      }`}
                                   >
                                     {staff.is_active ? 'Active' : 'Disabled'}
                                   </button>
@@ -2151,7 +2215,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   </div>
                   <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-white tracking-wider flex items-center justify-between">
                     <span className="select-all">
-                      {showQuickCurrentPassword 
+                      {showQuickCurrentPassword
                         ? (quickResetStaff.staff_password || quickResetStaff.plain_password || '123456')
                         : '••••••••••••'}
                     </span>
@@ -2217,18 +2281,18 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   disabled={quickResetLoading || quickResetPassword.length < 6}
                   className="px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
                 >
-                {quickResetLoading ? (
-                  <>
-                    <Loader2 size={13} className="animate-spin" />
-                    <span>Updating Password...</span>
-                  </>
-                ) : (
-                  <>
-                    <Key size={13} />
-                    <span>Set New Password</span>
-                  </>
-                )}
-              </button>
+                  {quickResetLoading ? (
+                    <>
+                      <Loader2 size={13} className="animate-spin" />
+                      <span>Updating Password...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Key size={13} />
+                      <span>Set New Password</span>
+                    </>
+                  )}
+                </button>
               </div>
             </div>
           </div>

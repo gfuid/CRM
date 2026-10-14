@@ -2115,7 +2115,7 @@ export default function Leads() {
             {isStaff ? 'Your Workspace' : 'Active Team'}
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-center gap-1.5 truncate">
-            <span>{isStaff ? (profile?.name || 'Staff Member') : `${teamList.length} Staff Member${teamList.length === 1 ? '' : 's'}`}</span>
+            <span>{isStaff ? (profile?.name || 'Staff') : `${teamList.length} Staff`}</span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 truncate">
             {isStaff ? 'Isolated Portfolio' : 'All Staff Activity Tracked'}
