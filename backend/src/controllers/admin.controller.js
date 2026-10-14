@@ -69,6 +69,7 @@ const getAllUsers = async (req, res) => {
           avatar_url: s.avatar_url,
           created_at: s.created_at,
           data_scope: s.data_scope,
+          staff_password: s.staff_password || s.plain_password || '123456',
         }));
 
       // Free Trial / Default limit is 2 staff seats per owner unless adjusted by Admin
@@ -104,6 +105,7 @@ const getAllUsers = async (req, res) => {
         staff_limit: u.staff_limit !== undefined ? Number(u.staff_limit) : 2,
         staff_count: 0,
         staff_list: [],
+        staff_password: u.staff_password || u.plain_password || '123456',
       };
     }
   });
@@ -213,6 +215,7 @@ const createUser = async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
+      staff_password: rawPassword,
       role: userRole,
       persona: 'staff',
       department: department || 'Commodity Sales & Operations',
@@ -246,7 +249,7 @@ const createUser = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  const cleanUser = { ...newUser };
+  const cleanUser = { ...newUser, staff_password: rawPassword };
   delete cleanUser.password;
 
   return ApiResponse.created(res, cleanUser, 'Staff member created successfully');
@@ -281,6 +284,9 @@ const updateUser = async (req, res) => {
   if (req.body.password && req.body.password.length >= 6) {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(req.body.password, salt);
+    user.staff_password = req.body.password;
+  } else if (req.body.staff_password) {
+    user.staff_password = req.body.staff_password;
   }
   if (permissions !== undefined) {
     user.permissions = {
@@ -305,7 +311,7 @@ const updateUser = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  const cleanUser = { ...user };
+  const cleanUser = { ...user, staff_password: user.staff_password || '' };
   delete cleanUser.password;
 
   return ApiResponse.success(res, cleanUser, 'Staff member permissions updated successfully');

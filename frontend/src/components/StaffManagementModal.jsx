@@ -195,12 +195,30 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     permissions: { ...DEFAULT_PERMISSIONS },
   });
 
-  // Dedicated Password Reset State
+  // Dedicated Password Reset & Password Visibility State
   const [quickResetStaff, setQuickResetStaff] = useState(null);
   const [quickResetPassword, setQuickResetPassword] = useState('');
   const [showQuickPassword, setShowQuickPassword] = useState(false);
   const [quickResetLoading, setQuickResetLoading] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
+  const [showEditCurrentPassword, setShowEditCurrentPassword] = useState(false);
+  const [showQuickCurrentPassword, setShowQuickCurrentPassword] = useState(false);
+  const [visiblePasswords, setVisiblePasswords] = useState({});
+  const [copiedPassword, setCopiedPassword] = useState(null);
+
+  const togglePasswordVisibility = (staffId) => {
+    setVisiblePasswords((prev) => ({
+      ...prev,
+      [staffId]: !prev[staffId],
+    }));
+  };
+
+  const copyPasswordToClipboard = (password, id) => {
+    if (!password) return;
+    navigator.clipboard.writeText(password);
+    setCopiedPassword(id);
+    setTimeout(() => setCopiedPassword(null), 2500);
+  };
 
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#%';
@@ -221,13 +239,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     setQuickResetLoading(true);
     setError('');
     try {
-      const res = await api.updateUser(staffMember.id, { password: cleanPass });
+      const res = await api.updateUser(staffMember.id, { password: cleanPass, staff_password: cleanPass });
       if (res && res.success) {
         setSuccessMsg(`Password successfully updated for ${staffMember.name} (${staffMember.email})!`);
         setQuickResetStaff(null);
         setQuickResetPassword('');
         if (editingStaff && editingStaff.id === staffMember.id) {
-          setEditingStaff((prev) => prev ? { ...prev, new_password: '' } : null);
+          setEditingStaff((prev) => prev ? { ...prev, staff_password: cleanPass, new_password: '' } : null);
         }
         loadStaff();
         window.dispatchEvent(new Event('crm_staff_updated'));
@@ -235,11 +253,16 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
     } catch (err) {
       console.warn('API updateUser password error, updating locally:', err.message);
+      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      const updated = localStaff.map((s) => s.id === staffMember.id ? { ...s, password: cleanPass, staff_password: cleanPass } : s);
+      localStorage.setItem(ownerKey, JSON.stringify(updated));
+      setStaffList((prev) => prev.map((s) => s.id === staffMember.id ? { ...s, staff_password: cleanPass } : s));
       setSuccessMsg(`Password successfully updated for ${staffMember.name}!`);
       setQuickResetStaff(null);
       setQuickResetPassword('');
       if (editingStaff && editingStaff.id === staffMember.id) {
-        setEditingStaff((prev) => prev ? { ...prev, new_password: '' } : null);
+        setEditingStaff((prev) => prev ? { ...prev, staff_password: cleanPass, new_password: '' } : null);
       }
       window.dispatchEvent(new Event('crm_staff_updated'));
     } finally {
@@ -253,6 +276,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       if (initialEditStaff) {
         setEditingStaff({
           ...initialEditStaff,
+          staff_password: initialEditStaff.staff_password || initialEditStaff.plain_password || '123456',
           data_scope: initialEditStaff.data_scope || 'own_only',
           permissions: initialEditStaff.permissions || { ...DEFAULT_PERMISSIONS },
           new_password: '',
@@ -349,6 +373,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        staff_password: form.password,
         role: form.role,
         department: form.department,
         phone: form.phone.trim(),
@@ -401,6 +426,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
+        staff_password: form.password,
         role: form.role || 'agent',
         department: form.department || designations[0] || 'Commodity Sales Executive',
         phone: form.phone.trim(),
@@ -453,6 +479,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         return;
       }
       payload.password = editingStaff.new_password.trim();
+      payload.staff_password = editingStaff.new_password.trim();
     }
 
     try {
@@ -468,7 +495,11 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       console.warn('API updateUser error, saving to local storage fallback:', err.message);
       const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      const updatedStaff = { ...editingStaff, ...payload };
+      const updatedStaff = {
+        ...editingStaff,
+        ...payload,
+        staff_password: payload.staff_password || editingStaff.staff_password || '123456',
+      };
       const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
       if (idx !== -1) {
         localStaff[idx] = { ...localStaff[idx], ...updatedStaff };
@@ -647,6 +678,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   <Lock size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type={showPassword ? 'text' : 'password'}
+                    autoComplete="new-password"
                     required
                     placeholder="Min 6 characters"
                     value={form.password}
@@ -1221,54 +1253,117 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                   />
                 </div>
+              </div>
 
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                      <Lock size={12} className="text-emerald-600" />
-                      <span>Reset Login Password</span>
-                      <span className="text-slate-400 font-normal text-[10px]">(Optional)</span>
-                    </label>
-                    {editingStaff.new_password && editingStaff.new_password.trim().length >= 6 && (
+              {/* Password Management Box for Owner */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+                {/* 1. CURRENT STAFF PASSWORD (VISIBLE / REVEALABLE) */}
+                <div className="p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/90 dark:border-amber-800/60 rounded-xl space-y-1.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
+                        <Lock size={12} className="text-amber-600" />
+                        <span>Current Login Password</span>
+                        <span className="px-1.5 py-0.2 rounded bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-extrabold">
+                          Owner Eye View
+                        </span>
+                      </label>
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => setShowEditCurrentPassword(!showEditCurrentPassword)}
+                          className="px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-md transition-colors cursor-pointer flex items-center gap-1"
+                          title={showEditCurrentPassword ? 'Hide password' : 'View password'}
+                        >
+                          {showEditCurrentPassword ? <EyeOff size={12} /> : <Eye size={12} />}
+                          <span>{showEditCurrentPassword ? 'Hide' : 'View'}</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => copyPasswordToClipboard(editingStaff.staff_password || editingStaff.plain_password || '123456', 'edit_curr')}
+                          className="px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 border border-amber-300 dark:border-amber-800 rounded-md transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                          title="Copy current password"
+                        >
+                          {copiedPassword === 'edit_curr' ? (
+                            <>
+                              <Check size={11} className="text-emerald-600" />
+                              <span className="text-emerald-600">Copied!</span>
+                            </>
+                          ) : (
+                            <>
+                              <Copy size={11} />
+                              <span>Copy</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
+                    </div>
+                    <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-white tracking-wider flex items-center justify-between">
+                      <span className="select-all">
+                        {showEditCurrentPassword
+                          ? (editingStaff.staff_password || editingStaff.plain_password || '123456')
+                          : '••••••••••••'}
+                      </span>
+                    </div>
+                  </div>
+                  <div className="text-[10px] text-amber-800/80 dark:text-amber-400">
+                    Employee uses this password to log in. Click "View" or copy to send.
+                  </div>
+                </div>
+
+                {/* 2. CHANGE / RESET PASSWORD */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5 flex flex-col justify-between">
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                        <Key size={12} className="text-emerald-600" />
+                        <span>Change / Set New Password</span>
+                        <span className="text-slate-400 font-normal text-[10px]">(Optional)</span>
+                      </label>
+                      {editingStaff.new_password && editingStaff.new_password.trim().length >= 6 && (
+                        <button
+                          type="button"
+                          onClick={() => handleQuickResetPassword(editingStaff, editingStaff.new_password)}
+                          disabled={quickResetLoading}
+                          className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                          title="Instantly update password without saving other form fields"
+                        >
+                          <Key size={10} />
+                          <span>{quickResetLoading ? 'Updating...' : 'Update Now'}</span>
+                        </button>
+                      )}
+                    </div>
+                    <div className="relative">
+                      <input
+                        type={showEditPassword ? 'text' : 'password'}
+                        autoComplete="new-password"
+                        placeholder="Type new password (min 6 chars)"
+                        value={editingStaff.new_password || ''}
+                        onChange={(e) => setEditingStaff({ ...editingStaff, new_password: e.target.value })}
+                        className="w-full pl-3 pr-9 py-1.5 text-xs bg-white dark:bg-slate-950 border border-slate-300 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-lg focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal font-mono"
+                      />
                       <button
                         type="button"
-                        onClick={() => handleQuickResetPassword(editingStaff, editingStaff.new_password)}
-                        disabled={quickResetLoading}
-                        className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                        title="Instantly update password without scrolling to the bottom"
+                        onClick={() => setShowEditPassword(!showEditPassword)}
+                        className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                        title={showEditPassword ? 'Hide new password' : 'Show new password'}
                       >
-                        <Key size={10} />
-                        <span>{quickResetLoading ? 'Updating...' : 'Update Password Now'}</span>
+                        {showEditPassword ? <EyeOff size={13} /> : <Eye size={13} />}
                       </button>
-                    )}
+                    </div>
                   </div>
-                  <div className="relative">
-                    <input
-                      type={showEditPassword ? 'text' : 'password'}
-                      placeholder="Enter new password (min 6 characters)"
-                      value={editingStaff.new_password || ''}
-                      onChange={(e) => setEditingStaff({ ...editingStaff, new_password: e.target.value })}
-                      className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowEditPassword(!showEditPassword)}
-                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-                      title={showEditPassword ? 'Hide password' : 'Show password'}
-                    >
-                      {showEditPassword ? <EyeOff size={13} /> : <Eye size={13} />}
-                    </button>
-                  </div>
-                  <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
-                    <span>Leave empty to keep existing password</span>
+                  <div className="flex items-center justify-between text-[10px] text-slate-400">
+                    <span>Leave blank to keep existing password</span>
                     {editingStaff.new_password && (
                       <span className={editingStaff.new_password.length >= 6 ? 'text-emerald-600 font-semibold' : 'text-amber-500 font-semibold'}>
-                        {editingStaff.new_password.length >= 6 ? '✓ Valid (Min 6 chars)' : `${editingStaff.new_password.length}/6 chars`}
+                        {editingStaff.new_password.length >= 6 ? '✓ Ready (Min 6)' : `${editingStaff.new_password.length}/6 chars`}
                       </span>
                     )}
                   </div>
                 </div>
+              </div>
 
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
                     Phone / WhatsApp
@@ -1628,6 +1723,9 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     <th className="py-3 px-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300">
                       Login Email Address
                     </th>
+                    <th className="py-3 px-3.5 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">
+                      Login Password
+                    </th>
                     <th className="py-3 px-3.5">Department / Role</th>
                     <th className="py-3 px-3.5">Data Scope</th>
                     <th className="py-3 px-3.5">Permissions</th>
@@ -1637,7 +1735,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                   {staffList.length === 0 ? (
                     <tr>
-                      <td colSpan="6" className="p-8 text-center text-slate-400 text-xs">
+                      <td colSpan="7" className="p-8 text-center text-slate-400 text-xs">
                         No staff members found. Click "+ Add New Staff" to create an employee account.
                       </td>
                     </tr>
@@ -1695,6 +1793,44 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                 )}
                               </button>
                             </div>
+                          </td>
+
+                          {/* DEDICATED VISIBLE LOGIN PASSWORD COLUMN */}
+                          <td className="py-3 px-3.5 whitespace-nowrap bg-amber-50/20 dark:bg-amber-950/10">
+                            {isOwnerStaff ? (
+                              <span className="text-[11px] font-semibold text-slate-400 italic">
+                                Private (Owner)
+                              </span>
+                            ) : (
+                              <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-slate-100">
+                                <Lock size={12} className="text-amber-600 shrink-0" />
+                                <span className="font-mono text-[11px] tracking-wider select-all">
+                                  {visiblePasswords[staff.id]
+                                    ? (staff.staff_password || staff.plain_password || '123456')
+                                    : '••••••••'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={() => togglePasswordVisibility(staff.id)}
+                                  className="p-1 rounded text-slate-400 hover:text-amber-600 transition-colors cursor-pointer"
+                                  title={visiblePasswords[staff.id] ? 'Hide password' : 'Show password'}
+                                >
+                                  {visiblePasswords[staff.id] ? <EyeOff size={13} /> : <Eye size={13} />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => copyPasswordToClipboard(staff.staff_password || staff.plain_password || '123456', staff.id)}
+                                  className="p-1 rounded text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
+                                  title="Copy Password"
+                                >
+                                  {copiedPassword === staff.id ? (
+                                    <Check size={12} className="text-emerald-600" />
+                                  ) : (
+                                    <Copy size={12} />
+                                  )}
+                                </button>
+                              </div>
+                            )}
                           </td>
 
                           {/* Department / Role */}
@@ -1786,6 +1922,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                     type="button"
                                     onClick={() => setEditingStaff({
                                       ...staff,
+                                      staff_password: staff.staff_password || staff.plain_password || '123456',
                                       data_scope: staff.data_scope || 'own_only',
                                       permissions: staff.permissions || { ...DEFAULT_PERMISSIONS },
                                       new_password: '',
@@ -1862,6 +1999,51 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </div>
 
               <div className="space-y-3">
+                {/* Current Active Password display with Eye Toggle & Copy */}
+                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/70 rounded-xl space-y-1.5">
+                  <div className="flex items-center justify-between text-[11px] font-bold text-amber-950 dark:text-amber-200">
+                    <span className="flex items-center gap-1.5">
+                      <Lock size={12} className="text-amber-600" />
+                      Current Login Password:
+                    </span>
+                    <div className="flex items-center gap-1.5">
+                      <button
+                        type="button"
+                        onClick={() => setShowQuickCurrentPassword(!showQuickCurrentPassword)}
+                        className="text-[10px] text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
+                      >
+                        {showQuickCurrentPassword ? <EyeOff size={11} /> : <Eye size={11} />}
+                        <span>{showQuickCurrentPassword ? 'Hide' : 'View'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => copyPasswordToClipboard(quickResetStaff.staff_password || quickResetStaff.plain_password || '123456', 'quick_curr')}
+                        className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-800 rounded transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Copy Password"
+                      >
+                        {copiedPassword === 'quick_curr' ? (
+                          <>
+                            <Check size={10} className="text-emerald-600" />
+                            <span className="text-emerald-600">Copied!</span>
+                          </>
+                        ) : (
+                          <>
+                            <Copy size={10} />
+                            <span>Copy</span>
+                          </>
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-white tracking-wider flex items-center justify-between">
+                    <span className="select-all">
+                      {showQuickCurrentPassword 
+                        ? (quickResetStaff.staff_password || quickResetStaff.plain_password || '123456')
+                        : '••••••••••••'}
+                    </span>
+                  </div>
+                </div>
+
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
@@ -1882,6 +2064,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   <div className="relative">
                     <input
                       type={showQuickPassword ? 'text' : 'password'}
+                      autoComplete="new-password"
                       value={quickResetPassword}
                       onChange={(e) => setQuickResetPassword(e.target.value)}
                       placeholder="Enter minimum 6 characters"

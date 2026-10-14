@@ -369,10 +369,10 @@
       "company_id": "",
       "created_by": "",
       "staff_limit": 2,
-      "last_login": "2026-10-14T15:46:25.723Z",
+      "last_login": "2026-10-14T16:32:08.770Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
-      "updatedAt": "2026-10-14T15:46:25.739Z",
+      "updatedAt": "2026-10-14T16:32:08.776Z",
       "__v": 0
     },
     {
@@ -434,7 +434,7 @@
       "is_active": true,
       "last_login": null,
       "name": "deepak",
-      "password": "$2a$10$wT8NZCFemOOd17ZQKE5aNupeQqTsnH24kmNznA7Sr4qDGalfmX2/q",
+      "password": "$2a$10$b1Rcng0QOL6mMuQHCJJyJOv2JUy/B7DWcDyaw9ZhMptgtwqHzzy46",
       "permissions": {
         "view_analytics": false,
         "view_leads": true,
@@ -453,7 +453,46 @@
       "phone": "+919845112345",
       "role": "agent",
       "staff_limit": 2,
-      "updatedAt": "2026-10-14T15:57:50.610Z"
+      "updatedAt": "2026-10-14T15:57:50.610Z",
+      "staff_password": "123456"
+    },
+    {
+      "_id": "6acfad450c69b3b6f1713b9a",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_1791988353309_h1djru",
+      "createdAt": "2026-10-14T16:26:54.985Z",
+      "created_at": "2026-10-14T16:26:54.954Z",
+      "created_by": "usr_1791988353309_kln9hb",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "vasu@gmail.com",
+      "id": "usr_1791995214954_dldsfy",
+      "is_active": true,
+      "last_login": null,
+      "name": "vasu",
+      "password": "$2a$10$vQn1HDNLvAmolPIEt19G6e2aDbTe5lPt0jgb3tkofn.eDf0TDx6Ue",
+      "permissions": {
+        "view_analytics": false,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": false,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 2,
+      "updatedAt": "2026-10-14T16:26:54.985Z"
     }
   ],
   "leads": [
@@ -4113,6 +4152,58 @@
       "createdAt": "2026-10-14T15:57:50.633Z",
       "updatedAt": "2026-10-14T15:57:50.633Z",
       "__v": 0
+    },
+    {
+      "_id": "6acfad4e7741b5837abb2c5c",
+      "id": "log_1791995214959_lhhc9t",
+      "actor_name": "soch",
+      "actor_id": "usr_1791988353309_kln9hb",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member vasu (vasu@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T16:26:54.959Z",
+      "createdAt": "2026-10-14T16:26:55.011Z",
+      "updatedAt": "2026-10-14T16:26:55.011Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfaebc9dab257cd96b6894",
+      "id": "log_1791995580679_ckkyoq",
+      "actor_name": "Keerthana Ponni K",
+      "actor_id": "usr_1791814468302_hoa08z",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Sagar Punia (demo1@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T16:33:00.679Z",
+      "createdAt": "2026-10-14T16:33:00.769Z",
+      "updatedAt": "2026-10-14T16:33:00.769Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfafcf9dab257cd96b6895",
+      "id": "log_1791995855018_lhfz8m",
+      "actor_name": "Keerthana Ponni K",
+      "actor_id": "usr_1791814468302_hoa08z",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for Sagar Punia (demo1@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T16:37:35.018Z",
+      "createdAt": "2026-10-14T16:37:35.020Z",
+      "updatedAt": "2026-10-14T16:37:35.020Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfafcf9dab257cd96b6896",
+      "id": "log_1791995855478_r83fu0",
+      "actor_name": "Keerthana Ponni K",
+      "actor_id": "usr_1791814468302_hoa08z",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for Sagar Punia (demo1@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T16:37:35.478Z",
+      "createdAt": "2026-10-14T16:37:35.480Z",
+      "updatedAt": "2026-10-14T16:37:35.480Z",
+      "__v": 0
     }
   ],
   "company": {
@@ -4137,5 +4228,5 @@
     "updatedAt": "2026-10-14T14:32:33.656Z",
     "__v": 0
   },
-  "timestamp": "2026-10-14T16:26:28.606Z"
+  "timestamp": "2026-10-14T16:57:24.948Z"
 }
