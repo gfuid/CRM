@@ -13,7 +13,21 @@ module.exports = {
   },
   mongodbUri: process.env.MONGODB_URI || '',
   mongodbDbName: process.env.MONGODB_DB_NAME || 'crm',
-  adminUsername: process.env.ADMIN_USERNAME || 'traveltrade_admin',
+  adminUsername: process.env.ADMIN_USERNAME || 'admin',
   adminEmail: process.env.ADMIN_EMAIL || 'admin@travel-trade.com',
-  adminPassword: process.env.ADMIN_PASSWORD || 'TravelTrade#Admin2026!',
+  adminPassword: process.env.ADMIN_PASSWORD || 'admin123',
+  // Public URLs used inside emails (login button, unsubscribe links)
+  appUrl: (process.env.APP_URL || 'https://crm-amber-nine.vercel.app').replace(/\/$/, ''),
+  apiPublicUrl: (process.env.API_PUBLIC_URL || 'https://crm-ep4i.onrender.com').replace(/\/$/, ''),
+  // Platform transactional mail (registration thank-you etc.). Recommended free provider: Maileroo SMTP.
+  smtp: {
+    host: process.env.SMTP_HOST || '',
+    port: parseInt(process.env.SMTP_PORT, 10) || 587,
+    secure: process.env.SMTP_SECURE === 'true',
+    user: process.env.SMTP_USER || '',
+    pass: process.env.SMTP_PASS || '',
+    from: process.env.MAIL_FROM || process.env.SMTP_USER || 'no-reply@travel-trade.com',
+  },
+  // Key for encrypting owners' SMTP passwords at rest (falls back to JWT secret)
+  mailEncKey: process.env.MAIL_ENC_KEY || '',
 };

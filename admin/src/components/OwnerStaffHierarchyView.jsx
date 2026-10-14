@@ -14,7 +14,8 @@ import {
   Eye,
   CheckCircle2,
   AlertTriangle,
-  UserPlus
+  UserPlus,
+  Lock,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -23,6 +24,8 @@ export default function OwnerStaffHierarchyView({
   onUpdateRole = () => {},
   onToggleStatus = () => {},
   onAddStaffForOwner = () => {},
+  onResetPassword = null,
+  onToggleFeature = null,
 }) {
   // Store expanded owner IDs. Default to having all owners expanded so staff are immediately visible!
   const [expandedOwners, setExpandedOwners] = useState({});
@@ -296,6 +299,32 @@ export default function OwnerStaffHierarchyView({
                       <span>Increase Quota (+1)</span>
                     </button>
 
+                    {onToggleFeature && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFeature(owner.id, 'email_marketing', !owner.features?.email_marketing)}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                          owner.features?.email_marketing
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        title="Premium: Email Marketing on/off for this owner"
+                      >
+                        <Mail size={12} />
+                        <span>Email {owner.features?.email_marketing ? 'ON' : 'OFF'}</span>
+                      </button>
+                    )}
+                    {onResetPassword && (
+                      <button
+                        type="button"
+                        onClick={() => onResetPassword(owner)}
+                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Set a new password for this owner"
+                      >
+                        <Lock size={12} />
+                        <span>Password</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => onAddStaffForOwner(owner)}
@@ -400,6 +429,17 @@ export default function OwnerStaffHierarchyView({
                               >
                                 {emp.is_active ? 'Deactivate' : 'Activate'}
                               </button>
+                              {onResetPassword && (
+                                <button
+                                  type="button"
+                                  onClick={() => onResetPassword(emp)}
+                                  className="ml-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                  title="Set a new password for this staff member"
+                                >
+                                  <Lock size={10} />
+                                  <span>Password</span>
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}

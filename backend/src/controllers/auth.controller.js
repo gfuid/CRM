@@ -5,6 +5,7 @@ const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const { isDbConnected } = require('../config/db');
 const models = require('../models');
+const mailer = require('../services/mailer.service');
 
 /**
  * Login user with MongoDB lookup & bcrypt verification
@@ -133,6 +134,7 @@ const register = async (req, res) => {
   const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
   const newId = generateId('usr');
+  const companyId = isOwner ? generateId('comp') : (req.user?.company_id || '');
   const newUser = {
     id: newId,
     name: name.trim(),
@@ -140,6 +142,8 @@ const register = async (req, res) => {
     password: hashedPassword,
     role: isOwner ? 'admin' : 'agent',
     persona: isOwner ? 'owner' : 'staff',
+    company_id: companyId,
+    created_by: isOwner ? '' : (req.user?.id || ''),
     staff_limit: isOwner ? 2 : undefined,
     department: department || (isOwner ? 'Executive Management' : 'Sales Outreach'),
     phone: phone || '',
@@ -171,8 +175,19 @@ const register = async (req, res) => {
   }
   dbSync.saveCompany(dataStore.company);
 
+  // Thank-you / welcome email from the platform sender (non-blocking, never fails registration)
+  if (isOwner) {
+    mailer.sendWelcomeEmail(newUser, company_name || dataStore.company.name).catch(() => {});
+  }
+
   const token = jwt.sign(
-    { id: newUser.id, email: newUser.email, role: newUser.role, persona: newUser.persona },
+    {
+      id: newUser.id,
+      email: newUser.email,
+      role: newUser.role,
+      persona: newUser.persona,
+      company_id: newUser.company_id,
+    },
     config.jwtSecret,
     { expiresIn: config.jwtExpiresIn }
   );
@@ -244,7 +259,7 @@ const adminLogin = async (req, res) => {
   }
 
   const cleanUser = (username || '').toLowerCase().trim();
-  const validUser = (config.adminUsername || 'traveltrade_admin').toLowerCase();
+  const validUser = (config.adminUsername || 'admin').toLowerCase();
   const validEmail = (config.adminEmail || 'admin@travel-trade.com').toLowerCase();
 
   const isUserMatch = cleanUser === validUser || cleanUser === validEmail;
@@ -259,7 +274,7 @@ const adminLogin = async (req, res) => {
       id: 'usr_super_admin',
       name: 'Super Administrator',
       email: config.adminEmail || 'admin@travel-trade.com',
-      username: config.adminUsername || 'traveltrade_admin',
+      username: config.adminUsername || 'admin',
       role: 'admin',
       persona: 'owner',
     },
@@ -274,7 +289,7 @@ const adminLogin = async (req, res) => {
         id: 'usr_super_admin',
         name: 'Super Administrator',
         email: config.adminEmail || 'admin@travel-trade.com',
-        username: config.adminUsername || 'traveltrade_admin',
+        username: config.adminUsername || 'admin',
         role: 'admin',
       },
       token,

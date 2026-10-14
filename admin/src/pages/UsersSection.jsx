@@ -31,6 +31,8 @@ export default function UsersSection({
   onUpdateRole,
   onToggleStatus,
   onUpdateStaffLimit,
+  onToggleFeature,
+  onResetPassword,
 }) {
   const [viewMode, setViewMode] = useState('hierarchy'); // 'hierarchy' | 'flat'
   const [search, setSearch] = useState('');
@@ -40,6 +42,29 @@ export default function UsersSection({
   const [selectedOwnerForStaffList, setSelectedOwnerForStaffList] = useState(null);
   const [newStaffLimitValue, setNewStaffLimitValue] = useState(2);
   const [isUpdatingLimit, setIsUpdatingLimit] = useState(false);
+  const [resetUser, setResetUser] = useState(null);
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetError, setResetError] = useState('');
+
+  const openReset = (user) => {
+    setResetUser(user);
+    setResetPassword('');
+    setResetError('');
+  };
+
+  const handleResetSubmit = async (e) => {
+    e.preventDefault();
+    if (!resetUser || !onResetPassword) return;
+    if (resetPassword.length < 6) {
+      setResetError('Password must be at least 6 characters.');
+      return;
+    }
+    setResetBusy(true);
+    const ok = await onResetPassword(resetUser.id, resetPassword);
+    setResetBusy(false);
+    if (ok) setResetUser(null);
+  };
 
   // Form state
   const [newUser, setNewUser] = useState({
@@ -140,7 +165,7 @@ export default function UsersSection({
           <div>
             <div className="flex flex-wrap items-center gap-2">
               <h2 className="text-lg font-black text-slate-900 tracking-tight m-0">
-                Personnel & Business Owners
+                Owners & Staff
               </h2>
               <span className="text-xs px-3 py-0.5 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200 font-extrabold">
                 {activeCount} Active
@@ -185,7 +210,7 @@ export default function UsersSection({
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 no-scrollbar bg-slate-100/90 p-1 rounded-full text-xs font-semibold shrink-0">
             {[
               { id: 'all', label: 'All Users' },
-              { id: 'owner', label: '👑 Business Owners' },
+              { id: 'owner', label: 'Business Owners' },
               { id: 'staff', label: 'Staff Reps' },
               { id: 'admin', label: 'Admins' },
               { id: 'manager', label: 'Managers' },
@@ -219,7 +244,7 @@ export default function UsersSection({
               }`}
             >
               <Crown size={14} className={viewMode === 'hierarchy' ? 'text-amber-400' : 'text-slate-400'} />
-              <span>👑 Owners & Staff Hierarchy (Underneath View)</span>
+              <span>Owners & Staff</span>
             </button>
 
             <button
@@ -231,14 +256,14 @@ export default function UsersSection({
               }`}
             >
               <List size={14} />
-              <span>📋 All Personnel Table</span>
+              <span>All accounts</span>
             </button>
           </div>
 
           <div className="text-[11px] font-semibold text-slate-500 px-2">
             {viewMode === 'hierarchy'
-              ? 'Click any owner to view/hide their staff underneath & adjust quotas directly'
-              : 'Flat search of all team accounts'}
+              ? 'Click an owner to see staff, adjust seat quota and premium features'
+              : 'Every account in one table'}
           </div>
         </div>
 
@@ -249,6 +274,8 @@ export default function UsersSection({
             onUpdateStaffLimit={onUpdateStaffLimit}
             onUpdateRole={onUpdateRole}
             onToggleStatus={onToggleStatus}
+            onResetPassword={openReset}
+            onToggleFeature={onToggleFeature}
             onAddStaffForOwner={(owner) => {
               setNewUser((prev) => ({
                 ...prev,
@@ -340,6 +367,35 @@ export default function UsersSection({
                       </button>
                     </div>
                   )}
+
+                  {isOwner && (
+                    <button
+                      onClick={() => onToggleFeature && onToggleFeature(u.id, 'email_marketing', !u.features?.email_marketing)}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
+                        u.features?.email_marketing
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                      title="Premium: allow this owner to send email campaigns to tagged leads"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Mail size={13} />
+                        <span>Email Marketing</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${u.features?.email_marketing ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                        {u.features?.email_marketing ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => openReset(u)}
+                    className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors cursor-pointer"
+                    title="Set a new password for this account"
+                  >
+                    <Lock size={13} />
+                    <span>Reset password</span>
+                  </button>
 
                   <div className="flex items-center justify-between pt-1 gap-2">
                     <div className="flex items-center gap-1.5">
@@ -528,6 +584,26 @@ export default function UsersSection({
                             >
                               Team
                             </button>
+                            <button
+                              onClick={() => onToggleFeature && onToggleFeature(u.id, 'email_marketing', !u.features?.email_marketing)}
+                              className={`px-3 py-1 rounded-full text-[11px] font-bold border shadow-2xs transition-all cursor-pointer flex items-center gap-1 ${
+                                u.features?.email_marketing
+                                  ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                                  : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                              }`}
+                              title="Premium: Email Marketing on/off for this owner"
+                            >
+                              <Mail size={11} />
+                              <span>Email {u.features?.email_marketing ? 'ON' : 'OFF'}</span>
+                            </button>
+                            <button
+                              onClick={() => openReset(u)}
+                              className="px-3 py-1 rounded-full text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                              title="Set a new password for this owner"
+                            >
+                              <Lock size={11} />
+                              <span>Password</span>
+                            </button>
                           </div>
                         ) : (
                           <button
@@ -542,6 +618,16 @@ export default function UsersSection({
                             }`}
                           >
                             {u.is_active ? 'Deactivate' : 'Activate'}
+                          </button>
+                        )}
+                        {!isOwner && (
+                          <button
+                            onClick={() => openReset(u)}
+                            className="ml-1.5 px-3 py-1 rounded-full text-[11px] font-bold border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 shadow-2xs transition-all cursor-pointer inline-flex items-center gap-1"
+                            title="Set a new password for this staff member"
+                          >
+                            <Lock size={11} />
+                            <span>Password</span>
                           </button>
                         )}
                       </td>
@@ -662,6 +748,35 @@ export default function UsersSection({
       </Modal>
 
       {/* Modal: Adjust Owner Staff Seat Limit (Super Admin Control) */}
+      <Modal isOpen={!!resetUser} onClose={() => setResetUser(null)} title={`Reset password: ${resetUser?.name || ''}`}>
+        <form onSubmit={handleResetSubmit} className="space-y-4">
+          <p className="text-xs text-slate-500">
+            Set a new sign-in password for <strong className="text-slate-800">{resetUser?.email}</strong>. Share it with the user; they can change it later from their profile.
+          </p>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">New password (min 6 characters)</label>
+            <input
+              type="text"
+              value={resetPassword}
+              onChange={(e) => setResetPassword(e.target.value)}
+              className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-slate-900/10 focus:border-slate-500 focus:outline-none font-mono"
+              placeholder="e.g. Sagar@2026"
+              autoFocus
+              autoComplete="off"
+            />
+            {resetError && <p className="text-xs text-rose-600 mt-1 font-semibold">{resetError}</p>}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button type="button" onClick={() => setResetUser(null)} className="px-4 py-2 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 cursor-pointer">
+              Cancel
+            </button>
+            <button type="submit" disabled={resetBusy} className="px-4 py-2 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50">
+              {resetBusy ? 'Saving…' : 'Set password'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
       <Modal
         isOpen={!!editingStaffLimitUser}
         onClose={() => setEditingStaffLimitUser(null)}

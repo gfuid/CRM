@@ -166,6 +166,47 @@ export default function App() {
     }
   };
 
+  const handleToggleFeature = async (id, key, value) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}/features`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ [key]: Boolean(value) }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Feature ${value ? 'enabled' : 'disabled'}`);
+        fetchAllData();
+        return true;
+      }
+      showToast(data.message || 'Error updating feature', 'error');
+      return false;
+    } catch (err) {
+      showToast('Network error updating feature', 'error');
+      return false;
+    }
+  };
+
+  const handleResetPassword = async (id, password) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${id}`, {
+        method: 'PATCH',
+        headers: getHeaders(),
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast('Password reset. The user can sign in with the new password now.');
+        return true;
+      }
+      showToast(data.message || 'Error resetting password', 'error');
+      return false;
+    } catch (err) {
+      showToast('Network error resetting password', 'error');
+      return false;
+    }
+  };
+
   const handleUpdateSettings = async (settingsData) => {
     try {
       const res = await fetch(`${API_BASE}/settings`, {
@@ -237,6 +278,8 @@ export default function App() {
                   onUpdateStaffLimit={handleUpdateStaffLimit}
                   onUpdateRole={handleUpdateRole}
                   onToggleStatus={handleToggleStatus}
+                  onToggleFeature={handleToggleFeature}
+                  onResetPassword={handleResetPassword}
                 />
               )}
 
@@ -247,6 +290,8 @@ export default function App() {
                   onUpdateRole={handleUpdateRole}
                   onToggleStatus={handleToggleStatus}
                   onUpdateStaffLimit={handleUpdateStaffLimit}
+                  onToggleFeature={handleToggleFeature}
+                  onResetPassword={handleResetPassword}
                 />
               )}
 

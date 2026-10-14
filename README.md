@@ -19,8 +19,8 @@ A modern, high-performance Customer Relationship Management (CRM) system and Adm
 
 ### 1. Super Admin Console
 - **URL**: [https://crm-b2g7.vercel.app](https://crm-b2g7.vercel.app/)
-- **Username**: `traveltrade_admin` (or `admin@travel-trade.com`)
-- **Password**: `TravelTrade#Admin2026!`
+- **Username**: `admin` (or `admin@travel-trade.com`)
+- **Password**: `admin123`
 
 ### 2. Sales CRM Workspace
 - **URL**: [https://crm-amber-nine.vercel.app](https://crm-amber-nine.vercel.app/)
@@ -30,6 +30,33 @@ A modern, high-performance Customer Relationship Management (CRM) system and Adm
 - **Staff Login**: Added via the "+ Add Staff" modal inside the Sales CRM workspace.
 
 ---
+
+## ✉️ Email (Transactional + Email Marketing)
+
+### Platform emails (thank-you on registration)
+Sent from the platform's own SMTP account via Nodemailer. Set these on the backend (Render → Environment):
+
+| Variable | Example | Notes |
+| :--- | :--- | :--- |
+| `SMTP_HOST` | `smtp.maileroo.com` | Recommended free provider: Maileroo (SMTP + API, ~3,000 mails/month free). EmailLabs (300/day) also works. |
+| `SMTP_PORT` | `587` | Use `465` with `SMTP_SECURE=true` for SSL |
+| `SMTP_USER` / `SMTP_PASS` | — | SMTP credentials from the provider dashboard |
+| `MAIL_FROM` | `Travel-Trade CRM <no-reply@yourdomain.com>` | Verify the domain (SPF/DKIM) at the provider |
+| `APP_URL` | `https://crm-amber-nine.vercel.app` | Used for the login button in emails |
+| `API_PUBLIC_URL` | `https://crm-ep4i.onrender.com` | Used for unsubscribe links in campaigns |
+| `MAIL_ENC_KEY` | long random string | Encrypts owners' SMTP passwords at rest (falls back to `JWT_SECRET`) |
+
+If `SMTP_HOST` is empty the backend simply logs and skips the mail; registration still works.
+
+### Email Marketing (premium, per company)
+- **Super Admin** switches it on per owner: Owners & Staff → `Email ON/OFF` (`PATCH /admin/users/:id/features`).
+- **Owner** opens *Email Marketing* in the Sales CRM, saves their own SMTP sender (Gmail app password, Zoho, Outlook, Hostinger, Maileroo, or custom) and sends a test mail.
+- Leads get optional **tags** (lead form → Tags). Campaigns target one or more tags, all leads with email, or a pasted / CSV list.
+- Sending is throttled (`rate_per_minute`), logged per recipient, and every mail carries a one-click **unsubscribe** link. Placeholders: `{{company_name}} {{contact_name}} {{country}} {{product}} {{sender_name}}`.
+- API: `/api/v1/email/*` (see `/api/v1/docs`).
+
+### Super Admin login
+The console verifies credentials **only** against the backend (`ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars; defaults `admin` / `admin123`). There is no client-side fallback any more. Admins can set a new password for any owner or staff member from Owners & Staff → **Password**.
 
 ## Architecture
 

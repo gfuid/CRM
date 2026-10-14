@@ -66,6 +66,20 @@ const API_SPEC = {
       ],
     },
     {
+      name: 'Email Marketing (Premium, owner-only)',
+      endpoints: [
+        { method: 'GET', path: '/email/status', desc: 'Feature enabled? Sender configured?' },
+        { method: 'PUT', path: '/email/settings', desc: 'Save owner SMTP sender (password encrypted at rest)' },
+        { method: 'POST', path: '/email/settings/test', desc: 'Send a test email through the owner SMTP' },
+        { method: 'GET', path: '/email/tags', desc: 'Lead tags with counts for audience targeting' },
+        { method: 'GET', path: '/email/audience/preview', desc: 'Recipient count for mode=all|tags|custom' },
+        { method: 'POST', path: '/email/campaigns', desc: 'Create campaign (subject, body with {{placeholders}}, audience, send:true)' },
+        { method: 'POST', path: '/email/campaigns/:id/send', desc: 'Start throttled sending with per-recipient log' },
+        { method: 'GET', path: '/email/unsubscribe/:token', desc: 'Public one-click unsubscribe link' },
+        { method: 'PATCH', path: '/admin/users/:id/features', desc: 'Super Admin: toggle email_marketing for an owner' },
+      ],
+    },
+    {
       name: 'Analytics & Admin Telemetry',
       endpoints: [
         { method: 'GET', path: '/analytics', desc: 'Real-time KPIs, conversion rate, win-rate, deal values' },

@@ -34,9 +34,9 @@ jobs:
         env:
           NODE_ENV: test
           JWT_SECRET: ci_test_jwt_secret_key_123456789
-          ADMIN_USERNAME: traveltrade_admin
+          ADMIN_USERNAME: admin
           ADMIN_EMAIL: admin@travel-trade.com
-          ADMIN_PASSWORD: 'TravelTrade#Admin2026!'
+          ADMIN_PASSWORD: 'admin123'
         run: |
           cd backend
           npm test

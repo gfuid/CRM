@@ -7,7 +7,7 @@ const { dataStore } = require('../repositories/dataStore');
  */
 const syncFromDB = async () => {
   try {
-    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs] =
+    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns] =
       await Promise.all([
         models.User.find().lean(),
         models.Company.findOne().lean(),
@@ -18,6 +18,8 @@ const syncFromDB = async () => {
         models.MyDay.find().lean(),
         models.Outreach.find().lean(),
         models.AuditLog.find().lean(),
+        models.EmailSetting.find().lean(),
+        models.EmailCampaign.find().lean(),
       ]);
 
     if (users && users.length > 0) dataStore.users = users;
@@ -29,6 +31,8 @@ const syncFromDB = async () => {
     if (myDays && myDays.length > 0) dataStore.myDays = myDays;
     if (outreach && outreach.length > 0) dataStore.outreach = outreach;
     if (auditLogs && auditLogs.length > 0) dataStore.auditLogs = auditLogs;
+    if (emailSettings && emailSettings.length > 0) dataStore.emailSettings = emailSettings;
+    if (emailCampaigns && emailCampaigns.length > 0) dataStore.emailCampaigns = emailCampaigns;
 
     console.log(
       `🔄 In-memory cache successfully synchronized with MongoDB Atlas (${leads.length} leads, ${users.length} users, ${tasks.length} tasks).`

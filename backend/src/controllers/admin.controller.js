@@ -11,13 +11,15 @@ const getAllUsers = async (req, res) => {
   const { role, search, status } = req.query;
   let results = [...dataStore.users];
 
-  // If called by a company owner, only return their own staff members
-  if (req.user && req.user.persona === 'owner') {
+  // If called by a company owner (not the platform Super Admin), only return their own staff members
+  if (req.user && req.user.persona === 'owner' && req.user.id !== 'usr_super_admin') {
+    const ownerId = req.user.id;
+    const ownerCompanyId = req.user.company_id || ownerId;
     results = results.filter(
       (u) =>
         u.persona !== 'owner' &&
-        (u.company_id === req.user.company_id ||
-          u.created_by === req.user.id ||
+        ((u.company_id && u.company_id === ownerCompanyId) ||
+          u.created_by === ownerId ||
           u.created_by === req.user.email)
     );
   }
@@ -52,7 +54,7 @@ const getAllUsers = async (req, res) => {
           (s) =>
             s.id !== u.id &&
             s.persona !== 'owner' &&
-            (s.company_id === u.company_id || s.created_by === u.id || s.created_by === u.email || (!s.company_id && !s.created_by))
+            ((u.company_id && s.company_id === u.company_id) || s.created_by === u.id || s.created_by === u.email)
         )
         .map((s) => ({
           id: s.id,
@@ -429,6 +431,51 @@ const updateStaffLimit = async (req, res) => {
     enrichedUser,
     `Staff limit for ${user.name} successfully updated to ${newLimit} seats!`
   );
+};
+
+/**
+ * Super Admin: switch premium features on/off for a company owner
+ * PATCH /admin/users/:id/features  { email_marketing: true|false }
+ */
+const updateUserFeatures = async (req, res) => {
+  const { id } = req.params;
+  const allowed = ['email_marketing'];
+  const updates = {};
+  for (const key of allowed) {
+    if (req.body && req.body[key] !== undefined) updates[key] = Boolean(req.body[key]);
+  }
+  if (Object.keys(updates).length === 0) {
+    return ApiResponse.error(res, `Provide at least one feature flag: ${allowed.join(', ')}`, 400);
+  }
+
+  const user = dataStore.users.find(
+    (u) => u.id === id || String(u._id) === id || u.email?.toLowerCase() === id?.toLowerCase()
+  );
+  if (!user) {
+    return ApiResponse.error(res, 'Owner / User not found', 404);
+  }
+  if (user.persona !== 'owner' && user.role !== 'admin') {
+    return ApiResponse.error(res, 'Premium features can only be enabled for company owners', 400);
+  }
+
+  user.features = { ...(user.features || {}), ...updates };
+  dbSync.saveUser(user);
+
+  const auditLog = {
+    id: generateId('log'),
+    actor_name: req.user ? req.user.name : 'Super Admin',
+    actor_id: req.user ? req.user.id : 'usr_admin_1',
+    action: 'FEATURES_UPDATED',
+    details: `${Object.entries(updates).map(([k, v]) => `${k}=${v ? 'ON' : 'OFF'}`).join(', ')} for ${user.name} (${user.email})`,
+    ip_address: req.ip || '127.0.0.1',
+    timestamp: new Date().toISOString(),
+  };
+  dataStore.auditLogs.unshift(auditLog);
+  dbSync.saveAuditLog(auditLog);
+
+  const cleanUser = { ...user };
+  delete cleanUser.password;
+  return ApiResponse.success(res, cleanUser, `Features updated for ${user.name}`);
 };
 
 /**
@@ -817,6 +864,7 @@ module.exports = {
   toggleUserStatus,
   deleteUser,
   updateStaffLimit,
+  updateUserFeatures,
   sendNotification,
   getAdminNotifications,
   deleteAdminNotification,

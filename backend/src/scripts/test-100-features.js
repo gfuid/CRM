@@ -52,7 +52,7 @@ const runAll100Features = async () => {
     const adminLoginRes = await fetch(`${BASE}/api/v1/auth/admin-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'traveltrade_admin', password: 'TravelTrade#Admin2026!' }),
+      body: JSON.stringify({ username: 'admin', password: 'admin123' }),
     });
     const adminLoginData = await adminLoginRes.json();
     test(6, 'Super Admin Login Authentication', adminLoginRes.status === 200 && adminLoginData.success && !!adminLoginData.data.token, `User: ${adminLoginData.data?.user?.username}`);
@@ -62,7 +62,7 @@ const runAll100Features = async () => {
     const badAdminRes = await fetch(`${BASE}/api/v1/auth/admin-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'traveltrade_admin', password: 'WrongPassword999!' }),
+      body: JSON.stringify({ username: 'admin', password: 'WrongPassword999!' }),
     });
     const badAdminData = await badAdminRes.json();
     test(7, 'Super Admin Invalid Password Rejection', badAdminRes.status === 401 && !badAdminData.success, `HTTP ${badAdminRes.status}`);

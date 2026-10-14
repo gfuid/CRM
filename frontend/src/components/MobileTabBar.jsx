@@ -11,7 +11,8 @@ import {
   Calendar,
   UserPlus,
   LogOut,
-  ExternalLink
+  ExternalLink,
+  Mail
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -42,9 +43,10 @@ export default function MobileTabBar({
     { id: 'activity', label: 'Activity Logs', icon: LayoutGrid, desc: 'Audit trail of trade updates' },
     { id: 'outreach', label: 'Outreach Matrix', icon: Table, desc: 'Touchpoint conversions' },
     { id: 'mydays', label: 'My Days Worklog', icon: Calendar, desc: 'Daily work timeline' },
-  ];
+    { id: 'email', label: 'Email Marketing', icon: Mail, desc: 'Premium: campaigns to tagged leads', visible: isOwner },
+  ].filter((t) => t.visible !== false);
 
-  const isMoreActive = ['activity', 'outreach', 'mydays'].includes(activeTab);
+  const isMoreActive = ['activity', 'outreach', 'mydays', 'email'].includes(activeTab);
 
   return (
     <>

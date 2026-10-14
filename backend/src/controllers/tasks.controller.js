@@ -1,5 +1,6 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { getTenantContext } = require('../utils/tenantScope');
 
 /**
  * Get all tasks with filter
@@ -8,27 +9,27 @@ const getTasks = async (req, res) => {
   const { status, priority, assigned_to } = req.query;
   let list = [...dataStore.tasks];
 
-  // Role-Based Isolation: Staff only see their own tasks
-  if (req.user && req.user.role !== 'admin') {
-    list = list.filter(
-      (t) =>
-        t.assigned_to === req.user.id ||
-        t.assigned_to === req.user.email ||
-        t.assigned_to === req.user.name ||
-        t.assigned_name === req.user.name
-    );
-  } else if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin')) {
-    // Scope owner to only their own and their staff's tasks
-    const ownerStaffIds = dataStore.users
-      .filter((u) => u.company_id === req.user.company_id || u.created_by === req.user.id)
-      .map((u) => u.id);
-    ownerStaffIds.push(req.user.id);
-    list = list.filter((t) => ownerStaffIds.includes(t.assigned_to) || !t.assigned_to);
-    if (assigned_to) {
-      list = list.filter((t) => t.assigned_to === assigned_to);
+  const ctx = getTenantContext(req.user);
+  if (!ctx.isSuperAdmin) {
+    if (req.user && req.user.role !== 'admin') {
+      list = list.filter(
+        (t) =>
+          t.assigned_to === req.user.id ||
+          t.assigned_to === req.user.email ||
+          t.assigned_to === req.user.name ||
+          t.assigned_name === req.user.name
+      );
+    } else {
+      list = list.filter((t) => {
+        if (t.company_id && (t.company_id === ctx.companyId || t.company_id === ctx.ownerId)) return true;
+        if (t.assigned_to && ctx.allowedUserIds.has(t.assigned_to)) return true;
+        if (t.created_by_id && ctx.allowedUserIds.has(t.created_by_id)) return true;
+        return false;
+      });
+      if (assigned_to) {
+        list = list.filter((t) => t.assigned_to === assigned_to);
+      }
     }
-  } else if (assigned_to) {
-    list = list.filter((t) => t.assigned_to === assigned_to);
   }
 
   if (status) {

@@ -44,6 +44,7 @@ const MyDays = lazyWithRetry(() => import('./pages/MyDays'));
 const FollowUp = lazyWithRetry(() => import('./pages/FollowUp'));
 const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
+const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
 
 const tabNames = {
   analytics: 'Analytics',
@@ -53,6 +54,7 @@ const tabNames = {
   outreach: 'Outreach',
   mydays: 'My Days',
   followup: 'Follow up',
+  email: 'Email Marketing',
 };
 
 function AppContent() {
@@ -97,6 +99,7 @@ function AppContent() {
         if (tab === 'outreach') return Boolean(perms.view_outreach);
         if (tab === 'mydays') return Boolean(perms.view_mydays);
         if (tab === 'followup') return Boolean(perms.view_followup);
+        if (tab === 'email') return false; // owner-only premium feature
         return true;
       };
 
@@ -292,6 +295,8 @@ function AppContent() {
         return <MyDays />;
       case 'followup':
         return <FollowUp />;
+      case 'email':
+        return isOwner ? <EmailMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
       default:
         return <Analytics />;
     }

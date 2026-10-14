@@ -11,6 +11,7 @@ import {
   LogOut,
   ChevronRight,
   Shield,
+  Mail,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
@@ -56,6 +57,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     { id: 'outreach', label: 'Outreach', icon: Table, visible: canViewOutreach },
     { id: 'mydays', label: 'My Days', icon: Calendar, visible: canViewMyDays },
     { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
+    { id: 'email', label: 'Email Marketing', icon: Mail, visible: isOwner, pro: true },
   ];
 
   const navItems = rawNavItems.filter((item) => item.visible !== false);
@@ -114,6 +116,10 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
               {showBadge ? (
                 <span className="px-2 py-0.5 text-xs font-bold text-white bg-[#F88F61] rounded-full shadow-sm">
                   {taskBadgeCount || 1}
+                </span>
+              ) : item.pro ? (
+                <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded-md bg-amber-100 text-amber-800 border border-amber-200">
+                  Pro
                 </span>
               ) : isActive ? (
                 <span className="w-2 h-2 rounded-full bg-emerald-500" />

@@ -1,18 +1,11 @@
-import React, { useState } from 'react';
-import {
-  RefreshCw,
-  Search,
-  Bell,
-  ChevronLeft,
-  ChevronDown,
-  ExternalLink,
-  LogOut,
-  Calendar,
-  Sparkles,
-  Shield,
-  Menu
-} from 'lucide-react';
-import BrandLogo from './BrandLogo';
+import React, { useState, useEffect, useRef } from 'react';
+import { RefreshCw, Bell, ChevronDown, ExternalLink, LogOut, Menu, Settings } from 'lucide-react';
+
+const SECTION_TITLES = {
+  overview: { title: 'Overview', subtitle: 'Platform summary' },
+  users: { title: 'Owners & Staff', subtitle: 'Accounts, seat quotas and premium features' },
+  settings: { title: 'Settings', subtitle: 'Platform configuration' },
+};
 
 export default function AdminTopBar({
   activeSection,
@@ -23,143 +16,55 @@ export default function AdminTopBar({
   onSignOut,
   onOpenNotificationModal = () => {},
 }) {
-  const [dateRangeOpen, setDateRangeOpen] = useState(false);
-  const [selectedRange, setSelectedRange] = useState('Jan 01 - Dec 31');
-  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [profileOpen, setProfileOpen] = useState(false);
+  const menuRef = useRef(null);
+  const section = SECTION_TITLES[activeSection] || SECTION_TITLES.overview;
 
-  const navTabs = [
-    { id: 'overview', label: 'Overview' },
-    { id: 'users', label: 'Users & Quotas' },
-    { id: 'settings', label: 'Settings' },
-  ];
-
-  const handleBack = () => {
-    if (activeSection !== 'overview') {
-      setActiveSection('overview');
-    } else if (window.history.length > 1) {
-      window.history.back();
-    } else {
-      window.location.href = 'https://crm-amber-nine.vercel.app';
-    }
-  };
+  useEffect(() => {
+    const close = (e) => {
+      if (menuRef.current && !menuRef.current.contains(e.target)) setProfileOpen(false);
+    };
+    document.addEventListener('mousedown', close);
+    return () => document.removeEventListener('mousedown', close);
+  }, []);
 
   return (
     <header className="sticky top-0 z-30 bg-[#eef1f6]/95 backdrop-blur-md px-4 sm:px-8 pt-4 pb-3">
       <div className="bg-white rounded-3xl border border-slate-200/80 shadow-card px-4 sm:px-6 py-2.5 flex items-center justify-between gap-4">
-        {/* Left: Brand & Pill Navigation (Zentra Style) */}
-        <div className="flex items-center gap-4 lg:gap-6">
-          <div className="flex items-center gap-2">
-            <button
-              onClick={handleBack}
-              className="w-9 h-9 rounded-2xl flex items-center justify-center border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-all cursor-pointer shadow-2xs"
-              title="Go back"
-              aria-label="Go back"
-            >
-              <ChevronLeft size={17} />
-            </button>
-
-            <button
-              onClick={onOpenMobileMenu}
-              className="md:hidden w-9 h-9 rounded-2xl flex items-center justify-center border border-slate-200 bg-slate-50 text-slate-700"
-            >
-              <Menu size={18} />
-            </button>
-
-            <div className="flex items-center gap-2.5 pl-1">
-              <BrandLogo size={30} />
-              <div className="hidden sm:block">
-                <span className="font-extrabold text-slate-900 text-sm tracking-tight">Travel-Trade</span>
-                <span className="text-[10px] ml-1.5 px-2 py-0.5 rounded-full font-bold bg-slate-900 text-white uppercase tracking-wider">
-                  Admin
-                </span>
-              </div>
-            </div>
+        {/* Left: mobile menu + section title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            onClick={onOpenMobileMenu}
+            className="md:hidden w-9 h-9 rounded-2xl flex items-center justify-center border border-slate-200 bg-slate-50 text-slate-700 shrink-0"
+            aria-label="Open menu"
+          >
+            <Menu size={18} />
+          </button>
+          <div className="min-w-0">
+            <div className="text-sm font-extrabold text-slate-900 tracking-tight truncate">{section.title}</div>
+            <div className="text-[11px] text-slate-400 font-medium truncate hidden sm:block">{section.subtitle}</div>
           </div>
-
-          {/* Desktop Zentra-style Pill Navigation */}
-          <nav className="hidden md:flex items-center bg-slate-100/90 p-1 rounded-full text-xs font-semibold">
-            {navTabs.map((tab) => {
-              const isActive = activeSection === tab.id;
-              return (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveSection(tab.id)}
-                  className={`px-4 py-1.5 rounded-full transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-slate-900 text-white shadow-sm font-bold'
-                      : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/70'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              );
-            })}
-          </nav>
         </div>
 
-        {/* Center: Search Pill (Kristin Watson Style) */}
-        <div className="hidden xl:flex items-center flex-1 max-w-xs relative">
-          <Search size={14} className="absolute left-3.5 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Search console, owners..."
-            className="w-full pl-9 pr-4 py-1.5 text-xs rounded-full bg-slate-50 border border-slate-200/80 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 transition-all text-slate-800 placeholder:text-slate-400"
-          />
-        </div>
-
-        {/* Right: Actions, Date Filter & Profile Controls */}
-        <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Zentra-style Date Range Pill */}
-          <div className="hidden lg:relative lg:block">
-            <button
-              onClick={() => setDateRangeOpen(!dateRangeOpen)}
-              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold text-slate-700 bg-slate-50 hover:bg-slate-100 border border-slate-200/80 transition-colors shadow-2xs cursor-pointer"
-            >
-              <Calendar size={13} className="text-slate-500" />
-              <span>{selectedRange}</span>
-              <ChevronDown size={12} className="text-slate-400" />
-            </button>
-
-            {dateRangeOpen && (
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-2xl shadow-float border border-slate-200 p-2 z-50 text-xs">
-                {['Jan 01 - Dec 31', 'Last 30 Days', 'This Quarter', 'All Time'].map((r) => (
-                  <button
-                    key={r}
-                    onClick={() => {
-                      setSelectedRange(r);
-                      setDateRangeOpen(false);
-                    }}
-                    className={`w-full text-left px-3 py-2 rounded-xl transition-colors cursor-pointer ${
-                      selectedRange === r ? 'bg-slate-100 font-bold text-slate-900' : 'text-slate-600 hover:bg-slate-50'
-                    }`}
-                  >
-                    {r}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Send Notice Broadcast Button */}
+        {/* Right: actions */}
+        <div className="flex items-center gap-2 sm:gap-2.5 shrink-0">
           <button
             onClick={onOpenNotificationModal}
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-amber-50 hover:bg-amber-100 text-amber-900 border border-amber-300 transition-colors shadow-2xs cursor-pointer"
-            title="Dispatch broadcast notification to Owner Dashboards"
+            title="Send a notice to owner dashboards"
           >
             <Bell size={13} className="text-amber-700" />
             <span className="hidden sm:inline">Send Notice</span>
           </button>
 
-          {/* Refresh Telemetry */}
           <button
             onClick={onRefresh}
             className="w-8 h-8 rounded-full flex items-center justify-center border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-600 hover:text-slate-900 transition-colors shadow-2xs cursor-pointer"
-            title="Synchronize Live Metrics"
+            title="Refresh data"
           >
             <RefreshCw size={13} className={refreshing ? 'animate-spin text-slate-900' : ''} />
           </button>
 
-          {/* Open Sales App External Link */}
           <a
             href="https://crm-amber-nine.vercel.app"
             target="_blank"
@@ -170,58 +75,42 @@ export default function AdminTopBar({
             <ExternalLink size={12} className="text-slate-500" />
           </a>
 
-          {/* Profile Avatar Pill (Kristin Watson Style) */}
-          <div className="relative">
+          <div className="relative" ref={menuRef}>
             <button
-              onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+              onClick={() => setProfileOpen((v) => !v)}
               className="flex items-center gap-2 pl-1 pr-2 py-1 rounded-full bg-slate-100 hover:bg-slate-200/80 border border-slate-200 transition-all cursor-pointer"
             >
-              <div className="relative">
-                <img
-                  src="https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=100&auto=format&fit=crop&q=80"
-                  alt="Admin Avatar"
-                  className="w-7 h-7 rounded-full object-cover border border-white"
-                />
-                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-              </div>
-              <span className="hidden md:inline text-xs font-bold text-slate-800">Admin</span>
+              <span className="w-7 h-7 rounded-full bg-slate-900 text-white text-[10px] font-black flex items-center justify-center">SA</span>
+              <span className="hidden md:inline text-xs font-bold text-slate-800">Super Admin</span>
               <ChevronDown size={12} className="text-slate-400" />
             </button>
 
-            {profileDropdownOpen && (
-              <div className="absolute right-0 mt-2 w-56 bg-white rounded-2xl shadow-float border border-slate-200 p-2 z-50 text-xs">
+            {profileOpen && (
+              <div className="absolute right-0 mt-2 w-52 bg-white rounded-2xl shadow-float border border-slate-200 p-2 z-50 text-xs">
                 <div className="p-2 border-b border-slate-100">
                   <div className="font-extrabold text-slate-900">Super Administrator</div>
-                  <div className="text-[11px] text-slate-400 truncate">admin@travel-trade.com</div>
+                  <div className="text-[11px] text-slate-400">Travel-Trade Admin Console</div>
                 </div>
                 <div className="py-1">
                   <button
                     onClick={() => {
                       setActiveSection('settings');
-                      setProfileDropdownOpen(false);
+                      setProfileOpen(false);
                     }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold"
+                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold flex items-center gap-1.5 cursor-pointer"
                   >
-                    Console Settings
-                  </button>
-                  <button
-                    onClick={() => {
-                      onOpenNotificationModal();
-                      setProfileDropdownOpen(false);
-                    }}
-                    className="w-full text-left px-3 py-2 rounded-xl text-slate-700 hover:bg-slate-50 font-semibold"
-                  >
-                    Broadcast Announcements
+                    <Settings size={13} />
+                    <span>Settings</span>
                   </button>
                 </div>
                 {onSignOut && (
                   <div className="pt-1 border-t border-slate-100">
                     <button
                       onClick={() => {
-                        setProfileDropdownOpen(false);
+                        setProfileOpen(false);
                         onSignOut();
                       }}
-                      className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-1.5"
+                      className="w-full text-left px-3 py-2 rounded-xl text-rose-600 hover:bg-rose-50 font-bold flex items-center gap-1.5 cursor-pointer"
                     >
                       <LogOut size={13} />
                       <span>Sign Out</span>
@@ -232,26 +121,6 @@ export default function AdminTopBar({
             )}
           </div>
         </div>
-      </div>
-
-      {/* Mobile Tab Navigation Bar */}
-      <div className="md:hidden flex items-center gap-2 mt-2 px-1">
-        {navTabs.map((tab) => {
-          const isActive = activeSection === tab.id;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveSection(tab.id)}
-              className={`flex-1 py-1.5 rounded-full text-xs font-bold transition-all ${
-                isActive
-                  ? 'bg-slate-900 text-white shadow-sm'
-                  : 'bg-white text-slate-600 border border-slate-200'
-              }`}
-            >
-              {tab.label}
-            </button>
-          );
-        })}
       </div>
     </header>
   );

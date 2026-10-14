@@ -1,6 +1,8 @@
 import React, { useState } from 'react';
 import { Shield, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
+const API_BASE = import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1';
+
 export default function AdminLoginPage({ onLoginSuccess }) {
   const [username, setUsername] = useState(() => localStorage.getItem('crm_admin_remembered_user') || '');
   const [password, setPassword] = useState('');
@@ -25,8 +27,8 @@ export default function AdminLoginPage({ onLoginSuccess }) {
     setLoading(true);
 
     try {
-      // 1. Attempt API verification via Render Cloud Backend
-      const res = await fetch('https://crm-ep4i.onrender.com/api/v1/auth/admin-login', {
+      // Verify credentials with the backend (ADMIN_USERNAME / ADMIN_PASSWORD on the server)
+      const res = await fetch(`${API_BASE}/auth/admin-login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: username.trim(), password }),
@@ -43,31 +45,6 @@ export default function AdminLoginPage({ onLoginSuccess }) {
           localStorage.removeItem('crm_admin_remembered_user');
         }
         onLoginSuccess(data.data.user);
-        return;
-      }
-
-      // 2. Resilient client-side cryptographic match for master admin key
-      const cleanUser = username.trim().toLowerCase();
-      const isUserValid = cleanUser === 'traveltrade_admin' || cleanUser === 'admin@travel-trade.com';
-      const isPassValid = password === 'TravelTrade#Admin2026!';
-
-      if (isUserValid && isPassValid) {
-        const adminSession = {
-          id: 'usr_super_admin',
-          username: 'traveltrade_admin',
-          email: 'admin@travel-trade.com',
-          name: 'Super Administrator',
-          role: 'admin',
-        };
-        const token = 'admin_session_' + Date.now();
-        localStorage.setItem('crm_admin_token', token);
-        localStorage.setItem('crm_admin_user', JSON.stringify(adminSession));
-        if (rememberMe) {
-          localStorage.setItem('crm_admin_remembered_user', username.trim());
-        } else {
-          localStorage.removeItem('crm_admin_remembered_user');
-        }
-        onLoginSuccess(adminSession);
         return;
       }
 

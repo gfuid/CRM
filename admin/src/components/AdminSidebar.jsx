@@ -6,16 +6,13 @@ import {
   ExternalLink,
   X,
   LogOut,
-  Shield,
-  Sparkles,
-  Crown
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
 const adminNavItems = [
-  { id: 'overview', label: 'Dashboard Overview', icon: LayoutDashboard },
-  { id: 'users', label: 'Users & Quotas', icon: Users2 },
-  { id: 'settings', label: 'Platform Settings', icon: Settings },
+  { id: 'overview', label: 'Overview', icon: LayoutDashboard },
+  { id: 'users', label: 'Owners & Staff', icon: Users2 },
+  { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
 export default function AdminSidebar({
@@ -72,7 +69,7 @@ export default function AdminSidebar({
         {/* Navigation Sections (Zentra & Pill Style) */}
         <div className="flex-1 overflow-y-auto p-3.5 space-y-1.5">
           <div className="px-3 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
-            Navigation
+            Menu
           </div>
 
           {adminNavItems.map((item) => {
@@ -94,20 +91,6 @@ export default function AdminSidebar({
             );
           })}
 
-          {/* Quick Info Box in Sidebar */}
-          <div className="pt-6 px-1">
-            <div className="p-4 rounded-3xl bg-gradient-to-br from-amber-50 to-orange-50/50 border border-amber-200/70 text-amber-900 space-y-2">
-              <div className="flex items-center gap-2">
-                <div className="w-7 h-7 rounded-xl bg-amber-500/20 text-amber-800 flex items-center justify-center font-bold">
-                  <Crown size={14} />
-                </div>
-                <div className="font-extrabold text-xs">Super Admin Access</div>
-              </div>
-              <p className="text-[11px] text-amber-800/90 leading-relaxed font-medium">
-                Manage business owner quotas, dispatch alerts, and oversee global export trade pipeline.
-              </p>
-            </div>
-          </div>
         </div>
 
         {/* Footer Links & Sign Out */}
@@ -131,7 +114,7 @@ export default function AdminSidebar({
               className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200/70 transition-colors cursor-pointer"
             >
               <LogOut size={13} />
-              <span>Sign Out of Console</span>
+              <span>Sign Out</span>
             </button>
           )}
         </div>

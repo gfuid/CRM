@@ -59,6 +59,8 @@ const dataStore = {
   tenants: [],
   users: [],
   notifications: [],
+  emailSettings: [],
+  emailCampaigns: [],
 
   leads: [
     {
@@ -639,6 +641,38 @@ const dbSync = {
     if (isConnected && models && models.Notification) {
       try {
         await models.Notification.findOneAndDelete({ id });
+      } catch (e) {}
+    }
+  },
+  saveEmailSetting: async (setting) => {
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailSetting) {
+      try {
+        const toSave = { ...setting };
+        delete toSave._id;
+        await models.EmailSetting.findOneAndUpdate({ owner_id: setting.owner_id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB EmailSetting Sync]:', e.message);
+      }
+    }
+  },
+  saveEmailCampaign: async (campaign) => {
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailCampaign) {
+      try {
+        const toSave = { ...campaign };
+        delete toSave._id;
+        await models.EmailCampaign.findOneAndUpdate({ id: campaign.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB EmailCampaign Sync]:', e.message);
+      }
+    }
+  },
+  deleteEmailCampaign: async (id) => {
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailCampaign) {
+      try {
+        await models.EmailCampaign.findOneAndDelete({ id });
       } catch (e) {}
     }
   },

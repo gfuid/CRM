@@ -1,30 +1,24 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore } = require('../repositories/dataStore');
+const { isLeadInUserScope, getTenantContext } = require('../utils/tenantScope');
 
 /**
  * Get aggregated analytics, KPIs, pipeline metrics, and sales velocity
  */
 const getAnalytics = async (req, res) => {
-  let leads = [...dataStore.leads];
-  let tasks = [...dataStore.tasks];
+  const leads = (dataStore.leads || []).filter((l) => isLeadInUserScope(l, req.user));
+  const ctx = getTenantContext(req.user);
 
-  // Role-Based Isolation & Multi-tenant scoping
+  let tasks = (dataStore.tasks || []).filter((t) => {
+    if (ctx.isSuperAdmin) return true;
+    if (t.company_id && (t.company_id === ctx.companyId || t.company_id === ctx.ownerId)) return true;
+    if (t.assigned_to && ctx.allowedUserIds.has(t.assigned_to)) return true;
+    if (t.created_by_id && ctx.allowedUserIds.has(t.created_by_id)) return true;
+    return false;
+  });
+
   if (req.user && req.user.role !== 'admin') {
-    leads = leads.filter(
-      (l) =>
-        l.assigned_to === req.user.id ||
-        l.assigned_to === req.user.email ||
-        l.assigned_to === req.user.name ||
-        l.created_by_id === req.user.id
-    );
     tasks = tasks.filter((t) => t.assigned_to === req.user.id);
-  } else if (req.user && req.user.company_id) {
-    leads = leads.filter((l) => l.company_id === req.user.company_id || !l.company_id);
-    const companyUserIds = dataStore.users
-      .filter((u) => u.company_id === req.user.company_id || u.created_by === req.user.id)
-      .map((u) => u.id);
-    companyUserIds.push(req.user.id);
-    tasks = tasks.filter((t) => companyUserIds.includes(t.assigned_to) || !t.assigned_to);
   }
 
   const totalLeads = leads.length;

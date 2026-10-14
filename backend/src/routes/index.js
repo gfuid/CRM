@@ -12,6 +12,7 @@ const myDaysRoutes = require('./myDays.routes');
 const followUpRoutes = require('./followUp.routes');
 const notificationsRoutes = require('./notifications.routes');
 const docsRoutes = require('./docs.routes');
+const emailRoutes = require('./email.routes');
 
 // Mount routes with clean v1 namespace
 router.use('/auth', authRoutes);
@@ -24,6 +25,7 @@ router.use('/outreach', outreachRoutes);
 router.use('/mydays', myDaysRoutes);
 router.use('/followup', followUpRoutes);
 router.use('/notifications', notificationsRoutes);
+router.use('/email', emailRoutes);
 router.use('/docs', docsRoutes);
 
 module.exports = router;

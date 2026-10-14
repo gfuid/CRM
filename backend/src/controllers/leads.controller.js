@@ -1,45 +1,18 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { normalizeTags } = require('./email.controller');
+const { isLeadInUserScope } = require('../utils/tenantScope');
 
-/**
- * Get all leads with filtering & pagination
- */
 /**
  * Get all leads with filtering & pagination
  */
 const getLeads = async (req, res) => {
   const { stage, priority, search, assigned_to, product, country } = req.query;
-  let list = [...dataStore.leads];
 
-  // Role-Based Isolation & Data Scope
-  if (req.user && req.user.role !== 'admin') {
-    if (req.user.data_scope === 'all') {
-      // Allowed to see company-wide leads
-      list = list.filter(
-        (l) =>
-          l.company_id === req.user.company_id ||
-          l.created_by_id === req.user.created_by ||
-          l.created_by_id === req.user.id
-      );
-    } else {
-      // Strictly own assigned leads only
-      list = list.filter(
-        (l) =>
-          l.assigned_to === req.user.id ||
-          l.assigned_to === req.user.email ||
-          l.assigned_to === req.user.name ||
-          l.created_by_id === req.user.id
-      );
-    }
-  } else if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin')) {
-    // Owner sees all leads of their company
-    if (req.user.company_id) {
-      list = list.filter((l) => l.company_id === req.user.company_id || !l.company_id);
-    }
-    if (assigned_to) {
-      list = list.filter((l) => l.assigned_to === assigned_to);
-    }
-  } else if (assigned_to) {
+  // Strict Tenant & Data Scope Isolation
+  let list = (dataStore.leads || []).filter((l) => isLeadInUserScope(l, req.user));
+
+  if (assigned_to) {
     list = list.filter((l) => l.assigned_to === assigned_to);
   }
 
@@ -100,7 +73,7 @@ const getLeadById = async (req, res) => {
   const { id } = req.params;
   const lead = dataStore.leads.find((l) => l.id === id);
 
-  if (!lead) {
+  if (!lead || !isLeadInUserScope(lead, req.user)) {
     return ApiResponse.error(res, 'Lead not found', 404);
   }
 
@@ -161,6 +134,7 @@ const createLead = async (req, res) => {
     next_follow_up_action,
     previous_remarks,
     notes,
+    tags,
   } = req.body;
 
   const leadName = name || company_name;
@@ -188,8 +162,14 @@ const createLead = async (req, res) => {
 
   const primaryContact = Array.isArray(contacts) && contacts[0] ? contacts[0] : null;
 
+  const isOwner = req.user && (req.user.persona === 'owner' || req.user.role === 'admin');
+  const ownerId = req.user ? (isOwner ? req.user.id : (req.user.created_by || req.user.company_id || req.user.id)) : 'usr_owner_1';
+  const companyId = req.user?.company_id || ownerId;
+
   const newLead = {
     id: generateId('lead'),
+    company_id: companyId,
+    owner_id: ownerId,
     name: leadName,
     company_name: leadName,
     type: type || 'Export',
@@ -238,6 +218,8 @@ const createLead = async (req, res) => {
           }]
         : [],
     notes: notes || today_remarks || '',
+    tags: normalizeTags(tags),
+    email_unsubscribed: false,
     created_at: req.body.created_at || new Date().toISOString(),
     updated_at: new Date().toISOString(),
   };
@@ -275,6 +257,10 @@ const updateLead = async (req, res) => {
 
   const current = dataStore.leads[leadIndex];
 
+  if (!isLeadInUserScope(current, req.user)) {
+    return ApiResponse.error(res, 'Lead not found', 404);
+  }
+
   // Staff members can only update their own leads, and cannot reassign
   if (req.user && req.user.role !== 'admin') {
     if (current.assigned_to !== req.user.id) {
@@ -284,6 +270,8 @@ const updateLead = async (req, res) => {
   }
 
   const oldStage = current.stage;
+
+  if (req.body.tags !== undefined) req.body.tags = normalizeTags(req.body.tags);
 
   // Requirement #6: Never overwrite original creator or creation timestamp upon reassignment or updates!
   const updated = {
@@ -331,6 +319,11 @@ const deleteLead = async (req, res) => {
 
   const index = dataStore.leads.findIndex((l) => l.id === id);
   if (index === -1) {
+    return ApiResponse.error(res, 'Lead not found', 404);
+  }
+
+  const targetLead = dataStore.leads[index];
+  if (!isLeadInUserScope(targetLead, req.user)) {
     return ApiResponse.error(res, 'Lead not found', 404);
   }
 

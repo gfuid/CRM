@@ -1,5 +1,6 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { getTenantContext, isLeadInUserScope } = require('../utils/tenantScope');
 
 /**
  * Get all follow-ups
@@ -8,11 +9,19 @@ const getFollowUps = async (req, res) => {
   const { status, assigned_to } = req.query;
   let list = [...dataStore.followUps];
 
-  // Role-Based Isolation: Staff only see their own follow-ups
-  if (req.user && req.user.role !== 'admin') {
-    list = list.filter((f) => f.assigned_to === req.user.id);
-  } else if (assigned_to) {
-    list = list.filter((f) => f.assigned_to === assigned_to);
+  const ctx = getTenantContext(req.user);
+  if (!ctx.isSuperAdmin) {
+    if (req.user && req.user.role !== 'admin') {
+      list = list.filter((f) => f.assigned_to === req.user.id);
+    } else {
+      list = list.filter((f) => {
+        if (f.company_id && (f.company_id === ctx.companyId || f.company_id === ctx.ownerId)) return true;
+        if (ctx.allowedUserIds.has(f.assigned_to) || ctx.allowedUserIds.has(f.created_by_id)) return true;
+        const linkedLead = dataStore.leads.find((l) => l.id === f.lead_id);
+        if (linkedLead && isLeadInUserScope(linkedLead, req.user)) return true;
+        return false;
+      });
+    }
   }
 
   if (status) {

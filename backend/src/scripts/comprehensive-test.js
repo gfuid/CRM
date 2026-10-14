@@ -48,7 +48,7 @@ const runComprehensiveSuite = async () => {
     const adminLogin = await fetch(`${BASE_URL}/api/v1/auth/admin-login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username: 'traveltrade_admin', password: 'TravelTrade#Admin2026!' }),
+      body: JSON.stringify({ username: 'admin', password: 'admin123' }),
     }).then((r) => r.json());
     assert(adminLogin.success && adminLogin.data.token, '3. Super Admin Login & JWT Issuance', `Token Issued for: ${adminLogin.data.user.username}`);
     const superAdminToken = adminLogin.data.token;

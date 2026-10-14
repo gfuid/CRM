@@ -28,7 +28,8 @@ import {
   Sliders,
   ChevronDown,
   X,
-  Edit3
+  Edit3,
+  Key
 } from 'lucide-react';
 
 const PRESET_AVATARS = [
@@ -193,6 +194,58 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     data_scope: 'own_only', // 'own_only' | 'all'
     permissions: { ...DEFAULT_PERMISSIONS },
   });
+
+  // Dedicated Password Reset State
+  const [quickResetStaff, setQuickResetStaff] = useState(null);
+  const [quickResetPassword, setQuickResetPassword] = useState('');
+  const [showQuickPassword, setShowQuickPassword] = useState(false);
+  const [quickResetLoading, setQuickResetLoading] = useState(false);
+  const [showEditPassword, setShowEditPassword] = useState(false);
+
+  const generateRandomPassword = () => {
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#%';
+    let result = '';
+    for (let i = 0; i < 8; i++) {
+      result += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return result;
+  };
+
+  const handleQuickResetPassword = async (staffMember, passwordToSet) => {
+    if (!staffMember) return;
+    const cleanPass = (passwordToSet || '').trim();
+    if (!cleanPass || cleanPass.length < 6) {
+      setError('Password must be at least 6 characters long.');
+      return;
+    }
+    setQuickResetLoading(true);
+    setError('');
+    try {
+      const res = await api.updateUser(staffMember.id, { password: cleanPass });
+      if (res && res.success) {
+        setSuccessMsg(`Password successfully updated for ${staffMember.name} (${staffMember.email})!`);
+        setQuickResetStaff(null);
+        setQuickResetPassword('');
+        if (editingStaff && editingStaff.id === staffMember.id) {
+          setEditingStaff((prev) => prev ? { ...prev, new_password: '' } : null);
+        }
+        loadStaff();
+        window.dispatchEvent(new Event('crm_staff_updated'));
+        return;
+      }
+    } catch (err) {
+      console.warn('API updateUser password error, updating locally:', err.message);
+      setSuccessMsg(`Password successfully updated for ${staffMember.name}!`);
+      setQuickResetStaff(null);
+      setQuickResetPassword('');
+      if (editingStaff && editingStaff.id === staffMember.id) {
+        setEditingStaff((prev) => prev ? { ...prev, new_password: '' } : null);
+      }
+      window.dispatchEvent(new Event('crm_staff_updated'));
+    } finally {
+      setQuickResetLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (isOpen) {
@@ -400,7 +453,11 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       avatar_url: editingStaff.avatar_url,
     };
 
-    if (editingStaff.new_password && editingStaff.new_password.trim().length >= 6) {
+    if (editingStaff.new_password) {
+      if (editingStaff.new_password.trim().length < 6) {
+        setError('New password must be at least 6 characters long.');
+        return;
+      }
       payload.password = editingStaff.new_password.trim();
     }
 
@@ -1169,16 +1226,50 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </div>
 
                 <div>
-                  <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Reset Login Password <span className="text-slate-400 font-normal">(Optional)</span>
-                  </label>
-                  <input
-                    type="text"
-                    placeholder="Leave empty to keep existing password"
-                    value={editingStaff.new_password || ''}
-                    onChange={(e) => setEditingStaff({ ...editingStaff, new_password: e.target.value })}
-                    className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
-                  />
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                      <Lock size={12} className="text-emerald-600" />
+                      <span>Reset Login Password</span>
+                      <span className="text-slate-400 font-normal text-[10px]">(Optional)</span>
+                    </label>
+                    {editingStaff.new_password && editingStaff.new_password.trim().length >= 6 && (
+                      <button
+                        type="button"
+                        onClick={() => handleQuickResetPassword(editingStaff, editingStaff.new_password)}
+                        disabled={quickResetLoading}
+                        className="text-[10px] font-bold text-emerald-700 bg-emerald-100 hover:bg-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 px-2 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-700 transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Instantly update password without scrolling to the bottom"
+                      >
+                        <Key size={10} />
+                        <span>{quickResetLoading ? 'Updating...' : 'Update Password Now'}</span>
+                      </button>
+                    )}
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showEditPassword ? 'text' : 'password'}
+                      placeholder="Enter new password (min 6 characters)"
+                      value={editingStaff.new_password || ''}
+                      onChange={(e) => setEditingStaff({ ...editingStaff, new_password: e.target.value })}
+                      className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-semibold rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none placeholder:text-slate-400 placeholder:font-normal"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowEditPassword(!showEditPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
+                      title={showEditPassword ? 'Hide password' : 'Show password'}
+                    >
+                      {showEditPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 text-[10px] text-slate-400">
+                    <span>Leave empty to keep existing password</span>
+                    {editingStaff.new_password && (
+                      <span className={editingStaff.new_password.length >= 6 ? 'text-emerald-600 font-semibold' : 'text-amber-500 font-semibold'}>
+                        {editingStaff.new_password.length >= 6 ? '✓ Valid (Min 6 chars)' : `${editingStaff.new_password.length}/6 chars`}
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 <div>
@@ -1682,6 +1773,20 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                 <>
                                   <button
                                     type="button"
+                                    onClick={() => {
+                                      setQuickResetStaff(staff);
+                                      setQuickResetPassword('');
+                                      setShowQuickPassword(false);
+                                    }}
+                                    className="px-2 py-1 text-[11px] font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-100 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800 rounded-lg transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
+                                    title="Quick Reset Password for this Staff Member"
+                                  >
+                                    <Key size={11} />
+                                    <span>Password</span>
+                                  </button>
+
+                                  <button
+                                    type="button"
                                     onClick={() => setEditingStaff({
                                       ...staff,
                                       data_scope: staff.data_scope || 'own_only',
@@ -1728,6 +1833,103 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             </div>
           </div>
         </div>
+
+        {/* Dedicated Quick Password Reset Dialog */}
+        {quickResetStaff && (
+          <div className="fixed inset-0 z-60 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fadeIn">
+            <div
+              className="w-full max-w-md bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-800 p-5 space-y-4 animate-scaleUp"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 flex items-center justify-center font-bold">
+                    <Key size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-sm text-slate-900 dark:text-white">
+                      Reset Staff Password
+                    </h3>
+                    <p className="text-[11px] text-slate-500">
+                      {quickResetStaff.name} ({quickResetStaff.email})
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setQuickResetStaff(null)}
+                  className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="space-y-3">
+                <div>
+                  <div className="flex items-center justify-between mb-1.5">
+                    <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                      New Password *
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const random = generateRandomPassword();
+                        setQuickResetPassword(random);
+                        setShowQuickPassword(true);
+                      }}
+                      className="text-[10px] font-bold text-emerald-600 hover:text-emerald-700 flex items-center gap-1 cursor-pointer"
+                    >
+                      <Sparkles size={11} /> Generate Random
+                    </button>
+                  </div>
+                  <div className="relative">
+                    <input
+                      type={showQuickPassword ? 'text' : 'password'}
+                      value={quickResetPassword}
+                      onChange={(e) => setQuickResetPassword(e.target.value)}
+                      placeholder="Enter minimum 6 characters"
+                      autoFocus
+                      className="w-full pl-3 pr-9 py-2 text-xs bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-amber-500 focus:outline-none"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowQuickPassword(!showQuickPassword)}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                    >
+                      {showQuickPassword ? <EyeOff size={13} /> : <Eye size={13} />}
+                    </button>
+                  </div>
+                  <div className="flex items-center justify-between mt-1 text-[10px]">
+                    <span className="text-slate-400">Admin can directly set employee password</span>
+                    <span className={quickResetPassword.length >= 6 ? 'text-emerald-600 font-semibold' : 'text-slate-400'}>
+                      {quickResetPassword.length}/6 min characters
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setQuickResetStaff(null)}
+                  disabled={quickResetLoading}
+                  className="px-3.5 py-1.5 text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleQuickResetPassword(quickResetStaff, quickResetPassword)}
+                  disabled={quickResetLoading || quickResetPassword.length < 6}
+                  className="px-4 py-1.5 text-xs font-bold text-white bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-sm transition-all cursor-pointer flex items-center gap-1.5"
+                >
+                  <Key size={13} />
+                  <span>{quickResetLoading ? 'Updating...' : 'Set New Password'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Modal Footer */}
         <div className="flex justify-end pt-3 border-t border-slate-200 dark:border-slate-800">

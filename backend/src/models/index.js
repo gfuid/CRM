@@ -8,6 +8,8 @@ const MyDay = require('./MyDay');
 const Outreach = require('./Outreach');
 const AuditLog = require('./AuditLog');
 const Notification = require('./Notification');
+const EmailSetting = require('./EmailSetting');
+const EmailCampaign = require('./EmailCampaign');
 
 module.exports = {
   User,
@@ -20,4 +22,6 @@ module.exports = {
   Outreach,
   AuditLog,
   Notification,
+  EmailSetting,
+  EmailCampaign,
 };

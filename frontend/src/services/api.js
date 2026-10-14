@@ -300,6 +300,73 @@ class ApiClient {
     });
   }
 
+  // Email Marketing (premium, owner-only)
+  getEmailStatus() {
+    return this.request('/email/status');
+  }
+
+  getEmailSettings() {
+    return this.request('/email/settings');
+  }
+
+  saveEmailSettings(data) {
+    return this.request('/email/settings', {
+      method: 'PUT',
+      body: JSON.stringify(data),
+    });
+  }
+
+  testEmailSettings(data = {}) {
+    return this.request('/email/settings/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  getEmailTags() {
+    return this.request('/email/tags');
+  }
+
+  previewEmailAudience(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/email/audience/preview${query ? `?${query}` : ''}`);
+  }
+
+  getEmailCampaigns() {
+    return this.request('/email/campaigns');
+  }
+
+  getEmailCampaign(id) {
+    return this.request(`/email/campaigns/${id}`);
+  }
+
+  createEmailCampaign(data) {
+    return this.request('/email/campaigns', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  sendEmailCampaign(id, data = {}) {
+    return this.request(`/email/campaigns/${id}/send`, {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  sendEmailCampaignTest(data) {
+    return this.request('/email/campaigns/test', {
+      method: 'POST',
+      body: JSON.stringify(data),
+    });
+  }
+
+  deleteEmailCampaign(id) {
+    return this.request(`/email/campaigns/${id}`, {
+      method: 'DELETE',
+    });
+  }
+
   // Notifications API
   getNotifications() {
     return this.request('/notifications');

@@ -42,8 +42,8 @@ const runCITests = async () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        username: 'traveltrade_admin',
-        password: 'TravelTrade#Admin2026!',
+        username: 'admin',
+        password: 'admin123',
       }),
     });
     const adminLogin = await adminLoginRes.json();
@@ -196,6 +196,71 @@ const runCITests = async () => {
     // 12. 404 Handler Verification
     const notFoundRes = await fetch(`${BASE}/api/v1/non-existent-endpoint`);
     assert('Centralized 404 Handler works properly', notFoundRes.status === 404);
+
+    // 13. Email Marketing: locked by default for a new owner
+    const emailStatusRes = await fetch(`${BASE}/api/v1/email/status`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+    const emailStatus = await emailStatusRes.json();
+    assert('Email Marketing is disabled by default for owners', emailStatusRes.status === 200 && emailStatus.data?.enabled === false && emailStatus.data?.is_owner === true);
+
+    const lockedRes = await fetch(`${BASE}/api/v1/email/campaigns`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+    const locked = await lockedRes.json();
+    assert('Email endpoints return 403 FEATURE_DISABLED when locked', lockedRes.status === 403 && locked.code === 'FEATURE_DISABLED');
+
+    // 14. Super Admin enables the premium feature for this owner
+    const ownerId = reg.data?.user?.id;
+    const enableRes = await fetch(`${BASE}/api/v1/admin/users/${ownerId}/features`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${adminToken}` },
+      body: JSON.stringify({ email_marketing: true }),
+    });
+    const enabled = await enableRes.json();
+    assert('Super Admin can enable Email Marketing for an owner', enableRes.status === 200 && enabled.data?.features?.email_marketing === true);
+
+    // 15. Owner saves SMTP sender settings (password stored encrypted, never echoed back)
+    const settingsRes = await fetch(`${BASE}/api/v1/email/settings`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ host: 'smtp.example.com', port: 587, user: 'owner@example.com', pass: 'app-password-123', from_name: 'CI Owner', rate_per_minute: 30 }),
+    });
+    const settings = await settingsRes.json();
+    assert(
+      'Owner can save SMTP sender settings (password masked)',
+      settingsRes.status === 200 && settings.data?.has_password === true && settings.data?.pass === undefined && settings.data?.pass_enc === undefined
+    );
+
+    // 16. Tag a lead and build an audience from it
+    const tagRes = await fetch(`${BASE}/api/v1/leads/${leadId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ tags: ['ci-buyer', ' Dubai ', 'ci-buyer'], email: 'buyer@ci-example.com' }),
+    });
+    const tagged = await tagRes.json();
+    assert('Lead tags are normalized and de-duplicated', tagRes.status === 200 && Array.isArray(tagged.data?.tags) && tagged.data.tags.length === 2 && tagged.data.tags.includes('Dubai'));
+
+    const tagsRes = await fetch(`${BASE}/api/v1/email/tags`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+    const tagsData = await tagsRes.json();
+    assert('Tags endpoint lists tag counts', tagsRes.status === 200 && tagsData.data?.some((t) => t.tag === 'ci-buyer' && t.with_email >= 1));
+
+    const previewRes = await fetch(`${BASE}/api/v1/email/audience/preview?mode=tags&tags=ci-buyer`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+    const previewData = await previewRes.json();
+    assert('Audience preview counts tagged leads with email', previewRes.status === 200 && previewData.data?.count >= 1);
+
+    // 17. Create a campaign draft targeting the tag
+    const campaignRes = await fetch(`${BASE}/api/v1/email/campaigns`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ownerToken}` },
+      body: JSON.stringify({ name: 'CI Campaign', subject: 'Hello {{company_name}}', body: 'Hi {{contact_name}}, fresh stock available.', audience: { mode: 'tags', tags: ['ci-buyer'] } }),
+    });
+    const campaign = await campaignRes.json();
+    assert('Campaign draft is created with recipients', campaignRes.status === 201 && campaign.data?.status === 'draft' && campaign.data?.total >= 1, `Campaign ID: ${campaign.data?.id}`);
+
+    // 18. Public unsubscribe link marks the lead as unsubscribed
+    const { unsubscribeToken } = require('../services/mailer.service');
+    const unsubRes = await fetch(`${BASE}/api/v1/email/unsubscribe/${unsubscribeToken(ownerId, 'buyer@ci-example.com')}`);
+    const unsubHtml = await unsubRes.text();
+    const previewAfterRes = await fetch(`${BASE}/api/v1/email/audience/preview?mode=tags&tags=ci-buyer`, { headers: { Authorization: `Bearer ${ownerToken}` } });
+    const previewAfter = await previewAfterRes.json();
+    assert('Unsubscribe link removes the address from future audiences', unsubRes.status === 200 && unsubHtml.includes('unsubscribed') && previewAfter.data?.count === previewData.data.count - 1);
 
   } catch (err) {
     console.error('💥 Unhandled Exception during CI tests:', err);
