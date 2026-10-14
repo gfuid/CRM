@@ -272,20 +272,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     try {
       const res = await api.getUsers();
       if (res && res.success && Array.isArray(res.data)) {
-        const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
-        const existingEmails = new Set(res.data.map((u) => u.email?.toLowerCase()));
-        const merged = [...res.data];
-        for (const ls of localStaff) {
-          if (!existingEmails.has(ls.email?.toLowerCase())) {
-            merged.push(ls);
-          }
-        }
-        setStaffList(merged);
+        setStaffList(res.data);
         return;
       }
     } catch (err) {
       console.warn('Failed to load staff list from API, checking local storage:', err.message);
-      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       if (localStaff.length > 0) {
         setStaffList(localStaff);
       }
@@ -397,7 +390,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
 
       // For network errors or offline sync:
-      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       if (localStaff.length >= staffQuota) {
         setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
         return;
@@ -417,7 +411,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         created_at: new Date().toISOString(),
       };
       localStaff.push(newStaff);
-      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
       setStaffList((prev) => [newStaff, ...prev.filter((s) => s.email?.toLowerCase() !== newStaff.email.toLowerCase())]);
       setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
       setForm({
@@ -472,7 +466,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
     } catch (err) {
       console.warn('API updateUser error, saving to local storage fallback:', err.message);
-      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       const updatedStaff = { ...editingStaff, ...payload };
       const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
       if (idx !== -1) {
@@ -480,7 +475,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       } else {
         localStaff.push(updatedStaff);
       }
-      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
       setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedStaff } : s)));
       setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
       setEditingStaff(null);
@@ -494,9 +489,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     } catch (err) {
       console.warn('API toggleUserStatus error, toggling in local storage:', err.message);
     }
-    const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
     const updated = localStaff.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s));
-    localStorage.setItem('crm_local_staff', JSON.stringify(updated));
+    localStorage.setItem(ownerKey, JSON.stringify(updated));
     setStaffList((prev) => prev.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s)));
     window.dispatchEvent(new Event('crm_staff_updated'));
   };
@@ -508,9 +504,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     } catch (err) {
       console.warn('API deleteUser error, removing from local storage:', err.message);
     }
-    const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
     const filtered = localStaff.filter((s) => s.id !== userId);
-    localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
+    localStorage.setItem(ownerKey, JSON.stringify(filtered));
     setStaffList((prev) => prev.filter((s) => s.id !== userId));
     setSuccessMsg(`Staff member ${name} removed.`);
     window.dispatchEvent(new Event('crm_staff_updated'));

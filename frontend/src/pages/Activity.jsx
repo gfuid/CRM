@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
@@ -82,21 +82,6 @@ const STAGE_THEMES = {
   },
 };
 
-const RESPONSIBLE_PERSONS_ORDER = [
-  'aarav',
-  'adric',
-  'Bhavana',
-  'Dan',
-  'David',
-  'Pavithra',
-  'Preetham',
-  'Rahul',
-  'Rohan',
-  'Sanju',
-  'Shiva',
-  'Athish'
-];
-
 export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays }) {
   const { profile } = useAuth();
   const [leads, setLeads] = useState([]);
@@ -148,6 +133,37 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     fetchActivities();
   }, []);
 
+  const [teamMembers, setTeamMembers] = useState([]);
+
+  // Load team members belonging to this organization
+  useEffect(() => {
+    const fetchTeam = async () => {
+      try {
+        const res = await api.getUsers();
+        if (res && res.success && Array.isArray(res.data)) {
+          setTeamMembers(res.data);
+        }
+      } catch (err) {
+        console.warn('Activity fetch team error:', err.message);
+      }
+    };
+    fetchTeam();
+  }, []);
+
+  const responsiblePersons = useMemo(() => {
+    const set = new Set();
+    teamMembers.forEach((t) => {
+      if (t.name) set.add(t.name.trim());
+    });
+    leads.forEach((l) => {
+      const name = l.agent_name || l.assigned_to;
+      if (name && name !== 'All' && !name.startsWith('usr_')) {
+        set.add(name.trim());
+      }
+    });
+    return Array.from(set);
+  }, [teamMembers, leads]);
+
   const saveLeads = (newLeads) => {
     setLeads(newLeads);
     try {
@@ -159,8 +175,10 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
   const getFollowUpStatus = (lead) => {
     if (lead.follow_up_status) return lead.follow_up_status;
     if (!lead.follow_up_date) return 'normal';
-    const today = new Date('2026-09-27');
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
     const followDate = new Date(lead.follow_up_date);
+    followDate.setHours(0, 0, 0, 0);
     const diff = Math.ceil((today - followDate) / (1000 * 60 * 60 * 24));
     if (diff > 30) return 'missed';
     if (diff > 7) return 'risk';
@@ -168,14 +186,14 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     return 'active';
   };
 
-  // Pre-calculated stats from full dataset
-  const missedCount = leads.filter((l) => getFollowUpStatus(l) === 'missed').length || 2;
-  const idleCount = leads.filter((l) => getFollowUpStatus(l) === 'idle_critical').length || 14;
-  const riskCount = leads.filter((l) => getFollowUpStatus(l) === 'risk').length || 175;
-  const activeCount = leads.filter((l) => getFollowUpStatus(l) === 'active').length || 5;
+  // Actual stats calculated from leads
+  const missedCount = leads.filter((l) => getFollowUpStatus(l) === 'missed').length;
+  const idleCount = leads.filter((l) => getFollowUpStatus(l) === 'idle_critical').length;
+  const riskCount = leads.filter((l) => getFollowUpStatus(l) === 'risk').length;
+  const activeCount = leads.filter((l) => getFollowUpStatus(l) === 'active').length;
 
-  const indiaCount = leads.filter((l) => (l.country || '').includes('India')).length || 4;
-  const intlCount = leads.filter((l) => !(l.country || '').includes('India')).length || 246;
+  const indiaCount = leads.filter((l) => (l.country || '').includes('India')).length;
+  const intlCount = leads.filter((l) => !(l.country || '').includes('India')).length;
 
   // Filter leads
   const filteredLeads = leads.filter((l) => {
@@ -449,7 +467,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                 All ({leads.length})
               </button>
 
-              {RESPONSIBLE_PERSONS_ORDER.map((person) => {
+              {responsiblePersons.map((person) => {
                 const count = leads.filter(
                   (l) => (l.assigned_to || l.agent_name || '').toLowerCase() === person.toLowerCase()
                 ).length;
@@ -515,7 +533,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                   ) : (
                     stageLeads.map((lead) => {
                       const followStatus = getFollowUpStatus(lead);
-                      const assigned = lead.assigned_to || lead.agent_name || 'Pavithra';
+                      const assigned = lead.agent_name || lead.assigned_to || 'Unassigned';
 
                       return (
                         <div

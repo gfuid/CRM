@@ -3,7 +3,8 @@
  * Includes automatic auth headers, response time metrics, and fallback handling
  */
 
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1';
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE_URL = isLocal ? 'http://localhost:5000/api/v1' : (import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1');
 
 class ApiClient {
   constructor() {

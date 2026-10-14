@@ -1,9 +1,41 @@
+const fs = require('fs');
+const path = require('path');
 const bcrypt = require('bcryptjs');
 const models = require('../models');
 const { dataStore } = require('../repositories/dataStore');
 
+const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
+
 /**
- * Hydrate in-memory dataStore from MongoDB Atlas
+ * Hydrate dataStore from local snapshot file if present
+ */
+const hydrateFromSnapshot = () => {
+  try {
+    if (fs.existsSync(snapshotPath)) {
+      const raw = fs.readFileSync(snapshotPath, 'utf-8');
+      const snapshot = JSON.parse(raw);
+      if (snapshot.users && snapshot.users.length > 0) dataStore.users = snapshot.users;
+      if (snapshot.company) dataStore.company = snapshot.company;
+      if (snapshot.leads && snapshot.leads.length > 0) dataStore.leads = snapshot.leads;
+      if (snapshot.tasks && snapshot.tasks.length > 0) dataStore.tasks = snapshot.tasks;
+      if (snapshot.activities && snapshot.activities.length > 0) dataStore.activities = snapshot.activities;
+      if (snapshot.followUps && snapshot.followUps.length > 0) dataStore.followUps = snapshot.followUps;
+      if (snapshot.myDays && snapshot.myDays.length > 0) dataStore.myDays = snapshot.myDays;
+      if (snapshot.outreach && snapshot.outreach.length > 0) dataStore.outreach = snapshot.outreach;
+      if (snapshot.auditLogs && snapshot.auditLogs.length > 0) dataStore.auditLogs = snapshot.auditLogs;
+      if (snapshot.emailSettings && snapshot.emailSettings.length > 0) dataStore.emailSettings = snapshot.emailSettings;
+      if (snapshot.emailCampaigns && snapshot.emailCampaigns.length > 0) dataStore.emailCampaigns = snapshot.emailCampaigns;
+      console.log(`⚡ Instant local snapshot hydrated (${(snapshot.leads || []).length} leads, ${(snapshot.users || []).length} users)`);
+      return true;
+    }
+  } catch (err) {
+    console.warn('⚠️  Could not hydrate from local snapshot:', err.message);
+  }
+  return false;
+};
+
+/**
+ * Hydrate in-memory dataStore from MongoDB Atlas & write snapshot
  */
 const syncFromDB = async () => {
   try {
@@ -37,6 +69,27 @@ const syncFromDB = async () => {
     console.log(
       `🔄 In-memory cache successfully synchronized with MongoDB Atlas (${leads.length} leads, ${users.length} users, ${tasks.length} tasks).`
     );
+
+    // Save snapshot to disk asynchronously to prevent any data loss
+    try {
+      const backupDir = path.dirname(snapshotPath);
+      if (!fs.existsSync(backupDir)) fs.mkdirSync(backupDir, { recursive: true });
+      const snapshot = {
+        users: dataStore.users,
+        leads: dataStore.leads,
+        tasks: dataStore.tasks,
+        activities: dataStore.activities,
+        followUps: dataStore.followUps,
+        myDays: dataStore.myDays,
+        outreach: dataStore.outreach,
+        auditLogs: dataStore.auditLogs,
+        company: dataStore.company,
+        timestamp: new Date().toISOString(),
+      };
+      fs.writeFile(snapshotPath, JSON.stringify(snapshot, null, 2), (err) => {
+        if (err) console.warn('Failed writing local snapshot:', err.message);
+      });
+    } catch (e) {}
   } catch (err) {
     console.error('⚠️  Failed to sync from MongoDB:', err.message);
   }
@@ -59,4 +112,5 @@ const seedMongoDB = async () => {
 module.exports = {
   seedMongoDB,
   syncFromDB,
+  hydrateFromSnapshot,
 };

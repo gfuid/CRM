@@ -1,4 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
+import PhoneInputWithCountry from './PhoneInputWithCountry';
+import { api } from '../services/api';
 import {
   X,
   Clock,
@@ -64,20 +66,7 @@ const STAGES = [
   'Closed Won'
 ];
 
-const REPS = [
-  'Rohan',
-  'adric',
-  'Pavithra',
-  'Rahul',
-  'Shiva',
-  'David',
-  'Athish',
-  'Dan',
-  'aarav',
-  'Bhavana',
-  'Preetham',
-  'Sanju'
-];
+
 
 export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, onDelete }) {
   if (!isOpen || !lead) return null;
@@ -151,8 +140,26 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [paymentDays, setPaymentDays] = useState(lead.export_requirements?.payment_days || '');
 
   // Assignment & Status
-  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || lead.agent_name || 'Rohan');
+  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || lead.agent_name || '');
   const [status, setStatus] = useState(lead.stage || lead.status || 'Closed Lost');
+  const [teamReps, setTeamReps] = useState([]);
+
+  useEffect(() => {
+    api.getUsers().then((res) => {
+      if (res && res.success && Array.isArray(res.data)) {
+        setTeamReps(res.data.map((u) => u.name).filter(Boolean));
+      }
+    }).catch(() => {});
+  }, []);
+
+  const availableReps = useMemo(() => {
+    const set = new Set();
+    if (lead.assigned_to) set.add(lead.assigned_to);
+    if (lead.agent_name) set.add(lead.agent_name);
+    if (assignedTo) set.add(assignedTo);
+    teamReps.forEach((r) => set.add(r));
+    return Array.from(set).filter(Boolean);
+  }, [teamReps, lead, assignedTo]);
 
   // Daily Activity
   const [activeChecks, setActiveChecks] = useState([]);
@@ -463,11 +470,11 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
                 <div>
                   <label className="text-[11px] font-bold text-slate-600 block mb-1">Phone</label>
-                  <input
-                    type="text"
+                  <PhoneInputWithCountry
                     value={phone}
-                    onChange={(e) => setPhone(e.target.value)}
-                    className="w-full px-3 py-2 bg-slate-50/50 border border-slate-200 rounded-lg text-xs"
+                    defaultCountry={country}
+                    onChange={(fullPhone) => setPhone(fullPhone)}
+                    placeholder="e.g. 495 729 13 94"
                   />
                   <button
                     type="button"
@@ -537,12 +544,11 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
               <label className="text-[11px] font-bold text-slate-600 block mb-1">
                 WhatsApp/zolo number
               </label>
-              <input
-                type="text"
+              <PhoneInputWithCountry
                 value={whatsapp}
+                defaultCountry={country}
+                onChange={(fullPhone) => setWhatsapp(fullPhone)}
                 placeholder="WhatsApp number"
-                onChange={(e) => setWhatsapp(e.target.value)}
-                className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
               />
               <button
                 type="button"
@@ -991,7 +997,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
                       : 'bg-white border-slate-200 text-slate-800'
                   }`}
                 >
-                  {REPS.map((r) => (
+                  {(availableReps.length > 0 ? availableReps : [assignedTo || 'Unassigned']).map((r) => (
                     <option key={r} value={r}>
                       {r}
                     </option>

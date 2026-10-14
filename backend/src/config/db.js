@@ -2,6 +2,8 @@ const mongoose = require('mongoose');
 const config = require('./env');
 
 let isConnected = false;
+let reconnectTimer = null;
+let isConnecting = false;
 
 const connectDB = async () => {
   if (!config.mongodbUri) {
@@ -9,43 +11,77 @@ const connectDB = async () => {
     return false;
   }
 
+  if (isConnecting) return false;
+  isConnecting = true;
+
   try {
-    mongoose.connection.on('connected', () => {
-      isConnected = true;
-      console.log('🍃 MongoDB Atlas connected successfully!');
-    });
+    if (mongoose.connection.listeners('connected').length === 0) {
+      mongoose.connection.on('connected', async () => {
+        isConnected = true;
+        isConnecting = false;
+        console.log('🍃 MongoDB Atlas connected successfully!');
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer);
+          reconnectTimer = null;
+        }
+        try {
+          const { seedMongoDB } = require('./seed');
+          await seedMongoDB();
+        } catch (e) {
+          console.warn('Sync on connect note:', e.message);
+        }
+      });
 
-    mongoose.connection.on('error', (err) => {
-      isConnected = false;
-      console.error('❌ MongoDB connection error:', err.message);
-    });
+      mongoose.connection.on('error', (err) => {
+        isConnected = false;
+        console.error('❌ MongoDB connection error:', err.message);
+        scheduleReconnect();
+      });
 
-    mongoose.connection.on('disconnected', () => {
-      isConnected = false;
-      console.warn('⚠️  MongoDB disconnected.');
-    });
+      mongoose.connection.on('disconnected', () => {
+        isConnected = false;
+        console.warn('⚠️  MongoDB disconnected.');
+        scheduleReconnect();
+      });
+    }
 
     await mongoose.connect(config.mongodbUri, {
-      serverSelectionTimeoutMS: 5000,
+      serverSelectionTimeoutMS: 20000,
+      connectTimeoutMS: 20000,
       autoIndex: true,
     });
 
     isConnected = true;
+    isConnecting = false;
     return true;
   } catch (error) {
     isConnected = false;
+    isConnecting = false;
     console.error('====================================================');
     console.error('⚠️  MongoDB Atlas Connection Failed:');
     console.error(error.message);
-    console.error('👉 TIP: If you see "Could not connect to any servers",');
-    console.error('   please whitelist your IP or allow 0.0.0.0/0 in MongoDB Atlas:');
-    console.error('   Atlas Dashboard -> Security -> Network Access -> Add IP (0.0.0.0/0)');
+    console.error('👉 Retrying connection in 5 seconds in background...');
     console.error('====================================================');
+    scheduleReconnect();
     return false;
   }
 };
 
+const scheduleReconnect = () => {
+  if (!reconnectTimer) {
+    reconnectTimer = setTimeout(() => {
+      reconnectTimer = null;
+      console.log('🔄 Retrying MongoDB Atlas connection...');
+      connectDB().catch(() => {});
+    }, 5000);
+  }
+};
+
 const disconnectDB = async () => {
+  if (reconnectTimer) {
+    clearTimeout(reconnectTimer);
+    reconnectTimer = null;
+  }
   if (isConnected) {
     await mongoose.disconnect();
     isConnected = false;

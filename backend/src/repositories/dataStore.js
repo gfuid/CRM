@@ -678,6 +678,26 @@ const dbSync = {
   },
 };
 
+// Instant recovery & offline persistence: hydrate immediately from local snapshot
+try {
+  const fs = require('fs');
+  const path = require('path');
+  const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
+  if (fs.existsSync(snapshotPath)) {
+    const raw = fs.readFileSync(snapshotPath, 'utf-8');
+    const snap = JSON.parse(raw);
+    if (snap.users && snap.users.length > 0) dataStore.users = snap.users;
+    if (snap.leads && snap.leads.length > 0) dataStore.leads = snap.leads;
+    if (snap.tasks && snap.tasks.length > 0) dataStore.tasks = snap.tasks;
+    if (snap.activities && snap.activities.length > 0) dataStore.activities = snap.activities;
+    if (snap.followUps && snap.followUps.length > 0) dataStore.followUps = snap.followUps;
+    if (snap.myDays && snap.myDays.length > 0) dataStore.myDays = snap.myDays;
+    if (snap.outreach && snap.outreach.length > 0) dataStore.outreach = snap.outreach;
+    if (snap.auditLogs && snap.auditLogs.length > 0) dataStore.auditLogs = snap.auditLogs;
+    if (snap.company) dataStore.company = snap.company;
+  }
+} catch (e) {}
+
 module.exports = {
   dataStore,
   generateId,

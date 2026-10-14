@@ -2,6 +2,8 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
+import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
+import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
 import {
   Plus,
@@ -761,6 +763,7 @@ export default function Leads() {
   const defaultContact = {
     name: '',
     phone: '',
+    country_code: '',
     extra_phones: [],
     email: '',
     designation: '',
@@ -797,10 +800,10 @@ export default function Leads() {
     port_delivery: '',
     payment_days: 'LC at Sight (Letter of Credit)',
     // Assignment & Creator Info (Requirement 4 & 6)
-    assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
-    agent_name: isStaff ? (profile?.name || 'Staff Member') : 'Athish',
+    assigned_to: isStaff ? (profile?.id || 'staff') : (profile?.id || 'owner'),
+    agent_name: isStaff ? (profile?.name || 'Staff Member') : (profile?.name || 'Owner'),
     created_by_id: profile?.id || 'usr_staff_creator',
-    created_by_name: profile?.name || profile?.full_name || 'Deepak',
+    created_by_name: profile?.name || profile?.full_name || 'Owner',
     created_at: new Date().toISOString(),
     follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     follow_up_time: '10:00',
@@ -879,11 +882,16 @@ export default function Leads() {
   // Load from LocalStorage and API on mount
   useEffect(() => {
     loadLeads();
-    if (isOwner && getTeamMembers) {
-      getTeamMembers().then((res) => {
-        if (Array.isArray(res) && res.length > 0) setTeamList(res);
-      }).catch(() => {});
-    }
+    const fetchTeam = () => {
+      if (isOwner && getTeamMembers) {
+        getTeamMembers().then((res) => {
+          if (Array.isArray(res)) setTeamList(res);
+        }).catch(() => {});
+      }
+    };
+    fetchTeam();
+    window.addEventListener('crm_staff_updated', fetchTeam);
+    return () => window.removeEventListener('crm_staff_updated', fetchTeam);
   }, [profile?.id, isOwner]);
 
   // Dossier Action Handlers
@@ -1228,8 +1236,8 @@ export default function Leads() {
     setCustomPaymentText('');
     setForm({
       ...initForm,
-      assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || 'usr_athish'),
-      agent_name: isStaff ? (profile?.name || 'Staff Member') : (teamList[0]?.name || 'Athish'),
+      assigned_to: isStaff ? (profile?.id || 'usr_staff') : (teamList[0]?.id || profile?.id || 'owner'),
+      agent_name: isStaff ? (profile?.name || 'Staff Member') : (teamList[0]?.name || profile?.name || 'Owner'),
       follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
       today_remarks: '',
       next_follow_up_action: '',
@@ -1264,11 +1272,19 @@ export default function Leads() {
     setCustomPaymentText('');
 
     const existingContacts = Array.isArray(lead.contacts) && lead.contacts.length > 0
-      ? lead.contacts
+      ? lead.contacts.map((c) => {
+          const parsed = parsePhoneNumber(c.phone || '', lead.country);
+          return {
+            ...c,
+            phone: c.phone || '',
+            country_code: c.country_code || (c.phone ? parsed.dialCode : ''),
+          };
+        })
       : [
           {
             name: lead.contact_person || '',
             phone: lead.phone || '',
+            country_code: lead.phone ? parsePhoneNumber(lead.phone, lead.country).dialCode : '',
             extra_phones: [],
             email: lead.email || '',
             designation: lead.designation || '',
@@ -2099,7 +2115,7 @@ export default function Leads() {
             {isStaff ? 'Your Workspace' : 'Active Team'}
           </div>
           <div className="text-xl sm:text-2xl font-black text-slate-900 mt-1 flex items-center gap-1.5 truncate">
-            <span>{isStaff ? (profile?.name || 'Staff Member') : `${teamList.length || 4} Staff Members`}</span>
+            <span>{isStaff ? (profile?.name || 'Staff Member') : `${teamList.length} Staff Member${teamList.length === 1 ? '' : 's'}`}</span>
           </div>
           <div className="text-[11px] font-semibold text-emerald-600 mt-0.5 truncate">
             {isStaff ? 'Isolated Portfolio' : 'All Staff Activity Tracked'}
@@ -2294,12 +2310,6 @@ export default function Leads() {
                   {tm.name} ({tm.department || tm.role || 'Staff'})
                 </option>
               ))}
-              {!teamList.some((t) => (t.name || '').toLowerCase().includes('deepak')) && (
-                <option value="Deepak">Deepak (Staff)</option>
-              )}
-              {!teamList.some((t) => (t.name || '').toLowerCase().includes('japneet')) && (
-                <option value="Japneet">Japneet (Staff)</option>
-              )}
             </select>
           )}
         </div>
@@ -3040,15 +3050,20 @@ export default function Leads() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-semibold text-slate-600 mb-1">
+                        <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                           Phone Number
                         </label>
-                        <input
-                          type="text"
-                          placeholder="+971 50 892 4110"
+                        <PhoneInputWithCountry
                           value={contact.phone}
-                          onChange={(e) => handleContactChange(cIdx, 'phone', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          countryCode={contact.country_code}
+                          defaultCountry={form.country}
+                          onChange={(fullPhone, dialCode) => {
+                            const updated = [...form.contacts];
+                            updated[cIdx].phone = fullPhone;
+                            updated[cIdx].country_code = dialCode;
+                            setForm({ ...form, contacts: updated });
+                          }}
+                          placeholder="e.g. 11 268 8960"
                         />
                       </div>
                     </div>
@@ -3056,17 +3071,19 @@ export default function Leads() {
                     {/* Extra Phones */}
                     {contact.extra_phones && contact.extra_phones.map((ext, pIdx) => (
                       <div key={pIdx} className="flex items-center gap-2">
-                        <input
-                          type="text"
-                          placeholder={`Alternate phone #${pIdx + 2}`}
-                          value={ext}
-                          onChange={(e) => handleExtraPhoneChange(cIdx, pIdx, e.target.value)}
-                          className="flex-1 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                        />
+                        <div className="flex-1">
+                          <PhoneInputWithCountry
+                            value={ext}
+                            defaultCountry={contact.country_code || form.country}
+                            onChange={(fullPhone) => handleExtraPhoneChange(cIdx, pIdx, fullPhone)}
+                            placeholder={`Alternate phone #${pIdx + 2}`}
+                          />
+                        </div>
                         <button
                           type="button"
                           onClick={() => removeExtraPhone(cIdx, pIdx)}
-                          className="p-1.5 text-rose-500 hover:bg-rose-50 rounded-lg cursor-pointer"
+                          className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl cursor-pointer transition-colors"
+                          title="Remove phone number"
                         >
                           <X size={14} />
                         </button>
@@ -3125,13 +3142,14 @@ export default function Leads() {
                   <span>📱 Direct WhatsApp Number</span>
                   <span className="text-[10px] text-slate-400 font-normal">(With country code)</span>
                 </label>
-                <input
-                  type="text"
-                  placeholder="+971 50 892 4110"
-                  value={form.whatsapp}
-                  onChange={(e) => setForm({ ...form, whatsapp: e.target.value })}
-                  className="w-full sm:max-w-sm px-3.5 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                />
+                <div className="w-full sm:max-w-md">
+                  <PhoneInputWithCountry
+                    value={form.whatsapp}
+                    defaultCountry={form.country}
+                    onChange={(fullPhone) => setForm({ ...form, whatsapp: fullPhone })}
+                    placeholder="e.g. 50 892 4110"
+                  />
+                </div>
               </div>
 
               {/* Multi-Social Media Links Manager */}
@@ -4052,7 +4070,7 @@ export default function Leads() {
                   </label>
                   <select
                     disabled={!isOwner}
-                    value={activeDetailLead.agent_name || 'adric'}
+                    value={activeDetailLead.agent_name || activeDetailLead.assigned_to || (profile?.name || 'Owner')}
                     onChange={(e) => {
                       const newAgent = e.target.value;
                       const updatedLead = { ...activeDetailLead, agent_name: newAgent, assigned_to: newAgent };
@@ -4062,7 +4080,8 @@ export default function Leads() {
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                   >
-                    {['Deepak', 'Japneet', 'Athish', 'adric', 'David', 'Rohan', 'Shiva', ...teamList.map((t) => t.name)]
+                    {[profile?.name || 'Owner', ...teamList.map((t) => t.name)]
+                      .filter(Boolean)
                       .filter((val, idx, self) => self.indexOf(val) === idx)
                       .map((name) => (
                         <option key={name} value={name}>{name}</option>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Modal from '../components/Modal';
@@ -195,7 +195,23 @@ export default function Outreach() {
     }
   };
 
-  const allUserOptions = ['All users', 'adric', 'Shiva', 'Rohan', 'David', 'Preetham', 'aarav', 'Rahul'];
+  const [teamMembers, setTeamMembers] = useState([]);
+  useEffect(() => {
+    api.getUsers().then((res) => {
+      if (res && res.success && Array.isArray(res.data)) {
+        setTeamMembers(res.data);
+      }
+    }).catch(() => {});
+  }, []);
+
+  const allUserOptions = useMemo(() => {
+    const list = ['All users'];
+    if (profile?.name) list.push(profile.name);
+    teamMembers.forEach((t) => {
+      if (t.name && !list.includes(t.name)) list.push(t.name);
+    });
+    return list;
+  }, [teamMembers, profile]);
 
   return (
     <div className="space-y-6 antialiased pb-12">

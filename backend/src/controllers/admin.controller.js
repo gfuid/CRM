@@ -18,6 +18,8 @@ const getAllUsers = async (req, res) => {
     results = results.filter(
       (u) =>
         u.persona !== 'owner' &&
+        u.role !== 'admin' &&
+        u.id !== ownerId &&
         ((u.company_id && u.company_id === ownerCompanyId) ||
           u.created_by === ownerId ||
           u.created_by === req.user.email)
@@ -136,11 +138,24 @@ const createUser = async (req, res) => {
 
   // Enforce staff limit check against owner quota (Default 2 per owner)
   let owner = null;
-  if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin')) {
+  if (req.user && req.user.persona === 'owner' && req.user.id !== 'usr_super_admin') {
+    owner = req.user;
+  } else if (req.body.owner_id || req.body.company_id) {
+    const targetOwnerId = req.body.owner_id;
+    const targetCompId = req.body.company_id;
+    owner = dataStore.users.find(
+      (u) =>
+        (u.persona === 'owner' || u.role === 'admin') &&
+        u.id !== 'usr_super_admin' &&
+        ((targetOwnerId && u.id === targetOwnerId) ||
+          (targetCompId && (u.company_id === targetCompId || u.id === targetCompId)))
+    );
+  }
+  if (!owner && req.user && req.user.id !== 'usr_super_admin') {
     owner = req.user;
   }
   if (!owner) {
-    owner = dataStore.users.find((u) => u.persona === 'owner' || u.role === 'admin');
+    owner = dataStore.users.find((u) => (u.persona === 'owner' || u.role === 'admin') && u.id !== 'usr_super_admin');
   }
 
   const staffLimit =
@@ -148,13 +163,17 @@ const createUser = async (req, res) => {
       ? Number(owner.staff_limit)
       : 2;
 
-  const currentStaffCount = dataStore.users.filter((u) => {
-    if (u.persona === 'owner') return false;
-    if (owner && (u.company_id === owner.company_id || u.created_by === owner.id || u.created_by === owner.email)) {
-      return true;
-    }
-    return true;
-  }).length;
+  const currentStaffCount = owner
+    ? dataStore.users.filter((u) => {
+        if (u.persona === 'owner' || u.role === 'admin' || u.id === owner.id) return false;
+        const ownerCompanyId = owner.company_id || owner.id;
+        return (
+          (ownerCompanyId && u.company_id === ownerCompanyId) ||
+          u.created_by === owner.id ||
+          u.created_by === owner.email
+        );
+      }).length
+    : 0;
 
   if (currentStaffCount >= staffLimit) {
     return ApiResponse.error(
@@ -186,27 +205,30 @@ const createUser = async (req, res) => {
     admin_access: false, // Strict: staff NEVER has main admin access
   };
 
-  const newUser = {
-    id: generateId('usr'),
-    name: name.trim(),
-    email: email.toLowerCase().trim(),
-    password: hashedPassword,
-    role: userRole,
-    persona: 'staff',
-    department: department || 'Commodity Sales & Operations',
-    phone: phone || '',
-    is_active: true,
-    avatar_url:
-      avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
-    data_scope: data_scope || 'own_only', // 'own_only' | 'all'
-    permissions: permissions
-      ? { ...defaultPermissions, ...permissions, admin_access: false }
-      : defaultPermissions,
-    company_id: req.user?.company_id || 'comp_traveltrade_1',
-    created_by: req.user?.id || 'usr_admin_1',
-    last_login: null,
-    created_at: new Date().toISOString(),
-  };
+    const ownerCompanyId = owner?.company_id || req.user?.company_id || owner?.id || 'comp_traveltrade_1';
+    const ownerId = owner?.id || req.user?.id || 'usr_admin_1';
+
+    const newUser = {
+      id: generateId('usr'),
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password: hashedPassword,
+      role: userRole,
+      persona: 'staff',
+      department: department || 'Commodity Sales & Operations',
+      phone: phone || '',
+      is_active: true,
+      avatar_url:
+        avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}`,
+      data_scope: data_scope || 'own_only', // 'own_only' | 'all'
+      permissions: permissions
+        ? { ...defaultPermissions, ...permissions, admin_access: false }
+        : defaultPermissions,
+      company_id: ownerCompanyId,
+      created_by: ownerId,
+      last_login: null,
+      created_at: new Date().toISOString(),
+    };
 
   dataStore.users.push(newUser);
   dbSync.saveUser(newUser);
@@ -303,6 +325,7 @@ const deleteUser = async (req, res) => {
     return ApiResponse.error(res, 'Cannot delete Company Owner account', 400);
   }
   dataStore.users.splice(userIndex, 1);
+  dbSync.deleteUser(id);
   return ApiResponse.success(res, { id }, 'Staff member deleted successfully');
 };
 
@@ -402,7 +425,10 @@ const updateStaffLimit = async (req, res) => {
       (s) =>
         s.id !== user.id &&
         s.persona !== 'owner' &&
-        (s.company_id === user.company_id || s.created_by === user.id || s.created_by === user.email || (!s.company_id && !s.created_by))
+        s.role !== 'admin' &&
+        ((user.company_id && s.company_id === user.company_id) ||
+          s.created_by === user.id ||
+          s.created_by === user.email)
     )
     .map((s) => ({
       id: s.id,

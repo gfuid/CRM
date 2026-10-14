@@ -391,7 +391,8 @@ export function AuthProvider({ children }) {
       console.warn('Failed to fetch team members from backend, using local store:', err.message);
     }
     try {
-      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      const ownerKey = profile?.id || user?.id ? `crm_local_staff_${profile?.id || user?.id}` : 'crm_local_staff';
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
       if (localStaff.length > 0) return localStaff;
     } catch {}
     return [];

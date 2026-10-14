@@ -53,9 +53,9 @@ const getLeads = async (req, res) => {
     const creator = dataStore.users.find((u) => u.id === l.created_by_id);
     return {
       ...l,
-      agent_name: agent ? agent.name : (l.agent_name || (l.assigned_to === 'usr_athish' ? 'Athish' : 'Unassigned')),
+      agent_name: agent ? agent.name : (l.agent_name || (l.assigned_to ? l.assigned_to : 'Unassigned')),
       agent_avatar: agent ? agent.avatar_url : null,
-      created_by_name: l.created_by_name || (creator ? creator.name : (l.agent_name || 'Deepak')),
+      created_by_name: l.created_by_name || (creator ? creator.name : (l.agent_name || 'Staff')),
       created_by_id: l.created_by_id || (creator ? creator.id : l.assigned_to),
       created_at: l.created_at || new Date().toISOString(),
     };
@@ -88,7 +88,7 @@ const getLeadById = async (req, res) => {
 
   return ApiResponse.success(res, {
     ...lead,
-    agent_name: agent ? agent.name : (lead.assigned_to === 'usr_athish' ? 'Athish' : 'Unassigned'),
+    agent_name: agent ? agent.name : (lead.agent_name || (lead.assigned_to ? lead.assigned_to : 'Unassigned')),
     agent_avatar: agent ? agent.avatar_url : null,
     activities: leadActivities,
     tasks: leadTasks,
@@ -195,9 +195,9 @@ const createLead = async (req, res) => {
     stage: stage || 'Requirement Understood',
     priority: priority || 'Medium',
     export_requirements: export_requirements || {},
-    assigned_to: (req.user && req.user.role !== 'admin') ? req.user.id : (assigned_to || 'usr_athish'),
-    created_by_id: req.body.created_by_id || (req.user ? req.user.id : 'usr_owner_1'),
-    created_by_name: req.body.created_by_name || (req.user ? (req.user.name || req.user.full_name) : 'Deepak'),
+    assigned_to: (req.user && req.user.role !== 'admin') ? req.user.id : (assigned_to || (req.user ? req.user.id : 'unassigned')),
+    created_by_id: req.body.created_by_id || (req.user ? req.user.id : 'unassigned'),
+    created_by_name: req.body.created_by_name || (req.user ? (req.user.name || req.user.full_name) : 'User'),
     follow_up_date: follow_up_date,
     follow_up_time: follow_up_time || req.body.follow_up_time || '10:00 AM',
     today_remarks: today_remarks || '',
@@ -234,7 +234,7 @@ const createLead = async (req, res) => {
     title: 'Export Lead Created',
     description: `Created lead for ${leadName} (Products: ${newLead.product}, Value: $${newLead.value.toLocaleString()}) by ${newLead.created_by_name}`,
     lead_id: newLead.id,
-    user_id: req.user ? req.user.id : 'usr_athish',
+    user_id: req.user ? req.user.id : 'system',
     duration_minutes: null,
     timestamp: new Date().toISOString(),
   };
