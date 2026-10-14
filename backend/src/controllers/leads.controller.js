@@ -49,14 +49,30 @@ const getLeads = async (req, res) => {
 
   // Populate assigned user info & creator user info
   const populated = list.map((l) => {
-    const agent = dataStore.users.find((u) => u.id === l.assigned_to);
+    let assignedId = l.assigned_to;
+    let agentName = l.agent_name;
+
+    // Purge any foreign legacy placeholder
+    if (assignedId === 'usr_athish' || agentName === 'Athish' || agentName === 'usr_athish') {
+      assignedId = req.user ? req.user.id : 'usr_1791814468302_hoa08z';
+      agentName = req.user ? req.user.name : 'Keerthana Ponni K';
+    }
+
+    const agent = dataStore.users.find((u) => u.id === assignedId);
     const creator = dataStore.users.find((u) => u.id === l.created_by_id);
+    const resolvedAgentName = agent
+      ? agent.name
+      : (agentName && !agentName.startsWith('usr_') && agentName !== 'Athish'
+          ? agentName
+          : (req.user ? req.user.name : 'Keerthana Ponni K'));
+
     return {
       ...l,
-      agent_name: agent ? agent.name : (l.agent_name || (l.assigned_to ? l.assigned_to : 'Unassigned')),
+      assigned_to: assignedId,
+      agent_name: resolvedAgentName,
       agent_avatar: agent ? agent.avatar_url : null,
-      created_by_name: l.created_by_name || (creator ? creator.name : (l.agent_name || 'Staff')),
-      created_by_id: l.created_by_id || (creator ? creator.id : l.assigned_to),
+      created_by_name: l.created_by_name || (creator ? creator.name : resolvedAgentName),
+      created_by_id: l.created_by_id || (creator ? creator.id : assignedId),
       created_at: l.created_at || new Date().toISOString(),
     };
   });

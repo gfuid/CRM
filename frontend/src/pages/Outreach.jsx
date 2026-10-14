@@ -27,6 +27,53 @@ import {
 import { OUTREACH_COLUMNS, INITIAL_OUTREACH_LOGS } from '../data/outreachData';
 import { SEED_LEADS } from '../data/seedLeads';
 
+// ISO formatting helper (YYYY-MM-DD)
+export const parseToIso = (d) => {
+  if (!d) return null;
+  const s = String(d).trim();
+
+  // 1. Matches YYYY-MM-DD
+  const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
+
+  // 2. Matches DD/MM/YYYY
+  const dmyMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (dmyMatch) {
+    return `${dmyMatch[3]}-${dmyMatch[2].padStart(2, '0')}-${dmyMatch[1].padStart(2, '0')}`;
+  }
+
+  // 3. Matches "14 Oct 2026" or "14-Oct-2026"
+  const monthNames = {
+    jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
+    jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
+  };
+  const namedMatch = s.match(/(\d{1,2})[\s\-]+([a-zA-Z]{3,9})[\s\-]+(\d{4})/);
+  if (namedMatch) {
+    const day = namedMatch[1].padStart(2, '0');
+    const monStr = namedMatch[2].toLowerCase().slice(0, 3);
+    const mon = monthNames[monStr] || '10';
+    return `${namedMatch[3]}-${mon}-${day}`;
+  }
+
+  // 4. Fallback to local Date object
+  const parsed = new Date(s);
+  if (!isNaN(parsed.getTime())) {
+    const year = parsed.getFullYear();
+    const month = String(parsed.getMonth() + 1).padStart(2, '0');
+    const day = String(parsed.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  }
+  return null;
+};
+
+export const getTodayIso = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  const day = String(now.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 // Format date as Day / Month / Year (DD/MM/YYYY)
 export const formatDMY = (dateStr, dateIso) => {
   if (dateIso && dateIso.includes('-')) {
@@ -36,45 +83,222 @@ export const formatDMY = (dateStr, dateIso) => {
     }
   }
   if (!dateStr) return '';
-  if (dateStr.includes('-')) {
-    const parts = dateStr.split('-');
-    if (parts.length === 3 && parts[0].length === 4) {
-      return `${parts[2].padStart(2, '0')}/${parts[1].padStart(2, '0')}/${parts[0]}`;
-    }
-  }
-  if (dateStr.includes('/')) {
-    const parts = dateStr.split('/');
-    if (parts.length === 3) {
-      const p0 = parseInt(parts[0], 10);
-      const p1 = parseInt(parts[1], 10);
-      const y = parts[2];
-      if (p1 > 12) {
-        // Was M/D/YYYY (e.g. 9/26/2026) -> Day/Month/Year
-        return `${String(p1).padStart(2, '0')}/${String(p0).padStart(2, '0')}/${y}`;
-      }
-      if (parts[0].length === 1 && p0 <= 12 && p1 <= 12) {
-        // Single digit month at start (e.g. 9/5/2026) -> Day/Month/Year
-        return `${String(p1).padStart(2, '0')}/${String(p0).padStart(2, '0')}/${y}`;
-      }
-      // Already DD/MM/YYYY
-      return `${String(p0).padStart(2, '0')}/${String(p1).padStart(2, '0')}/${y}`;
-    }
+  const iso = parseToIso(dateStr);
+  if (iso) {
+    const parts = iso.split('-');
+    return `${parts[2]}/${parts[1]}/${parts[0]}`;
   }
   return dateStr;
 };
 
+export const extractTime = (d) => {
+  if (!d) return '11:00 AM';
+  if (typeof d === 'string' && d.includes('·')) {
+    const parts = d.split('·');
+    return parts[parts.length - 1].trim();
+  }
+  if (typeof d === 'string' && /AM|PM/i.test(d)) {
+    const match = d.match(/\d{1,2}:\d{2}\s*(?:AM|PM)/i);
+    if (match) return match[0];
+  }
+  const parsed = new Date(d);
+  if (!isNaN(parsed.getTime())) {
+    return parsed.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+  }
+  return '11:00 AM';
+};
+
+export const classifyActivity = (actText) => {
+  if (!actText) return 'call_initiated';
+  const lower = String(actText).toLowerCase();
+  if (lower.includes('email reply') || (lower.includes('email') && lower.includes('repl'))) return 'email_reply';
+  if (lower.includes('email') || lower.includes('mail')) return 'email';
+  if (lower.includes('whatsapp') || lower.includes('zalo') || lower.includes('chat') || lower.includes('message')) return 'whatsapp';
+  if (lower.includes('meeting') || lower.includes('conference') || lower.includes('zoom') || lower.includes('google meet')) return 'meeting';
+  if (lower.includes('payment') || lower.includes('cad') || lower.includes('lc') || lower.includes('advance')) return 'payment_discussion';
+  if (lower.includes('price') || lower.includes('rate') || lower.includes('discount') || lower.includes('quote') || lower.includes('quotation')) {
+    if (lower.includes('sent quotation') || lower.includes('quote sent')) return 'sent_quotations';
+    return 'price_discussion';
+  }
+  if (lower.includes('sample sent') || lower.includes('dispatched sample') || lower.includes('courier')) return 'sample_sent';
+  if (lower.includes('sample')) return 'sample_discussion';
+  if (lower.includes('negotiat')) return 'negotiation';
+  if (lower.includes('response') || lower.includes('replied') || lower.includes('feedback')) return 'response';
+  if (lower.includes('call') || lower.includes('phone') || lower.includes('tele')) return 'call_initiated';
+  return 'call_initiated';
+};
+
+export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
+  const map = new Map();
+
+  const getOrCreateRow = (dateIso, user) => {
+    const key = `${dateIso}_${user}`;
+    if (!map.has(key)) {
+      map.set(key, {
+        id: `out_${dateIso}_${user.toLowerCase().replace(/[^a-z0-9]/g, '_')}`,
+        date: formatDMY('', dateIso),
+        date_iso: dateIso,
+        user,
+        counts: {
+          new_lead: 0,
+          call_initiated: 0,
+          email: 0,
+          whatsapp: 0,
+          response: 0,
+          meeting: 0,
+          price_discussion: 0,
+          payment_discussion: 0,
+          sample_discussion: 0,
+          sample_sent: 0,
+          negotiation: 0,
+          sent_quotations: 0,
+          email_reply: 0,
+        },
+        activities: {
+          new_lead: [],
+          call_initiated: [],
+          email: [],
+          whatsapp: [],
+          response: [],
+          meeting: [],
+          price_discussion: [],
+          payment_discussion: [],
+          sample_discussion: [],
+          sample_sent: [],
+          negotiation: [],
+          sent_quotations: [],
+          email_reply: [],
+        },
+      });
+    }
+    return map.get(key);
+  };
+
+  // 1. Process all leads
+  leads.forEach((lead) => {
+    const leadDateIso = parseToIso(lead.created_at || lead.created_date) || getTodayIso();
+    const leadUser = (lead.created_by_name || lead.agent_name || 'Keerthana Ponni K').trim();
+
+    const row = getOrCreateRow(leadDateIso, leadUser);
+    row.counts.new_lead += 1;
+    row.activities.new_lead.push({
+      id: lead.id,
+      company_name: lead.company_name || lead.name || 'Unnamed Company',
+      contact_person: lead.contact_person || (lead.contacts && lead.contacts[0]?.name) || 'Contact Person',
+      time: extractTime(lead.created_at) || '10:00 AM',
+      note: lead.notes || `Created trade lead for ${Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Agricultural Commodities')}`,
+      product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Rice DDGS'),
+      country: lead.country || 'International',
+      phone: lead.phone || '',
+      email: lead.email || '',
+      stage: lead.stage || 'Lead Generation',
+      quantity: lead.quantity || 0,
+      price: lead.price || lead.value || 0,
+    });
+
+    // 2. Process activity_history if present
+    if (Array.isArray(lead.activity_history)) {
+      lead.activity_history.forEach((act) => {
+        const actDateIso = parseToIso(act.date || act.created_at) || leadDateIso;
+        const actUser = (act.author ? act.author.replace(/^by\s+/i, '') : leadUser) || leadUser;
+        const actType = classifyActivity(act.activity);
+
+        const actRow = getOrCreateRow(actDateIso, actUser.trim());
+        if (actRow.counts[actType] !== undefined) {
+          actRow.counts[actType] += 1;
+        } else {
+          actRow.counts.call_initiated += 1;
+        }
+
+        const bucket = actRow.activities[actType] || actRow.activities.call_initiated;
+        bucket.push({
+          id: lead.id,
+          company_name: lead.company_name || lead.name || 'Unnamed Company',
+          contact_person: lead.contact_person || 'Contact Person',
+          time: extractTime(act.date) || act.time || '11:00 AM',
+          note: act.note || `${act.activity} logged`,
+          product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Commodities'),
+          country: lead.country || 'International',
+          phone: lead.phone || '',
+          email: lead.email || '',
+          stage: lead.stage || 'Requirement Understood',
+          quantity: lead.quantity || 0,
+          price: lead.price || lead.value || 0,
+        });
+      });
+    }
+
+    // 3. Process previous_remarks if present
+    if (Array.isArray(lead.previous_remarks)) {
+      lead.previous_remarks.forEach((rem) => {
+        const remDateIso = parseToIso(rem.date || rem.follow_up_date) || leadDateIso;
+        const remUser = (rem.author || leadUser).trim();
+        const remType = classifyActivity(rem.today_remark || rem.remark || 'call_initiated');
+
+        const remRow = getOrCreateRow(remDateIso, remUser);
+        if (remRow.counts[remType] !== undefined) {
+          remRow.counts[remType] += 1;
+        } else {
+          remRow.counts.response += 1;
+        }
+
+        const bucket = remRow.activities[remType] || remRow.activities.response;
+        bucket.push({
+          id: lead.id,
+          company_name: lead.company_name || lead.name || 'Unnamed Company',
+          contact_person: lead.contact_person || 'Contact Person',
+          time: extractTime(rem.date) || '12:00 PM',
+          note: rem.today_remark || rem.remark || 'Follow-up interaction recorded',
+          product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Commodities'),
+          country: lead.country || 'International',
+          phone: lead.phone || '',
+          email: lead.email || '',
+          stage: lead.stage || 'Contact Established',
+          quantity: lead.quantity || 0,
+          price: lead.price || lead.value || 0,
+        });
+      });
+    }
+  });
+
+  // 4. Incorporate any extra static or stored logs
+  if (Array.isArray(extraLogs)) {
+    extraLogs.forEach((item) => {
+      const dateIso = item.date_iso || parseToIso(item.date) || getTodayIso();
+      const user = item.user || 'Shiva';
+      const row = getOrCreateRow(dateIso, user);
+      if (item.counts) {
+        Object.keys(item.counts).forEach((k) => {
+          if (row.counts[k] !== undefined) {
+            row.counts[k] = (row.counts[k] || 0) + (item.counts[k] || 0);
+          }
+        });
+      }
+      if (item.activities) {
+        Object.keys(item.activities).forEach((k) => {
+          if (row.activities[k] && Array.isArray(item.activities[k])) {
+            row.activities[k].push(...item.activities[k]);
+          }
+        });
+      }
+    });
+  }
+
+  // 5. Convert to array and sort descending by date_iso
+  const result = Array.from(map.values()).sort((a, b) => b.date_iso.localeCompare(a.date_iso));
+  return result;
+};
+
 export default function Outreach() {
   const { profile } = useAuth();
-  const [logs, setLogs] = useState(() =>
-    INITIAL_OUTREACH_LOGS.map((item) => ({
-      ...item,
-      date: formatDMY(item.date, item.date_iso),
-    }))
-  );
-  const [fromDate, setFromDate] = useState('2026-09-20');
-  const [toDate, setToDate] = useState('2026-09-27');
+  const [leads, setLeads] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [datePreset, setDatePreset] = useState('all'); // 'all' | 'today' | '7days' | 'month' | 'custom'
+  const [fromDate, setFromDate] = useState('');
+  const [toDate, setToDate] = useState('');
   const [selectedUser, setSelectedUser] = useState('All users');
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   // Modal 1: Daily Breakdown Modal (matches OneRoot screenshots 4 & 5)
   const [activeBreakdown, setActiveBreakdown] = useState(null);
@@ -82,46 +306,123 @@ export default function Outreach() {
   // Modal 2: Complete Lead Dossier Details ("eys clik pr sab trah ke details")
   const [activePreviewLead, setActivePreviewLead] = useState(null);
 
-  // Persistent storage check on mount & normalize dates to DD/MM/YYYY
-  useEffect(() => {
+  // Load all leads, team, and outreach data
+  const loadAllData = async () => {
+    let currentLeads = [];
     try {
-      const stored = localStorage.getItem('oneroot_outreach_v3');
+      const stored = localStorage.getItem('oneroot_leads_v3');
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          const normalized = parsed.map((item) => ({
-            ...item,
-            date: formatDMY(item.date, item.date_iso),
-          }));
-          setLogs(normalized);
-          localStorage.setItem('oneroot_outreach_v3', JSON.stringify(normalized));
-          return;
+          currentLeads = parsed;
+          setLeads(parsed);
         }
       }
     } catch {}
-    const normalizedInitial = INITIAL_OUTREACH_LOGS.map((item) => ({
-      ...item,
-      date: formatDMY(item.date, item.date_iso),
-    }));
-    setLogs(normalizedInitial);
+
+    let storedOutreach = [];
+    try {
+      const storedOut = localStorage.getItem('oneroot_outreach_v3');
+      if (storedOut) {
+        const parsed = JSON.parse(storedOut);
+        if (Array.isArray(parsed)) storedOutreach = parsed;
+      }
+    } catch {}
+
+    // Compute initial matrix from local storage immediately so there is no blank screen
+    if (currentLeads.length > 0 || storedOutreach.length > 0 || INITIAL_OUTREACH_LOGS.length > 0) {
+      const computed = buildOutreachMatrix(currentLeads, storedOutreach.length > 0 ? storedOutreach : INITIAL_OUTREACH_LOGS);
+      setLogs(computed);
+    }
+
+    // Now fetch fresh leads and team from remote API
+    try {
+      const [leadsRes, usersRes] = await Promise.all([
+        api.getLeads().catch(() => null),
+        api.getUsers().catch(() => null),
+      ]);
+
+      if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
+        setTeamMembers(usersRes.data);
+      }
+
+      if (leadsRes && leadsRes.success && Array.isArray(leadsRes.data) && leadsRes.data.length > 0) {
+        setLeads(leadsRes.data);
+        try {
+          localStorage.setItem('oneroot_leads_v3', JSON.stringify(leadsRes.data));
+        } catch {}
+        const computed = buildOutreachMatrix(leadsRes.data, storedOutreach.length > 0 ? storedOutreach : INITIAL_OUTREACH_LOGS);
+        setLogs(computed);
+        try {
+          localStorage.setItem('oneroot_outreach_v3', JSON.stringify(computed));
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('Outreach data refresh warning:', err);
+    }
+  };
+
+  useEffect(() => {
+    loadAllData();
+    const handleUpdate = () => loadAllData();
+    window.addEventListener('crm_leads_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      window.removeEventListener('crm_leads_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, []);
 
-  // Filter logs by date range & user
-  const filteredLogs = logs.filter((log) => {
-    if (selectedUser !== 'All users' && log.user !== selectedUser) {
-      return false;
-    }
-    if (fromDate && log.date_iso < fromDate) {
-      return false;
-    }
-    if (toDate && log.date_iso > toDate) {
-      return false;
-    }
-    return true;
-  });
+  const handlePresetChange = (preset) => {
+    setDatePreset(preset);
+    const now = new Date();
+    const toIso = (dt) => {
+      const year = dt.getFullYear();
+      const month = String(dt.getMonth() + 1).padStart(2, '0');
+      const day = String(dt.getDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    };
 
-  const handleRefresh = () => {
+    if (preset === 'all') {
+      setFromDate('');
+      setToDate('');
+    } else if (preset === 'today') {
+      const todayStr = toIso(now);
+      setFromDate(todayStr);
+      setToDate(todayStr);
+    } else if (preset === '7days') {
+      const past = new Date(now.getTime() - 7 * 86400000);
+      setFromDate(toIso(past));
+      setToDate(toIso(now));
+    } else if (preset === 'month') {
+      const first = new Date(now.getFullYear(), now.getMonth(), 1);
+      const last = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+      setFromDate(toIso(first));
+      setToDate(toIso(last));
+    }
+  };
+
+  // Filter logs by date range & user
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      if (selectedUser !== 'All users' && log.user !== selectedUser) {
+        return false;
+      }
+      if (datePreset !== 'all') {
+        if (fromDate && log.date_iso < fromDate) {
+          return false;
+        }
+        if (toDate && log.date_iso > toDate) {
+          return false;
+        }
+      }
+      return true;
+    });
+  }, [logs, selectedUser, datePreset, fromDate, toDate]);
+
+  const handleRefresh = async () => {
     setIsRefreshing(true);
+    await loadAllData();
     setTimeout(() => {
       setIsRefreshing(false);
     }, 450);
@@ -129,19 +430,32 @@ export default function Outreach() {
 
   // Open Full Lead Dossier when clicking any lead card
   const handleLeadClick = (leadSummary) => {
-    // 1. Try to find the exact lead in SEED_LEADS or localStorage
-    let fullLead = null;
-    try {
-      const localLeads = JSON.parse(localStorage.getItem('oneroot_leads_v3') || '[]');
-      if (Array.isArray(localLeads) && localLeads.length > 0) {
-        fullLead = localLeads.find(
-          (l) =>
-            (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
-            (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
-        );
-      }
-    } catch {}
+    if (!leadSummary) return;
 
+    // 1. Try to find the exact lead in state leads
+    let fullLead = leads.find(
+      (l) =>
+        (leadSummary.id && l.id === leadSummary.id) ||
+        (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
+        (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
+    );
+
+    // 2. Try localStorage
+    if (!fullLead) {
+      try {
+        const localLeads = JSON.parse(localStorage.getItem('oneroot_leads_v3') || '[]');
+        if (Array.isArray(localLeads) && localLeads.length > 0) {
+          fullLead = localLeads.find(
+            (l) =>
+              (leadSummary.id && l.id === leadSummary.id) ||
+              (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
+              (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
+          );
+        }
+      } catch {}
+    }
+
+    // 3. Try SEED_LEADS
     if (!fullLead) {
       fullLead = SEED_LEADS.find(
         (l) =>
@@ -163,26 +477,26 @@ export default function Outreach() {
         contact_person: leadSummary.contact_person || 'Procurement Manager',
         phone: leadSummary.phone || '+91 98452 11890',
         email: leadSummary.email || 'procurement@company.com',
-        website: 'https://' + leadSummary.company_name.toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
+        website: 'https://' + (leadSummary.company_name || 'company').toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
         address: 'Industrial Processing Zone, India',
         products: leadSummary.product ? [leadSummary.product] : ['Agricultural Commodities'],
         quantity: leadSummary.quantity || 50000,
         price: leadSummary.price || 50000,
         stage: leadSummary.stage || 'Requirement Understood',
-        agent_name: activeBreakdown?.user || 'Shiva',
+        agent_name: activeBreakdown?.user || profile?.name || 'Keerthana Ponni K',
         activity_history: [
           {
             activity: 'Call initiated',
-            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '26/09/2026'} · ${leadSummary.time || '11:00 AM'}`,
+            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '14/10/2026'} · ${leadSummary.time || '11:00 AM'}`,
             note: leadSummary.note || 'Discussed product specs and shipment schedule',
-            author: `by ${activeBreakdown?.user || 'Shiva'}`,
+            author: `by ${activeBreakdown?.user || profile?.name || 'Keerthana Ponni K'}`,
           },
         ],
         previous_remarks: [
           {
             remark: leadSummary.note || 'Follow up scheduled',
-            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '26/09/2026'}`,
-            author: activeBreakdown?.user || 'Shiva',
+            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '14/10/2026'}`,
+            author: activeBreakdown?.user || profile?.name || 'Keerthana Ponni K',
           },
         ],
         export_requirements: {
@@ -195,23 +509,21 @@ export default function Outreach() {
     }
   };
 
-  const [teamMembers, setTeamMembers] = useState([]);
-  useEffect(() => {
-    api.getUsers().then((res) => {
-      if (res && res.success && Array.isArray(res.data)) {
-        setTeamMembers(res.data);
-      }
-    }).catch(() => {});
-  }, []);
-
   const allUserOptions = useMemo(() => {
-    const list = ['All users'];
-    if (profile?.name) list.push(profile.name);
+    const set = new Set(['All users']);
+    if (profile?.name) set.add(profile.name);
     teamMembers.forEach((t) => {
-      if (t.name && !list.includes(t.name)) list.push(t.name);
+      if (t.name) set.add(t.name);
     });
-    return list;
-  }, [teamMembers, profile]);
+    logs.forEach((l) => {
+      if (l.user) set.add(l.user);
+    });
+    leads.forEach((l) => {
+      const u = l.created_by_name || l.agent_name;
+      if (u) set.add(u);
+    });
+    return Array.from(set);
+  }, [teamMembers, profile, logs, leads]);
 
   return (
     <div className="space-y-6 antialiased pb-12">
@@ -225,9 +537,62 @@ export default function Outreach() {
         </p>
       </div>
 
-      {/* FILTER BAR - EXACT MATCH TO ONEROOT SCREENSHOT 3 */}
+      {/* FILTER BAR - EXACT MATCH TO ONEROOT SCREENSHOT 3 + PRESETS */}
       <div className="bg-white dark:bg-slate-900 p-4 sm:p-5 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs">
         <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+          {/* DATE PRESETS */}
+          <div className="space-y-1">
+            <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+              Date Presets
+            </label>
+            <div className="flex items-center gap-1.5 h-10">
+              <button
+                type="button"
+                onClick={() => handlePresetChange('all')}
+                className={`h-10 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  datePreset === 'all'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                All Time
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePresetChange('today')}
+                className={`h-10 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  datePreset === 'today'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                Today
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePresetChange('7days')}
+                className={`h-10 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  datePreset === '7days'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                7 Days
+              </button>
+              <button
+                type="button"
+                onClick={() => handlePresetChange('month')}
+                className={`h-10 px-3 rounded-xl text-xs font-bold border transition-all cursor-pointer ${
+                  datePreset === 'month'
+                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-700 shadow-xs'
+                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-300 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                This Month
+              </button>
+            </div>
+          </div>
+
           {/* FROM Date */}
           <div className="space-y-1">
             <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
@@ -237,7 +602,10 @@ export default function Outreach() {
               <input
                 type="date"
                 value={fromDate}
-                onChange={(e) => setFromDate(e.target.value)}
+                onChange={(e) => {
+                  setFromDate(e.target.value);
+                  setDatePreset('custom');
+                }}
                 className="h-10 px-3.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
               />
             </div>
@@ -252,7 +620,10 @@ export default function Outreach() {
               <input
                 type="date"
                 value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
+                onChange={(e) => {
+                  setToDate(e.target.value);
+                  setDatePreset('custom');
+                }}
                 className="h-10 px-3.5 text-xs font-bold bg-white dark:bg-slate-800 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 focus:outline-none text-slate-800 dark:text-slate-100"
               />
             </div>

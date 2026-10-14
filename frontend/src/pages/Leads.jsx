@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
+import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
 import {
@@ -316,8 +317,8 @@ const _OLD_LEADS_UNUSED = [
       port_delivery: 'Jebel Ali Port, Dubai',
       payment_days: 'CAD (Cash Against Documents via Bank)',
     },
-    assigned_to: 'usr_athish',
-    agent_name: 'Athish',
+    assigned_to: 'usr_staff_demo1',
+    agent_name: 'Sagar Punia',
     follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
     notes: 'Requested certificate of analysis for curcumin content min 3.5%. Samples dispatched via DHL.',
     created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
@@ -369,8 +370,8 @@ const _OLD_LEADS_UNUSED = [
       port_delivery: 'Chennai Port / Nhava Sheva',
       payment_days: '100% LC at Sight',
     },
-    assigned_to: 'usr_athish',
-    agent_name: 'Athish',
+    assigned_to: 'usr_staff_demo1',
+    agent_name: 'Sagar Punia',
     follow_up_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
     notes: 'Looking for 2x40ft containers of Teja Red Chilli stemless. Awaiting lab moisture test report.',
     created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
@@ -422,8 +423,8 @@ const _OLD_LEADS_UNUSED = [
       port_delivery: 'Port of Rotterdam',
       payment_days: 'CAD on arrival of vessel',
     },
-    assigned_to: 'usr_athish',
-    agent_name: 'Athish',
+    assigned_to: 'usr_staff_demo1',
+    agent_name: 'Sagar Punia',
     follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
     notes: 'High protein content (min 45% profat) required. Ocean freight rates confirmed from Mundra Port.',
     created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
@@ -475,8 +476,8 @@ const _OLD_LEADS_UNUSED = [
       port_delivery: 'Chittagong Port / Petrapole Border',
       payment_days: 'Irrevocable LC at Sight',
     },
-    assigned_to: 'usr_athish',
-    agent_name: 'Athish',
+    assigned_to: 'usr_staff_demo1',
+    agent_name: 'Sagar Punia',
     follow_up_date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
     notes: 'Initial 3 rake consignment completed. Repeat order contract for Q3 under preparation.',
     created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
@@ -528,8 +529,8 @@ const _OLD_LEADS_UNUSED = [
       port_delivery: 'Colombo Port',
       payment_days: '30% Advance, 70% on BL copy',
     },
-    assigned_to: 'usr_athish',
-    agent_name: 'Athish',
+    assigned_to: 'usr_staff_demo1',
+    agent_name: 'Sagar Punia',
     follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
     notes: 'Reefer container logistics quote obtained from Tuticorin Port. Schedule call tomorrow.',
     created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -615,7 +616,7 @@ function SearchableCountrySelect({ value, onChange, className = '' }) {
         <span className="flex items-center gap-2 truncate">
           {selectedObj ? (
             <>
-              <span className="text-sm leading-none">{selectedObj.flag}</span>
+              <CountryFlag code={selectedObj.code} name={selectedObj.name} className="w-4 h-3" />
               <span className="font-semibold text-slate-800 dark:text-slate-100">{selectedObj.name}</span>
             </>
           ) : (
@@ -656,7 +657,7 @@ function SearchableCountrySelect({ value, onChange, className = '' }) {
                   className="w-full px-3 py-2 text-xs flex items-center justify-between hover:bg-emerald-50 dark:hover:bg-slate-800 text-left transition-colors cursor-pointer"
                 >
                   <span className="flex items-center gap-2">
-                    <span className="text-sm leading-none">{c.flag}</span>
+                    <CountryFlag code={c.code} name={c.name} className="w-4 h-3" />
                     <span className="font-semibold text-slate-800 dark:text-slate-200">{c.name}</span>
                   </span>
                   <span className="text-[10px] text-slate-400 font-mono">{c.code}</span>
@@ -829,6 +830,7 @@ export default function Leads() {
       const next = typeof updater === 'function' ? updater(prev) : updater;
       try {
         localStorage.setItem('oneroot_leads_v3', JSON.stringify(next));
+        window.dispatchEvent(new Event('crm_leads_updated'));
       } catch (e) {}
       return next;
     });
@@ -1254,8 +1256,7 @@ export default function Leads() {
         lead.assigned_to === profile?.id ||
         lead.assigned_to === profile?.name ||
         lead.agent_name === profile?.name ||
-        lead.agent_id === profile?.id ||
-        (profile?.name?.toLowerCase().includes('athish') && (lead.assigned_to === 'usr_athish' || lead.agent_name === 'Athish'));
+        lead.agent_id === profile?.id;
       if (!isMine) {
         alert('Permission Denied: Staff members can only edit their own assigned leads.');
         return;
@@ -1338,8 +1339,8 @@ export default function Leads() {
       incoterm: exp.incoterm || 'CIF',
       port_delivery: exp.port_delivery || '',
       payment_days: exp.payment_days || 'LC at Sight (Letter of Credit)',
-      assigned_to: lead.assigned_to || (isStaff ? profile?.id : 'usr_athish'),
-      agent_name: lead.agent_name || (isStaff ? profile?.name : 'Athish'),
+      assigned_to: lead.assigned_to || (isStaff ? profile?.id : 'usr_staff_demo1'),
+      agent_name: lead.agent_name || (isStaff ? profile?.name : 'Sagar Punia'),
       created_by_id: lead.created_by_id || 'usr_staff_creator',
       created_by_name: lead.created_by_name || lead.agent_name || 'Deepak',
       created_at: lead.created_at || new Date().toISOString(),
@@ -1499,7 +1500,7 @@ export default function Leads() {
         } catch (apiErr) {
           console.warn('API update failed, updating local state:', apiErr);
         }
-        setLeads((prev) =>
+        updateAndPersistLeads((prev) =>
           prev.map((l) => (l.id === editingLead.id ? { ...l, ...leadPayload } : l))
         );
         showNotification('Lead updated successfully!', 'success');
@@ -1518,7 +1519,7 @@ export default function Leads() {
           created_at: new Date().toISOString(),
         };
         // Avoid duplicate in local state if already present
-        setLeads((prev) => {
+        updateAndPersistLeads((prev) => {
           if (prev.some((l) => l.id === newRecord.id)) return prev;
           return [newRecord, ...prev];
         });
@@ -1722,7 +1723,7 @@ export default function Leads() {
         'Requirement Understood',
         'CIF',
         'Jebel Ali Port',
-        'Athish',
+        'Sagar Punia',
         new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
         'Customer requested COA min 3.5% curcumin',
       ],
@@ -1742,7 +1743,7 @@ export default function Leads() {
         'Sample Sent',
         'FOB',
         'Rotterdam',
-        'Athish',
+        'Rahul',
         new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
         'Feed grade protein analysis submitted',
       ],
@@ -1844,8 +1845,8 @@ export default function Leads() {
                 port_delivery: r.portdelivery || r.port || '',
                 payment_days: r.paymentdays || 'CAD on BL copy',
               },
-              assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_athish',
-              agent_name: isStaff ? (profile?.name || 'Staff') : (r.assignedrep || 'Athish'),
+              assigned_to: isStaff ? (profile?.id || 'staff') : 'usr_staff_demo1',
+              agent_name: isStaff ? (profile?.name || 'Staff') : (r.assignedrep || 'Sagar Punia'),
               follow_up_date: r.followupdate || '',
               notes: r.notes || 'Imported via bulk CSV upload',
             };
@@ -1916,8 +1917,7 @@ export default function Leads() {
           lead.assigned_to === profile?.id ||
           lead.assigned_to === profile?.name ||
           lead.agent_name === profile?.name ||
-          lead.agent_id === profile?.id ||
-          (profile?.name?.toLowerCase().includes('athish') && (lead.assigned_to === 'usr_athish' || lead.agent_name === 'Athish'));
+          lead.agent_id === profile?.id;
         if (!isAssignedToMe) return false;
       } else if (filterStaff) {
         // Owner filtering by specific staff member (e.g. Deepak, Japneet, Athish)

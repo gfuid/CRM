@@ -455,7 +455,7 @@ export function AuthProvider({ children }) {
     try {
       const res = await api.getUsers();
       if (res && res.success && Array.isArray(res.data)) {
-        return res.data;
+        return res.data.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
       }
     } catch (err) {
       console.warn('Failed to fetch team members from backend, using local store:', err.message);
@@ -463,7 +463,9 @@ export function AuthProvider({ children }) {
     try {
       const ownerKey = profile?.id || user?.id ? `crm_local_staff_${profile?.id || user?.id}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-      if (localStaff.length > 0) return localStaff;
+      if (localStaff.length > 0) {
+        return localStaff.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+      }
     } catch {}
     return [];
   };

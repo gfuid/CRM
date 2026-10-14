@@ -77,7 +77,7 @@ const createFollowUp = async (req, res) => {
 
   const finalAssignedTo = (req.user && req.user.role !== 'admin')
     ? req.user.id
-    : (assigned_to || (req.user ? req.user.id : 'usr_athish'));
+    : (assigned_to || (req.user ? req.user.id : 'usr_1791814468302_hoa08z'));
 
   const newFollowUp = {
     id: generateId('flw'),

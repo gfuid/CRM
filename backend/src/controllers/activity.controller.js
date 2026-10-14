@@ -8,6 +8,19 @@ const getActivities = async (req, res) => {
   const { type, lead_id } = req.query;
   let list = [...dataStore.activities];
 
+  // Strict Tenant Isolation: only return activities belonging to the user's organization/leads
+  if (req.user && req.user.id !== 'usr_super_admin') {
+    const { getTenantContext, isLeadInUserScope } = require('../utils/tenantScope');
+    const ctx = getTenantContext(req.user);
+    list = list.filter((a) => {
+      if (a.lead_id) {
+        const lead = dataStore.leads.find((l) => l.id === a.lead_id);
+        if (lead) return isLeadInUserScope(lead, req.user);
+      }
+      return ctx.allowedUserIds ? ctx.allowedUserIds.has(a.user_id) : true;
+    });
+  }
+
   if (type) {
     list = list.filter((a) => a.type === type);
   }

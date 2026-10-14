@@ -369,10 +369,10 @@
       "company_id": "comp_bioniversio_1",
       "created_by": "",
       "staff_limit": 2,
-      "last_login": "2026-10-14T17:41:56.631Z",
+      "last_login": "2026-10-14T18:50:29.862Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
-      "updatedAt": "2026-10-14T17:41:56.635Z",
+      "updatedAt": "2026-10-14T18:50:29.879Z",
       "__v": 0,
       "company_name": "Bioniversio Biologics"
     },
@@ -530,21 +530,21 @@
       "staff_password": "123456"
     },
     {
-      "_id": "6acfc0b20c69b3b6f1717b56",
+      "_id": "6acfc5ba0c69b3b6f1718bd3",
       "__v": 0,
       "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
       "company_id": "comp_bioniversio_1",
-      "createdAt": "2026-10-14T17:49:37.932Z",
-      "created_at": "2026-10-14T17:49:37.928Z",
+      "createdAt": "2026-10-14T18:11:06.338Z",
+      "created_at": "2026-10-14T18:11:06.336Z",
       "created_by": "usr_1791814468302_hoa08z",
       "data_scope": "own_only",
       "department": "Commodity Sales Executive",
-      "email": "anand@gmail.com",
-      "id": "usr_1792000177928_2tzyr0",
+      "email": "rahul@gmail.com",
+      "id": "usr_1792001466336_wwykxg",
       "is_active": true,
-      "last_login": "2026-10-14T17:53:24.132Z",
-      "name": "Anand",
-      "password": "$2a$10$SiekFiEmmorNHBcc755pqu/vdi369p.pCJzEIgGSlqcDHCzZdCX.C",
+      "last_login": "2026-10-14T18:12:01.831Z",
+      "name": "Rahul",
+      "password": "$2a$10$IO0HH/u.sLuR1grb0O3L5O4n4F1LQu6V417aglu53NbytWJ7Brkn2",
       "permissions": {
         "view_analytics": true,
         "view_leads": true,
@@ -566,7 +566,7 @@
       "role": "agent",
       "staff_limit": 2,
       "staff_password": "123456",
-      "updatedAt": "2026-10-14T17:53:24.133Z"
+      "updatedAt": "2026-10-14T18:12:01.832Z"
     }
   ],
   "leads": [
@@ -2604,7 +2604,8 @@
           "extra_phones": [],
           "email": "info@agro.hayleys.com",
           "designation": "General Manager / Head of Supply Chain",
-          "linkedin": "https://www.linkedin.com/in/uditha-palliyaguru-78a276254/"
+          "linkedin": "https://www.linkedin.com/in/uditha-palliyaguru-78a276254/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2626,9 +2627,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "HAYLEYS AGRICULTURE HOLDINGS LTD",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
       "phone": "94 112688 960",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 15:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "15:45",
+          "date": "14 Oct 2026, 11:48 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 15:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "15:45",
+          "date": "14 Oct 2026, 11:47 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow will update the status",
@@ -2654,10 +2673,21 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:00:30.220Z",
+      "updated_at": "2026-10-14T18:18:07.753Z",
       "value": 10350,
       "website": "https://www.hayleysagriculture.com/",
-      "whatsapp": ""
+      "whatsapp": "94 112688 960",
+      "agent_name": "usr_athish",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/uditha-palliyaguru-78a276254/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/uditha-palliyaguru-78a276254/",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf1b0c0c69b3b6f16f669b",
@@ -3321,14 +3351,23 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
+      "follow_up_date": "2026-10-17",
       "follow_up_time": "14:45",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Health Pro Feed & Raw Materials Pvt Ltd",
-      "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "next_follow_up_action": "17 ko demo date",
+      "notes": "[Today's Interaction - 15 Oct 2026, 12:29 am]: demo testing\n\n[Planned Action on 2026-10-17 at 14:45]: 17 ko demo date\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
       "phone": "+94 77 627 4675",
       "previous_remarks": [
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "15 Oct 2026, 12:29 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -3351,10 +3390,10 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "As Discussed regarding the product",
+      "today_remarks": "demo testing",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:32:25.168Z",
+      "updated_at": "2026-10-14T18:59:03.780Z",
       "value": 10350,
       "website": "https://www.healthprofeed.com/contact.html ",
       "whatsapp": ""
@@ -4291,6 +4330,19 @@
       "createdAt": "2026-10-14T17:49:37.934Z",
       "updatedAt": "2026-10-14T17:49:37.934Z",
       "__v": 0
+    },
+    {
+      "_id": "6acfc5ba40b19d6b9bf4cd96",
+      "id": "log_1792001466336_gbv85z",
+      "actor_name": "Keerthana Ponni K",
+      "actor_id": "usr_1791814468302_hoa08z",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Rahul (rahul@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T18:11:06.337Z",
+      "createdAt": "2026-10-14T18:11:06.424Z",
+      "updatedAt": "2026-10-14T18:11:06.424Z",
+      "__v": 0
     }
   ],
   "company": {
@@ -4315,5 +4367,5 @@
     "updatedAt": "2026-10-14T14:32:33.656Z",
     "__v": 0
   },
-  "timestamp": "2026-10-14T17:54:37.954Z"
+  "timestamp": "2026-10-14T19:48:27.113Z"
 }

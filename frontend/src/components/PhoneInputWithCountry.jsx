@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { ChevronDown, Search, Check, X } from 'lucide-react';
+import CountryFlag from './CountryFlag';
 import {
   COUNTRY_CODES,
   findCountry,
@@ -148,7 +149,7 @@ export default function PhoneInputWithCountry({
           className="flex items-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-slate-800/80 hover:bg-slate-100 dark:hover:bg-slate-750 text-slate-800 dark:text-slate-200 rounded-l-xl border-r border-slate-200 dark:border-slate-700/80 text-xs font-bold cursor-pointer select-none transition-colors shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
           title={`Country Code: ${selectedCountry.name} (${selectedCountry.dial_code}) — Click to change`}
         >
-          <span className="text-base leading-none">{selectedCountry.flag}</span>
+          <CountryFlag code={selectedCountry.code} name={selectedCountry.name} />
           <span className="font-mono text-[11px] font-extrabold text-slate-700 dark:text-slate-200">
             {selectedCountry.dial_code}
           </span>
@@ -243,7 +244,7 @@ export default function PhoneInputWithCountry({
                           }`}
                         >
                           <span className="flex items-center gap-2 truncate">
-                            <span className="text-base leading-none">{c.flag}</span>
+                            <CountryFlag code={c.code} name={c.name} />
                             <span className="truncate">{c.name}</span>
                           </span>
                           <span className="flex items-center gap-2 shrink-0">
@@ -281,7 +282,7 @@ export default function PhoneInputWithCountry({
                         }`}
                       >
                         <span className="flex items-center gap-2 truncate">
-                          <span className="text-base leading-none">{c.flag}</span>
+                          <CountryFlag code={c.code} name={c.name} />
                           <span className="truncate">{c.name}</span>
                         </span>
                         <span className="flex items-center gap-2 shrink-0">

@@ -2,6 +2,7 @@
  * Production-ready in-memory Data Store & Repository Adapter
  * Database-agnostic layer with full CRUD operations for CRM entities.
  * Can be replaced or mapped to PostgreSQL, MongoDB, or Supabase seamlessly.
+ * Reloaded: 2026-10-15
  */
 
 const crypto = require('crypto');
@@ -61,6 +62,7 @@ const dataStore = {
   notifications: [],
   emailSettings: [],
   emailCampaigns: [],
+  outreach: [],
 
   leads: [
     {
@@ -108,7 +110,7 @@ const dataStore = {
         port_delivery: 'Jebel Ali Port, Dubai',
         payment_days: 'CAD (Cash Against Documents via Bank)',
       },
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
       notes: 'Requested certificate of analysis for curcumin content min 3.5%. Samples dispatched via DHL.',
       created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
@@ -159,7 +161,7 @@ const dataStore = {
         port_delivery: 'Chennai Port / Nhava Sheva',
         payment_days: '100% LC at Sight',
       },
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       follow_up_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
       notes: 'Looking for 2x40ft containers of Teja Red Chilli stemless. Awaiting lab moisture test report.',
       created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
@@ -210,7 +212,7 @@ const dataStore = {
         port_delivery: 'Port of Rotterdam',
         payment_days: 'CAD on arrival of vessel',
       },
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
       notes: 'High protein content (min 45% profat) required. Ocean freight rates confirmed from Mundra Port.',
       created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
@@ -261,7 +263,7 @@ const dataStore = {
         port_delivery: 'Chittagong Port / Petrapole Border',
         payment_days: 'Irrevocable LC at Sight',
       },
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       follow_up_date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
       notes: 'Initial 3 rake consignment completed. Repeat order contract for Q3 under preparation.',
       created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
@@ -312,7 +314,7 @@ const dataStore = {
         port_delivery: 'Colombo Port',
         payment_days: '30% Advance, 70% on BL',
       },
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
       notes: 'Reefer container logistics quote obtained from Tuticorin Port. Schedule call tomorrow.',
       created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
@@ -328,7 +330,7 @@ const dataStore = {
       priority: 'Urgent',
       status: 'In Progress',
       due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       lead_id: 'lead_1',
       created_at: new Date().toISOString(),
     },
@@ -339,7 +341,7 @@ const dataStore = {
       priority: 'High',
       status: 'Pending',
       due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       lead_id: 'lead_2',
       created_at: new Date().toISOString(),
     },
@@ -350,7 +352,7 @@ const dataStore = {
       priority: 'High',
       status: 'Completed',
       due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
       lead_id: 'lead_3',
       created_at: new Date().toISOString(),
     },
@@ -363,7 +365,7 @@ const dataStore = {
       title: 'Pricing & Incoterm Negotiation with Tariq Mansoor',
       description: 'Discussed CIF Jebel Ali rates ($1,680/MT) for 50 MT double-polish turmeric.',
       lead_id: 'lead_1',
-      user_id: 'usr_athish',
+      user_id: 'usr_1791814468302_hoa08z',
       duration_minutes: 25,
       timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
     },
@@ -373,7 +375,7 @@ const dataStore = {
       title: 'Proforma Invoice & Lab Certificate Dispatched',
       description: 'Sent PI and SGS moisture analysis certificate to minh.nguyen@vietspices.vn.',
       lead_id: 'lead_2',
-      user_id: 'usr_athish',
+      user_id: 'usr_1791814468302_hoa08z',
       duration_minutes: null,
       timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
     },
@@ -382,7 +384,7 @@ const dataStore = {
   outreach: [
     {
       id: 'out_1',
-      employee_id: 'usr_athish',
+      employee_id: 'usr_1791814468302_hoa08z',
       date: new Date().toISOString().split('T')[0],
       calls_made: 34,
       emails_sent: 58,
@@ -395,7 +397,7 @@ const dataStore = {
   myDays: [
     {
       id: 'day_1',
-      user_id: 'usr_athish',
+      user_id: 'usr_1791814468302_hoa08z',
       task: 'Finalize SGS Inspection booking for JNPT container',
       priority: 'high',
       completed: false,
@@ -404,7 +406,7 @@ const dataStore = {
     },
     {
       id: 'day_2',
-      user_id: 'usr_athish',
+      user_id: 'usr_1791814468302_hoa08z',
       task: 'Call Al-Barakah VP Procurement regarding LC opening',
       priority: 'high',
       completed: true,
@@ -413,7 +415,7 @@ const dataStore = {
     },
     {
       id: 'day_3',
-      user_id: 'usr_athish',
+      user_id: 'usr_1791814468302_hoa08z',
       task: 'Check Guntur Red Chilli mandi spot prices',
       priority: 'medium',
       completed: false,
@@ -433,7 +435,7 @@ const dataStore = {
       type: 'WhatsApp Call',
       agenda: 'Verify DHL tracking for sample turmeric and confirm LC draft',
       status: 'Scheduled',
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
     },
     {
       id: 'flw_2',
@@ -445,7 +447,7 @@ const dataStore = {
       type: 'Video Call',
       agenda: 'Confirm 2x40ft Teja stemless red chilli booking',
       status: 'Scheduled',
-      assigned_to: 'usr_athish',
+      assigned_to: 'usr_1791814468302_hoa08z',
     },
     {
       id: 'flw_3',

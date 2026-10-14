@@ -1,9 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Modal from '../components/Modal';
 import OneRootCustomerModal from '../components/OneRootCustomerModal';
+import CountryFlag from '../components/CountryFlag';
+import { findCountry } from '../data/countryCodes';
 import {
   Plus,
   Search,
@@ -25,7 +27,10 @@ import {
   X,
   MessageCircle,
   ExternalLink,
-  ChevronDown
+  ChevronDown,
+  AlertCircle,
+  AlertTriangle,
+  CheckCircle2,
 } from 'lucide-react';
 
 const STAGES = [
@@ -67,11 +72,11 @@ const STAGE_THEMES = {
     topLine: 'bg-amber-500',
   },
   'Closed Won': {
-    headerBorder: 'border-rose-200 bg-rose-50/50',
-    headerText: 'text-rose-600',
-    dot: 'bg-rose-500',
-    cardBorder: 'border-slate-200/80 hover:border-rose-300',
-    topLine: 'bg-rose-500',
+    headerBorder: 'border-emerald-200 bg-emerald-50/50',
+    headerText: 'text-emerald-600',
+    dot: 'bg-emerald-500',
+    cardBorder: 'border-slate-200/80 hover:border-emerald-300',
+    topLine: 'bg-emerald-500',
   },
   'Closed Lost': {
     headerBorder: 'border-rose-200 bg-rose-50/50',
@@ -83,8 +88,9 @@ const STAGE_THEMES = {
 };
 
 export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays }) {
-  const { profile } = useAuth();
+  const { profile, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState([]);
+  const [teamMembers, setTeamMembers] = useState([]);
 
   // Filters
   const [search, setSearch] = useState('');
@@ -94,103 +100,294 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
   const [filterMarket, setFilterMarket] = useState('All');
   const [filterFollowUp, setFilterFollowUp] = useState('All'); // 'All' | 'missed' | 'idle_critical' | 'risk' | 'active'
 
-  // Detailed Modal state ("eys clik pr sab trah ke details")
+  // Detailed Modal state
   const [selectedLead, setSelectedLead] = useState(null);
 
-  // Load leads from API and purge legacy dummy leads from storage
-  useEffect(() => {
-    const fetchActivities = async () => {
-      try {
-        const stored = localStorage.getItem('oneroot_leads_v3');
-        if (stored) {
-          const parsed = JSON.parse(stored);
-          if (Array.isArray(parsed)) {
-            const clean = parsed.filter(
+  // Helper to sanitize assignees and remove legacy placeholders like usr_athish / Athish
+  const sanitizeLead = useCallback((l, idx = 0) => {
+    let assigned = l.agent_name || l.assigned_to;
+    let assignedId = l.assigned_to;
+
+    // Distribute any legacy, foreign or unassigned leads between company staff: Sagar Punia & Rahul
+    if (
+      !assigned ||
+      assigned === 'usr_athish' ||
+      assigned === 'Athish' ||
+      assigned === 'Athish Ravikanth' ||
+      assigned.startsWith('usr_')
+    ) {
+      const isSagar = idx % 2 === 0;
+      assigned = isSagar ? 'Sagar Punia' : 'Rahul';
+      assignedId = isSagar ? 'usr_staff_demo1' : 'usr_1792001466336_wwykxg';
+    }
+
+    return {
+      ...l,
+      agent_name: assigned,
+      assigned_to: assignedId,
+    };
+  }, []);
+
+  // Load leads from API & storage
+  const fetchActivities = useCallback(async () => {
+    try {
+      const stored = localStorage.getItem('oneroot_leads_v3');
+      if (stored) {
+        const parsed = JSON.parse(stored);
+        if (Array.isArray(parsed)) {
+          const clean = parsed
+            .filter(
               (l) =>
                 !l.id?.startsWith('lead_') &&
                 l.company_name !== 'Gk Optotorg LLC' &&
                 l.company_name !== 'Baltimport LLC' &&
                 l.company_name !== 'Al-Barakah Global Agro Foods LLC'
-            );
-            setLeads(clean);
-          }
+            )
+            .map((l, idx) => sanitizeLead(l, idx));
+          setLeads(clean);
         }
-      } catch {}
-
-      try {
-        const res = await api.getLeads();
-        if (res && res.success && Array.isArray(res.data)) {
-          setLeads(res.data);
-          try {
-            localStorage.setItem('oneroot_leads_v3', JSON.stringify(res.data));
-          } catch {}
-        }
-      } catch (err) {
-        console.warn('Activity API fetch error:', err.message);
       }
-    };
+    } catch {}
 
+    try {
+      const res = await api.getLeads();
+      if (res && res.success && Array.isArray(res.data)) {
+        const sanitized = res.data.map((l, idx) => sanitizeLead(l, idx));
+        setLeads(sanitized);
+        try {
+          localStorage.setItem('oneroot_leads_v3', JSON.stringify(sanitized));
+        } catch {}
+      }
+    } catch (err) {
+      console.warn('Activity API fetch error:', err.message);
+    }
+  }, [sanitizeLead]);
+
+  useEffect(() => {
     fetchActivities();
-  }, []);
+    window.addEventListener('crm_leads_updated', fetchActivities);
+    return () => {
+      window.removeEventListener('crm_leads_updated', fetchActivities);
+    };
+  }, [fetchActivities]);
 
-  const [teamMembers, setTeamMembers] = useState([]);
-
-  // Load team members belonging to this organization
+  // Load team members strictly belonging to this company (excluding external owners like Athish)
   useEffect(() => {
     const fetchTeam = async () => {
       try {
-        const res = await api.getUsers();
-        if (res && res.success && Array.isArray(res.data)) {
-          setTeamMembers(res.data);
+        let members = [];
+        if (getTeamMembers) {
+          members = await getTeamMembers();
+        } else {
+          const res = await api.getUsers({ include_self: true });
+          if (res && res.success && Array.isArray(res.data)) {
+            members = res.data;
+          }
         }
+        // Strict filter: never include foreign Athish or non-company users
+        const filtered = (members || []).filter(
+          (u) =>
+            u.name !== 'Athish' &&
+            u.name !== 'Athish Ravikanth' &&
+            u.id !== 'usr_athish' &&
+            u.email !== 'athishravikanth@gmail.com'
+        );
+        setTeamMembers(filtered);
       } catch (err) {
         console.warn('Activity fetch team error:', err.message);
       }
     };
     fetchTeam();
-  }, []);
+  }, [getTeamMembers]);
 
+  // Responsible persons list: strictly company staff Sagar Punia, Rahul, Keerthana Ponni K
   const responsiblePersons = useMemo(() => {
-    const set = new Set();
-    teamMembers.forEach((t) => {
-      if (t.name) set.add(t.name.trim());
-    });
-    leads.forEach((l) => {
-      const name = l.agent_name || l.assigned_to;
-      if (name && name !== 'All' && !name.startsWith('usr_')) {
-        set.add(name.trim());
-      }
-    });
-    return Array.from(set);
-  }, [teamMembers, leads]);
+    const list = [];
+    const staffNames = (teamMembers || [])
+      .map((t) => t.name?.trim())
+      .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'));
+
+    if (staffNames.length > 0) {
+      staffNames.forEach((s) => {
+        if (!list.includes(s)) list.push(s);
+      });
+    }
+
+    if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
+    if (!list.includes('Rahul')) list.push('Rahul');
+
+    const ownerName = profile?.name?.trim();
+    if (ownerName && !list.includes(ownerName) && ownerName !== 'Athish' && ownerName !== 'Athish Ravikanth') {
+      list.push(ownerName);
+    }
+
+    return list;
+  }, [teamMembers, profile]);
 
   const saveLeads = (newLeads) => {
     setLeads(newLeads);
     try {
       localStorage.setItem('oneroot_leads_v3', JSON.stringify(newLeads));
+      window.dispatchEvent(new Event('crm_leads_updated'));
     } catch {}
   };
 
-  // Follow-up status helper
-  const getFollowUpStatus = (lead) => {
-    if (lead.follow_up_status) return lead.follow_up_status;
-    if (!lead.follow_up_date) return 'normal';
+  // Follow-up status & detailed card presentation helper (matches Image 3)
+  const getFollowUpDetails = useCallback((lead) => {
+    const rawDate = lead.follow_up_date;
+    if (!rawDate) {
+      return {
+        status: 'active',
+        isOverdue: false,
+        isDueToday: false,
+        diffDays: 0,
+        formattedDate: 'No follow-up set',
+        badgeText: 'ACTIVE · ON TRACK',
+        badgeClass: 'text-emerald-700',
+        dotClass: 'bg-emerald-500',
+        cardBg: 'bg-white border-slate-200/90 hover:border-emerald-300',
+        cardHover: 'hover:shadow-lg hover:shadow-slate-500/10',
+        dateBoxClass: 'bg-slate-50 border border-slate-200 text-slate-700',
+        remarkTextClass: 'text-slate-700 font-medium italic',
+        remarkCountClass: 'text-slate-500 font-semibold',
+        dividerClass: 'border-slate-100',
+        subtextColor: 'text-slate-600',
+        shouldBlink: false,
+      };
+    }
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
-    const followDate = new Date(lead.follow_up_date);
-    followDate.setHours(0, 0, 0, 0);
-    const diff = Math.ceil((today - followDate) / (1000 * 60 * 60 * 24));
-    if (diff > 30) return 'missed';
-    if (diff > 7) return 'risk';
-    if (diff >= 1) return 'idle_critical';
-    return 'active';
+
+    const targetDate = new Date(rawDate);
+    targetDate.setHours(0, 0, 0, 0);
+
+    const diffTime = today.getTime() - targetDate.getTime();
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+
+    const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const formattedDate = !isNaN(targetDate.getTime())
+      ? `${monthNames[targetDate.getMonth()]} ${targetDate.getDate()}, ${targetDate.getFullYear()}`
+      : rawDate;
+
+    if (diffDays > 0) {
+      // OVERDUE: Soft coral-red background, live blinking red dot, alert header matching Image 3!
+      return {
+        status: diffDays > 30 ? 'missed' : diffDays > 7 ? 'risk' : 'idle_critical',
+        isOverdue: true,
+        isDueToday: false,
+        diffDays,
+        formattedDate: `Follow-up: ${formattedDate} (Overdue)`,
+        badgeText: `RISK · FOLLOW-UP OVERDUE ${diffDays} ${diffDays === 1 ? 'DAY' : 'DAYS'}`,
+        badgeClass: 'text-red-700',
+        dotClass: 'bg-red-600',
+        cardBg: 'bg-[#fee2e2]/85 border-red-300 hover:border-red-400 hover:shadow-red-200/50',
+        cardHover: 'hover:shadow-lg hover:shadow-red-500/10',
+        dateBoxClass: 'bg-white/90 border border-red-200/90 text-red-700 shadow-2xs',
+        remarkTextClass: 'text-red-950/90 font-medium italic',
+        remarkCountClass: 'text-red-700 font-semibold',
+        dividerClass: 'border-red-200/70',
+        subtextColor: 'text-red-900/80',
+        shouldBlink: true,
+      };
+    } else if (diffDays === 0) {
+      // DUE TODAY: Warm amber background with pulsing indicator
+      return {
+        status: 'idle_critical',
+        isOverdue: false,
+        isDueToday: true,
+        diffDays: 0,
+        formattedDate: `Follow-up: ${formattedDate} (Due Today)`,
+        badgeText: 'URGENT · FOLLOW-UP DUE TODAY',
+        badgeClass: 'text-amber-800',
+        dotClass: 'bg-amber-500',
+        cardBg: 'bg-amber-50/90 border-amber-300 hover:border-amber-400',
+        cardHover: 'hover:shadow-lg hover:shadow-amber-500/10',
+        dateBoxClass: 'bg-white/95 border border-amber-300 text-amber-800 shadow-2xs',
+        remarkTextClass: 'text-amber-950 font-medium italic',
+        remarkCountClass: 'text-amber-800 font-semibold',
+        dividerClass: 'border-amber-200',
+        subtextColor: 'text-amber-900/80',
+        shouldBlink: true,
+      };
+    } else {
+      // UPCOMING / FUTURE: Clean crisp cards
+      const daysAhead = Math.abs(diffDays);
+      const isSoon = daysAhead <= 3;
+      return {
+        status: 'active',
+        isOverdue: false,
+        isDueToday: false,
+        diffDays,
+        formattedDate: `Follow-up: ${formattedDate}`,
+        badgeText: isSoon ? `UPCOMING · IN ${daysAhead} ${daysAhead === 1 ? 'DAY' : 'DAYS'}` : 'ACTIVE · ON TRACK',
+        badgeClass: isSoon ? 'text-blue-700' : 'text-emerald-700',
+        dotClass: isSoon ? 'bg-blue-500' : 'bg-emerald-500',
+        cardBg: isSoon
+          ? 'bg-blue-50/50 border-blue-200 hover:border-blue-300'
+          : 'bg-white border-slate-200/90 hover:border-emerald-300',
+        cardHover: 'hover:shadow-lg hover:shadow-slate-500/10',
+        dateBoxClass: isSoon
+          ? 'bg-white/90 border border-blue-200 text-blue-700'
+          : 'bg-slate-50 border border-slate-200 text-slate-700',
+        remarkTextClass: 'text-slate-700 font-medium italic',
+        remarkCountClass: 'text-slate-500 font-semibold',
+        dividerClass: 'border-slate-100',
+        subtextColor: 'text-slate-600',
+        shouldBlink: false,
+      };
+    }
+  }, []);
+
+  // Extract latest remark and total count from previous_remarks or history
+  const getLatestRemarkInfo = (lead) => {
+    let latestText = '';
+    let count = 0;
+
+    if (Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0) {
+      count = lead.previous_remarks.length;
+      const last = lead.previous_remarks[lead.previous_remarks.length - 1];
+      if (typeof last === 'string') {
+        latestText = last;
+      } else if (last) {
+        latestText = last.today_remark || last.text || last.remark || last.planned_action || last.notes || '';
+      }
+    } else if (lead.today_remarks) {
+      latestText = lead.today_remarks;
+      count = 1;
+    } else if (lead.next_follow_up_action) {
+      latestText = lead.next_follow_up_action;
+      count = 1;
+    } else if (lead.notes) {
+      latestText = lead.notes;
+      count = 1;
+    }
+
+    return { latestText: latestText.trim(), count };
   };
 
-  // Actual stats calculated from leads
-  const missedCount = leads.filter((l) => getFollowUpStatus(l) === 'missed').length;
-  const idleCount = leads.filter((l) => getFollowUpStatus(l) === 'idle_critical').length;
-  const riskCount = leads.filter((l) => getFollowUpStatus(l) === 'risk').length;
-  const activeCount = leads.filter((l) => getFollowUpStatus(l) === 'active').length;
+  // Extract clean product tags (EXPORT, Turmeric, etc.)
+  const getProductTags = (lead) => {
+    const tags = [];
+    if (Array.isArray(lead.products)) {
+      tags.push(...lead.products.filter(Boolean));
+    } else if (typeof lead.products === 'string' && lead.products) {
+      tags.push(...lead.products.split(',').map((s) => s.trim()).filter(Boolean));
+    }
+    if (lead.product && !tags.includes(lead.product)) {
+      tags.push(lead.product);
+    }
+    if (lead.commodity && !tags.includes(lead.commodity)) {
+      tags.push(lead.commodity);
+    }
+    return tags.slice(0, 2);
+  };
+
+  // Actual stats calculated from leads with sanitized status
+  const missedCount = leads.filter((l) => getFollowUpDetails(l).status === 'missed').length;
+  const idleCount = leads.filter((l) => getFollowUpDetails(l).status === 'idle_critical').length;
+  const riskCount = leads.filter((l) => getFollowUpDetails(l).status === 'risk').length;
+  const activeCount = leads.filter((l) => getFollowUpDetails(l).status === 'active').length;
 
   const indiaCount = leads.filter((l) => (l.country || '').includes('India')).length;
   const intlCount = leads.filter((l) => !(l.country || '').includes('India')).length;
@@ -207,8 +404,8 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     const lStage = l.stage || l.status || '';
     if (filterStatus && lStage !== filterStatus) return false;
 
-    const assigned = l.assigned_to || l.agent_name || '';
-    if (filterResponsible !== 'All' && assigned.toLowerCase() !== filterResponsible.toLowerCase()) {
+    const assigned = (l.agent_name || l.assigned_to || '').toLowerCase();
+    if (filterResponsible !== 'All' && assigned !== filterResponsible.toLowerCase()) {
       return false;
     }
 
@@ -216,7 +413,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     if (filterMarket === 'International' && (l.country || '').includes('India')) return false;
 
     if (filterFollowUp !== 'All') {
-      const st = getFollowUpStatus(l);
+      const st = getFollowUpDetails(l).status;
       if (st !== filterFollowUp) return false;
     }
 
@@ -260,7 +457,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
         <div>
           <h1 className="text-2xl font-black text-slate-900 tracking-tight">Activity</h1>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            Pipeline board &mdash; drag cards to update status
+            Pipeline board &mdash; drag or click cards to update status &amp; view complete dossiers
           </p>
         </div>
         <div>
@@ -274,14 +471,14 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
         </div>
       </div>
 
-      {/* Main Board Container Card (matches OneRoot Screenshot Image 1) */}
+      {/* Main Board Container Card */}
       <div className="bg-white rounded-2xl border border-slate-200/90 shadow-sm p-6 space-y-6">
         {/* Card Title & Subtitle + My Day Button */}
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-sm font-bold text-slate-900">Activity board</h2>
             <p className="text-xs text-slate-500 font-medium mt-0.5">
-              Drag a card to move it along the pipeline
+              Live pipeline stages with urgency indicators and follow-up tracking
             </p>
           </div>
           <button
@@ -293,72 +490,75 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
           </button>
         </div>
 
-        {/* Section 1: NEEDS FOLLOW-UP Alerts (Exact matching OneRoot pills) */}
+        {/* Section 1: NEEDS FOLLOW-UP Alerts (Emotionally & Semantically Tuned) */}
         <div>
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2.5">
             NEEDS FOLLOW-UP
           </div>
           <div className="flex flex-wrap items-center gap-2.5">
-            {/* Missed Follow */}
+            {/* Missed Follow: Alert Crimson Red with Live Blinking Ping Dot */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'missed' ? 'All' : 'missed')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
                 filterFollowUp === 'missed'
-                  ? 'bg-amber-950 text-white ring-2 ring-amber-700 shadow-sm'
-                  : 'bg-[#803810] hover:bg-[#6c2e0b] text-white shadow-sm'
+                  ? 'bg-red-700 text-white ring-2 ring-red-400 ring-offset-2 shadow-sm'
+                  : 'bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/20'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-300" />
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+              </span>
               <span>Missed Follow</span>
-              <span className="bg-white text-[#803810] text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-white text-red-700 text-[11px] px-2 py-0.2 rounded-full font-black">
                 {missedCount}
               </span>
             </button>
 
-            {/* Idle Critical */}
+            {/* Idle Critical: High-Visibility Warning Tangerine / Amber */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'idle_critical' ? 'All' : 'idle_critical')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
                 filterFollowUp === 'idle_critical'
-                  ? 'bg-amber-800 text-white ring-2 ring-amber-500 shadow-sm'
-                  : 'bg-[#c2410c] hover:bg-[#9a3412] text-white shadow-sm'
+                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 ring-offset-2 shadow-sm'
+                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/20'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-amber-200" />
+              <span className="w-2 h-2 rounded-full bg-amber-200" />
               <span>Idle Critical</span>
-              <span className="bg-white text-[#c2410c] text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-white text-amber-800 text-[11px] px-2 py-0.2 rounded-full font-black">
                 {idleCount}
               </span>
             </button>
 
-            {/* Risk */}
+            {/* Risk: Deep Ruby / Rose for Accounts at Risk */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'risk' ? 'All' : 'risk')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
                 filterFollowUp === 'risk'
-                  ? 'bg-rose-950 text-white ring-2 ring-rose-500 shadow-sm'
-                  : 'bg-[#991b1b] hover:bg-[#7f1d1d] text-white shadow-sm'
+                  ? 'bg-rose-700 text-white ring-2 ring-rose-400 ring-offset-2 shadow-sm'
+                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/20'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-300" />
+              <span className="w-2 h-2 rounded-full bg-rose-200" />
               <span>Risk</span>
-              <span className="bg-white text-[#991b1b] text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-white text-rose-800 text-[11px] px-2 py-0.2 rounded-full font-black">
                 {riskCount}
               </span>
             </button>
 
-            {/* Active */}
+            {/* Active: Vibrant Emerald Green representing healthy pipeline growth */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'active' ? 'All' : 'active')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
+              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
                 filterFollowUp === 'active'
-                  ? 'bg-rose-950 text-white ring-2 ring-rose-500 shadow-sm'
-                  : 'bg-gradient-to-r from-rose-500 to-pink-600 hover:from-rose-600 hover:to-pink-700 text-white shadow-sm'
+                  ? 'bg-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-2 shadow-sm'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20'
               }`}
             >
-              <span className="w-1.5 h-1.5 rounded-full bg-rose-200" />
+              <span className="w-2 h-2 rounded-full bg-emerald-200" />
               <span>Active</span>
-              <span className="bg-white text-rose-600 text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-white text-emerald-800 text-[11px] px-2 py-0.2 rounded-full font-black">
                 {activeCount}
               </span>
             </button>
@@ -449,7 +649,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
           </div>
         </div>
 
-        {/* Section 4: RESPONSIBLE PERSON Horizontal Scroll Bar */}
+        {/* Section 4: RESPONSIBLE PERSON Horizontal Scroll Bar (Tenant Verified Personnel Only) */}
         <div>
           <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">
             RESPONSIBLE PERSON
@@ -469,7 +669,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
 
               {responsiblePersons.map((person) => {
                 const count = leads.filter(
-                  (l) => (l.assigned_to || l.agent_name || '').toLowerCase() === person.toLowerCase()
+                  (l) => (l.agent_name || l.assigned_to || '').toLowerCase() === person.toLowerCase()
                 ).length;
                 const isSelected = filterResponsible.toLowerCase() === person.toLowerCase();
                 return (
@@ -507,7 +707,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             return (
               <div
                 key={stage}
-                className="w-80 shrink-0 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col max-h-[820px] shadow-xs"
+                className="w-80 shrink-0 bg-slate-50/80 rounded-2xl border border-slate-200 flex flex-col max-h-[850px] shadow-xs"
               >
                 {/* Column Header */}
                 <div
@@ -532,43 +732,46 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                     </div>
                   ) : (
                     stageLeads.map((lead) => {
-                      const followStatus = getFollowUpStatus(lead);
-                      const assigned = lead.agent_name || lead.assigned_to || 'Unassigned';
+                      const details = getFollowUpDetails(lead);
+                      const assigned = lead.agent_name || lead.assigned_to || profile?.name || 'Keerthana Ponni K';
+                      const remarkInfo = getLatestRemarkInfo(lead);
+                      const productTags = getProductTags(lead);
+                      const countryObj = findCountry(lead.country);
+
+                      const qtyVal = Number(lead.quantity || 0);
+                      const qtyFormatted = qtyVal.toLocaleString();
+                      const unit = lead.quantity_unit || (qtyVal >= 1000 ? 'kg' : (lead.unit || 'MT'));
+                      const priceVal = Number(lead.price || lead.value || 0);
+                      const priceFormatted = priceVal.toLocaleString();
 
                       return (
                         <div
                           key={lead.id}
                           onClick={() => setSelectedLead(lead)}
-                          className={`bg-white rounded-xl p-3.5 border ${theme.cardBorder} shadow-xs hover:shadow-md transition-all cursor-pointer space-y-2.5 group`}
+                          className={`rounded-2xl p-4 border ${details.cardBg} ${details.cardHover} transition-all duration-200 cursor-pointer space-y-3 group shadow-xs`}
                         >
-                          {/* Top Alert Badge */}
-                          {lead.follow_up_badge ? (
-                            <div
-                              className={`px-2 py-1 rounded-md text-[10px] font-black tracking-tight flex items-center gap-1.5 ${
-                                followStatus === 'risk' || lead.follow_up_badge.includes('RISK')
-                                  ? 'bg-rose-100 text-rose-800 border border-rose-200'
-                                  : followStatus === 'idle_critical' || lead.follow_up_badge.includes('IDLE')
-                                  ? 'bg-amber-100 text-amber-900 border border-amber-200'
-                                  : followStatus === 'missed' || lead.follow_up_badge.includes('MISSED')
-                                  ? 'bg-amber-950 text-amber-100 border border-amber-800'
-                                  : 'bg-rose-100 text-rose-800 border border-rose-200'
-                              }`}
-                            >
-                              <span className="truncate">{lead.follow_up_badge}</span>
-                            </div>
-                          ) : (
-                            <div className="text-[10px] font-bold text-slate-400">
-                              {lead.type || 'Export'} &bull; {lead.country}
-                            </div>
-                          )}
+                          {/* 1. Top Alert Header: Blinking Live Ping Dot & Uppercase Text (Matches Image 3) */}
+                          <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider">
+                            {details.shouldBlink ? (
+                              <span className="relative flex h-2 w-2 shrink-0">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                                <span className={`relative inline-flex rounded-full h-2 w-2 ${details.dotClass}`}></span>
+                              </span>
+                            ) : (
+                              <span className={`w-2 h-2 rounded-full shrink-0 ${details.dotClass}`}></span>
+                            )}
+                            <span className={`${details.badgeClass} ${details.shouldBlink ? 'animate-pulse' : ''} truncate`}>
+                              {details.badgeText}
+                            </span>
+                          </div>
 
-                          {/* Company Name & Assignee Pill */}
+                          {/* 2. Company Name & Assignee Dropdown Pill (Image 3: Pavithra ⌄) */}
                           <div className="flex items-start justify-between gap-2">
-                            <h3 className="font-black text-slate-900 text-xs leading-snug group-hover:text-purple-600 transition-colors">
+                            <h3 className="font-black text-slate-900 text-sm leading-snug group-hover:text-purple-700 transition-colors line-clamp-2">
                               {lead.name || lead.company_name}
                             </h3>
 
-                            {/* Assignee Dropdown */}
+                            {/* Clean Assignee Pill */}
                             <div
                               onClick={(e) => e.stopPropagation()}
                               className="relative shrink-0"
@@ -576,11 +779,8 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                               <select
                                 value={assigned}
                                 onChange={(e) => handleAssigneeChange(lead.id, e.target.value, e)}
-                                className="appearance-none bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-bold px-2 py-1 pr-4 rounded-md border border-slate-200/80 cursor-pointer focus:outline-none"
+                                className="appearance-none bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-xs font-bold pl-2.5 pr-6 py-1 rounded-lg border border-purple-200/90 cursor-pointer focus:outline-none transition-colors shadow-2xs"
                               >
-                                {assigned && !responsiblePersons.includes(assigned) && (
-                                  <option value={assigned}>{assigned}</option>
-                                )}
                                 {responsiblePersons.map((p) => (
                                   <option key={p} value={p}>
                                     {p}
@@ -588,30 +788,72 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                                 ))}
                               </select>
                               <ChevronDown
-                                size={10}
-                                className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-500 pointer-events-none"
+                                size={12}
+                                className="absolute right-1.5 top-1/2 -translate-y-1/2 text-purple-700 pointer-events-none"
                               />
                             </div>
                           </div>
 
-                          {/* Contact Person */}
-                          {lead.contact_person && (
-                            <div className="text-[11px] text-slate-600 font-medium">
-                              {lead.contact_person}
-                            </div>
-                          )}
+                          {/* 3. Quantity & Price metrics line */}
+                          <div className="text-xs text-slate-600 font-medium">
+                            Qty: <strong className="text-slate-900 font-black">{qtyFormatted} {unit}</strong>
+                            <span className="mx-1.5 text-slate-400">&bull;</span>
+                            Price: <strong className="text-slate-900 font-black">${priceFormatted}</strong>
+                          </div>
 
-                          {/* Quantity & Price */}
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-                            <span>
-                              Qty: <strong className="text-slate-800">{Number(lead.quantity || 0).toLocaleString()} {lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT')}</strong>
-                            </span>
-                            <span className="font-black text-slate-900">
-                              Price: ${(lead.price || 0).toLocaleString()}
+                          {/* 4. Company Name / Contact Person with Building Icon */}
+                          <div className={`flex items-center gap-1.5 text-xs font-semibold ${details.subtextColor}`}>
+                            <Building2 size={13} className="shrink-0 opacity-80" />
+                            <span className="truncate">{lead.name || lead.company_name}</span>
+                          </div>
+
+                          {/* 5. Country Flag and Country Name */}
+                          <div className="flex items-center gap-2 text-xs font-bold text-slate-800">
+                            <CountryFlag
+                              code={countryObj?.code}
+                              name={lead.country}
+                              className="w-5 h-3.5 rounded-[2px] shadow-2xs"
+                            />
+                            <span>{lead.country || 'International'}</span>
+                          </div>
+
+                          {/* 6. Follow-up Date Box Container with Calendar Icon */}
+                          <div className={`px-2.5 py-1.5 rounded-lg flex items-center gap-2 text-xs font-bold transition-all ${details.dateBoxClass}`}>
+                            <CalendarDays size={14} className="shrink-0" />
+                            <span className={details.shouldBlink ? 'animate-pulse' : ''}>
+                              {details.formattedDate}
                             </span>
                           </div>
 
-                          {/* Move Status Dropdown */}
+                          {/* 7. Tags: EXPORT & Product details */}
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            <span className="bg-slate-200/80 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded tracking-wide uppercase">
+                              {lead.type || 'EXPORT'}
+                            </span>
+                            {productTags.map((tag, idx) => (
+                              <span
+                                key={idx}
+                                className="bg-slate-200/80 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded tracking-wide"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+
+                          {/* 8. Remarks & Follow-up History (Italics + Count) */}
+                          {remarkInfo.latestText && (
+                            <div className="pt-0.5">
+                              <div className={`border-t my-1.5 ${details.dividerClass}`} />
+                              <p className={`text-xs leading-relaxed ${details.remarkTextClass}`}>
+                                &ldquo;{remarkInfo.latestText}&rdquo;
+                              </p>
+                              <span className={`text-[10px] block mt-1 ${details.remarkCountClass}`}>
+                                {remarkInfo.count} {remarkInfo.count === 1 ? 'remark' : 'remarks'}
+                              </span>
+                            </div>
+                          )}
+
+                          {/* 9. Move Status Dropdown */}
                           <div
                             onClick={(e) => e.stopPropagation()}
                             className="pt-1.5"
@@ -622,7 +864,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                             <select
                               value={lead.stage || lead.status}
                               onChange={(e) => handleStageChange(lead.id, e.target.value, e)}
-                              className="w-full px-2 py-1.5 bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-lg text-[11px] font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors cursor-pointer"
+                              className="w-full px-2.5 py-1.5 bg-white/90 hover:bg-white border border-slate-200 rounded-lg text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-purple-500 transition-colors cursor-pointer shadow-2xs"
                             >
                               {STAGES.map((s) => (
                                 <option key={s} value={s}>

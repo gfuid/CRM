@@ -11,18 +11,22 @@ const getAllUsers = async (req, res) => {
   const { role, search, status } = req.query;
   let results = [...dataStore.users];
 
-  // If called by a company owner (not the platform Super Admin), only return their own staff members
-  if (req.user && req.user.persona === 'owner' && req.user.id !== 'usr_super_admin') {
+  // Strict Tenant Isolation: only return staff members belonging to the requester's own company
+  if (req.user && req.user.id !== 'usr_super_admin') {
     const ownerId = req.user.id;
     const ownerCompanyId = req.user.company_id || ownerId;
+    const includeSelf = req.query.include_self === 'true';
     results = results.filter(
       (u) =>
-        u.persona !== 'owner' &&
-        u.role !== 'admin' &&
-        u.id !== ownerId &&
-        ((u.company_id && u.company_id === ownerCompanyId) ||
-          u.created_by === ownerId ||
-          u.created_by === req.user.email)
+        (includeSelf ? true : u.id !== ownerId) &&
+        u.id !== 'usr_super_admin' &&
+        u.id !== 'usr_athish' &&
+        u.name !== 'Athish Ravikanth' &&
+        u.name !== 'Athish' &&
+        u.email !== 'athishravikanth@gmail.com' &&
+        (u.id === ownerId ||
+          (ownerCompanyId && u.company_id === ownerCompanyId) ||
+          (u.created_by && (u.created_by === ownerId || u.created_by === req.user.email)))
     );
   }
 
