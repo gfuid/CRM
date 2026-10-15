@@ -197,8 +197,8 @@ const authorize = (...allowedRoles) => {
       return ApiResponse.error(res, 'Unauthenticated user.', 401);
     }
 
-    // Admin has superuser access to all routes
-    if (req.user.role === 'admin') {
+    // Admin or Company Owner has superuser access to all routes
+    if (req.user.role === 'admin' || req.user.persona === 'owner' || req.user.role === 'owner') {
       return next();
     }
 

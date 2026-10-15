@@ -341,17 +341,64 @@ const updateUser = async (req, res) => {
  */
 const deleteUser = async (req, res) => {
   const { id } = req.params;
-  const userIndex = dataStore.users.findIndex((u) => u.id === id);
-  if (userIndex === -1) {
-    return ApiResponse.error(res, 'User not found', 404);
-  }
-  const user = dataStore.users[userIndex];
-  if (user.role === 'admin') {
+  const targetId = String(id).trim();
+
+  // 1. Find user in memory by id, _id, or email
+  let userIndex = dataStore.users.findIndex(
+    (u) =>
+      u.id === targetId ||
+      String(u._id) === targetId ||
+      (u.email && u.email.toLowerCase() === targetId.toLowerCase())
+  );
+
+  let user = userIndex !== -1 ? dataStore.users[userIndex] : null;
+
+  // 2. Prevent deleting Company Owner account or Super Admin
+  if (user && (user.id === 'usr_super_admin' || user.persona === 'owner' || (user.role === 'admin' && user.persona !== 'staff'))) {
     return ApiResponse.error(res, 'Cannot delete Company Owner account', 400);
   }
-  dataStore.users.splice(userIndex, 1);
-  dbSync.deleteUser(id);
-  return ApiResponse.success(res, { id }, 'Staff member deleted successfully');
+
+  // 3. Remove from in-memory dataStore.users
+  if (userIndex !== -1) {
+    dataStore.users.splice(userIndex, 1);
+  } else {
+    dataStore.users = dataStore.users.filter(
+      (u) =>
+        u.id !== targetId &&
+        String(u._id) !== targetId &&
+        (!u.email || u.email.toLowerCase() !== targetId.toLowerCase())
+    );
+  }
+
+  // 4. Add to backend deleted tombstones so restarts or snapshots don't re-seed
+  dataStore.deletedUserIds = dataStore.deletedUserIds || [];
+  dataStore.deletedUserEmails = dataStore.deletedUserEmails || [];
+  if (targetId && !dataStore.deletedUserIds.includes(targetId)) dataStore.deletedUserIds.push(targetId);
+  if (user?.id && !dataStore.deletedUserIds.includes(user.id)) dataStore.deletedUserIds.push(user.id);
+  if (user?._id && !dataStore.deletedUserIds.includes(String(user._id))) dataStore.deletedUserIds.push(String(user._id));
+  if (user?.email && !dataStore.deletedUserEmails.includes(user.email.toLowerCase())) {
+    dataStore.deletedUserEmails.push(user.email.toLowerCase());
+  }
+
+  // 5. Delete from DB via dbSync
+  const identifierToDelete = user?.id || user?._id || user?.email || targetId;
+  await dbSync.deleteUser(identifierToDelete);
+
+  // 6. Audit log
+  try {
+    const auditEntry = {
+      id: generateId('audit'),
+      action: 'DELETE_STAFF',
+      performed_by: req.user?.email || req.user?.name || 'Owner',
+      target: user?.email || user?.name || targetId,
+      details: `Owner removed staff member ${user?.name || ''} (${user?.email || targetId})`,
+      timestamp: new Date().toISOString(),
+    };
+    dataStore.auditLogs.unshift(auditEntry);
+    saveSnapshot();
+  } catch (e) {}
+
+  return ApiResponse.success(res, { id: targetId, deleted: true }, 'Staff member deleted successfully');
 };
 
 /**

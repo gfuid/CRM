@@ -3,6 +3,21 @@ import { api } from '../services/api';
 
 const AuthContext = createContext({});
 
+export const isStaffDeleted = (u) => {
+  if (!u) return false;
+  try {
+    const deleted = JSON.parse(localStorage.getItem('crm_deleted_staff') || '[]');
+    if (!deleted || !Array.isArray(deleted) || deleted.length === 0) return false;
+    const lowerDeleted = deleted.map((x) => String(x).toLowerCase());
+    if (u.id && lowerDeleted.includes(String(u.id).toLowerCase())) return true;
+    if (u._id && lowerDeleted.includes(String(u._id).toLowerCase())) return true;
+    if (u.email && lowerDeleted.includes(String(u.email).toLowerCase())) return true;
+    return false;
+  } catch {
+    return false;
+  }
+};
+
 export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const [profile, setProfile] = useState(null);
@@ -469,6 +484,59 @@ export function AuthProvider({ children }) {
     setCompany(null);
   };
 
+  // Delete staff member and remove from all local and backend stores
+  const deleteStaffMember = async (staffId, staffEmail) => {
+    // 1. Record tombstone
+    try {
+      const deleted = JSON.parse(localStorage.getItem('crm_deleted_staff') || '[]');
+      const newEntries = [staffId, staffEmail].filter(Boolean).map((x) => String(x).toLowerCase());
+      const updated = Array.from(new Set([...deleted, ...newEntries]));
+      localStorage.setItem('crm_deleted_staff', JSON.stringify(updated));
+    } catch {}
+
+    // 2. Call backend API
+    try {
+      if (staffId || staffEmail) {
+        await api.deleteUser(staffId || staffEmail);
+      }
+    } catch (err) {
+      console.warn('API deleteUser error during staff deletion:', err.message);
+    }
+
+    // 3. Purge from local storage across all staff keys
+    try {
+      const isTarget = (u) => {
+        if (!u) return false;
+        if (staffId && (u.id === staffId || String(u._id) === String(staffId))) return true;
+        if (staffEmail && u.email && u.email.toLowerCase() === String(staffEmail).toLowerCase()) return true;
+        return false;
+      };
+
+      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
+      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff.filter((u) => !isTarget(u))));
+
+      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
+      localStorage.setItem('crm_local_users', JSON.stringify(localUsers.filter((u) => !isTarget(u))));
+
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('crm_local_staff_')) {
+          try {
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            if (Array.isArray(arr)) {
+              localStorage.setItem(key, JSON.stringify(arr.filter((u) => !isTarget(u))));
+            }
+          } catch {}
+        }
+      }
+    } catch (e) {
+      console.warn('Error purging local storage during delete:', e);
+    }
+
+    window.dispatchEvent(new CustomEvent('crm_staff_updated', { detail: { deletedId: staffId, deletedEmail: staffEmail } }));
+    return true;
+  };
+
   // Get all team members for current organization
   const getTeamMembers = async () => {
     let list = [];
@@ -495,7 +563,10 @@ export function AuthProvider({ children }) {
       list = Array.from(map.values());
     } catch {}
 
-    // Guarantee both Sagar Punia and Rahul are always present for Bioniversio Biologics / Keerthana Ponni K
+    // Exclude any deleted staff members
+    list = list.filter((u) => !isStaffDeleted(u));
+
+    // Guarantee both Sagar Punia and Rahul are always present for Bioniversio Biologics / Keerthana Ponni K UNLESS explicitly deleted!
     const isBioniversio =
       profile?.company_id === 'comp_bioniversio_1' ||
       profile?.email === 'bioniversiobiologics@arggroups.com' ||
@@ -509,7 +580,7 @@ export function AuthProvider({ children }) {
           (u.name && u.name.toLowerCase().includes('sagar')) ||
           (u.email && u.email.toLowerCase().includes('sagar'))
       );
-      if (!hasSagar) {
+      if (!hasSagar && !isStaffDeleted({ id: 'usr_1789929063747_allpa4', email: 'sagarpunia163@gmail.com' })) {
         list.unshift({
           id: 'usr_1789929063747_allpa4',
           name: 'Sagar Punia',
@@ -531,7 +602,7 @@ export function AuthProvider({ children }) {
           (u.name && u.name.toLowerCase().includes('rahul')) ||
           (u.email && u.email.toLowerCase().includes('rahul'))
       );
-      if (!hasRahul) {
+      if (!hasRahul && !isStaffDeleted({ id: 'usr_1792001466336_wwykxg', email: 'rahul@gmail.com' })) {
         list.push({
           id: 'usr_1792001466336_wwykxg',
           name: 'Rahul',
@@ -549,13 +620,14 @@ export function AuthProvider({ children }) {
       }
     }
 
+    // Filter again after potential injections
+    list = list.filter((u) => !isStaffDeleted(u));
+
     // Persist to local cache so offline or session restarts keep staff intact
     try {
-      if (list.length > 0) {
-        localStorage.setItem('crm_local_staff', JSON.stringify(list));
-        if (profile?.id || user?.id) {
-          localStorage.setItem(`crm_local_staff_${profile?.id || user?.id}`, JSON.stringify(list));
-        }
+      localStorage.setItem('crm_local_staff', JSON.stringify(list));
+      if (profile?.id || user?.id) {
+        localStorage.setItem(`crm_local_staff_${profile?.id || user?.id}`, JSON.stringify(list));
       }
     } catch {}
 
@@ -576,6 +648,7 @@ export function AuthProvider({ children }) {
     loading,
     signUpOwner,
     addStaffMember,
+    deleteStaffMember,
     signIn,
     signOut,
     updateProfile,

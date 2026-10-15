@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import Modal from './Modal';
+import { useAuth, isStaffDeleted } from '../context/AuthContext';
 import {
   Users,
   Plus,
@@ -126,8 +127,22 @@ const PRESETS = {
 };
 
 export default function StaffManagementModal({ isOpen, onClose, initialEditStaff }) {
+  const { user, profile, deleteStaffMember } = useAuth();
+  const sessionUser = (() => {
+    try {
+      const s = JSON.parse(localStorage.getItem('crm_user_session') || '{}');
+      return s.user || s.profile || {};
+    } catch {
+      return {};
+    }
+  })();
+  const currentUser = profile || user || sessionUser;
+  const currentUserId = profile?.id || user?.id || sessionUser?.id;
+  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 10;
+
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingStaff, setEditingStaff] = useState(null); // When editing existing staff permissions
   const [showPassword, setShowPassword] = useState(false);
@@ -256,7 +271,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
     } catch (err) {
       console.warn('API updateUser password error, updating locally:', err.message);
-      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       const updated = localStaff.map((s) => s.id === staffMember.id ? { ...s, password: cleanPass, staff_password: cleanPass } : s);
       localStorage.setItem(ownerKey, JSON.stringify(updated));
@@ -305,7 +320,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     } catch (err) {
       console.warn('Failed to load staff list from API, checking local storage:', err.message);
     }
-    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
     const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
     const filteredLocal = localStaff.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
 
@@ -317,12 +332,15 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     });
     list = Array.from(map.values());
 
+    // Filter out any tombstoned / deleted staff
+    list = list.filter((u) => !isStaffDeleted(u));
+
     const hasSagar = list.some(
       (u) =>
         (u.name && u.name.toLowerCase().includes('sagar')) ||
         (u.email && u.email.toLowerCase().includes('sagar'))
     );
-    if (!hasSagar) {
+    if (!hasSagar && !isStaffDeleted({ id: 'usr_1789929063747_allpa4', email: 'sagarpunia163@gmail.com' })) {
       list.unshift({
         id: 'usr_1789929063747_allpa4',
         name: 'Sagar Punia',
@@ -345,7 +363,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         (u.name && u.name.toLowerCase().includes('rahul')) ||
         (u.email && u.email.toLowerCase().includes('rahul'))
     );
-    if (!hasRahul) {
+    if (!hasRahul && !isStaffDeleted({ id: 'usr_1792001466336_wwykxg', email: 'rahul@gmail.com' })) {
       list.push({
         id: 'usr_1792001466336_wwykxg',
         name: 'Rahul',
@@ -362,11 +380,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
           'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
       });
     }
+
+    list = list.filter((u) => !isStaffDeleted(u));
     setStaffList(list);
     try {
       localStorage.setItem('crm_local_staff', JSON.stringify(list));
-      if (currentUser?.id) {
-        localStorage.setItem(`crm_local_staff_${currentUser.id}`, JSON.stringify(list));
+      if (currentUserId) {
+        localStorage.setItem(`crm_local_staff_${currentUserId}`, JSON.stringify(list));
       }
     } catch {}
     setLoading(false);
@@ -396,14 +416,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     }
   };
 
-  const currentUser = (() => {
-    try {
-      return JSON.parse(localStorage.getItem('crm_user') || '{}');
-    } catch {
-      return {};
-    }
-  })();
-  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 10;
   const isLimitReached = staffList.length >= staffQuota;
 
   const handleCreateStaff = async (e) => {
@@ -447,7 +459,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       if (res && res.success) {
         // Sync immediately to local storage
         try {
-          const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+          const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
           const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
           const cleanUser = res.data || {
             id: 'usr_staff_' + Date.now(),
@@ -466,7 +478,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
           const filtered = localStaff.filter((s) => s.email?.toLowerCase() !== cleanUser.email?.toLowerCase());
           filtered.push(cleanUser);
           localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
-          if (currentUser?.id) {
+          if (currentUserId) {
             localStorage.setItem(ownerKey, JSON.stringify(filtered));
           }
         } catch {}
@@ -503,7 +515,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
 
       // For network errors or offline sync:
-      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       if (localStaff.length >= staffQuota) {
         setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
@@ -589,7 +601,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       const updatedUser = (res && res.success && res.data) ? res.data : { ...editingStaff, ...payload };
 
       // Sync across all local storage caches
-      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
       if (idx !== -1) {
@@ -632,7 +644,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       return;
     } catch (err) {
       console.warn('API updateUser error, saving to local storage fallback:', err.message);
-      const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
       const updatedStaff = {
         ...editingStaff,
@@ -687,28 +699,88 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     } catch (err) {
       console.warn('API toggleUserStatus error, toggling in local storage:', err.message);
     }
-    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
-    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-    const updated = localStaff.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s));
+    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
+    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
+    const updated = localStaff.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s));
     localStorage.setItem(ownerKey, JSON.stringify(updated));
-    setStaffList((prev) => prev.map((s) => (s.id === userId ? { ...s, is_active: !s.is_active } : s)));
+    localStorage.setItem('crm_local_staff', JSON.stringify(updated));
+    setStaffList((prev) => prev.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s)));
     window.dispatchEvent(new Event('crm_staff_updated'));
   };
 
-  const handleDeleteStaff = async (userId, name) => {
-    if (!window.confirm(`Are you sure you want to remove staff member "${name}"?`)) return;
-    try {
-      await api.deleteUser(userId);
-    } catch (err) {
-      console.warn('API deleteUser error, removing from local storage:', err.message);
+  const handleDeleteStaff = async (staffMember) => {
+    if (!staffMember) return;
+    const staffId = staffMember.id || staffMember._id;
+    const staffName = staffMember.name || 'this staff member';
+    const staffEmail = staffMember.email;
+
+    if (!window.confirm(`Are you sure you want to remove staff member "${staffName}"? This action cannot be undone.`)) {
+      return;
     }
-    const ownerKey = currentUser?.id ? `crm_local_staff_${currentUser.id}` : 'crm_local_staff';
-    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-    const filtered = localStaff.filter((s) => s.id !== userId);
-    localStorage.setItem(ownerKey, JSON.stringify(filtered));
-    setStaffList((prev) => prev.filter((s) => s.id !== userId));
-    setSuccessMsg(`Staff member ${name} removed.`);
-    window.dispatchEvent(new Event('crm_staff_updated'));
+
+    setDeletingId(staffId || staffEmail);
+    setError('');
+    setSuccessMsg('');
+
+    try {
+      if (deleteStaffMember) {
+        await deleteStaffMember(staffId, staffEmail);
+      } else {
+        try {
+          if (staffId || staffEmail) {
+            await api.deleteUser(staffId || staffEmail);
+          }
+        } catch (err) {
+          console.warn('API deleteUser error, removing from local storage:', err.message);
+        }
+
+        try {
+          const deleted = JSON.parse(localStorage.getItem('crm_deleted_staff') || '[]');
+          const newEntries = [staffId, staffMember._id, staffEmail].filter(Boolean).map((x) => String(x).toLowerCase());
+          const updated = Array.from(new Set([...deleted, ...newEntries]));
+          localStorage.setItem('crm_deleted_staff', JSON.stringify(updated));
+        } catch {}
+
+        const isTarget = (u) => {
+          if (!u) return false;
+          if (staffId && (u.id === staffId || String(u._id) === String(staffId))) return true;
+          if (staffMember._id && String(u._id) === String(staffMember._id)) return true;
+          if (staffEmail && u.email && u.email.toLowerCase() === staffEmail.toLowerCase()) return true;
+          return false;
+        };
+
+        const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
+        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
+        const filtered = localStaff.filter((s) => !isTarget(s));
+        localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
+        if (currentUserId) {
+          localStorage.setItem(ownerKey, JSON.stringify(filtered));
+        }
+
+        const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
+        const filteredUsers = localUsers.filter((u) => !isTarget(u));
+        localStorage.setItem('crm_local_users', JSON.stringify(filteredUsers));
+
+        window.dispatchEvent(new CustomEvent('crm_staff_updated', { detail: { deletedId: staffId, deletedEmail: staffEmail } }));
+      }
+
+      setStaffList((prev) => prev.filter((s) => {
+        if (staffId && (s.id === staffId || String(s._id) === String(staffId))) return false;
+        if (staffEmail && s.email && s.email.toLowerCase() === staffEmail.toLowerCase()) return false;
+        return true;
+      }));
+
+      if (editingStaff && (editingStaff.id === staffId || editingStaff.email === staffEmail)) {
+        setEditingStaff(null);
+      }
+
+      setSuccessMsg(`Staff member "${staffName}" removed successfully.`);
+    } catch (err) {
+      console.error('Failed to delete staff member:', err);
+      setError(err?.message || 'Failed to remove staff member. Please try again.');
+    } finally {
+      setDeletingId(null);
+    }
   };
 
   return (
@@ -1856,31 +1928,46 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </div>
             </div>
 
-            <div className="flex justify-end gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
+            <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
               <button
                 type="button"
-                onClick={() => setEditingStaff(null)}
-                className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                disabled={deletingId === (editingStaff.id || editingStaff.email)}
+                onClick={() => handleDeleteStaff(editingStaff)}
+                className="px-3 py-2 text-xs font-semibold text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 rounded-xl cursor-pointer flex items-center gap-1.5 transition-colors disabled:opacity-50"
               >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={savingPermissions}
-                className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5 transition-all"
-              >
-                {savingPermissions ? (
-                  <>
-                    <Loader2 size={14} className="animate-spin" />
-                    <span>Saving Permissions...</span>
-                  </>
+                {deletingId === (editingStaff.id || editingStaff.email) ? (
+                  <Loader2 size={13} className="animate-spin text-rose-600" />
                 ) : (
-                  <>
-                    <Check size={14} />
-                    <span>Save Changes & Permissions</span>
-                  </>
+                  <Trash2 size={13} />
                 )}
+                <span>Remove Staff Member</span>
               </button>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingStaff(null)}
+                  className="px-4 py-2 text-xs font-semibold text-slate-600 hover:bg-slate-200 rounded-xl cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPermissions}
+                  className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-60 rounded-xl shadow-md shadow-emerald-600/20 cursor-pointer flex items-center gap-1.5 transition-all"
+                >
+                  {savingPermissions ? (
+                    <>
+                      <Loader2 size={14} className="animate-spin" />
+                      <span>Saving Permissions...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check size={14} />
+                      <span>Save Changes & Permissions</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </form>
         )}
@@ -2126,11 +2213,16 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
 
                                   <button
                                     type="button"
-                                    onClick={() => handleDeleteStaff(staff.id, staff.name)}
-                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer"
+                                    disabled={deletingId === (staff.id || staff._id || staff.email)}
+                                    onClick={() => handleDeleteStaff(staff)}
+                                    className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors cursor-pointer disabled:opacity-50"
                                     title="Delete Staff Member"
                                   >
-                                    <Trash2 size={13} />
+                                    {deletingId === (staff.id || staff._id || staff.email) ? (
+                                      <Loader2 size={13} className="animate-spin text-rose-600" />
+                                    ) : (
+                                      <Trash2 size={13} />
+                                    )}
                                   </button>
                                 </>
                               )}

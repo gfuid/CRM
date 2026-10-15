@@ -14,7 +14,7 @@ import {
   Mail,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
-import { useAuth } from '../context/AuthContext';
+import { useAuth, isStaffDeleted } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
   const { isOwner, isStaff, profile, signOut, getTeamMembers } = useAuth();
@@ -22,10 +22,10 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     try {
       const cached = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
       if (Array.isArray(cached) && cached.length > 0) {
-        return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish');
+        return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
       }
     } catch {}
-    return [
+    const defaults = [
       {
         id: 'usr_1789929063747_allpa4',
         name: 'Sagar Punia',
@@ -47,6 +47,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
         avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
       },
     ];
+    return defaults.filter((u) => !isStaffDeleted(u));
   });
 
   const reloadStaff = () => {
@@ -54,43 +55,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
       getTeamMembers()
         .then((members) => {
           if (Array.isArray(members)) {
-            let staff = members.filter((m) => m.persona !== 'owner' && m.name !== 'Athish');
-            const hasRahul = staff.some(
-              (s) =>
-                (s.name && s.name.toLowerCase() === 'rahul') ||
-                (s.email && s.email.toLowerCase().includes('rahul'))
-            );
-            if (!hasRahul) {
-              staff.push({
-                id: 'usr_1792001466336_wwykxg',
-                name: 'Rahul',
-                role: 'agent',
-                persona: 'staff',
-                department: 'Commodity Sales Executive',
-                email: 'rahul@gmail.com',
-                is_active: true,
-                avatar_url:
-                  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-              });
-            }
-            const hasSagar = staff.some(
-              (s) =>
-                (s.name && s.name.toLowerCase().includes('sagar')) ||
-                (s.email && s.email.toLowerCase().includes('sagar'))
-            );
-            if (!hasSagar) {
-              staff.unshift({
-                id: 'usr_1789929063747_allpa4',
-                name: 'Sagar Punia',
-                role: 'agent',
-                persona: 'staff',
-                department: 'Commodity Sales Executive',
-                email: 'sagarpunia163@gmail.com',
-                is_active: true,
-                avatar_url:
-                  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-              });
-            }
+            const staff = members.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
             setStaffList(staff);
           }
         })

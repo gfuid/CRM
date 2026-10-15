@@ -512,6 +512,8 @@ const saveSnapshot = () => {
     const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
     const payload = {
       users: dataStore.users,
+      deletedUserIds: dataStore.deletedUserIds || [],
+      deletedUserEmails: dataStore.deletedUserEmails || [],
       leads: dataStore.leads,
       tasks: dataStore.tasks,
       activities: dataStore.activities,
@@ -548,8 +550,15 @@ const dbSync = {
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
-        await models.User.findOneAndDelete({ $or: [{ id }, { email: id }] });
-      } catch (e) {}
+        const mongoose = require('mongoose');
+        const conditions = [{ id }, { email: String(id).toLowerCase() }];
+        if (mongoose.Types.ObjectId.isValid(id)) {
+          conditions.push({ _id: id });
+        }
+        await models.User.deleteMany({ $or: conditions });
+      } catch (e) {
+        console.warn('[DB User Delete]:', e.message);
+      }
     }
   },
   saveLead: async (lead) => {
@@ -713,6 +722,8 @@ try {
     const raw = fs.readFileSync(snapshotPath, 'utf-8');
     const snap = JSON.parse(raw);
     if (snap.users && snap.users.length > 0) dataStore.users = snap.users;
+    if (snap.deletedUserIds && Array.isArray(snap.deletedUserIds)) dataStore.deletedUserIds = snap.deletedUserIds;
+    if (snap.deletedUserEmails && Array.isArray(snap.deletedUserEmails)) dataStore.deletedUserEmails = snap.deletedUserEmails;
     if (snap.leads && snap.leads.length > 0) dataStore.leads = snap.leads;
     if (snap.tasks && snap.tasks.length > 0) dataStore.tasks = snap.tasks;
     if (snap.activities && snap.activities.length > 0) dataStore.activities = snap.activities;
@@ -722,11 +733,25 @@ try {
     if (snap.auditLogs && snap.auditLogs.length > 0) dataStore.auditLogs = snap.auditLogs;
     if (snap.company) dataStore.company = snap.company;
 
+    const isUserDeleted = (email, id) => {
+      const deletedIds = dataStore.deletedUserIds || [];
+      const deletedEmails = dataStore.deletedUserEmails || [];
+      return (
+        (id && deletedIds.includes(String(id))) ||
+        (email && deletedEmails.includes(String(email).toLowerCase()))
+      );
+    };
+
+    // Strip out any previously deleted users
+    if (dataStore.users && dataStore.users.length > 0) {
+      dataStore.users = dataStore.users.filter((u) => !isUserDeleted(u.email, u.id));
+    }
+
     // Ensure company staff for Bioniversio Biologics (Keerthana Ponni K)
     const sagar = dataStore.users.find(
       (u) => u.email === 'sagarpunia163@gmail.com' || u.id === 'usr_1789929063747_allpa4'
     );
-    if (sagar) {
+    if (sagar && !isUserDeleted(sagar.email, sagar.id)) {
       sagar.company_id = 'comp_bioniversio_1';
       sagar.company_name = 'Bioniversio Biologics';
       sagar.created_by = 'usr_1791814468302_hoa08z';
@@ -740,7 +765,7 @@ try {
     const hasRahul = dataStore.users.some(
       (u) => (u.name && u.name.toLowerCase() === 'rahul') || u.email === 'rahul@gmail.com'
     );
-    if (!hasRahul) {
+    if (!hasRahul && !isUserDeleted('rahul@gmail.com', 'usr_1792001466336_wwykxg')) {
       dataStore.users.push({
         _id: '6acfc5ba40b19d6b9bf4cd97',
         id: 'usr_1792001466336_wwykxg',
