@@ -103,12 +103,18 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
   // Detailed Modal state
   const [selectedLead, setSelectedLead] = useState(null);
 
+  const isKeerthanaCompany =
+    profile?.company_id === 'comp_bioniversio_1' ||
+    profile?.id === 'usr_1791814468302_hoa08z' ||
+    profile?.email === 'bioniversiobiologics@arggroups.com' ||
+    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
+
   // Helper to sanitize assignees and remove legacy placeholders like usr_athish / Athish
   const sanitizeLead = useCallback((l, idx = 0) => {
     let assigned = l.agent_name || l.assigned_to;
     let assignedId = l.assigned_to;
 
-    // Distribute any legacy, foreign or unassigned leads between company staff: Sagar Punia & Rahul
+    // Distribute any legacy, foreign or unassigned leads
     if (
       !assigned ||
       assigned === 'usr_athish' ||
@@ -116,9 +122,14 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
       assigned === 'Athish Ravikanth' ||
       assigned.startsWith('usr_')
     ) {
-      const isSagar = idx % 2 === 0;
-      assigned = isSagar ? 'Sagar Punia' : 'Rahul';
-      assignedId = isSagar ? 'usr_staff_demo1' : 'usr_1792001466336_wwykxg';
+      if (isKeerthanaCompany) {
+        const isSagar = idx % 2 === 0;
+        assigned = isSagar ? 'Sagar Punia' : 'Rahul';
+        assignedId = isSagar ? 'usr_staff_demo1' : 'usr_1792001466336_wwykxg';
+      } else {
+        assigned = profile?.name || 'Self';
+        assignedId = profile?.id || '';
+      }
     }
 
     return {
@@ -126,7 +137,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
       agent_name: assigned,
       assigned_to: assignedId,
     };
-  }, []);
+  }, [profile, isKeerthanaCompany]);
 
   // Load leads from API & storage
   const fetchActivities = useCallback(async () => {
@@ -213,8 +224,11 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
       });
     }
 
-    if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
-    if (!list.includes('Rahul')) list.push('Rahul');
+    // Only add Sagar Punia and Rahul if the owner is Keerthana Ponni K!
+    if (isKeerthanaCompany) {
+      if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
+      if (!list.includes('Rahul')) list.push('Rahul');
+    }
 
     const ownerName = profile?.name?.trim();
     if (ownerName && !list.includes(ownerName) && ownerName !== 'Athish' && ownerName !== 'Athish Ravikanth') {
@@ -222,7 +236,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     }
 
     return list;
-  }, [teamMembers, profile]);
+  }, [teamMembers, profile, isKeerthanaCompany]);
 
   const saveLeads = (newLeads) => {
     setLeads(newLeads);

@@ -4,6 +4,7 @@ import { RefreshCw, Bell, ChevronDown, ExternalLink, LogOut, Menu, Settings } fr
 const SECTION_TITLES = {
   overview: { title: 'Overview', subtitle: 'Platform summary' },
   users: { title: 'Owners & Staff', subtitle: 'Accounts, seat quotas and premium features' },
+  developer: { title: 'Developer & Servers', subtitle: 'Atlas storage, API performance, memory profiler & server health' },
   settings: { title: 'Settings', subtitle: 'Platform configuration' },
 };
 

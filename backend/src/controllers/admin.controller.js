@@ -3,6 +3,10 @@ const bcrypt = require('bcryptjs');
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync, saveSnapshot } = require('../repositories/dataStore');
 const { systemMetrics } = require('../middlewares/responseTime.middleware');
+const { mongoose, isDbConnected } = require('../config/db');
+const config = require('../config/env');
+
+const GENERIC_COMPANY_IDS = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
 
 /**
  * List all users / employees (Admin only)
@@ -11,10 +15,11 @@ const getAllUsers = async (req, res) => {
   const { role, search, status } = req.query;
   let results = [...dataStore.users];
 
-  // Strict Tenant Isolation: only return staff members belonging to the requester's own company
+  // Strict Tenant Isolation: only return staff members belonging to the requester's own company/account
   if (req.user && req.user.id !== 'usr_super_admin') {
-    const ownerId = req.user.id;
-    const ownerCompanyId = req.user.company_id || ownerId;
+    const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
+    const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
+    const ownerCompanyId = req.user.company_id || (isOwner ? ('comp_' + req.user.id) : null);
     const includeSelf = req.query.include_self === 'true';
     const isKeerthanaCompany =
       ownerCompanyId === 'comp_bioniversio_1' ||
@@ -22,25 +27,51 @@ const getAllUsers = async (req, res) => {
       req.user.email === 'bioniversiobiologics@arggroups.com' ||
       (req.user.name && req.user.name.includes('Keerthana'));
 
-    results = results.filter(
-      (u) =>
-        (includeSelf ? true : u.id !== ownerId) &&
-        u.id !== 'usr_super_admin' &&
-        u.id !== 'usr_athish' &&
-        u.name !== 'Athish Ravikanth' &&
-        u.name !== 'Athish' &&
-        u.email !== 'athishravikanth@gmail.com' &&
-        (u.id === ownerId ||
-          (ownerCompanyId && u.company_id === ownerCompanyId) ||
-          (u.created_by && (u.created_by === ownerId || u.created_by === req.user.email)) ||
-          (isKeerthanaCompany &&
-            (u.email === 'sagarpunia163@gmail.com' ||
-              u.id === 'usr_1789929063747_allpa4' ||
-              u.name === 'Sagar Punia' ||
-              u.email === 'rahul@gmail.com' ||
-              u.name === 'Rahul'))
-        )
-    );
+    results = results.filter((u) => {
+      // Never return super admin or test accounts
+      if (u.id === 'usr_super_admin' || u.id === 'usr_athish' || u.name === 'Athish' || u.name === 'Athish Ravikanth' || u.email === 'athishravikanth@gmail.com') {
+        return false;
+      }
+
+      // If user is requester themselves
+      if (u.id === req.user.id) {
+        return includeSelf;
+      }
+
+      // Never return another owner as staff
+      if (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff')) {
+        return false;
+      }
+
+      // For Keerthana's company, specifically allow Sagar Punia and Rahul
+      if (isKeerthanaCompany && (
+        u.email === 'sagarpunia163@gmail.com' ||
+        u.id === 'usr_1789929063747_allpa4' ||
+        u.name === 'Sagar Punia' ||
+        u.email === 'rahul@gmail.com' ||
+        u.name === 'Rahul'
+      )) {
+        return true;
+      }
+
+      // STRICT OWNERSHIP CHECK:
+      // If staff has created_by, it MUST match this owner:
+      if (u.created_by) {
+        return u.created_by === ownerId || (req.user.email && u.created_by.toLowerCase() === req.user.email.toLowerCase());
+      }
+
+      // Or belong to this owner's company (and NOT a generic shared company)
+      if (
+        ownerCompanyId &&
+        !GENERIC_COMPANY_IDS.includes(ownerCompanyId) &&
+        u.company_id &&
+        u.company_id === ownerCompanyId
+      ) {
+        return true;
+      }
+
+      return false;
+    });
   }
 
   if (role) {
@@ -67,14 +98,39 @@ const getAllUsers = async (req, res) => {
     delete cleanUser.password;
 
     if (isOwner) {
-      // Find all staff members belonging to this owner/company
+      // Keerthana company check for this owner
+      const isKeerthana =
+        u.company_id === 'comp_bioniversio_1' ||
+        u.id === 'usr_1791814468302_hoa08z' ||
+        u.email === 'bioniversiobiologics@arggroups.com' ||
+        (u.name && u.name.includes('Keerthana'));
+
+      // Find all staff members strictly belonging to this owner
       const staffList = dataStore.users
-        .filter(
-          (s) =>
-            s.id !== u.id &&
-            s.persona !== 'owner' &&
-            ((u.company_id && s.company_id === u.company_id) || s.created_by === u.id || s.created_by === u.email)
-        )
+        .filter((s) => {
+          if (s.id === u.id || s.persona === 'owner' || s.role === 'admin') return false;
+          if (s.id === 'usr_athish' || s.name === 'Athish' || s.name === 'Athish Ravikanth' || s.email === 'athishravikanth@gmail.com') return false;
+
+          if (isKeerthana && (
+            s.email === 'sagarpunia163@gmail.com' ||
+            s.id === 'usr_1789929063747_allpa4' ||
+            s.name === 'Sagar Punia' ||
+            s.email === 'rahul@gmail.com' ||
+            s.name === 'Rahul'
+          )) {
+            return true;
+          }
+
+          if (s.created_by) {
+            return s.created_by === u.id || (u.email && s.created_by.toLowerCase() === u.email.toLowerCase());
+          }
+
+          if (u.company_id && !GENERIC_COMPANY_IDS.includes(u.company_id) && s.company_id === u.company_id) {
+            return true;
+          }
+
+          return false;
+        })
         .map((s) => ({
           id: s.id,
           name: s.name,
@@ -106,12 +162,13 @@ const getAllUsers = async (req, res) => {
       };
     } else {
       // For staff, identify their reporting owner
-      const owner =
-        dataStore.users.find(
-          (o) =>
-            (o.persona === 'owner' || o.role === 'admin') &&
-            (o.company_id === u.company_id || o.id === u.created_by)
-        ) || dataStore.users.find((o) => o.persona === 'owner' || o.role === 'admin');
+      const owner = dataStore.users.find(
+        (o) =>
+          (o.persona === 'owner' || o.role === 'admin') &&
+          o.id !== 'usr_super_admin' &&
+          ((u.created_by && (o.id === u.created_by || (o.email && o.email.toLowerCase() === u.created_by.toLowerCase()))) ||
+            (!u.created_by && u.company_id && !GENERIC_COMPANY_IDS.includes(u.company_id) && o.company_id === u.company_id))
+      );
 
       return {
         ...cleanUser,
@@ -155,9 +212,9 @@ const createUser = async (req, res) => {
     return ApiResponse.error(res, 'A staff member with this email already exists', 409);
   }
 
-  // Enforce staff limit check against owner quota (Default 2 per owner)
+  // Resolve creating business owner
   let owner = null;
-  if (req.user && req.user.persona === 'owner' && req.user.id !== 'usr_super_admin') {
+  if (req.user && (req.user.persona === 'owner' || req.user.role === 'admin') && req.user.id !== 'usr_super_admin') {
     owner = req.user;
   } else if (req.body.owner_id || req.body.company_id) {
     const targetOwnerId = req.body.owner_id;
@@ -166,7 +223,7 @@ const createUser = async (req, res) => {
       (u) =>
         (u.persona === 'owner' || u.role === 'admin') &&
         u.id !== 'usr_super_admin' &&
-        ((targetOwnerId && u.id === targetOwnerId) ||
+        ((targetOwnerId && (u.id === targetOwnerId || (u.email && u.email.toLowerCase() === String(targetOwnerId).toLowerCase()))) ||
           (targetCompId && (u.company_id === targetCompId || u.id === targetCompId)))
     );
   }
@@ -174,25 +231,26 @@ const createUser = async (req, res) => {
     owner = req.user;
   }
   if (!owner) {
-    owner = dataStore.users.find((u) => (u.persona === 'owner' || u.role === 'admin') && u.id !== 'usr_super_admin');
+    return ApiResponse.error(res, 'Please select the Business Owner account to which this staff member belongs.', 400);
   }
 
   const staffLimit =
-    owner?.staff_limit !== undefined
+    owner.staff_limit !== undefined
       ? Number(owner.staff_limit)
       : 2;
 
-  const currentStaffCount = owner
-    ? dataStore.users.filter((u) => {
-        if (u.persona === 'owner' || u.role === 'admin' || u.id === owner.id) return false;
-        const ownerCompanyId = owner.company_id || owner.id;
-        return (
-          (ownerCompanyId && u.company_id === ownerCompanyId) ||
-          u.created_by === owner.id ||
-          u.created_by === owner.email
-        );
-      }).length
-    : 0;
+  const ownerCompanyIdRaw = owner.company_id || ('comp_' + owner.id);
+  const currentStaffCount = dataStore.users.filter((u) => {
+    if (u.persona === 'owner' || u.role === 'admin' || u.id === owner.id) return false;
+    if (u.created_by) {
+      return u.created_by === owner.id || (owner.email && u.created_by.toLowerCase() === owner.email.toLowerCase());
+    }
+    return (
+      ownerCompanyIdRaw &&
+      !GENERIC_COMPANY_IDS.includes(ownerCompanyIdRaw) &&
+      u.company_id === ownerCompanyIdRaw
+    );
+  }).length;
 
   if (currentStaffCount >= staffLimit) {
     return ApiResponse.error(
@@ -224,9 +282,15 @@ const createUser = async (req, res) => {
     admin_access: false, // Strict: staff NEVER has main admin access
   };
 
-    const ownerCompanyId = owner?.company_id || req.user?.company_id || owner?.id || 'comp_traveltrade_1';
-    const ownerCompanyName = owner?.company_name || req.user?.company_name || 'My Organization';
-    const ownerId = owner?.id || req.user?.id || 'usr_admin_1';
+  const ownerId = owner.id;
+  let ownerCompanyId = owner.company_id || req.user?.company_id;
+  if (!ownerCompanyId || GENERIC_COMPANY_IDS.includes(ownerCompanyId)) {
+    ownerCompanyId = 'comp_' + ownerId;
+    owner.company_id = ownerCompanyId;
+    dbSync.saveUser({ id: owner.id, company_id: ownerCompanyId });
+    if (req.user && req.user.id === owner.id) req.user.company_id = ownerCompanyId;
+  }
+  const ownerCompanyName = owner.company_name || req.user?.company_name || (owner.name ? `${owner.name}'s Workspace` : 'My Organization');
 
     const newUser = {
       id: generateId('usr'),
@@ -286,6 +350,23 @@ const updateUser = async (req, res) => {
   );
   if (!user) {
     return ApiResponse.error(res, 'User not found', 404);
+  }
+
+  // Strict tenant authorization: owner can only modify their own staff
+  if (req.user && req.user.id !== 'usr_super_admin') {
+    const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
+    const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
+    const ownerCompId = req.user.company_id;
+
+    const belongsToMe =
+      user.id === req.user.id ||
+      (user.created_by
+        ? (user.created_by === ownerId || (req.user.email && user.created_by.toLowerCase() === req.user.email.toLowerCase()))
+        : (ownerCompId && !GENERIC_COMPANY_IDS.includes(ownerCompId) && user.company_id === ownerCompId));
+
+    if (!belongsToMe) {
+      return ApiResponse.error(res, 'Access denied: You can only modify personnel belonging to your organization.', 403);
+    }
   }
 
   if (name) user.name = name.trim();
@@ -356,6 +437,22 @@ const deleteUser = async (req, res) => {
   // 2. Prevent deleting Company Owner account or Super Admin
   if (user && (user.id === 'usr_super_admin' || user.persona === 'owner' || (user.role === 'admin' && user.persona !== 'staff'))) {
     return ApiResponse.error(res, 'Cannot delete Company Owner account', 400);
+  }
+
+  // Strict tenant authorization: owner can only delete their own personnel
+  if (req.user && req.user.id !== 'usr_super_admin' && user) {
+    const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
+    const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
+    const ownerCompId = req.user.company_id;
+
+    const belongsToMe =
+      user.created_by
+        ? (user.created_by === ownerId || (req.user.email && user.created_by.toLowerCase() === req.user.email.toLowerCase()))
+        : (ownerCompId && !GENERIC_COMPANY_IDS.includes(ownerCompId) && user.company_id === ownerCompId);
+
+    if (!belongsToMe) {
+      return ApiResponse.error(res, 'Access denied: You can only delete personnel belonging to your organization.', 403);
+    }
   }
 
   // 3. Remove from in-memory dataStore.users
@@ -953,6 +1050,266 @@ const deleteAdminNotification = async (req, res) => {
   return ApiResponse.success(res, removed, 'Notification deleted successfully');
 };
 
+/**
+ * Real-time Comprehensive Developer Metrics & System Observability
+ * GET /api/v1/admin/developer-metrics
+ */
+const getDeveloperMetrics = async (req, res) => {
+  try {
+    const mem = process.memoryUsage();
+    const uptimeSeconds = Math.floor(process.uptime());
+    const dbConnected = isDbConnected();
+
+    // 1. MongoDB Atlas Storage & Metrics
+    let mongoStats = {
+      connected: dbConnected,
+      mode: dbConnected ? 'MongoDB Atlas (Cluster)' : 'In-Memory Fallback & Snapshot',
+      databaseName: config.mongodbDbName || 'crm',
+      atlasTier: 'M0 Sandbox (Free Tier)',
+      storageLimitBytes: 536870912, // 512 MB Free Tier limit
+      storageLimitMb: 512,
+      dataSizeBytes: 0,
+      dataSizeMb: '0.00',
+      storageSizeBytes: 0,
+      storageSizeMb: '0.00',
+      indexSizeBytes: 0,
+      indexSizeMb: '0.00',
+      totalUsedBytes: 0,
+      totalUsedMb: '0.00',
+      freeMb: '512.00',
+      percentUsed: '0.00',
+      collectionsCount: 0,
+      objectsCount: 0,
+      collections: [],
+      pingMs: null,
+    };
+
+    if (dbConnected && mongoose.connection.db) {
+      const pingStart = Date.now();
+      try {
+        await mongoose.connection.db.admin().ping();
+        mongoStats.pingMs = Date.now() - pingStart;
+      } catch (e) {
+        mongoStats.pingMs = null;
+      }
+
+      try {
+        const stats = await mongoose.connection.db.stats();
+        const totalUsed = (stats.storageSize || stats.dataSize || 0) + (stats.indexSize || 0);
+        mongoStats.dataSizeBytes = stats.dataSize || 0;
+        mongoStats.dataSizeMb = ((stats.dataSize || 0) / 1024 / 1024).toFixed(2);
+        mongoStats.storageSizeBytes = stats.storageSize || 0;
+        mongoStats.storageSizeMb = ((stats.storageSize || 0) / 1024 / 1024).toFixed(2);
+        mongoStats.indexSizeBytes = stats.indexSize || 0;
+        mongoStats.indexSizeMb = ((stats.indexSize || 0) / 1024 / 1024).toFixed(2);
+        mongoStats.totalUsedBytes = totalUsed;
+        mongoStats.totalUsedMb = (totalUsed / 1024 / 1024).toFixed(2);
+        mongoStats.freeMb = Math.max(0, 512 - parseFloat(mongoStats.totalUsedMb)).toFixed(2);
+        mongoStats.percentUsed = Math.min(100, ((totalUsed / 536870912) * 100)).toFixed(2);
+        mongoStats.collectionsCount = stats.collections || 0;
+        mongoStats.objectsCount = stats.objects || 0;
+        mongoStats.avgObjSizeBytes = stats.avgObjSize || 0;
+      } catch (statsErr) {
+        console.warn('MongoDB stats query warning:', statsErr.message);
+      }
+
+      // Query collections stats
+      try {
+        const colList = await mongoose.connection.db.listCollections().toArray();
+        const colBreakdowns = await Promise.all(
+          colList.map(async (c) => {
+            try {
+              const cStats = await mongoose.connection.db.collection(c.name).stats();
+              return {
+                name: c.name,
+                count: cStats.count || 0,
+                sizeBytes: cStats.size || 0,
+                sizeKb: ((cStats.size || 0) / 1024).toFixed(2),
+                storageSizeKb: ((cStats.storageSize || 0) / 1024).toFixed(2),
+                avgObjSize: cStats.avgObjSize || 0,
+              };
+            } catch {
+              const count = await mongoose.connection.db.collection(c.name).countDocuments().catch(() => 0);
+              return { name: c.name, count, sizeBytes: 0, sizeKb: '0.00', storageSizeKb: '0.00', avgObjSize: 0 };
+            }
+          })
+        );
+        mongoStats.collections = colBreakdowns.sort((a, b) => b.sizeBytes - a.sizeBytes);
+      } catch (colErr) {
+        console.warn('Collections list warning:', colErr.message);
+      }
+    }
+
+    // In-memory collections fallback / local metrics calculation
+    const inMemoryCollections = [
+      { name: 'users', count: dataStore.users.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.users)) },
+      { name: 'leads', count: dataStore.leads.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.leads)) },
+      { name: 'tasks', count: dataStore.tasks.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.tasks)) },
+      { name: 'audit_logs', count: dataStore.auditLogs.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.auditLogs)) },
+      { name: 'activities', count: dataStore.activities.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.activities)) },
+      { name: 'notifications', count: (dataStore.adminNotifications || []).length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.adminNotifications || [])) },
+    ].map((col) => ({
+      ...col,
+      sizeKb: (col.sizeBytes / 1024).toFixed(2),
+      storageSizeKb: (col.sizeBytes / 1024).toFixed(2),
+      avgObjSize: col.count > 0 ? Math.round(col.sizeBytes / col.count) : 0,
+    }));
+
+    if (!dbConnected || mongoStats.collections.length === 0) {
+      mongoStats.collections = inMemoryCollections;
+      const totalMemBytes = inMemoryCollections.reduce((acc, c) => acc + c.sizeBytes, 0);
+      mongoStats.dataSizeBytes = totalMemBytes;
+      mongoStats.dataSizeMb = (totalMemBytes / 1024 / 1024).toFixed(2);
+      mongoStats.totalUsedBytes = totalMemBytes;
+      mongoStats.totalUsedMb = (totalMemBytes / 1024 / 1024).toFixed(2);
+      mongoStats.freeMb = (512 - parseFloat(mongoStats.totalUsedMb)).toFixed(2);
+      mongoStats.percentUsed = ((totalMemBytes / 536870912) * 100).toFixed(2);
+      mongoStats.collectionsCount = inMemoryCollections.length;
+      mongoStats.objectsCount = inMemoryCollections.reduce((acc, c) => acc + c.count, 0);
+    }
+
+    // 2. Per-User / Per-Owner Memory & Resource Consumption (Who is consuming what)
+    const owners = dataStore.users.filter((u) => u.persona === 'owner' || u.role === 'admin');
+
+    const userFootprint = owners.map((owner) => {
+      const staffList = dataStore.users.filter(
+        (s) => (s.created_by && (s.created_by === owner.id || s.created_by === owner.email)) ||
+               (owner.company_id && s.company_id === owner.company_id)
+      );
+      const ownerLeads = dataStore.leads.filter(
+        (l) => l.company_id === owner.company_id || l.created_by_id === owner.id || staffList.some((s) => s.id === l.assigned_to)
+      );
+
+      const estimatedBytes =
+        Buffer.byteLength(JSON.stringify(owner)) +
+        Buffer.byteLength(JSON.stringify(staffList)) +
+        Buffer.byteLength(JSON.stringify(ownerLeads));
+
+      return {
+        id: owner.id,
+        name: owner.name,
+        email: owner.email,
+        companyName: owner.company_name || 'Workspace',
+        staffCount: staffList.length,
+        leadsCount: ownerLeads.length,
+        estimatedBytes,
+        estimatedKb: (estimatedBytes / 1024).toFixed(2),
+        sharePercent: ((estimatedBytes / (mongoStats.dataSizeBytes || 1024)) * 100).toFixed(1),
+        lastLogin: owner.last_login || owner.created_at,
+        isActive: owner.is_active,
+      };
+    }).sort((a, b) => b.estimatedBytes - a.estimatedBytes);
+
+    // 3. API & Server Performance Metrics
+    const topEndpoints = Object.entries(systemMetrics.endpoints || {})
+      .map(([endpoint, data]) => ({
+        endpoint,
+        hits: data.hits,
+        avgMs: data.avgMs,
+        peakMs: data.peakMs,
+        lastStatus: data.lastStatus,
+      }))
+      .sort((a, b) => b.hits - a.hits)
+      .slice(0, 10);
+
+    const devMetrics = {
+      server: {
+        status: 'ONLINE',
+        isOnline: true,
+        uptimeSeconds,
+        uptimeHuman: `${Math.floor(uptimeSeconds / 86400)}d ${Math.floor((uptimeSeconds % 86400) / 3600)}h ${Math.floor((uptimeSeconds % 3600) / 60)}m ${uptimeSeconds % 60}s`,
+        pid: process.pid,
+        nodeVersion: process.version,
+        platform: process.platform,
+        arch: process.arch,
+        environment: config.nodeEnv,
+        serverTime: new Date().toISOString(),
+        cpuCount: os.cpus().length,
+        cpuModel: os.cpus()[0]?.model || 'Generic CPU',
+        loadAverage: os.loadavg(),
+      },
+      processMemory: {
+        rssMb: (mem.rss / 1024 / 1024).toFixed(2),
+        heapTotalMb: (mem.heapTotal / 1024 / 1024).toFixed(2),
+        heapUsedMb: (mem.heapUsed / 1024 / 1024).toFixed(2),
+        externalMb: (mem.external / 1024 / 1024).toFixed(2),
+        arrayBuffersMb: ((mem.arrayBuffers || 0) / 1024 / 1024).toFixed(2),
+        heapUsagePercent: ((mem.heapUsed / mem.heapTotal) * 100).toFixed(1),
+      },
+      systemMemory: {
+        totalMb: (os.totalmem() / 1024 / 1024).toFixed(2),
+        freeMb: (os.freemem() / 1024 / 1024).toFixed(2),
+        usedMb: ((os.totalmem() - os.freemem()) / 1024 / 1024).toFixed(2),
+        usagePercent: (((os.totalmem() - os.freemem()) / os.totalmem()) * 100).toFixed(1),
+      },
+      database: mongoStats,
+      apiPerformance: {
+        totalRequests: systemMetrics.totalRequests,
+        avgLatencyMs: systemMetrics.averageResponseTimeMs,
+        lastLatencyMs: systemMetrics.lastResponseTimeMs,
+        peakLatencyMs: systemMetrics.peakResponseTimeMs,
+        statusCodes: systemMetrics.statusCodes || { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 },
+        topEndpoints,
+        recentRequests: (systemMetrics.history || []).slice(-20).reverse(),
+      },
+      userResourceConsumption: userFootprint,
+    };
+
+    return ApiResponse.success(res, devMetrics, 'Developer telemetry fetched successfully');
+  } catch (err) {
+    console.error('getDeveloperMetrics error:', err);
+    return ApiResponse.error(res, 'Failed to fetch developer telemetry: ' + err.message, 500);
+  }
+};
+
+/**
+ * Trigger Database Synchronization / Snapshot Write
+ * POST /api/v1/admin/developer/sync-db
+ */
+const triggerDbSync = async (req, res) => {
+  try {
+    saveSnapshot();
+    let atlasSynced = false;
+    if (isDbConnected()) {
+      try {
+        const { seedMongoDB } = require('../config/seed');
+        await seedMongoDB();
+        atlasSynced = true;
+      } catch (e) {
+        console.warn('Atlas sync warning:', e.message);
+      }
+    }
+    return ApiResponse.success(
+      res,
+      {
+        snapshotSaved: true,
+        atlasSynced,
+        timestamp: new Date().toISOString(),
+      },
+      atlasSynced
+        ? 'Successfully synchronized in-memory database with MongoDB Atlas and updated snapshot!'
+        : 'In-memory snapshot written successfully (MongoDB Atlas running in fallback mode).'
+    );
+  } catch (err) {
+    return ApiResponse.error(res, 'Database sync failed: ' + err.message, 500);
+  }
+};
+
+/**
+ * Reset / Clear API Metrics Counters & Latency Peaks
+ * POST /api/v1/admin/developer/clear-metrics
+ */
+const clearMetrics = async (req, res) => {
+  try {
+    if (systemMetrics && typeof systemMetrics.reset === 'function') {
+      systemMetrics.reset();
+    }
+    return ApiResponse.success(res, { cleared: true, timestamp: new Date().toISOString() }, 'API metrics counter and latency statistics reset successfully');
+  } catch (err) {
+    return ApiResponse.error(res, 'Failed to clear metrics: ' + err.message, 500);
+  }
+};
+
 module.exports = {
   getOverviewSummary,
   getAllUsers,
@@ -967,6 +1324,9 @@ module.exports = {
   getAdminNotifications,
   deleteAdminNotification,
   getSystemHealth,
+  getDeveloperMetrics,
+  triggerDbSync,
+  clearMetrics,
   getAuditLogs,
   updateCompanySettings,
   getSubscriptionInfo,

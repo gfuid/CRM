@@ -16,42 +16,10 @@
       "created_at": "2026-09-20T17:22:37.033Z",
       "createdAt": "2026-09-20T17:22:37.042Z",
       "updatedAt": "2026-10-07T10:00:36.154Z",
-      "__v": 0
-    },
-    {
-      "_id": "6ab026671262f2bde2f7a399",
-      "id": "usr_1789929063747_allpa4",
       "__v": 0,
-      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-      "createdAt": "2026-09-20T18:31:03.752Z",
-      "created_at": "2026-09-20T18:31:03.747Z",
-      "department": "Commodity Sales & Export Outreach",
-      "email": "sagarpunia163@gmail.com",
-      "is_active": true,
-      "last_login": "2026-10-11T12:22:55.278Z",
-      "name": "Sagar Punia",
-      "password": "$2a$10$q3fhgmN8HX2nK9qFm.wqeeHUfl2M2VlBdPgN809vPWMPrZxSWgsR2",
-      "persona": "staff",
-      "phone": "08307967782",
-      "role": "agent",
-      "updatedAt": "2026-10-11T12:22:55.366Z",
-      "data_scope": "own_only",
-      "permissions": {
-        "view_analytics": true,
-        "view_leads": true,
-        "view_tasks": true,
-        "tasks_assign": false,
-        "view_followup": true,
-        "view_outreach": false,
-        "view_activity": true,
-        "view_mydays": true,
-        "can_read": true,
-        "can_create": true,
-        "can_update": true,
-        "can_delete": false,
-        "can_export": false,
-        "admin_access": false
-      }
+      "company_id": "comp_punia_1789924957033",
+      "company_name": "punia's Workspace",
+      "created_by": ""
     },
     {
       "_id": "6ab8a598c126a0c55f6a2179",
@@ -69,7 +37,10 @@
       "created_at": "2026-09-27T05:11:52.422Z",
       "createdAt": "2026-09-27T05:11:52.431Z",
       "updatedAt": "2026-10-07T10:00:36.629Z",
-      "__v": 0
+      "__v": 0,
+      "company_id": "comp_sagar_1790485912422",
+      "company_name": "sagar's Workspace",
+      "created_by": ""
     },
     {
       "_id": "6ab8d2d616f4fcd01678ec3d",
@@ -87,7 +58,10 @@
       "created_at": "2026-09-27T08:24:54.307Z",
       "createdAt": "2026-09-27T08:24:54.311Z",
       "updatedAt": "2026-10-07T10:00:36.739Z",
-      "__v": 0
+      "__v": 0,
+      "company_id": "comp_testowner_1790497494307",
+      "company_name": "Travel-Trade",
+      "created_by": ""
     },
     {
       "_id": "6ac5293bce3860acc32ee587",
@@ -105,7 +79,10 @@
       "created_at": "2026-10-06T17:00:43.083Z",
       "createdAt": "2026-10-06T17:00:43.087Z",
       "updatedAt": "2026-10-07T10:00:36.818Z",
-      "__v": 0
+      "__v": 0,
+      "company_id": "comp_sagarpunia_1791306043083",
+      "company_name": "sagarpunia's Workspace",
+      "created_by": ""
     },
     {
       "_id": "6ac529c7542c8e21972cf754",
@@ -124,7 +101,7 @@
       "phone": "1234567895",
       "role": "agent",
       "updatedAt": "2026-10-07T15:31:11.273Z",
-      "company_id": "usr_1791306043083_9p353t",
+      "company_id": "comp_sagarpunia_1791306043083",
       "created_by": "usr_1791306043083_9p353t",
       "data_scope": "own_only",
       "permissions": {
@@ -141,7 +118,8 @@
         "can_update": false,
         "can_delete": false,
         "admin_access": false
-      }
+      },
+      "company_name": "sagarpunia's Workspace"
     },
     {
       "_id": "6ac53394ce3860acc32ee589",
@@ -159,7 +137,10 @@
       "created_at": "2026-10-06T17:44:52.781Z",
       "createdAt": "2026-10-06T17:44:52.782Z",
       "updatedAt": "2026-10-07T11:35:13.352Z",
-      "__v": 0
+      "__v": 0,
+      "company_id": "comp_ambani_1791308692781",
+      "company_name": "ambani's Workspace",
+      "created_by": ""
     },
     {
       "_id": "6ac534d1542c8e21972d18c5",
@@ -177,13 +158,16 @@
       "persona": "staff",
       "phone": "1234567895",
       "role": "agent",
-      "updatedAt": "2026-10-07T10:00:36.974Z"
+      "updatedAt": "2026-10-07T10:00:36.974Z",
+      "company_id": "comp_ambani_1791308692781",
+      "company_name": "ambani's Workspace",
+      "created_by": "usr_1791308692781_zo9rj5"
     },
     {
       "_id": "6ac62ea6542c8e21973014a2",
       "__v": 0,
       "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-      "company_id": "comp_traveltrade_1",
+      "company_id": "comp_ambani_1791308692781",
       "createdAt": "2026-10-07T11:36:06.152Z",
       "created_at": "2026-10-07T11:36:06.148Z",
       "created_by": "usr_1791308692781_zo9rj5",
@@ -215,13 +199,14 @@
       "phone": "",
       "role": "agent",
       "staff_limit": 3,
-      "updatedAt": "2026-10-14T14:37:20.905Z"
+      "updatedAt": "2026-10-14T14:37:20.905Z",
+      "company_name": "ambani's Workspace"
     },
     {
       "_id": "6ac780660c69b3b6f1580c6a",
       "__v": 0,
       "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-      "company_id": "comp_traveltrade_1",
+      "company_id": "comp_sagar_1790485912422",
       "createdAt": "2026-10-08T11:37:10.144Z",
       "created_at": "2026-10-08T11:37:10.052Z",
       "created_by": "usr_1790485912422_52s5fh",
@@ -253,7 +238,8 @@
       "phone": "",
       "role": "agent",
       "staff_limit": 3,
-      "updatedAt": "2026-10-08T11:37:10.144Z"
+      "updatedAt": "2026-10-08T11:37:10.144Z",
+      "company_name": "sagar's Workspace"
     },
     {
       "_id": "6ac783351c03af4e273e0877",
@@ -268,20 +254,21 @@
       "is_active": true,
       "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Athish%20Ravikanth",
       "data_scope": "own_only",
-      "company_id": "",
+      "company_id": "comp_athish_1791460149959",
       "created_by": "",
       "staff_limit": 3,
       "last_login": "2026-10-12T15:09:44.588Z",
       "created_at": "2026-10-08T11:49:09.959Z",
       "createdAt": "2026-10-08T11:49:09.960Z",
       "updatedAt": "2026-10-12T15:09:44.589Z",
-      "__v": 0
+      "__v": 0,
+      "company_name": "Athish Ravikanth's Workspace"
     },
     {
       "_id": "6ac783940c69b3b6f1581630",
       "__v": 0,
       "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
-      "company_id": "comp_traveltrade_1",
+      "company_id": "comp_athish_1791460149959",
       "createdAt": "2026-10-08T11:50:44.643Z",
       "created_at": "2026-10-08T11:50:44.556Z",
       "created_by": "usr_1791460149959_h6fqui",
@@ -313,7 +300,8 @@
       "phone": "",
       "role": "agent",
       "staff_limit": 3,
-      "updatedAt": "2026-10-12T14:21:29.684Z"
+      "updatedAt": "2026-10-12T14:21:29.684Z",
+      "company_name": "Athish Ravikanth's Workspace"
     },
     {
       "_id": "6accead89aa6b5965e596f99",
@@ -328,7 +316,7 @@
       "is_active": true,
       "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=SUNIL%20CHAITHANYA",
       "data_scope": "own_only",
-      "company_id": "",
+      "company_id": "comp_sunil_1791814360788",
       "created_by": "",
       "staff_limit": 2,
       "last_login": "2026-10-12T15:13:19.786Z",
@@ -351,7 +339,8 @@
         "can_delete": false,
         "can_export": false,
         "admin_access": false
-      }
+      },
+      "company_name": "Ambavi International"
     },
     {
       "_id": "6acceb449aa6b5965e596f9a",
@@ -369,10 +358,10 @@
       "company_id": "comp_bioniversio_1",
       "created_by": "",
       "staff_limit": 2,
-      "last_login": "2026-10-14T20:19:16.796Z",
+      "last_login": "2026-10-15T09:03:06.469Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
-      "updatedAt": "2026-10-14T20:19:16.801Z",
+      "updatedAt": "2026-10-15T09:03:06.474Z",
       "__v": 0,
       "company_name": "Bioniversio Biologics"
     },
@@ -389,14 +378,15 @@
       "is_active": true,
       "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=binti",
       "data_scope": "own_only",
-      "company_id": "",
+      "company_id": "comp_binti_1791906296111",
       "created_by": "",
       "staff_limit": 2,
-      "last_login": "2026-10-13T15:44:56.111Z",
+      "last_login": "2026-10-15T09:01:52.765Z",
       "created_at": "2026-10-13T15:44:56.111Z",
       "createdAt": "2026-10-13T15:44:56.121Z",
-      "updatedAt": "2026-10-13T15:44:56.121Z",
-      "__v": 0
+      "updatedAt": "2026-10-15T09:01:52.770Z",
+      "__v": 0,
+      "company_name": "binti's Workspace"
     },
     {
       "_id": "6acf9281c8e54b290300574a",
@@ -418,7 +408,8 @@
       "created_at": "2026-10-14T14:32:33.309Z",
       "createdAt": "2026-10-14T14:32:33.399Z",
       "updatedAt": "2026-10-14T16:17:17.673Z",
-      "__v": 0
+      "__v": 0,
+      "company_name": "soch's Workspace"
     },
     {
       "_id": "6acfa6740c69b3b6f1712543",
@@ -455,7 +446,8 @@
       "role": "agent",
       "staff_limit": 2,
       "updatedAt": "2026-10-14T15:57:50.610Z",
-      "staff_password": "123456"
+      "staff_password": "123456",
+      "company_name": "soch's Workspace"
     },
     {
       "_id": "6acfad450c69b3b6f1713b9a",
@@ -493,7 +485,8 @@
       "phone": "",
       "role": "agent",
       "staff_limit": 2,
-      "updatedAt": "2026-10-14T16:26:54.985Z"
+      "updatedAt": "2026-10-14T16:26:54.985Z",
+      "company_name": "soch's Workspace"
     }
   ],
   "leads": [
@@ -3933,6 +3926,27 @@
   ],
   "followUps": [
     {
+      "id": "flw_1792162919154_bqxgct",
+      "lead_id": "lead_1792162918903_u477bs",
+      "client_name": "CI Global Spices FZE",
+      "lead_name": "CI Global Spices FZE",
+      "company": "",
+      "scheduled_date": "2026-10-19",
+      "date": "2026-10-19",
+      "scheduled_time": "11:00 AM",
+      "time": "11:00 AM",
+      "type": "Phone Call",
+      "channel": "Phone Call",
+      "agenda": "Confirm LC draft verification with bank.",
+      "note": "Confirm LC draft verification with bank.",
+      "remark": "",
+      "today_remarks": "Call customer to review updated CIF quote.",
+      "next_follow_up_action": "Confirm LC draft verification with bank.",
+      "status": "Scheduled",
+      "assigned_to": "usr_1792162918833_1ztkou",
+      "created_at": "2026-10-16T15:01:59.154Z"
+    },
+    {
       "id": "flw_1",
       "lead_id": "lead_1",
       "client_name": "Tariq Mansoor",
@@ -4294,5 +4308,5 @@
     "updatedAt": "2026-10-14T14:32:33.656Z",
     "__v": 0
   },
-  "timestamp": "2026-10-14T21:07:11.459Z"
+  "timestamp": "2026-10-18T17:42:30.899Z"
 }

@@ -748,10 +748,52 @@ try {
     }
 
     // Ensure company staff for Bioniversio Biologics (Keerthana Ponni K)
-    const sagar = dataStore.users.find(
+    let sagar = dataStore.users.find(
       (u) => u.email === 'sagarpunia163@gmail.com' || u.id === 'usr_1789929063747_allpa4'
     );
-    if (sagar && !isUserDeleted(sagar.email, sagar.id)) {
+    if (!sagar && !isUserDeleted('sagarpunia163@gmail.com', 'usr_1789929063747_allpa4')) {
+      sagar = {
+        _id: '6ab4c5ba40b19d6b9bf4cd91',
+        id: 'usr_1789929063747_allpa4',
+        name: 'Sagar Punia',
+        email: 'sagarpunia163@gmail.com',
+        password: '$2a$10$q3fhgmN8HX2nK9qFm.wqeeHUfl2M2VlBdPgN809vPWMPrZxSWgsR2',
+        staff_password: 'staff123',
+        role: 'agent',
+        persona: 'staff',
+        department: 'Commodity Sales Executive',
+        phone: '08307967782',
+        is_active: true,
+        avatar_url:
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        data_scope: 'own_only',
+        company_id: 'comp_bioniversio_1',
+        company_name: 'Bioniversio Biologics',
+        created_by: 'usr_1791814468302_hoa08z',
+        permissions: {
+          view_analytics: false,
+          view_leads: true,
+          view_tasks: true,
+          tasks_assign: false,
+          view_followup: true,
+          view_outreach: false,
+          view_activity: true,
+          view_mydays: true,
+          can_read: true,
+          can_create: true,
+          can_update: true,
+          can_delete: false,
+          can_export: false,
+          admin_access: false,
+        },
+        last_login: null,
+        created_at: '2026-10-07T10:00:19.168Z',
+        createdAt: '2026-10-07T10:00:19.168Z',
+        updatedAt: '2026-10-07T10:00:19.168Z',
+        __v: 0,
+      };
+      dataStore.users.push(sagar);
+    } else if (sagar && !isUserDeleted(sagar.email, sagar.id)) {
       sagar.company_id = 'comp_bioniversio_1';
       sagar.company_name = 'Bioniversio Biologics';
       sagar.created_by = 'usr_1791814468302_hoa08z';
@@ -817,6 +859,12 @@ try {
       keerthana.staff_limit = 10;
       keerthana.company_id = 'comp_bioniversio_1';
       keerthana.company_name = 'Bioniversio Biologics';
+    }
+
+    // Guarantee strict tenant isolation for all owners & staff
+    if (dataStore.users && dataStore.users.length > 0) {
+      const { enforceTenantIsolation } = require('../utils/tenantScope');
+      enforceTenantIsolation(dataStore.users);
     }
 
     saveSnapshot();

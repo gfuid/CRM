@@ -20,34 +20,15 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
   const { isOwner, isStaff, profile, signOut, getTeamMembers } = useAuth();
   const [staffList, setStaffList] = useState(() => {
     try {
-      const cached = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
-      if (Array.isArray(cached) && cached.length > 0) {
-        return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
+      const ownerKey = profile?.id ? `crm_local_staff_${profile.id}` : null;
+      if (ownerKey) {
+        const cached = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        if (Array.isArray(cached) && cached.length > 0) {
+          return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
+        }
       }
     } catch {}
-    const defaults = [
-      {
-        id: 'usr_1789929063747_allpa4',
-        name: 'Sagar Punia',
-        role: 'agent',
-        persona: 'staff',
-        department: 'Commodity Sales Executive',
-        email: 'sagarpunia163@gmail.com',
-        is_active: true,
-        avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-      },
-      {
-        id: 'usr_1792001466336_wwykxg',
-        name: 'Rahul',
-        role: 'agent',
-        persona: 'staff',
-        department: 'Commodity Sales Executive',
-        email: 'rahul@gmail.com',
-        is_active: true,
-        avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-      },
-    ];
-    return defaults.filter((u) => !isStaffDeleted(u));
+    return [];
   });
 
   const reloadStaff = () => {
@@ -67,7 +48,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     reloadStaff();
     window.addEventListener('crm_staff_updated', reloadStaff);
     return () => window.removeEventListener('crm_staff_updated', reloadStaff);
-  }, [isOwner, getTeamMembers]);
+  }, [isOwner, profile?.id, getTeamMembers]);
 
   const userPerms = profile?.permissions || {};
   // Strict permission enforcement: staff only sees sections owner explicitly granted

@@ -74,6 +74,8 @@ export default function UsersSection({
     role: 'agent',
     department: 'Commodity Sales & Export Operations',
     phone: '',
+    owner_id: '',
+    company_id: '',
   });
   const [errorMsg, setErrorMsg] = useState('');
 
@@ -102,6 +104,11 @@ export default function UsersSection({
     e.preventDefault();
     setErrorMsg('');
 
+    if (!newUser.owner_id) {
+      setErrorMsg('Please select a Business Owner account for this team member.');
+      return;
+    }
+
     try {
       await onCreateUser(newUser);
       setIsAddUserModalOpen(false);
@@ -112,6 +119,8 @@ export default function UsersSection({
         role: 'agent',
         department: 'Commodity Sales & Export Operations',
         phone: '',
+        owner_id: '',
+        company_id: '',
       });
     } catch (err) {
       setErrorMsg(err.message || 'Failed to create user');
@@ -279,6 +288,7 @@ export default function UsersSection({
             onAddStaffForOwner={(owner) => {
               setNewUser((prev) => ({
                 ...prev,
+                owner_id: owner?.id || '',
                 company_id: owner?.company_id || '',
               }));
               setIsAddUserModalOpen(true);
@@ -655,6 +665,38 @@ export default function UsersSection({
               <span>{errorMsg}</span>
             </div>
           )}
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Assign to Business Owner (Company Account) *
+            </label>
+            <select
+              required
+              value={newUser.owner_id || ''}
+              onChange={(e) => {
+                const selectedOwnerId = e.target.value;
+                const ownerObj = users.find((u) => u.id === selectedOwnerId);
+                setNewUser({
+                  ...newUser,
+                  owner_id: selectedOwnerId,
+                  company_id: ownerObj?.company_id || '',
+                });
+              }}
+              className="w-full px-4 py-2.5 text-xs rounded-2xl border border-slate-200 bg-slate-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-slate-900/10 focus:border-slate-400 font-bold"
+            >
+              <option value="">-- Select Business Owner --</option>
+              {users
+                .filter((u) => (u.persona === 'owner' || u.role === 'admin') && u.id !== 'usr_super_admin')
+                .map((o) => (
+                  <option key={o.id} value={o.id}>
+                    {o.name} ({o.email}) - {o.company_name || 'Workspace'}
+                  </option>
+                ))}
+            </select>
+            <p className="text-[11px] text-slate-500 mt-1">
+              Staff created under this owner will be strictly isolated and only accessible to this owner account.
+            </p>
+          </div>
 
           <div>
             <label className="block text-xs font-bold text-slate-700 mb-1">Full Name *</label>

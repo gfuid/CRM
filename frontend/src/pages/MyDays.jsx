@@ -26,10 +26,17 @@ import { TEAM_MEMBERS, INITIAL_MY_DAYS_REPORTS } from '../data/myDaysData';
 
 export default function MyDays() {
   const { isOwner, isStaff, profile, getTeamMembers } = useAuth();
+
+  const isKeerthana =
+    profile?.company_id === 'comp_bioniversio_1' ||
+    profile?.id === 'usr_1791814468302_hoa08z' ||
+    profile?.email === 'bioniversiobiologics@arggroups.com' ||
+    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
+
   const [reports, setReports] = useState(INITIAL_MY_DAYS_REPORTS);
   const [selectedMember, setSelectedMember] = useState('All users');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
-  const [teamMembers, setTeamMembers] = useState(['Sagar Punia', 'Rahul']);
+  const [teamMembers, setTeamMembers] = useState(isKeerthana ? ['Sagar Punia', 'Rahul'] : []);
 
   // Fetch verified active team members
   useEffect(() => {
@@ -47,16 +54,21 @@ export default function MyDays() {
     }
   }, [getTeamMembers]);
 
-  // Dynamic filter buttons and select options: ['All users', 'Sagar Punia', 'Rahul']
+  // Dynamic filter buttons and select options
   const memberList = useMemo(() => {
     const list = ['All users'];
+    if (profile?.name && !list.includes(profile.name) && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') {
+      list.push(profile.name);
+    }
     teamMembers.forEach((m) => {
       if (!list.includes(m)) list.push(m);
     });
-    if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
-    if (!list.includes('Rahul')) list.push('Rahul');
+    if (isKeerthana) {
+      if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
+      if (!list.includes('Rahul')) list.push('Rahul');
+    }
     return list;
-  }, [teamMembers]);
+  }, [teamMembers, profile, isKeerthana]);
 
   // Calendar state - Default to September 2026
   const [currentYear, setCurrentYear] = useState(2026);
@@ -68,8 +80,8 @@ export default function MyDays() {
 
   // New report form state
   const [newReport, setNewReport] = useState({
-    user: 'Sagar Punia',
-    date_iso: '2026-09-27',
+    user: profile?.name || (isKeerthana ? 'Sagar Punia' : 'Self'),
+    date_iso: new Date().toISOString().split('T')[0],
     leads: 1,
     status: 0,
     reassign: 0,
@@ -234,8 +246,8 @@ export default function MyDays() {
     setIsAddModalOpen(false);
     setSelectedReport(created);
     setNewReport({
-      user: 'Sagar Punia',
-      date_iso: '2026-09-27',
+      user: profile?.name || (isKeerthana ? 'Sagar Punia' : 'Self'),
+      date_iso: new Date().toISOString().split('T')[0],
       leads: 1,
       status: 0,
       reassign: 0,

@@ -271,10 +271,12 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
     } catch (err) {
       console.warn('API updateUser password error, updating locally:', err.message);
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      const updated = localStaff.map((s) => s.id === staffMember.id ? { ...s, password: cleanPass, staff_password: cleanPass } : s);
-      localStorage.setItem(ownerKey, JSON.stringify(updated));
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+      if (ownerKey) {
+        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        const updated = localStaff.map((s) => s.id === staffMember.id ? { ...s, password: cleanPass, staff_password: cleanPass } : s);
+        localStorage.setItem(ownerKey, JSON.stringify(updated));
+      }
       setStaffList((prev) => prev.map((s) => s.id === staffMember.id ? { ...s, staff_password: cleanPass } : s));
       setSuccessMsg(`Password successfully updated for ${staffMember.name}!`);
       setQuickResetStaff(null);
@@ -315,18 +317,23 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     try {
       const res = await api.getUsers();
       if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        list = res.data.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+        list = res.data;
       }
     } catch (err) {
       console.warn('Failed to load staff list from API, checking local storage:', err.message);
     }
-    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-    const filteredLocal = localStaff.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+
+    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+    let localStaff = [];
+    if (ownerKey) {
+      try {
+        localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      } catch {}
+    }
 
     const map = new Map();
     list.forEach((u) => map.set(u.email?.toLowerCase() || u.id, u));
-    filteredLocal.forEach((u) => {
+    localStaff.forEach((u) => {
       const key = u.email?.toLowerCase() || u.id;
       if (!map.has(key)) map.set(key, u);
     });
@@ -335,60 +342,106 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     // Filter out any tombstoned / deleted staff
     list = list.filter((u) => !isStaffDeleted(u));
 
-    const hasSagar = list.some(
-      (u) =>
-        (u.name && u.name.toLowerCase().includes('sagar')) ||
-        (u.email && u.email.toLowerCase().includes('sagar'))
-    );
-    if (!hasSagar && !isStaffDeleted({ id: 'usr_1789929063747_allpa4', email: 'sagarpunia163@gmail.com' })) {
-      list.unshift({
-        id: 'usr_1789929063747_allpa4',
-        name: 'Sagar Punia',
-        email: 'sagarpunia163@gmail.com',
-        role: 'agent',
-        persona: 'staff',
-        staff_password: 'staff123',
-        department: 'Commodity Sales Executive',
-        phone: '08307967782',
-        is_active: true,
-        company_id: 'comp_bioniversio_1',
-        created_by: 'usr_1791814468302_hoa08z',
-        avatar_url:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-      });
-    }
+    const isKeerthanaCompany =
+      currentUser?.company_id === 'comp_bioniversio_1' ||
+      currentUserId === 'usr_1791814468302_hoa08z' ||
+      currentUser?.email === 'bioniversiobiologics@arggroups.com' ||
+      (currentUser?.name && currentUser.name.toLowerCase().includes('keerthana'));
 
-    const hasRahul = list.some(
-      (u) =>
-        (u.name && u.name.toLowerCase().includes('rahul')) ||
-        (u.email && u.email.toLowerCase().includes('rahul'))
-    );
-    if (!hasRahul && !isStaffDeleted({ id: 'usr_1792001466336_wwykxg', email: 'rahul@gmail.com' })) {
-      list.push({
-        id: 'usr_1792001466336_wwykxg',
-        name: 'Rahul',
-        email: 'rahul@gmail.com',
-        role: 'agent',
-        persona: 'staff',
-        staff_password: 'staff123',
-        department: 'Commodity Sales Executive',
-        phone: '+91 98765 43210',
-        is_active: true,
-        company_id: 'comp_bioniversio_1',
-        created_by: 'usr_1791814468302_hoa08z',
-        avatar_url:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-      });
+    const currentOwnerEmail = (currentUser?.email || '').toLowerCase();
+    const currentOwnerCompId = currentUser?.company_id;
+    const genericCompanyIds = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
+
+    // Strict filtering: only staff belonging to this owner!
+    list = list.filter((u) => {
+      if (!u) return false;
+      if (u.id === currentUserId || (currentOwnerEmail && u.email?.toLowerCase() === currentOwnerEmail)) return false;
+      if (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff')) return false;
+      if (u.name === 'Athish' || u.name === 'Athish Ravikanth' || u.id === 'usr_athish' || u.email === 'athishravikanth@gmail.com') return false;
+
+      if (isKeerthanaCompany && (
+        u.email?.toLowerCase() === 'sagarpunia163@gmail.com' ||
+        u.email?.toLowerCase() === 'rahul@gmail.com' ||
+        u.id === 'usr_1789929063747_allpa4' ||
+        u.id === 'usr_1792001466336_wwykxg'
+      )) {
+        return true;
+      }
+
+      if (u.created_by) {
+        return (
+          u.created_by === currentUserId ||
+          (currentOwnerEmail && u.created_by.toLowerCase() === currentOwnerEmail)
+        );
+      }
+
+      if (
+        currentOwnerCompId &&
+        !genericCompanyIds.includes(currentOwnerCompId) &&
+        u.company_id &&
+        u.company_id === currentOwnerCompId
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    if (isKeerthanaCompany) {
+      const hasSagar = list.some(
+        (u) =>
+          (u.name && u.name.toLowerCase().includes('sagar')) ||
+          (u.email && u.email.toLowerCase().includes('sagar'))
+      );
+      if (!hasSagar && !isStaffDeleted({ id: 'usr_1789929063747_allpa4', email: 'sagarpunia163@gmail.com' })) {
+        list.unshift({
+          id: 'usr_1789929063747_allpa4',
+          name: 'Sagar Punia',
+          email: 'sagarpunia163@gmail.com',
+          role: 'agent',
+          persona: 'staff',
+          staff_password: 'staff123',
+          department: 'Commodity Sales Executive',
+          phone: '08307967782',
+          is_active: true,
+          company_id: 'comp_bioniversio_1',
+          created_by: 'usr_1791814468302_hoa08z',
+          avatar_url:
+            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
+        });
+      }
+
+      const hasRahul = list.some(
+        (u) =>
+          (u.name && u.name.toLowerCase().includes('rahul')) ||
+          (u.email && u.email.toLowerCase().includes('rahul'))
+      );
+      if (!hasRahul && !isStaffDeleted({ id: 'usr_1792001466336_wwykxg', email: 'rahul@gmail.com' })) {
+        list.push({
+          id: 'usr_1792001466336_wwykxg',
+          name: 'Rahul',
+          email: 'rahul@gmail.com',
+          role: 'agent',
+          persona: 'staff',
+          staff_password: 'staff123',
+          department: 'Commodity Sales Executive',
+          phone: '+91 98765 43210',
+          is_active: true,
+          company_id: 'comp_bioniversio_1',
+          created_by: 'usr_1791814468302_hoa08z',
+          avatar_url:
+            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
+        });
+      }
     }
 
     list = list.filter((u) => !isStaffDeleted(u));
     setStaffList(list);
-    try {
-      localStorage.setItem('crm_local_staff', JSON.stringify(list));
-      if (currentUserId) {
-        localStorage.setItem(`crm_local_staff_${currentUserId}`, JSON.stringify(list));
-      }
-    } catch {}
+    if (ownerKey) {
+      try {
+        localStorage.setItem(ownerKey, JSON.stringify(list));
+      } catch {}
+    }
     setLoading(false);
   };
 
@@ -454,31 +507,34 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         avatar_url: form.avatar_url,
         data_scope: form.data_scope,
         permissions: form.permissions,
+        owner_id: currentUserId,
+        company_id: currentUser?.company_id,
       });
 
       if (res && res.success) {
-        // Sync immediately to local storage
+        // Sync immediately to owner-specific local storage
         try {
-          const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-          const cleanUser = res.data || {
-            id: 'usr_staff_' + Date.now(),
-            name: form.name.trim(),
-            email: form.email.trim().toLowerCase(),
-            staff_password: form.password,
-            role: form.role || 'agent',
-            persona: 'staff',
-            department: form.department,
-            phone: form.phone.trim(),
-            avatar_url: form.avatar_url,
-            data_scope: form.data_scope,
-            permissions: form.permissions,
-            is_active: true,
-          };
-          const filtered = localStaff.filter((s) => s.email?.toLowerCase() !== cleanUser.email?.toLowerCase());
-          filtered.push(cleanUser);
-          localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
-          if (currentUserId) {
+          const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+          if (ownerKey) {
+            const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+            const cleanUser = res.data || {
+              id: 'usr_staff_' + Date.now(),
+              name: form.name.trim(),
+              email: form.email.trim().toLowerCase(),
+              staff_password: form.password,
+              role: form.role || 'agent',
+              persona: 'staff',
+              department: form.department,
+              phone: form.phone.trim(),
+              avatar_url: form.avatar_url,
+              data_scope: form.data_scope,
+              permissions: form.permissions,
+              company_id: currentUser?.company_id,
+              created_by: currentUserId,
+              is_active: true,
+            };
+            const filtered = localStaff.filter((s) => s.email?.toLowerCase() !== cleanUser.email?.toLowerCase());
+            filtered.push(cleanUser);
             localStorage.setItem(ownerKey, JSON.stringify(filtered));
           }
         } catch {}
@@ -515,8 +571,11 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       }
 
       // For network errors or offline sync:
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+      let localStaff = [];
+      if (ownerKey) {
+        localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      }
       if (localStaff.length >= staffQuota) {
         setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
         return;
@@ -534,13 +593,16 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         avatar_url: form.avatar_url,
         data_scope: form.data_scope,
         permissions: form.permissions,
+        company_id: currentUser?.company_id,
+        created_by: currentUserId,
         company_name: ownerCompanyName,
         is_active: true,
         created_at: new Date().toISOString(),
       };
-      localStaff.push(newStaff);
-      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
-      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
+      if (ownerKey) {
+        localStaff.push(newStaff);
+        localStorage.setItem(ownerKey, JSON.stringify(localStaff));
+      }
 
       // Also persist to crm_local_users so offline login works smoothly
       const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
@@ -600,17 +662,18 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       const res = await api.updateUser(editingStaff.id, payload);
       const updatedUser = (res && res.success && res.data) ? res.data : { ...editingStaff, ...payload };
 
-      // Sync across all local storage caches
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
-      if (idx !== -1) {
-        localStaff[idx] = { ...localStaff[idx], ...updatedUser };
-      } else {
-        localStaff.push(updatedUser);
+      // Sync across owner-specific local storage cache
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+      if (ownerKey) {
+        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+        if (idx !== -1) {
+          localStaff[idx] = { ...localStaff[idx], ...updatedUser };
+        } else {
+          localStaff.push(updatedUser);
+        }
+        localStorage.setItem(ownerKey, JSON.stringify(localStaff));
       }
-      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
-      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
 
       // Sync crm_local_users
       const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
@@ -644,21 +707,22 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       return;
     } catch (err) {
       console.warn('API updateUser error, saving to local storage fallback:', err.message);
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
       const updatedStaff = {
         ...editingStaff,
         ...payload,
         staff_password: payload.staff_password || editingStaff.staff_password || '123456',
       };
-      const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
-      if (idx !== -1) {
-        localStaff[idx] = { ...localStaff[idx], ...updatedStaff };
-      } else {
-        localStaff.push(updatedStaff);
+      if (ownerKey) {
+        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
+        if (idx !== -1) {
+          localStaff[idx] = { ...localStaff[idx], ...updatedStaff };
+        } else {
+          localStaff.push(updatedStaff);
+        }
+        localStorage.setItem(ownerKey, JSON.stringify(localStaff));
       }
-      localStorage.setItem(ownerKey, JSON.stringify(localStaff));
-      localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
 
       // Sync crm_local_users
       const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
@@ -699,11 +763,12 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     } catch (err) {
       console.warn('API toggleUserStatus error, toggling in local storage:', err.message);
     }
-    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-    const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-    const updated = localStaff.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s));
-    localStorage.setItem(ownerKey, JSON.stringify(updated));
-    localStorage.setItem('crm_local_staff', JSON.stringify(updated));
+    const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+    if (ownerKey) {
+      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      const updated = localStaff.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s));
+      localStorage.setItem(ownerKey, JSON.stringify(updated));
+    }
     setStaffList((prev) => prev.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s)));
     window.dispatchEvent(new Event('crm_staff_updated'));
   };
@@ -749,11 +814,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
           return false;
         };
 
-        const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : 'crm_local_staff';
-        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-        const filtered = localStaff.filter((s) => !isTarget(s));
-        localStorage.setItem('crm_local_staff', JSON.stringify(filtered));
-        if (currentUserId) {
+        const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
+        if (ownerKey) {
+          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+          const filtered = localStaff.filter((s) => !isTarget(s));
           localStorage.setItem(ownerKey, JSON.stringify(filtered));
         }
 

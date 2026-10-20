@@ -4,13 +4,19 @@ import AdminTopBar from './components/AdminTopBar';
 import AdminLoginPage from './pages/AdminLoginPage';
 import OverviewSection from './pages/OverviewSection';
 import UsersSection from './pages/UsersSection';
+import DeveloperSection from './pages/DeveloperSection';
 import SettingsSection from './pages/SettingsSection';
 import BroadcastNotificationModal from './components/BroadcastNotificationModal';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL
+const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const LOCAL_API_BASE = 'http://localhost:5000/api/v1/admin';
+const REMOTE_API_BASE = import.meta.env.VITE_API_URL
   ? `${import.meta.env.VITE_API_URL}/admin`
   : 'https://crm-ep4i.onrender.com/api/v1/admin';
+
+// If local, prefer localhost:5000 where backend is running
+const API_BASE = isLocal ? LOCAL_API_BASE : REMOTE_API_BASE;
 
 export default function App() {
   const [adminUser, setAdminUser] = useState(() => {
@@ -57,22 +63,34 @@ export default function App() {
     if (isManual) setRefreshing(true);
     try {
       const headers = getHeaders();
-      const [uRes, sRes, oRes] = await Promise.all([
-        fetch(`${API_BASE}/users`, { headers }).then((r) => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/subscription`, { headers }).then((r) => r.json()).catch(() => ({})),
-        fetch(`${API_BASE}/overview-summary`, { headers }).then((r) => r.json()).catch(() => ({})),
+      let activeUrl = API_BASE;
+
+      let [uRes, sRes, oRes] = await Promise.all([
+        fetch(`${activeUrl}/users`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${activeUrl}/subscription`, { headers }).then((r) => r.json()).catch(() => ({})),
+        fetch(`${activeUrl}/overview-summary`, { headers }).then((r) => r.json()).catch(() => ({})),
       ]);
 
-      if (uRes.success) setUsers(uRes.data);
-      if (sRes.success) setSubscription(sRes.data);
-      if (oRes.success) setOverviewSummary(oRes.data);
+      // If local server returned nothing and we are on localhost, fallback to remote Render
+      if ((!uRes || !uRes.success) && isLocal && activeUrl === LOCAL_API_BASE) {
+        activeUrl = REMOTE_API_BASE;
+        [uRes, sRes, oRes] = await Promise.all([
+          fetch(`${activeUrl}/users`, { headers }).then((r) => r.json()).catch(() => ({})),
+          fetch(`${activeUrl}/subscription`, { headers }).then((r) => r.json()).catch(() => ({})),
+          fetch(`${activeUrl}/overview-summary`, { headers }).then((r) => r.json()).catch(() => ({})),
+        ]);
+      }
+
+      if (uRes && uRes.success) setUsers(uRes.data);
+      if (sRes && sRes.success) setSubscription(sRes.data);
+      if (oRes && oRes.success) setOverviewSummary(oRes.data);
 
       if (isManual) {
         showToast('Platform metrics synchronized with Node.js backend');
       }
     } catch (err) {
       console.error('Failed to load admin data:', err);
-      showToast('Backend connection error (Render Cloud API)', 'error');
+      showToast('Backend connection error: ' + err.message, 'error');
     } finally {
       setLoading(false);
       setRefreshing(false);
@@ -292,6 +310,14 @@ export default function App() {
                   onUpdateStaffLimit={handleUpdateStaffLimit}
                   onToggleFeature={handleToggleFeature}
                   onResetPassword={handleResetPassword}
+                />
+              )}
+
+              {activeSection === 'developer' && (
+                <DeveloperSection
+                  apiBase={API_BASE}
+                  getHeaders={getHeaders}
+                  showToast={showToast}
                 />
               )}
 

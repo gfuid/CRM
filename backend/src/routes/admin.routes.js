@@ -23,6 +23,9 @@ router.get('/overview-summary', asyncHandler(adminController.getOverviewSummary)
 
 // System performance & health
 router.get('/health', asyncHandler(adminController.getSystemHealth));
+router.get('/developer-metrics', asyncHandler(adminController.getDeveloperMetrics));
+router.post('/developer/sync-db', asyncHandler(adminController.triggerDbSync));
+router.post('/developer/clear-metrics', asyncHandler(adminController.clearMetrics));
 
 // Audit trail
 router.get('/audit-logs', asyncHandler(adminController.getAuditLogs));

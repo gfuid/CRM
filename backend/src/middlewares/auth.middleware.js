@@ -96,7 +96,7 @@ const authenticate = async (req, res, next) => {
           email: decoded.email,
           role: decoded.role || 'agent',
           persona: decoded.persona || (decoded.role === 'admin' ? 'owner' : 'staff'),
-          company_id: decoded.company_id || 'comp_1',
+          company_id: decoded.company_id || (decoded.id ? ('comp_' + decoded.id) : ('comp_' + Date.now())),
           department: decoded.department || 'Commodity Sales & Export Operations',
           is_active: true,
         };
@@ -173,7 +173,7 @@ const authenticate = async (req, res, next) => {
           email: candidateEmail || unverified?.email || 'owner@travel-trade.com',
           role: unverified?.role || 'admin',
           persona: unverified?.persona || 'owner',
-          company_id: unverified?.company_id || 'comp_1',
+          company_id: unverified?.company_id || (candidateId ? ('comp_' + candidateId) : ('comp_' + Date.now())),
           department: unverified?.department || 'Executive Management',
           is_active: true,
         };

@@ -62,6 +62,12 @@ const login = async (req, res) => {
     dataStore.users[cachedIdx].last_login = now;
   }
 
+  const isOwner = user.persona === 'owner' || user.role === 'admin';
+  if (isOwner && (!user.company_id || user.company_id === 'comp_1' || user.company_id === 'comp_traveltrade_1')) {
+    user.company_id = 'comp_' + user.id;
+    dbSync.saveUser({ id: user.id, company_id: user.company_id });
+  }
+
   const token = jwt.sign(
     {
       id: user.id,
@@ -236,6 +242,16 @@ const register = async (req, res) => {
  * Get current authenticated user profile
  */
 const getProfile = async (req, res) => {
+  const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
+  if (isOwner && (!req.user.company_id || req.user.company_id === 'comp_1' || req.user.company_id === 'comp_traveltrade_1')) {
+    req.user.company_id = 'comp_' + req.user.id;
+    const userInStore = dataStore.users.find((u) => u.id === req.user.id);
+    if (userInStore) {
+      userInStore.company_id = req.user.company_id;
+      dbSync.saveUser(userInStore);
+    }
+  }
+
   let companyName = req.user.company_name || '';
   if (!companyName && req.user.persona === 'staff') {
     const owner = dataStore.users.find(
@@ -259,10 +275,12 @@ const getProfile = async (req, res) => {
     company_name: companyName,
   };
 
+  const resolvedCompanyId = req.user.company_id || (isOwner ? ('comp_' + req.user.id) : 'comp_1');
+
   return ApiResponse.success(res, {
     user: userWithCompany,
     company: {
-      id: req.user.company_id || 'comp_1',
+      id: resolvedCompanyId,
       name: companyName,
       plan: req.user.plan || dataStore.company?.plan || 'growth',
     },

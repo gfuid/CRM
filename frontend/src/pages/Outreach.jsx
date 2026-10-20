@@ -507,23 +507,31 @@ export default function Outreach() {
     }
   };
 
+  const isKeerthana =
+    profile?.company_id === 'comp_bioniversio_1' ||
+    profile?.id === 'usr_1791814468302_hoa08z' ||
+    profile?.email === 'bioniversiobiologics@arggroups.com' ||
+    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
+
   const allUserOptions = useMemo(() => {
     const set = new Set(['All users']);
-    if (profile?.name) set.add(profile.name);
+    if (profile?.name && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') set.add(profile.name);
     (teamMembers || []).forEach((t) => {
       if (t.name && t.name !== 'Athish' && t.name !== 'Athish Ravikanth' && !t.name.startsWith('usr_')) {
         set.add(t.name);
       }
     });
-    set.add('Sagar Punia');
-    set.add('Rahul');
+    if (isKeerthana) {
+      set.add('Sagar Punia');
+      set.add('Rahul');
+    }
     (logs || []).forEach((l) => {
       if (l.user && l.user !== 'Athish' && l.user !== 'Athish Ravikanth' && !l.user.startsWith('usr_')) {
         set.add(l.user);
       }
     });
     return Array.from(set);
-  }, [teamMembers, profile, logs]);
+  }, [teamMembers, profile, logs, isKeerthana]);
 
   return (
     <div className="space-y-6 antialiased pb-12">

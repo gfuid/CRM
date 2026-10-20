@@ -71,7 +71,7 @@ const STAGES = [
 export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, onDelete }) {
   if (!isOpen || !lead) return null;
 
-  const { isOwner } = useAuth();
+  const { isOwner, profile, getTeamMembers } = useAuth();
 
   // Form states
   const [type, setType] = useState(lead.type || 'Export');
@@ -145,21 +145,32 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [teamReps, setTeamReps] = useState([]);
 
   useEffect(() => {
-    api.getUsers().then((res) => {
-      if (res && res.success && Array.isArray(res.data)) {
-        setTeamReps(res.data.map((u) => u.name).filter(Boolean));
-      }
-    }).catch(() => {});
-  }, []);
+    if (getTeamMembers) {
+      getTeamMembers()
+        .then((res) => {
+          if (Array.isArray(res)) {
+            setTeamReps(
+              res
+                .map((u) => u.name?.trim())
+                .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'))
+            );
+          }
+        })
+        .catch(() => {});
+    }
+  }, [getTeamMembers]);
 
   const availableReps = useMemo(() => {
     const set = new Set();
-    if (lead.assigned_to) set.add(lead.assigned_to);
-    if (lead.agent_name) set.add(lead.agent_name);
-    if (assignedTo) set.add(assignedTo);
+    if (profile?.name && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') {
+      set.add(profile.name);
+    }
     teamReps.forEach((r) => set.add(r));
+    if (assignedTo && !assignedTo.startsWith('usr_') && assignedTo !== 'Athish' && assignedTo !== 'Athish Ravikanth') {
+      set.add(assignedTo);
+    }
     return Array.from(set).filter(Boolean);
-  }, [teamReps, lead, assignedTo]);
+  }, [teamReps, profile, assignedTo]);
 
   // Daily Activity
   const [activeChecks, setActiveChecks] = useState([]);

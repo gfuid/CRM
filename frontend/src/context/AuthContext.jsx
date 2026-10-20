@@ -254,13 +254,25 @@ export function AuthProvider({ children }) {
         }
       }
 
-      // Check if it's a registered staff member created by the owner
-      const localStaff = JSON.parse(localStorage.getItem('crm_local_staff') || '[]');
-      const staffMatch = localStaff.find((s) => s.email.toLowerCase() === cleanEmail);
+      // Check if it's a registered staff member created by an owner
+      let staffMatch = null;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key && key.startsWith('crm_local_staff_')) {
+          try {
+            const arr = JSON.parse(localStorage.getItem(key) || '[]');
+            const m = Array.isArray(arr) ? arr.find((s) => s.email?.toLowerCase() === cleanEmail) : null;
+            if (m) {
+              staffMatch = m;
+              break;
+            }
+          } catch {}
+        }
+      }
       if (staffMatch) {
-        if (!password || staffMatch.password === password) {
+        if (!password || staffMatch.password === password || staffMatch.staff_password === password) {
           localStorage.setItem('crm_token', 'local_session_' + Date.now());
-          const owner = localUsers.find((o) => o.persona === 'owner' || o.role === 'admin');
+          const owner = localUsers.find((o) => (o.persona === 'owner' || o.role === 'admin') && (o.id === staffMatch.created_by || o.company_id === staffMatch.company_id));
           const resolvedCompName = staffMatch.company_name || staffMatch.company?.name || owner?.company_name || owner?.company?.name || 'My Organization';
           const comp = { name: resolvedCompName, plan: 'growth' };
           setUser(staffMatch);
@@ -387,19 +399,20 @@ export function AuthProvider({ children }) {
         department: department || 'Commodity Sales & Export Operations',
         phone: phone || '',
         avatar_url,
+        owner_id: profile?.id || user?.id,
+        company_id: profile?.company_id || user?.company_id,
       });
       if (res && res.success) {
         try {
-          const ownerKey = profile?.id || user?.id ? `crm_local_staff_${profile?.id || user?.id}` : 'crm_local_staff';
-          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-          const idx = localStaff.findIndex((s) => s.email?.toLowerCase() === email.toLowerCase());
-          if (idx !== -1) {
-            localStaff[idx] = res.data;
-          } else {
-            localStaff.push(res.data);
-          }
-          localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
-          if (profile?.id || user?.id) {
+          const ownerKey = (profile?.id || user?.id) ? `crm_local_staff_${profile?.id || user?.id}` : null;
+          if (ownerKey) {
+            const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+            const idx = localStaff.findIndex((s) => s.email?.toLowerCase() === email.toLowerCase());
+            if (idx !== -1) {
+              localStaff[idx] = res.data;
+            } else {
+              localStaff.push(res.data);
+            }
             localStorage.setItem(ownerKey, JSON.stringify(localStaff));
           }
         } catch {}
@@ -419,13 +432,15 @@ export function AuthProvider({ children }) {
         is_active: true,
         avatar_url: avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(fullName)}`,
         created_at: new Date().toISOString(),
+        created_by: profile?.id || user?.id,
+        company_id: profile?.company_id || user?.company_id,
+        company_name: profile?.company_name || user?.company_name,
       };
       try {
-        const ownerKey = profile?.id || user?.id ? `crm_local_staff_${profile?.id || user?.id}` : 'crm_local_staff';
-        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-        localStaff.push(newStaff);
-        localStorage.setItem('crm_local_staff', JSON.stringify(localStaff));
-        if (profile?.id || user?.id) {
+        const ownerKey = (profile?.id || user?.id) ? `crm_local_staff_${profile?.id || user?.id}` : null;
+        if (ownerKey) {
+          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+          localStaff.push(newStaff);
           localStorage.setItem(ownerKey, JSON.stringify(localStaff));
         }
       } catch {}
@@ -478,6 +493,7 @@ export function AuthProvider({ children }) {
   const signOut = () => {
     localStorage.removeItem('crm_token');
     localStorage.removeItem('crm_user_session');
+    localStorage.removeItem('crm_local_staff'); // Purge legacy shared key
     localStorage.setItem('crm_logged_out', 'true');
     setUser(null);
     setProfile(null);
@@ -539,42 +555,91 @@ export function AuthProvider({ children }) {
 
   // Get all team members for current organization
   const getTeamMembers = async () => {
+    const activeUserId = profile?.id || user?.id;
+    const activeEmail = (profile?.email || user?.email || '').toLowerCase();
+    const activeCompId = profile?.company_id || user?.company_id;
+
     let list = [];
     try {
       const res = await api.getUsers();
       if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        list = res.data.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+        list = res.data;
       }
     } catch (err) {
       console.warn('Failed to fetch team members from backend, using local store:', err.message);
     }
 
-    try {
-      const ownerKey = profile?.id || user?.id ? `crm_local_staff_${profile?.id || user?.id}` : 'crm_local_staff';
-      const localStaff = JSON.parse(localStorage.getItem(ownerKey) || localStorage.getItem('crm_local_staff') || '[]');
-      const filteredLocal = localStaff.filter((u) => u.name !== 'Athish' && u.name !== 'Athish Ravikanth' && u.id !== 'usr_athish');
+    // Isolated owner key only - NEVER use shared 'crm_local_staff' fallback!
+    const ownerKey = activeUserId ? `crm_local_staff_${activeUserId}` : null;
+    let localStaff = [];
+    if (ownerKey) {
+      try {
+        localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+      } catch {}
+    }
 
-      const map = new Map();
-      list.forEach((u) => map.set(u.email?.toLowerCase() || u.id, u));
-      filteredLocal.forEach((u) => {
-        const key = u.email?.toLowerCase() || u.id;
-        if (!map.has(key)) map.set(key, u);
-      });
-      list = Array.from(map.values());
-    } catch {}
+    const map = new Map();
+    list.forEach((u) => map.set(u.email?.toLowerCase() || u.id, u));
+    localStaff.forEach((u) => {
+      const key = u.email?.toLowerCase() || u.id;
+      if (!map.has(key)) map.set(key, u);
+    });
+    list = Array.from(map.values());
 
     // Exclude any deleted staff members
     list = list.filter((u) => !isStaffDeleted(u));
 
-    // Guarantee both Sagar Punia and Rahul are always present for Bioniversio Biologics / Keerthana Ponni K UNLESS explicitly deleted!
-    const isBioniversio =
-      profile?.company_id === 'comp_bioniversio_1' ||
-      profile?.email === 'bioniversiobiologics@arggroups.com' ||
-      profile?.name?.includes('Keerthana') ||
-      !profile ||
-      profile.persona === 'owner';
+    // STRICT OWNER ISOLATION: A staff member MUST belong to the current owner
+    const isKeerthana =
+      activeCompId === 'comp_bioniversio_1' ||
+      activeEmail === 'bioniversiobiologics@arggroups.com' ||
+      (profile?.name && profile.name.toLowerCase().includes('keerthana')) ||
+      activeUserId === 'usr_1791814468302_hoa08z';
 
-    if (isBioniversio) {
+    const genericCompanyIds = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
+
+    list = list.filter((u) => {
+      if (!u) return false;
+      // Exclude self (owner shouldn't be listed as their own staff)
+      if (u.id === activeUserId || (activeEmail && u.email?.toLowerCase() === activeEmail)) return false;
+      // Exclude other owners
+      if (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff')) return false;
+      // Exclude test user Athish
+      if (u.id === 'usr_athish' || u.name === 'Athish' || u.name === 'Athish Ravikanth' || u.email === 'athishravikanth@gmail.com') return false;
+
+      // Allow Keerthana's specific staff strictly for Keerthana
+      if (isKeerthana && (
+        u.email?.toLowerCase() === 'sagarpunia163@gmail.com' ||
+        u.email?.toLowerCase() === 'rahul@gmail.com' ||
+        u.id === 'usr_1789929063747_allpa4' ||
+        u.id === 'usr_1792001466336_wwykxg'
+      )) {
+        return true;
+      }
+
+      // Check explicit creator match
+      if (u.created_by) {
+        return (
+          u.created_by === activeUserId ||
+          (activeEmail && u.created_by.toLowerCase() === activeEmail)
+        );
+      }
+
+      // Check company_id match (only if valid non-generic company and created_by is NOT set)
+      if (
+        activeCompId &&
+        !genericCompanyIds.includes(activeCompId) &&
+        u.company_id &&
+        u.company_id === activeCompId
+      ) {
+        return true;
+      }
+
+      return false;
+    });
+
+    // Guarantee both Sagar Punia and Rahul are present ONLY for Keerthana Ponni K UNLESS explicitly deleted!
+    if (isKeerthana) {
       const hasSagar = list.some(
         (u) =>
           (u.name && u.name.toLowerCase().includes('sagar')) ||
@@ -623,13 +688,12 @@ export function AuthProvider({ children }) {
     // Filter again after potential injections
     list = list.filter((u) => !isStaffDeleted(u));
 
-    // Persist to local cache so offline or session restarts keep staff intact
-    try {
-      localStorage.setItem('crm_local_staff', JSON.stringify(list));
-      if (profile?.id || user?.id) {
-        localStorage.setItem(`crm_local_staff_${profile?.id || user?.id}`, JSON.stringify(list));
-      }
-    } catch {}
+    // Persist to isolated local cache for this owner only
+    if (ownerKey) {
+      try {
+        localStorage.setItem(ownerKey, JSON.stringify(list));
+      } catch {}
+    }
 
     return list;
   };

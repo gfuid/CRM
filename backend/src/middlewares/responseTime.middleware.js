@@ -8,7 +8,25 @@ const systemMetrics = {
   averageResponseTimeMs: 0,
   lastResponseTimeMs: 0,
   peakResponseTimeMs: 0,
+  statusCodes: {
+    '2xx': 0,
+    '3xx': 0,
+    '4xx': 0,
+    '5xx': 0,
+  },
+  endpoints: {},
   history: [],
+  startedAt: new Date().toISOString(),
+  reset() {
+    this.totalRequests = 0;
+    this.averageResponseTimeMs = 0;
+    this.lastResponseTimeMs = 0;
+    this.peakResponseTimeMs = 0;
+    this.statusCodes = { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 };
+    this.endpoints = {};
+    this.history = [];
+    this.startedAt = new Date().toISOString();
+  },
 };
 
 const responseTimeMiddleware = (req, res, next) => {
@@ -30,12 +48,38 @@ const responseTimeMiddleware = (req, res, next) => {
       (systemMetrics.averageResponseTimeMs * 0.95 + ms * 0.05).toFixed(2)
     );
 
-    // Keep last 50 data points for admin charts
-    if (systemMetrics.history.length > 50) {
+    // Track status code breakdown
+    const codeGroup = Math.floor(res.statusCode / 100) + 'xx';
+    if (systemMetrics.statusCodes[codeGroup] !== undefined) {
+      systemMetrics.statusCodes[codeGroup] += 1;
+    }
+
+    // Track endpoint aggregated performance
+    const rawPath = (req.baseUrl || '') + (req.path || req.url || '');
+    const cleanPath = rawPath.split('?')[0].replace(/\/[0-9a-fA-F_-]{10,}/g, '/:id');
+    const endpointKey = `${req.method} ${cleanPath}`;
+    if (!systemMetrics.endpoints[endpointKey]) {
+      systemMetrics.endpoints[endpointKey] = {
+        hits: 0,
+        totalMs: 0,
+        avgMs: 0,
+        peakMs: 0,
+        lastStatus: res.statusCode,
+      };
+    }
+    const ep = systemMetrics.endpoints[endpointKey];
+    ep.hits += 1;
+    ep.totalMs += ms;
+    ep.avgMs = parseFloat((ep.totalMs / ep.hits).toFixed(2));
+    if (ms > ep.peakMs) ep.peakMs = ms;
+    ep.lastStatus = res.statusCode;
+
+    // Keep last 100 data points for developer observability
+    if (systemMetrics.history.length > 100) {
       systemMetrics.history.shift();
     }
     systemMetrics.history.push({
-      path: req.baseUrl + req.path,
+      path: rawPath.split('?')[0],
       method: req.method,
       status: res.statusCode,
       durationMs: ms,

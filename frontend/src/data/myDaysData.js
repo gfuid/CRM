@@ -3,8 +3,6 @@
 
 export const TEAM_MEMBERS = [
   'All users',
-  'Sagar Punia',
-  'Rahul',
 ];
 
 export const INITIAL_MY_DAYS_REPORTS = [];

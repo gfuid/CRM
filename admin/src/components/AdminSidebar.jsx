@@ -3,6 +3,7 @@ import {
   LayoutDashboard,
   Users2,
   Settings,
+  Terminal,
   ExternalLink,
   X,
   LogOut,
@@ -12,6 +13,7 @@ import BrandLogo from './BrandLogo';
 const adminNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'users', label: 'Owners & Staff', icon: Users2 },
+  { id: 'developer', label: 'Developer & Servers', icon: Terminal, badge: 'Live' },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];
 
@@ -79,14 +81,27 @@ export default function AdminSidebar({
               <button
                 key={item.id}
                 onClick={() => handleSelect(item.id)}
-                className={`w-full flex items-center gap-3 px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
                   isActive
                     ? 'bg-slate-900 text-white shadow-sm'
                     : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
-                <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
-                <span>{item.label}</span>
+                <div className="flex items-center gap-3">
+                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <span>{item.label}</span>
+                </div>
+                {item.badge && (
+                  <span
+                    className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
+                      isActive
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                        : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                    }`}
+                  >
+                    {item.badge}
+                  </span>
+                )}
               </button>
             );
           })}

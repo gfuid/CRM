@@ -54,7 +54,13 @@ const syncFromDB = async () => {
         models.EmailCampaign.find().lean(),
       ]);
 
-    if (users && users.length > 0) dataStore.users = users;
+    if (users && users.length > 0) {
+      dataStore.users = users;
+      try {
+        const { enforceTenantIsolation } = require('../utils/tenantScope');
+        enforceTenantIsolation(dataStore.users);
+      } catch (e) {}
+    }
     if (company) dataStore.company = company;
     if (leads && leads.length > 0) dataStore.leads = leads;
     if (tasks && tasks.length > 0) dataStore.tasks = tasks;
