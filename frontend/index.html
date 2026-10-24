@@ -24,6 +24,19 @@
         }
       });
     </script>
+    <script>
+      // If the app has not started after 12 seconds (very old browser or blocked script), explain instead of a blank page
+      setTimeout(function () {
+        var root = document.getElementById('root');
+        if (root && !root.children.length) {
+          root.innerHTML = '<div style="font-family:system-ui,sans-serif;max-width:420px;margin:15vh auto;padding:24px;text-align:center;color:#0f172a">' +
+            '<h2 style="margin:0 0 8px">The CRM could not start</h2>' +
+            '<p style="color:#475569;line-height:1.5">Please refresh the page. If this keeps happening, update your browser (Safari / iOS 14 or newer, or the latest Chrome).</p>' +
+            '<button onclick="location.reload()" style="margin-top:12px;padding:10px 18px;border:0;border-radius:10px;background:#059669;color:#fff;font-weight:700">Refresh</button></div>';
+        }
+      }, 12000);
+    </script>
+    <noscript>Please enable JavaScript to use the CRM.</noscript>
     <script type="module" src="/src/main.jsx"></script>
   </body>
 </html>

@@ -15,6 +15,7 @@ const systemMetrics = {
     '5xx': 0,
   },
   endpoints: {},
+  userRequests: {},
   history: [],
   startedAt: new Date().toISOString(),
   reset() {
@@ -24,6 +25,7 @@ const systemMetrics = {
     this.peakResponseTimeMs = 0;
     this.statusCodes = { '2xx': 0, '3xx': 0, '4xx': 0, '5xx': 0 };
     this.endpoints = {};
+    this.userRequests = {};
     this.history = [];
     this.startedAt = new Date().toISOString();
   },
@@ -38,6 +40,9 @@ const responseTimeMiddleware = (req, res, next) => {
     const ms = parseFloat(elapsedTimeInMs);
 
     systemMetrics.totalRequests += 1;
+    if (req.user?.id) {
+      systemMetrics.userRequests[req.user.id] = (systemMetrics.userRequests[req.user.id] || 0) + 1;
+    }
     systemMetrics.lastResponseTimeMs = ms;
     if (ms > systemMetrics.peakResponseTimeMs) {
       systemMetrics.peakResponseTimeMs = ms;

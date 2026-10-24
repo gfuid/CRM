@@ -38,11 +38,12 @@ import {
 
 // Formatting helpers for INR Lakhs / Crores and USD
 export const formatLakhs = (lakhs) => {
-  if (!lakhs || isNaN(lakhs)) return '₹0 L';
-  if (lakhs >= 100) {
-    return `₹${(lakhs / 100).toFixed(2)} Cr`;
-  }
-  return `₹${Number(lakhs).toFixed(1)} L`;
+  // Deal prices are entered in USD; "lakhs" here is just the USD amount / 100,000.
+  const usd = Number(lakhs) * 100000;
+  if (!usd || isNaN(usd)) return '$0';
+  if (usd >= 1000000) return `$${(usd / 1000000).toFixed(2)}M`;
+  if (usd >= 1000) return `$${(usd / 1000).toFixed(1)}K`;
+  return `$${Math.round(usd).toLocaleString('en-US')}`;
 };
 
 export const formatDual = (lakhs) => {
@@ -1222,7 +1223,7 @@ export default function Analytics() {
                     }`}
                   >
                     <DollarSign size={13} />
-                    <span>Order Value (₹ Lakhs)</span>
+                    <span>Order Value (USD)</span>
                   </button>
                   <button
                     type="button"
@@ -1481,7 +1482,7 @@ export default function Analytics() {
                   <div className="flex items-center justify-between gap-3 text-xs mb-1">
                     <span className="text-slate-300 font-medium">Order Value:</span>
                     <span className="font-extrabold text-rose-300">
-                      ₹{trendPoints[hoveredTrendIndex].valLakhs?.toFixed(1)} Lakhs
+                      {formatLakhs(trendPoints[hoveredTrendIndex].valLakhs)}
                     </span>
                   </div>
                   <div className="flex items-center justify-between gap-3 text-[11px] text-slate-400 mb-1">
@@ -2121,7 +2122,7 @@ export default function Analytics() {
             {/* LEADS BY COUNTRY */}
             <div className="bg-white dark:bg-slate-900 p-5 sm:p-6 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm transition-colors flex flex-col justify-between">
               <div>
-                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
+                <div className="flex flex-wrap justify-between items-start gap-2 pb-4 border-b border-slate-100 dark:border-slate-800 mb-4">
                   <div>
                     <h2 className="text-base font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                       <Globe size={18} className="text-rose-500 dark:text-rose-400" />
@@ -2131,7 +2132,7 @@ export default function Analytics() {
                       Buyer distribution across {metrics.totalLeads} international trade leads
                     </p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex flex-wrap items-center gap-2">
                     <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl">
                       <button
                         type="button"
@@ -2248,7 +2249,7 @@ export default function Analytics() {
                                       {hoveredItem.country}
                                     </span>
                                     <span className="text-[11px] font-extrabold text-rose-600 dark:text-rose-400">
-                                      {hoveredMeta?.port || 'CIF Destination'}
+                                      {hoveredMeta?.port || '—'}
                                     </span>
                                     <span className="text-[10px] font-bold text-slate-500 dark:text-slate-400">
                                       {hoveredItem.count} Deals ({hoveredItem.pct}%)
@@ -2372,7 +2373,7 @@ export default function Analytics() {
                   <span>Sales Representative Order Book & Performance</span>
                 </h2>
                 <p className="text-xs text-slate-400 mt-0.5">
-                  Portfolio value handled (₹ Lakhs & Cr) and assigned inquiries by team member
+                  Portfolio value handled (USD) and assigned inquiries by team member
                 </p>
               </div>
 
@@ -2534,7 +2535,7 @@ export default function Analytics() {
                 <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs">
                   <div className="flex items-center gap-1.5 font-bold text-slate-600 dark:text-slate-400">
                     <span className="w-3 h-3 rounded-sm bg-indigo-600 shadow-2xs" />
-                    <span>Portfolio Order Book (₹ Lakhs)</span>
+                    <span>Portfolio Order Book (USD)</span>
                   </div>
 
                   <div className="text-[11px] font-extrabold text-slate-400">

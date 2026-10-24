@@ -1,49 +1,48 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
-const { authenticate, authorize } = require('../middlewares/auth.middleware');
+const { authenticate, requireOwner, requireSuperAdmin } = require('../middlewares/auth.middleware');
 const asyncHandler = require('../utils/asyncHandler');
 
-// All admin routes require authentication and admin role
 router.use(authenticate);
-router.use(authorize('admin'));
 
-// User / Team management
-router.get('/users', asyncHandler(adminController.getAllUsers));
-router.post('/users', asyncHandler(adminController.createUser));
-router.patch('/users/:id', asyncHandler(adminController.updateUser));
-router.patch('/users/:id/role', asyncHandler(adminController.updateUserRole));
-router.patch('/users/:id/status', asyncHandler(adminController.toggleUserStatus));
+// ------------------------------------------------------------------
+// Staff management: company owners (scoped to their own staff) + Super Admin
+// ------------------------------------------------------------------
+router.get('/users', requireOwner, asyncHandler(adminController.getAllUsers));
+router.post('/users', requireOwner, asyncHandler(adminController.createUser));
+router.patch('/users/:id', requireOwner, asyncHandler(adminController.updateUser));
+router.patch('/users/:id/role', requireOwner, asyncHandler(adminController.updateUserRole));
+router.patch('/users/:id/status', requireOwner, asyncHandler(adminController.toggleUserStatus));
+router.delete('/users/:id', requireOwner, asyncHandler(adminController.deleteUser));
+
+// ------------------------------------------------------------------
+// Everything below is the platform operator's console only
+// ------------------------------------------------------------------
+router.use(requireSuperAdmin);
+
 router.patch('/users/:id/staff-limit', asyncHandler(adminController.updateStaffLimit));
 router.patch('/users/:id/features', asyncHandler(adminController.updateUserFeatures));
-router.delete('/users/:id', asyncHandler(adminController.deleteUser));
 
-// Consolidated Overview Summary
 router.get('/overview-summary', asyncHandler(adminController.getOverviewSummary));
 
-// System performance & health
 router.get('/health', asyncHandler(adminController.getSystemHealth));
 router.get('/developer-metrics', asyncHandler(adminController.getDeveloperMetrics));
 router.post('/developer/sync-db', asyncHandler(adminController.triggerDbSync));
 router.post('/developer/clear-metrics', asyncHandler(adminController.clearMetrics));
 
-// Audit trail
 router.get('/audit-logs', asyncHandler(adminController.getAuditLogs));
 
-// Company settings & Subscription Plans
 router.patch('/settings', asyncHandler(adminController.updateCompanySettings));
 router.get('/subscription', asyncHandler(adminController.getSubscriptionInfo));
 router.post('/subscription/upgrade', asyncHandler(adminController.upgradePlan));
 
-// Multi-tenant organization routes
 router.get('/tenants', asyncHandler(adminController.getAllTenants));
 router.post('/tenants', asyncHandler(adminController.createTenant));
 router.patch('/tenants/:id', asyncHandler(adminController.updateTenant));
 
-// Admin Broadcast Notifications
 router.post('/notifications', asyncHandler(adminController.sendNotification));
 router.get('/notifications', asyncHandler(adminController.getAdminNotifications));
 router.delete('/notifications/:id', asyncHandler(adminController.deleteAdminNotification));
 
 module.exports = router;
-

@@ -11,7 +11,7 @@ const outreachSchema = new mongoose.Schema(
     reply_rate: { type: String, default: '0%' },
     status: { type: String, enum: ['Active', 'Draft', 'Completed', 'Paused'], default: 'Active' },
   },
-  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } }
+  { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' }, strict: false }
 );
 
 module.exports = mongoose.model('Outreach', outreachSchema);

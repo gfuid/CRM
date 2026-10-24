@@ -39,3 +39,13 @@ Thumbs.db
 *.njsproj
 *.sln
 *.sw?
+
+# Database snapshots / backups contain customer data
+backend/backups/
+**/backups/*.json
+
+# Local credential notes
+admin-credentials.js
+
+# Local safety copies made before fixes
+.claude/pre-fix-backup-*/

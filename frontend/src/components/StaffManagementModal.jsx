@@ -43,6 +43,16 @@ const PRESET_AVATARS = [
   'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
 ];
 
+const removeStaffPasswordFields = (staff) => {
+  const safeStaff = { ...staff };
+  delete safeStaff.password;
+  delete safeStaff.staff_password;
+  delete safeStaff.plain_password;
+  delete safeStaff.current_password;
+  delete safeStaff.new_password;
+  return safeStaff;
+};
+
 const DEFAULT_PERMISSIONS = {
   view_analytics: false, // Default hidden from staff as requested
   view_leads: true,
@@ -138,7 +148,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
   })();
   const currentUser = profile || user || sessionUser;
   const currentUserId = profile?.id || user?.id || sessionUser?.id;
-  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 10;
+  const staffQuota = currentUser?.staff_limit !== undefined ? Number(currentUser.staff_limit) : 2;
 
   const [staffList, setStaffList] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -219,25 +229,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
   const [creatingStaff, setCreatingStaff] = useState(false);
   const [savingPermissions, setSavingPermissions] = useState(false);
   const [showEditPassword, setShowEditPassword] = useState(false);
-  const [showEditCurrentPassword, setShowEditCurrentPassword] = useState(false);
-  const [showQuickCurrentPassword, setShowQuickCurrentPassword] = useState(false);
-  const [visiblePasswords, setVisiblePasswords] = useState({});
-  const [copiedPassword, setCopiedPassword] = useState(null);
-
-  const togglePasswordVisibility = (staffId) => {
-    setVisiblePasswords((prev) => ({
-      ...prev,
-      [staffId]: !prev[staffId],
-    }));
-  };
-
-  const copyPasswordToClipboard = (password, id) => {
-    if (!password) return;
-    navigator.clipboard.writeText(password);
-    setCopiedPassword(id);
-    setTimeout(() => setCopiedPassword(null), 2500);
-  };
-
   const generateRandomPassword = () => {
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnpqrstuvwxyz23456789@#%';
     let result = '';
@@ -257,34 +248,21 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     setQuickResetLoading(true);
     setError('');
     try {
-      const res = await api.updateUser(staffMember.id, { password: cleanPass, staff_password: cleanPass });
-      if (res && res.success) {
-        setSuccessMsg(`Password successfully updated for ${staffMember.name} (${staffMember.email})!`);
-        setQuickResetStaff(null);
-        setQuickResetPassword('');
-        if (editingStaff && editingStaff.id === staffMember.id) {
-          setEditingStaff((prev) => prev ? { ...prev, staff_password: cleanPass, new_password: '' } : null);
-        }
-        loadStaff();
-        window.dispatchEvent(new Event('crm_staff_updated'));
-        return;
+      const res = await api.updateUser(staffMember.id, { password: cleanPass });
+      if (!res?.success) {
+        throw new Error(res?.message || 'Could not update the staff password.');
       }
-    } catch (err) {
-      console.warn('API updateUser password error, updating locally:', err.message);
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
-      if (ownerKey) {
-        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-        const updated = localStaff.map((s) => s.id === staffMember.id ? { ...s, password: cleanPass, staff_password: cleanPass } : s);
-        localStorage.setItem(ownerKey, JSON.stringify(updated));
-      }
-      setStaffList((prev) => prev.map((s) => s.id === staffMember.id ? { ...s, staff_password: cleanPass } : s));
-      setSuccessMsg(`Password successfully updated for ${staffMember.name}!`);
+      setSuccessMsg(`Password successfully updated for ${staffMember.name} (${staffMember.email})!`);
       setQuickResetStaff(null);
       setQuickResetPassword('');
       if (editingStaff && editingStaff.id === staffMember.id) {
-        setEditingStaff((prev) => prev ? { ...prev, staff_password: cleanPass, new_password: '' } : null);
+        setEditingStaff((prev) => prev ? { ...prev, new_password: '' } : null);
       }
+      loadStaff();
       window.dispatchEvent(new Event('crm_staff_updated'));
+    } catch (err) {
+      console.warn('API updateUser password error:', err.message);
+      setError(err.message || 'Could not update the staff password. Please try again.');
     } finally {
       setQuickResetLoading(false);
     }
@@ -295,8 +273,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       loadStaff();
       if (initialEditStaff) {
         setEditingStaff({
-          ...initialEditStaff,
-          staff_password: initialEditStaff.staff_password || initialEditStaff.plain_password || '123456',
+          ...removeStaffPasswordFields(initialEditStaff),
           data_scope: initialEditStaff.data_scope || 'own_only',
           permissions: initialEditStaff.permissions || { ...DEFAULT_PERMISSIONS },
           new_password: '',
@@ -314,10 +291,12 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
   const loadStaff = async () => {
     setLoading(true);
     let list = [];
+    let serverAnswered = false;
     try {
       const res = await api.getUsers();
-      if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
-        list = res.data;
+      if (res && res.success && Array.isArray(res.data)) {
+        list = res.data.map(removeStaffPasswordFields);
+        serverAnswered = true; // the server list is the truth, even when it is empty
       }
     } catch (err) {
       console.warn('Failed to load staff list from API, checking local storage:', err.message);
@@ -325,9 +304,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
 
     const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
     let localStaff = [];
-    if (ownerKey) {
+    if (ownerKey && !serverAnswered) {
       try {
-        localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        const savedStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
+        localStaff = Array.isArray(savedStaff) ? savedStaff.map(removeStaffPasswordFields) : [];
       } catch {}
     }
 
@@ -342,12 +322,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     // Filter out any tombstoned / deleted staff
     list = list.filter((u) => !isStaffDeleted(u));
 
-    const isKeerthanaCompany =
-      currentUser?.company_id === 'comp_bioniversio_1' ||
-      currentUserId === 'usr_1791814468302_hoa08z' ||
-      currentUser?.email === 'bioniversiobiologics@arggroups.com' ||
-      (currentUser?.name && currentUser.name.toLowerCase().includes('keerthana'));
-
     const currentOwnerEmail = (currentUser?.email || '').toLowerCase();
     const currentOwnerCompId = currentUser?.company_id;
     const genericCompanyIds = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
@@ -357,17 +331,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       if (!u) return false;
       if (u.id === currentUserId || (currentOwnerEmail && u.email?.toLowerCase() === currentOwnerEmail)) return false;
       if (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff')) return false;
-      if (u.name === 'Athish' || u.name === 'Athish Ravikanth' || u.id === 'usr_athish' || u.email === 'athishravikanth@gmail.com') return false;
-
-      if (isKeerthanaCompany && (
-        u.email?.toLowerCase() === 'sagarpunia163@gmail.com' ||
-        u.email?.toLowerCase() === 'rahul@gmail.com' ||
-        u.id === 'usr_1789929063747_allpa4' ||
-        u.id === 'usr_1792001466336_wwykxg'
-      )) {
-        return true;
-      }
-
       if (u.created_by) {
         return (
           u.created_by === currentUserId ||
@@ -387,55 +350,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       return false;
     });
 
-    if (isKeerthanaCompany) {
-      const hasSagar = list.some(
-        (u) =>
-          (u.name && u.name.toLowerCase().includes('sagar')) ||
-          (u.email && u.email.toLowerCase().includes('sagar'))
-      );
-      if (!hasSagar && !isStaffDeleted({ id: 'usr_1789929063747_allpa4', email: 'sagarpunia163@gmail.com' })) {
-        list.unshift({
-          id: 'usr_1789929063747_allpa4',
-          name: 'Sagar Punia',
-          email: 'sagarpunia163@gmail.com',
-          role: 'agent',
-          persona: 'staff',
-          staff_password: 'staff123',
-          department: 'Commodity Sales Executive',
-          phone: '08307967782',
-          is_active: true,
-          company_id: 'comp_bioniversio_1',
-          created_by: 'usr_1791814468302_hoa08z',
-          avatar_url:
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        });
-      }
-
-      const hasRahul = list.some(
-        (u) =>
-          (u.name && u.name.toLowerCase().includes('rahul')) ||
-          (u.email && u.email.toLowerCase().includes('rahul'))
-      );
-      if (!hasRahul && !isStaffDeleted({ id: 'usr_1792001466336_wwykxg', email: 'rahul@gmail.com' })) {
-        list.push({
-          id: 'usr_1792001466336_wwykxg',
-          name: 'Rahul',
-          email: 'rahul@gmail.com',
-          role: 'agent',
-          persona: 'staff',
-          staff_password: 'staff123',
-          department: 'Commodity Sales Executive',
-          phone: '+91 98765 43210',
-          is_active: true,
-          company_id: 'comp_bioniversio_1',
-          created_by: 'usr_1791814468302_hoa08z',
-          avatar_url:
-            'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-        });
-      }
-    }
-
-    list = list.filter((u) => !isStaffDeleted(u));
+    list = list.map(removeStaffPasswordFields);
     setStaffList(list);
     if (ownerKey) {
       try {
@@ -500,7 +415,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         name: form.name.trim(),
         email: form.email.trim().toLowerCase(),
         password: form.password,
-        staff_password: form.password,
         role: form.role,
         department: form.department,
         phone: form.phone.trim(),
@@ -511,28 +425,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         company_id: currentUser?.company_id,
       });
 
-      if (res && res.success) {
+      if (res?.success && res.data) {
         // Sync immediately to owner-specific local storage
         try {
           const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
           if (ownerKey) {
             const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-            const cleanUser = res.data || {
-              id: 'usr_staff_' + Date.now(),
-              name: form.name.trim(),
-              email: form.email.trim().toLowerCase(),
-              staff_password: form.password,
-              role: form.role || 'agent',
-              persona: 'staff',
-              department: form.department,
-              phone: form.phone.trim(),
-              avatar_url: form.avatar_url,
-              data_scope: form.data_scope,
-              permissions: form.permissions,
-              company_id: currentUser?.company_id,
-              created_by: currentUserId,
-              is_active: true,
-            };
+            const cleanUser = removeStaffPasswordFields(res.data);
             const filtered = localStaff.filter((s) => s.email?.toLowerCase() !== cleanUser.email?.toLowerCase());
             filtered.push(cleanUser);
             localStorage.setItem(ownerKey, JSON.stringify(filtered));
@@ -556,6 +455,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         window.dispatchEvent(new Event('crm_staff_updated'));
         return;
       }
+      throw new Error(res?.message || 'The staff account could not be saved on the server.');
     } catch (err) {
       console.warn('API createUser error, checking fallback:', err.message);
       const errMsg = (err.message || '').toLowerCase();
@@ -570,63 +470,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         return;
       }
 
-      // For network errors or offline sync:
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
-      let localStaff = [];
-      if (ownerKey) {
-        localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      }
-      if (localStaff.length >= staffQuota) {
-        setError(`Staff limit reached (${localStaff.length}/${staffQuota} seats used). By default, business owners cannot add more than ${staffQuota} staff members. Contact administrator.`);
-        return;
-      }
-      const ownerCompanyName = currentUser?.company_name || currentUser?.company?.name || 'My Organization';
-      const newStaff = {
-        id: 'usr_staff_' + Date.now(),
-        name: form.name.trim(),
-        email: form.email.trim().toLowerCase(),
-        password: form.password,
-        staff_password: form.password,
-        role: form.role || 'agent',
-        department: form.department || designations[0] || 'Commodity Sales Executive',
-        phone: form.phone.trim(),
-        avatar_url: form.avatar_url,
-        data_scope: form.data_scope,
-        permissions: form.permissions,
-        company_id: currentUser?.company_id,
-        created_by: currentUserId,
-        company_name: ownerCompanyName,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-      if (ownerKey) {
-        localStaff.push(newStaff);
-        localStorage.setItem(ownerKey, JSON.stringify(localStaff));
-      }
-
-      // Also persist to crm_local_users so offline login works smoothly
-      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
-      if (!localUsers.some((u) => u.email.toLowerCase() === newStaff.email.toLowerCase())) {
-        localUsers.push(newStaff);
-        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
-      }
-
-      setStaffList((prev) => [newStaff, ...prev.filter((s) => s.email?.toLowerCase() !== newStaff.email.toLowerCase())]);
-      setSuccessMsg(`Staff account for ${form.name} created successfully! Scope: ${form.data_scope === 'own_only' ? 'Only Own Leads' : 'All Leads'}.`);
-      setForm({
-        name: '',
-        email: '',
-        password: '',
-        role: 'agent',
-        department: designations[0] || 'Commodity Sales Executive',
-        phone: '',
-        avatar_url: PRESET_AVATARS[0],
-        data_scope: 'own_only',
-        permissions: { ...DEFAULT_PERMISSIONS },
-      });
-      setShowAddForm(false);
-      window.dispatchEvent(new Event('crm_staff_updated'));
-      return;
+      setError('The staff account was not saved on the server. Reconnect and try again.');
     } finally {
       setCreatingStaff(false);
     }
@@ -654,13 +498,15 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         return;
       }
       payload.password = editingStaff.new_password.trim();
-      payload.staff_password = editingStaff.new_password.trim();
     }
 
     setSavingPermissions(true);
     try {
       const res = await api.updateUser(editingStaff.id, payload);
-      const updatedUser = (res && res.success && res.data) ? res.data : { ...editingStaff, ...payload };
+      if (!res?.success || !res.data) {
+        throw new Error(res?.message || 'Could not update this staff account.');
+      }
+      const updatedUser = removeStaffPasswordFields(res.data);
 
       // Sync across owner-specific local storage cache
       const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
@@ -668,9 +514,9 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
         const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
         if (idx !== -1) {
-          localStaff[idx] = { ...localStaff[idx], ...updatedUser };
+          localStaff[idx] = removeStaffPasswordFields({ ...localStaff[idx], ...updatedUser });
         } else {
-          localStaff.push(updatedUser);
+          localStaff.push(removeStaffPasswordFields(updatedUser));
         }
         localStorage.setItem(ownerKey, JSON.stringify(localStaff));
       }
@@ -679,7 +525,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
       const uIdx = localUsers.findIndex((u) => u.id === editingStaff.id || u.email?.toLowerCase() === editingStaff.email?.toLowerCase());
       if (uIdx !== -1) {
-        localUsers[uIdx] = { ...localUsers[uIdx], ...updatedUser };
+        localUsers[uIdx] = removeStaffPasswordFields({ ...localUsers[uIdx], ...updatedUser });
         localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
       }
 
@@ -689,9 +535,9 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
         try {
           const session = JSON.parse(sessionStr);
           if (session?.user && (session.user.id === editingStaff.id || session.user.email?.toLowerCase() === editingStaff.email?.toLowerCase())) {
-            session.user = { ...session.user, ...updatedUser };
+            session.user = removeStaffPasswordFields({ ...session.user, ...updatedUser });
             if (session.profile) {
-              session.profile = { ...session.profile, ...updatedUser };
+              session.profile = removeStaffPasswordFields({ ...session.profile, ...updatedUser });
             }
             localStorage.setItem('crm_user_session', JSON.stringify(session));
           }
@@ -706,52 +552,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       window.dispatchEvent(new Event('crm_staff_updated'));
       return;
     } catch (err) {
-      console.warn('API updateUser error, saving to local storage fallback:', err.message);
-      const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
-      const updatedStaff = {
-        ...editingStaff,
-        ...payload,
-        staff_password: payload.staff_password || editingStaff.staff_password || '123456',
-      };
-      if (ownerKey) {
-        const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-        const idx = localStaff.findIndex((s) => s.id === editingStaff.id || s.email?.toLowerCase() === editingStaff.email?.toLowerCase());
-        if (idx !== -1) {
-          localStaff[idx] = { ...localStaff[idx], ...updatedStaff };
-        } else {
-          localStaff.push(updatedStaff);
-        }
-        localStorage.setItem(ownerKey, JSON.stringify(localStaff));
-      }
-
-      // Sync crm_local_users
-      const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
-      const uIdx = localUsers.findIndex((u) => u.id === editingStaff.id || u.email?.toLowerCase() === editingStaff.email?.toLowerCase());
-      if (uIdx !== -1) {
-        localUsers[uIdx] = { ...localUsers[uIdx], ...updatedStaff };
-        localStorage.setItem('crm_local_users', JSON.stringify(localUsers));
-      }
-
-      // Live update active session if currently logged in as this staff member
-      const sessionStr = localStorage.getItem('crm_user_session');
-      if (sessionStr) {
-        try {
-          const session = JSON.parse(sessionStr);
-          if (session?.user && (session.user.id === editingStaff.id || session.user.email?.toLowerCase() === editingStaff.email?.toLowerCase())) {
-            session.user = { ...session.user, ...updatedStaff };
-            if (session.profile) {
-              session.profile = { ...session.profile, ...updatedStaff };
-            }
-            localStorage.setItem('crm_user_session', JSON.stringify(session));
-          }
-        } catch (e) { }
-      }
-
-      setStaffList((prev) => prev.map((s) => (s.id === editingStaff.id ? { ...s, ...updatedStaff } : s)));
-      setSuccessMsg(`Permissions and details updated for ${editingStaff.name}!`);
-      setEditingStaff(null);
-      window.dispatchEvent(new CustomEvent('crm_permissions_updated', { detail: updatedStaff }));
-      window.dispatchEvent(new Event('crm_staff_updated'));
+      console.error('Failed to update staff account:', err);
+      setError(err?.message || 'Could not update this staff account. Please try again.');
     } finally {
       setSavingPermissions(false);
     }
@@ -759,14 +561,21 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
 
   const toggleStatus = async (userId) => {
     try {
-      await api.toggleUserStatus(userId);
+      const res = await api.toggleUserStatus(userId);
+      if (!res?.success) {
+        throw new Error(res?.message || 'Could not update this staff member’s status.');
+      }
     } catch (err) {
-      console.warn('API toggleUserStatus error, toggling in local storage:', err.message);
+      console.error('Failed to update staff status:', err);
+      setError(err?.message || 'Could not update this staff member’s status. Please try again.');
+      return;
     }
     const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
     if (ownerKey) {
       const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-      const updated = localStaff.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s));
+      const updated = localStaff.map((s) => removeStaffPasswordFields(
+        s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s
+      ));
       localStorage.setItem(ownerKey, JSON.stringify(updated));
     }
     setStaffList((prev) => prev.map((s) => (s.id === userId || String(s._id) === String(userId) ? { ...s, is_active: !s.is_active } : s)));
@@ -788,45 +597,10 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     setSuccessMsg('');
 
     try {
-      if (deleteStaffMember) {
-        await deleteStaffMember(staffId, staffEmail);
-      } else {
-        try {
-          if (staffId || staffEmail) {
-            await api.deleteUser(staffId || staffEmail);
-          }
-        } catch (err) {
-          console.warn('API deleteUser error, removing from local storage:', err.message);
-        }
-
-        try {
-          const deleted = JSON.parse(localStorage.getItem('crm_deleted_staff') || '[]');
-          const newEntries = [staffId, staffMember._id, staffEmail].filter(Boolean).map((x) => String(x).toLowerCase());
-          const updated = Array.from(new Set([...deleted, ...newEntries]));
-          localStorage.setItem('crm_deleted_staff', JSON.stringify(updated));
-        } catch {}
-
-        const isTarget = (u) => {
-          if (!u) return false;
-          if (staffId && (u.id === staffId || String(u._id) === String(staffId))) return true;
-          if (staffMember._id && String(u._id) === String(staffMember._id)) return true;
-          if (staffEmail && u.email && u.email.toLowerCase() === staffEmail.toLowerCase()) return true;
-          return false;
-        };
-
-        const ownerKey = currentUserId ? `crm_local_staff_${currentUserId}` : null;
-        if (ownerKey) {
-          const localStaff = JSON.parse(localStorage.getItem(ownerKey) || '[]');
-          const filtered = localStaff.filter((s) => !isTarget(s));
-          localStorage.setItem(ownerKey, JSON.stringify(filtered));
-        }
-
-        const localUsers = JSON.parse(localStorage.getItem('crm_local_users') || '[]');
-        const filteredUsers = localUsers.filter((u) => !isTarget(u));
-        localStorage.setItem('crm_local_users', JSON.stringify(filteredUsers));
-
-        window.dispatchEvent(new CustomEvent('crm_staff_updated', { detail: { deletedId: staffId, deletedEmail: staffEmail } }));
+      if (typeof deleteStaffMember !== 'function') {
+        throw new Error('Staff deletion is unavailable. Refresh the page and try again.');
       }
+      await deleteStaffMember(staffId, staffEmail);
 
       setStaffList((prev) => prev.filter((s) => {
         if (staffId && (s.id === staffId || String(s._id) === String(staffId))) return false;
@@ -1269,25 +1043,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     </div>
                   </label>
 
-                  {/* Task Assignment Permission (Strict Staff Restriction) */}
-                  <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.tasks_assign
-                      ? 'bg-emerald-50 border-emerald-300'
-                      : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}>
-                    <input
-                      type="checkbox"
-                      checked={!!form.permissions.tasks_assign}
-                      onChange={(e) => setForm({
-                        ...form,
-                        permissions: { ...form.permissions, tasks_assign: e.target.checked }
-                      })}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <div className="min-w-0">
-                      <span className="font-bold block truncate">➕ Assign New Tasks</span>
-                      <span className="text-[10px] text-slate-400 block">{form.permissions.tasks_assign ? 'Allowed' : 'Disabled (Owner Only)'}</span>
-                    </div>
-                  </label>
 
                   {/* Follow-up Toggle */}
                   <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
@@ -1319,7 +1074,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     />
                     <div className="min-w-0">
                       <span className="font-bold block truncate">📞 Outreach Matrix</span>
-                      <span className="text-[10px] text-slate-400 block">Daily touchpoints</span>
+                      <span className="text-[10px] text-slate-400 block">Page with daily calls / emails / WhatsApp counts per person</span>
                     </div>
                   </label>
 
@@ -1371,76 +1126,43 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               {/* CRUD Action Rights */}
               <div className="space-y-1.5 pt-1">
                 <label className="block text-xs font-bold text-slate-900 dark:text-white">
-                  3. CRUD Action Rights <span className="text-emerald-600">(What can they do?)</span>
+                  3. What can they do? <span className="text-emerald-600">(Actions)</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                  <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className="p-2.5 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={form.permissions.can_read}
-                      onChange={(e) => setForm({
-                        ...form,
-                        permissions: { ...form.permissions, can_read: e.target.checked }
-                      })}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
-                    />
-                    <span className="font-semibold">👁️ Read</span>
-                  </label>
-
-                  <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={form.permissions.can_create}
+                      checked={form.permissions.can_create !== false}
                       onChange={(e) => setForm({
                         ...form,
                         permissions: { ...form.permissions, can_create: e.target.checked }
                       })}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
                     />
-                    <span className="font-semibold">✍️ Create</span>
+                    <div className="min-w-0">
+                      <span className="font-bold block">✍️ Create</span>
+                      <span className="text-[10px] text-slate-500 block">Add new leads, follow-ups and personal tasks</span>
+                    </div>
                   </label>
-
-                  <label className="p-2 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
+                  <label className="p-2.5 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-2 cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={form.permissions.can_update}
+                      checked={form.permissions.can_update !== false}
                       onChange={(e) => setForm({
                         ...form,
                         permissions: { ...form.permissions, can_update: e.target.checked }
                       })}
-                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
                     />
-                    <span className="font-semibold">✏️ Update</span>
-                  </label>
-
-                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}>
-                    <input
-                      type="checkbox"
-                      checked={!!form.permissions.can_export}
-                      onChange={(e) => setForm({
-                        ...form,
-                        permissions: { ...form.permissions, can_export: e.target.checked }
-                      })}
-                      className="rounded text-indigo-600 focus:ring-indigo-500"
-                    />
-                    <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
-                  </label>
-
-                  <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer transition-all ${form.permissions.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800'
-                    }`}>
-                    <input
-                      type="checkbox"
-                      checked={form.permissions.can_delete}
-                      onChange={(e) => setForm({
-                        ...form,
-                        permissions: { ...form.permissions, can_delete: e.target.checked }
-                      })}
-                      className="rounded text-rose-600 focus:ring-rose-500"
-                    />
-                    <span className="font-semibold text-rose-700 dark:text-rose-400">🗑️ Delete</span>
+                    <div className="min-w-0">
+                      <span className="font-bold block">✏️ Add updates</span>
+                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done. Cannot change lead details.</span>
+                    </div>
                   </label>
                 </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Editing lead details, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
+                </p>
               </div>
             </div>
 
@@ -1559,63 +1281,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </div>
               </div>
 
-              {/* Password Management Box for Owner */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
-                {/* 1. CURRENT STAFF PASSWORD (VISIBLE / REVEALABLE) */}
-                <div className="p-3 bg-amber-50/60 dark:bg-amber-950/20 border border-amber-200/90 dark:border-amber-800/60 rounded-xl space-y-1.5 flex flex-col justify-between">
-                  <div>
-                    <div className="flex items-center justify-between mb-1">
-                      <label className="text-[11px] font-extrabold text-amber-950 dark:text-amber-200 flex items-center gap-1.5">
-                        <Lock size={12} className="text-amber-600" />
-                        <span>Current Login Password</span>
-                        <span className="px-1.5 py-0.2 rounded bg-amber-200/70 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200 text-[9px] font-extrabold">
-                          Owner Eye View
-                        </span>
-                      </label>
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => setShowEditCurrentPassword(!showEditCurrentPassword)}
-                          className="px-2 py-0.5 text-[10px] font-bold text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/40 rounded-md transition-colors cursor-pointer flex items-center gap-1"
-                          title={showEditCurrentPassword ? 'Hide password' : 'View password'}
-                        >
-                          {showEditCurrentPassword ? <EyeOff size={12} /> : <Eye size={12} />}
-                          <span>{showEditCurrentPassword ? 'Hide' : 'View'}</span>
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => copyPasswordToClipboard(editingStaff.staff_password || editingStaff.plain_password || '123456', 'edit_curr')}
-                          className="px-2 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-800 border border-amber-300 dark:border-amber-800 rounded-md transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                          title="Copy current password"
-                        >
-                          {copiedPassword === 'edit_curr' ? (
-                            <>
-                              <Check size={11} className="text-emerald-600" />
-                              <span className="text-emerald-600">Copied!</span>
-                            </>
-                          ) : (
-                            <>
-                              <Copy size={11} />
-                              <span>Copy</span>
-                            </>
-                          )}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-white tracking-wider flex items-center justify-between">
-                      <span className="select-all">
-                        {showEditCurrentPassword
-                          ? (editingStaff.staff_password || editingStaff.plain_password || '123456')
-                          : '••••••••••••'}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="text-[10px] text-amber-800/80 dark:text-amber-400">
-                    Employee uses this password to log in. Click "View" or copy to send.
-                  </div>
-                </div>
-
-                {/* 2. CHANGE / RESET PASSWORD */}
+              {/* Password changes are allowed; existing passwords are never displayed. */}
+              <div className="grid grid-cols-1 gap-3 pt-1">
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-xl space-y-1.5 flex flex-col justify-between">
                   <div>
                     <div className="flex items-center justify-between mb-1">
@@ -1835,25 +1502,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                   </div>
                 </label>
 
-                {/* Tasks Assignment (Restricted) */}
-                <label className={`p-2.5 rounded-xl border flex items-center gap-2 cursor-pointer transition-all ${editingStaff.permissions?.tasks_assign
-                    ? 'bg-emerald-50 border-emerald-300'
-                    : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                  }`}>
-                  <input
-                    type="checkbox"
-                    checked={!!editingStaff.permissions?.tasks_assign}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, tasks_assign: e.target.checked }
-                    })}
-                    className="rounded text-emerald-600"
-                  />
-                  <div>
-                    <span className="font-bold block">➕ Assign Tasks</span>
-                    <span className="text-[10px] text-slate-400 block">{editingStaff.permissions?.tasks_assign ? 'Allowed' : 'Disabled'}</span>
-                  </div>
-                </label>
 
                 <label className="p-2.5 rounded-xl border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
                   <input
@@ -1924,72 +1572,43 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             {/* CRUD */}
             <div>
               <label className="block text-xs font-bold text-slate-900 dark:text-white mb-1.5">
-                3. Action Rights (CRUD) <span className="text-emerald-600">(What can they do?)</span>
+                3. What can they do? <span className="text-emerald-600">(Actions)</span>
               </label>
-              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 text-xs">
-                <label className="p-2 rounded-lg border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingStaff.permissions?.can_read !== false}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, can_read: e.target.checked }
-                    })}
-                    className="rounded text-emerald-600"
-                  />
-                  <span className="font-semibold">👁️ Read</span>
-                </label>
-                <label className="p-2 rounded-lg border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingStaff.permissions?.can_create !== false}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, can_create: e.target.checked }
-                    })}
-                    className="rounded text-emerald-600"
-                  />
-                  <span className="font-semibold">✍️ Create</span>
-                </label>
-                <label className="p-2 rounded-lg border bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={editingStaff.permissions?.can_update !== false}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, can_update: e.target.checked }
-                    })}
-                    className="rounded text-emerald-600"
-                  />
-                  <span className="font-semibold">✏️ Update</span>
-                </label>
-                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${editingStaff.permissions?.can_export ? 'bg-indigo-50 border-indigo-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                  }`}>
-                  <input
-                    type="checkbox"
-                    checked={!!editingStaff.permissions?.can_export}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, can_export: e.target.checked }
-                    })}
-                    className="rounded text-indigo-600"
-                  />
-                  <span className="font-semibold text-indigo-700 dark:text-indigo-400">📥 Export</span>
-                </label>
-                <label className={`p-2 rounded-lg border flex items-center gap-2 cursor-pointer ${editingStaff.permissions?.can_delete ? 'bg-rose-50 border-rose-300' : 'bg-white dark:bg-slate-950 border-slate-200 dark:border-slate-800'
-                  }`}>
-                  <input
-                    type="checkbox"
-                    checked={!!editingStaff.permissions?.can_delete}
-                    onChange={(e) => setEditingStaff({
-                      ...editingStaff,
-                      permissions: { ...editingStaff.permissions, can_delete: e.target.checked }
-                    })}
-                    className="rounded text-rose-600"
-                  />
-                  <span className="font-semibold text-rose-600">🗑️ Delete</span>
-                </label>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs">
+                  <label className="p-2.5 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingStaff.permissions?.can_create !== false}
+                      onChange={(e) => setEditingStaff({
+                        ...editingStaff,
+                        permissions: { ...editingStaff.permissions, can_create: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block">✍️ Create</span>
+                      <span className="text-[10px] text-slate-500 block">Add new leads, follow-ups and personal tasks</span>
+                    </div>
+                  </label>
+                  <label className="p-2.5 rounded-lg border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-start gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={editingStaff.permissions?.can_update !== false}
+                      onChange={(e) => setEditingStaff({
+                        ...editingStaff,
+                        permissions: { ...editingStaff.permissions, can_update: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block">✏️ Add updates</span>
+                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done. Cannot change lead details.</span>
+                    </div>
+                  </label>
+                </div>
+                <p className="text-[10px] text-slate-500 mt-1">
+                  Editing lead details, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
+                </p>
             </div>
 
             <div className="flex items-center justify-between gap-2 pt-2 border-t border-slate-200 dark:border-slate-800">
@@ -2055,9 +1674,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     <th className="py-3 px-3.5 bg-emerald-50/40 dark:bg-emerald-950/20 text-emerald-900 dark:text-emerald-300">
                       Login Email Address
                     </th>
-                    <th className="py-3 px-3.5 bg-amber-50/40 dark:bg-amber-950/20 text-amber-900 dark:text-amber-300">
-                      Login Password
-                    </th>
                     <th className="py-3 px-3.5">Department / Role</th>
                     <th className="py-3 px-3.5">Data Scope</th>
                     <th className="py-3 px-3.5">Permissions</th>
@@ -2067,7 +1683,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs">
                   {staffList.length === 0 ? (
                     <tr>
-                      <td colSpan="7" className="p-8 text-center text-slate-400 text-xs">
+                      <td colSpan="6" className="p-8 text-center text-slate-400 text-xs">
                         No staff members found. Click "+ Add New Staff" to create an employee account.
                       </td>
                     </tr>
@@ -2127,44 +1743,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                             </div>
                           </td>
 
-                          {/* DEDICATED VISIBLE LOGIN PASSWORD COLUMN */}
-                          <td className="py-3 px-3.5 whitespace-nowrap bg-amber-50/20 dark:bg-amber-950/10">
-                            {isOwnerStaff ? (
-                              <span className="text-[11px] font-semibold text-slate-400 italic">
-                                Private (Owner)
-                              </span>
-                            ) : (
-                              <div className="flex items-center gap-1.5 font-bold text-xs text-slate-900 dark:text-slate-100">
-                                <Lock size={12} className="text-amber-600 shrink-0" />
-                                <span className="font-mono text-[11px] tracking-wider select-all">
-                                  {visiblePasswords[staff.id]
-                                    ? (staff.staff_password || staff.plain_password || '123456')
-                                    : '••••••••'}
-                                </span>
-                                <button
-                                  type="button"
-                                  onClick={() => togglePasswordVisibility(staff.id)}
-                                  className="p-1 rounded text-slate-400 hover:text-amber-600 transition-colors cursor-pointer"
-                                  title={visiblePasswords[staff.id] ? 'Hide password' : 'Show password'}
-                                >
-                                  {visiblePasswords[staff.id] ? <EyeOff size={13} /> : <Eye size={13} />}
-                                </button>
-                                <button
-                                  type="button"
-                                  onClick={() => copyPasswordToClipboard(staff.staff_password || staff.plain_password || '123456', staff.id)}
-                                  className="p-1 rounded text-slate-400 hover:text-emerald-600 transition-colors cursor-pointer"
-                                  title="Copy Password"
-                                >
-                                  {copiedPassword === staff.id ? (
-                                    <Check size={12} className="text-emerald-600" />
-                                  ) : (
-                                    <Copy size={12} />
-                                  )}
-                                </button>
-                              </div>
-                            )}
-                          </td>
-
                           {/* Department / Role */}
                           <td className="py-3 px-3.5 text-slate-600 dark:text-slate-300 font-medium">
                             <div className="font-semibold text-slate-800 dark:text-slate-200">{staff.department || 'Commodity Sales'}</div>
@@ -2208,22 +1786,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                     📋 Leads
                                   </span>
 
-                                  <span className={`px-1.5 py-0.2 rounded text-[9px] font-bold border ${perms.tasks_assign
-                                      ? 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                                      : 'bg-blue-50 text-blue-700 border-blue-200'
-                                    }`}>
-                                    {perms.tasks_assign ? '✅ Tasks (Can Assign)' : '✅ Tasks (View Only)'}
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold border bg-blue-50 text-blue-700 border-blue-200">
+                                    ✅ Tasks
                                   </span>
 
-                                  {perms.can_delete ? (
-                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-rose-50 text-rose-700 border border-rose-200">
-                                      🗑️ Delete: ON
-                                    </span>
-                                  ) : (
-                                    <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-400">
-                                      No Delete
-                                    </span>
-                                  )}
+                                  <span className="px-1.5 py-0.2 rounded text-[9px] font-bold bg-slate-100 text-slate-500">
+                                    No Delete (owner only)
+                                  </span>
                                 </>
                               )}
                             </div>
@@ -2251,8 +1820,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                                   <button
                                     type="button"
                                     onClick={() => setEditingStaff({
-                                      ...staff,
-                                      staff_password: staff.staff_password || staff.plain_password || '123456',
+                                      ...removeStaffPasswordFields(staff),
                                       data_scope: staff.data_scope || 'own_only',
                                       permissions: staff.permissions || { ...DEFAULT_PERMISSIONS },
                                       new_password: '',
@@ -2333,51 +1901,6 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               </div>
 
               <div className="space-y-3">
-                {/* Current Active Password display with Eye Toggle & Copy */}
-                <div className="p-3 bg-amber-50/70 dark:bg-amber-950/30 border border-amber-200/90 dark:border-amber-800/70 rounded-xl space-y-1.5">
-                  <div className="flex items-center justify-between text-[11px] font-bold text-amber-950 dark:text-amber-200">
-                    <span className="flex items-center gap-1.5">
-                      <Lock size={12} className="text-amber-600" />
-                      Current Login Password:
-                    </span>
-                    <div className="flex items-center gap-1.5">
-                      <button
-                        type="button"
-                        onClick={() => setShowQuickCurrentPassword(!showQuickCurrentPassword)}
-                        className="text-[10px] text-amber-700 dark:text-amber-300 hover:underline flex items-center gap-0.5 cursor-pointer font-bold"
-                      >
-                        {showQuickCurrentPassword ? <EyeOff size={11} /> : <Eye size={11} />}
-                        <span>{showQuickCurrentPassword ? 'Hide' : 'View'}</span>
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => copyPasswordToClipboard(quickResetStaff.staff_password || quickResetStaff.plain_password || '123456', 'quick_curr')}
-                        className="px-1.5 py-0.5 text-[10px] font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-amber-300 dark:border-amber-800 rounded transition-colors cursor-pointer flex items-center gap-1 shadow-2xs"
-                        title="Copy Password"
-                      >
-                        {copiedPassword === 'quick_curr' ? (
-                          <>
-                            <Check size={10} className="text-emerald-600" />
-                            <span className="text-emerald-600">Copied!</span>
-                          </>
-                        ) : (
-                          <>
-                            <Copy size={10} />
-                            <span>Copy</span>
-                          </>
-                        )}
-                      </button>
-                    </div>
-                  </div>
-                  <div className="px-3 py-1.5 bg-white dark:bg-slate-900 border border-amber-200 dark:border-amber-900/40 rounded-lg font-mono text-xs font-bold text-slate-900 dark:text-white tracking-wider flex items-center justify-between">
-                    <span className="select-all">
-                      {showQuickCurrentPassword
-                        ? (quickResetStaff.staff_password || quickResetStaff.plain_password || '123456')
-                        : '••••••••••••'}
-                    </span>
-                  </div>
-                </div>
-
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-bold text-slate-700 dark:text-slate-300">

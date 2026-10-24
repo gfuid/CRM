@@ -57,29 +57,36 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
     if (isManual) setRefreshing(true);
     try {
       const headers = getHeaders();
-      let res = await fetch(`${apiBase}/developer-metrics`, { headers }).catch(() => null);
+      const endpoints = [
+        `${apiBase}/developer-metrics`,
+        `${apiBase.includes('localhost') ? 'https://crm-ep4i.onrender.com/api/v1/admin' : 'http://localhost:5000/api/v1/admin'}/developer-metrics`,
+      ];
+      const failures = [];
 
-      // If primary endpoint failed, check local/remote alternate
-      if (!res || !res.ok) {
-        const alternateBase = apiBase.includes('localhost')
-          ? 'https://crm-ep4i.onrender.com/api/v1/admin'
-          : 'http://localhost:5000/api/v1/admin';
-        res = await fetch(`${alternateBase}/developer-metrics`, { headers }).catch(() => null);
-      }
-
-      if (res && res.ok) {
-        const json = await res.json();
-        if (json.success && json.data) {
-          setMetrics(json.data);
-          setError(null);
-          setLastRefreshedAt(new Date());
-          if (isManual) {
-            showToast('Developer & infrastructure telemetry updated');
+      for (const endpoint of endpoints) {
+        try {
+          const res = await fetch(endpoint, { headers });
+          if (!res.ok) {
+            failures.push(`${endpoint} returned HTTP ${res.status}`);
+            continue;
           }
-          return;
+
+          const json = await res.json();
+          if (json.success && json.data) {
+            setMetrics(json.data);
+            setError(null);
+            setLastRefreshedAt(new Date());
+            if (isManual) {
+              showToast('Developer & infrastructure telemetry updated');
+            }
+            return;
+          }
+          failures.push(`${endpoint}: ${json.message || 'no telemetry data returned'}`);
+        } catch (err) {
+          failures.push(`${endpoint}: ${err.message}`);
         }
       }
-      throw new Error('Unable to connect to telemetry API');
+      throw new Error(failures.join('; ') || 'Unable to connect to telemetry API');
     } catch (err) {
       console.warn('Developer metrics fetch warning:', err.message);
       setError(err.message);
@@ -217,6 +224,37 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
     );
   }
 
+  if (!metrics) {
+    return (
+      <div className="max-w-3xl mx-auto rounded-3xl border border-amber-200 bg-amber-50 p-6 sm:p-8">
+        <div className="flex items-start gap-4">
+          <div className="rounded-2xl bg-amber-100 p-3 text-amber-700">
+            <AlertTriangle size={22} />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-extrabold text-slate-900">Server metrics are unavailable</h2>
+            <p className="mt-2 text-sm text-slate-700">
+              The dashboard could not get data from the backend. No live values are available to show.
+            </p>
+            <p className="mt-2 text-xs font-mono text-slate-500">
+              Primary API: {apiBase}/developer-metrics
+            </p>
+            {error && <p className="mt-1 break-all text-xs font-mono text-rose-700">{error}</p>}
+            <button
+              type="button"
+              onClick={() => fetchMetrics(true)}
+              disabled={refreshing}
+              className="mt-5 inline-flex items-center gap-2 rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-bold text-white transition-colors hover:bg-slate-700 disabled:opacity-60"
+            >
+              <RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />
+              {refreshing ? 'Trying again…' : 'Retry connection'}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   const { server, processMemory, systemMemory, database, apiPerformance } = metrics || {};
   const dbUsagePercent = parseFloat(database?.percentUsed || '0');
   const heapUsagePercent = parseFloat(processMemory?.heapUsagePercent || '0');
@@ -234,7 +272,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
             <div className="flex items-center gap-3 flex-wrap">
               <div className="flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide">
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>BACKEND ACTIVE · {server?.status || 'ONLINE'}</span>
+                <span>BACKEND ACTIVE · {server?.status}</span>
               </div>
               <span className="text-xs text-slate-400 font-mono">
                 Node {server?.nodeVersion} · PID {server?.pid} · {server?.platform} ({server?.arch})
@@ -359,7 +397,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 MongoDB Atlas Storage
               </div>
               <div className="text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
-                <span>{database?.totalUsedMb ?? '0.13'}</span>
+                <span>{database?.totalUsedMb ?? '—'}</span>
                 <span className="text-xs font-bold text-slate-400">/ 512 MB</span>
               </div>
             </div>
@@ -374,7 +412,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Free M0 Capacity Used</span>
               <span className={`font-black ${dbUsagePercent > 80 ? 'text-rose-600' : 'text-slate-900'}`}>
-                {database?.percentUsed ?? '0.02'}%
+                {database?.percentUsed ?? '—'}%
               </span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
@@ -386,8 +424,8 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-              <span>Remaining Free: <strong className="text-emerald-700 font-bold">{database?.freeMb ?? '511.87'} MB</strong></span>
-              <span className="font-mono">{database?.objectsCount ?? 18} docs</span>
+              <span>Remaining Free: <strong className="text-emerald-700 font-bold">{database?.freeMb ?? '—'} MB</strong></span>
+              <span className="font-mono">{database?.objectsCount ?? '—'} docs</span>
             </div>
           </div>
         </div>
@@ -400,8 +438,8 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 Node.js Heap Memory
               </div>
               <div className="text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
-                <span>{processMemory?.heapUsedMb ?? '42.15'}</span>
-                <span className="text-xs font-bold text-slate-400">/ {processMemory?.heapTotalMb ?? '68.50'} MB</span>
+                <span>{processMemory?.heapUsedMb ?? '—'}</span>
+                <span className="text-xs font-bold text-slate-400">/ {processMemory?.heapTotalMb ?? '—'} MB</span>
               </div>
             </div>
             <div className="w-10 h-10 rounded-2xl bg-indigo-100 text-indigo-700 flex items-center justify-center font-bold shrink-0">
@@ -412,7 +450,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Heap Utilization</span>
-              <span className="font-black text-indigo-900">{processMemory?.heapUsagePercent ?? '61.5'}%</span>
+              <span className="font-black text-indigo-900">{processMemory?.heapUsagePercent ?? '—'}%</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
               <div
@@ -421,8 +459,8 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-              <span>RSS: <strong className="text-slate-800 font-bold">{processMemory?.rssMb ?? '89.20'} MB</strong></span>
-              <span>Ext: {processMemory?.externalMb ?? '4.10'} MB</span>
+              <span>RSS: <strong className="text-slate-800 font-bold">{processMemory?.rssMb ?? '—'} MB</strong></span>
+              <span>Ext: {processMemory?.externalMb ?? '—'} MB</span>
             </div>
           </div>
         </div>
@@ -435,7 +473,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 Host System RAM
               </div>
               <div className="text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
-                <span>{systemMemory?.freeMb ?? '4096.00'}</span>
+                <span>{systemMemory?.freeMb ?? '—'}</span>
                 <span className="text-xs font-bold text-slate-400">MB Free</span>
               </div>
             </div>
@@ -447,7 +485,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Total System RAM</span>
-              <span className="font-black text-slate-900">{systemMemory?.totalMb ?? '16384.00'} MB</span>
+              <span className="font-black text-slate-900">{systemMemory?.totalMb ?? '—'} MB</span>
             </div>
             <div className="w-full bg-slate-100 rounded-full h-2.5 overflow-hidden">
               <div
@@ -456,8 +494,8 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
               />
             </div>
             <div className="flex items-center justify-between text-[11px] text-slate-500 pt-1 border-t border-slate-100">
-              <span>Used: <strong className="text-slate-800 font-bold">{systemMemory?.usedMb ?? '12288.00'} MB</strong></span>
-              <span>{systemMemory?.usagePercent ?? '75.0'}% load</span>
+              <span>Used: <strong className="text-slate-800 font-bold">{systemMemory?.usedMb ?? '—'} MB</strong></span>
+              <span>{systemMemory?.usagePercent ?? '—'}% load</span>
             </div>
           </div>
         </div>
@@ -470,7 +508,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 API Avg Latency
               </div>
               <div className="text-2xl font-black text-slate-900 mt-1 flex items-baseline gap-1">
-                <span>{apiPerformance?.avgLatencyMs ?? '18'}</span>
+                <span>{apiPerformance?.avgLatencyMs ?? '—'}</span>
                 <span className="text-xs font-bold text-slate-400">ms</span>
               </div>
             </div>
@@ -482,7 +520,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs">
               <span className="font-semibold text-slate-600">Total Hits</span>
-              <span className="font-extrabold text-amber-900">{apiPerformance?.totalRequests ?? '142'} requests</span>
+              <span className="font-extrabold text-amber-900">{apiPerformance?.totalRequests ?? '—'} requests</span>
             </div>
             <div className="flex items-center gap-1.5">
               <span className="px-2 py-0.5 rounded-full bg-emerald-50 text-emerald-700 text-[10px] font-extrabold border border-emerald-200">
@@ -590,7 +628,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
                   database?.connected ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'
                 }`}>
-                  {database?.connected ? 'Atlas Online' : 'Snapshot Mode'}
+                  {database?.connected ? 'Atlas Online' : database ? 'Snapshot Mode' : 'Unavailable'}
                 </span>
               </div>
 
@@ -740,7 +778,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
               <div className="flex items-center justify-between text-xs font-bold">
                 <span className="text-slate-700">Cluster Space Utilization</span>
                 <span className="text-slate-900">
-                  {database?.totalUsedMb ?? '0.13'} MB used of 512 MB ({database?.percentUsed ?? '0.02'}%)
+                  {database?.totalUsedMb ?? '—'} MB used of 512 MB ({database?.percentUsed ?? '—'}%)
                 </span>
               </div>
 
@@ -756,19 +794,19 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase">Available Free Space</div>
-                  <div className="text-lg font-black text-emerald-700 mt-0.5">{database?.freeMb ?? '511.87'} MB</div>
+                  <div className="text-lg font-black text-emerald-700 mt-0.5">{database?.freeMb ?? '—'} MB</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Safe margin remaining</div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase">Data Size</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">{database?.dataSizeMb ?? '0.13'} MB</div>
-                  <div className="text-[10px] text-slate-400 mt-0.5">{database?.dataSizeBytes ?? '136,480'} bytes</div>
+                  <div className="text-lg font-black text-slate-900 mt-0.5">{database?.dataSizeMb ?? '—'} MB</div>
+                  <div className="text-[10px] text-slate-400 mt-0.5">{database?.dataSizeBytes ?? '—'} bytes</div>
                 </div>
 
                 <div className="p-3.5 rounded-2xl bg-white border border-slate-200/90 shadow-2xs">
                   <div className="text-[10px] font-extrabold text-slate-400 uppercase">Storage on Disk</div>
-                  <div className="text-lg font-black text-slate-900 mt-0.5">{database?.storageSizeMb ?? '0.13'} MB</div>
+                  <div className="text-lg font-black text-slate-900 mt-0.5">{database?.storageSizeMb ?? '—'} MB</div>
                   <div className="text-[10px] text-slate-400 mt-0.5">Pre-allocated blocks</div>
                 </div>
 
@@ -829,7 +867,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
         </div>
       )}
 
-      {/* TAB 3: USER MEMORY CONSUMPTION ("Kitna user kitna memory khaa raha hai") */}
+      {/* TAB 3: USER MEMORY CONSUMPTION ("Memory used per user") */}
       {activeTab === 'memory' && (
         <div className="space-y-6">
           <div className="bg-white rounded-3xl p-6 border border-slate-200/90 shadow-card space-y-4">
@@ -840,7 +878,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                   <span>Tenant & User Memory Profiler</span>
                 </h3>
                 <p className="text-xs text-slate-500 font-medium mt-0.5">
-                  Breakdown of data and memory footprint by Business Owner organization.
+                  Storage is an estimate from workspace records, not an exact disk measurement. API counts cover authenticated requests since this server started or metrics were reset.
                 </p>
               </div>
 
@@ -863,8 +901,10 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                     <th className="py-3 px-4">Business Owner & Company</th>
                     <th className="py-3 px-4">Staff Count</th>
                     <th className="py-3 px-4">Leads Count</th>
-                    <th className="py-3 px-4">Data Footprint</th>
-                    <th className="py-3 px-4">Database Share</th>
+                    <th className="py-3 px-4">Data Footprint (est.)</th>
+                    <th className="py-3 px-4">DB Share (est.)</th>
+                    <th className="py-3 px-4">API Requests</th>
+                    <th className="py-3 px-4">API Usage Share</th>
                     <th className="py-3 px-4">Status</th>
                     <th className="py-3 px-4 text-right">Last Login</th>
                   </tr>
@@ -872,7 +912,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredUserFootprint.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="py-8 text-center text-slate-400 text-xs">
+                      <td colSpan={9} className="py-8 text-center text-slate-400 text-xs">
                         No tenant matching search query.
                       </td>
                     </tr>
@@ -899,6 +939,11 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                             <span className="font-extrabold text-slate-700 text-[11px]">{u.sharePercent}%</span>
                           </div>
                         </td>
+                        <td className="py-3 px-4 font-mono font-bold text-slate-700">
+                          {u.apiRequests}
+                          <span className="block text-[10px] text-slate-400 font-sans">requests, not billed cost</span>
+                        </td>
+                        <td className="py-3 px-4 font-bold text-slate-700">{u.apiUsageSharePercent}%</td>
                         <td className="py-3 px-4">
                           <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold ${
                             u.isActive ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'

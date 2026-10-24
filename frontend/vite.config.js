@@ -3,6 +3,10 @@ import { defineConfig } from 'vite';
 
 export default defineConfig({
   plugins: [react()],
+  // Older iPads / iPhones (Safari 14+) must still be able to run the app; the default target would show a blank page there
+  build: {
+    target: ['es2020', 'safari14', 'chrome87', 'edge88', 'firefox78'],
+  },
   server: {
     port: 5173,
     proxy: {

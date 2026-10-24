@@ -36,12 +36,6 @@ async function migrate() {
 
   // Explicit staff mapping
   const staffOwnerMap = {
-    // Sagar Punia & Rahul -> Keerthana Ponni K
-    'usr_1789929063747_allpa4': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'sagarpunia163@gmail.com': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'usr_1792001466336_wwykxg': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'rahul@gmail.com': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-
     // papu -> sagarpunia (usr_1791306043083_9p353t)
     'usr_1791306183682_rh51dw': { created_by: 'usr_1791306043083_9p353t', company_id: 'comp_sagarpunia_1791306043083', company_name: "sagarpunia's Workspace" },
     'papu@gmail.com': { created_by: 'usr_1791306043083_9p353t', company_id: 'comp_sagarpunia_1791306043083', company_name: "sagarpunia's Workspace" },

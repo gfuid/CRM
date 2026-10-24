@@ -68,9 +68,12 @@ const STAGES = [
 
 
 
-export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, onDelete }) {
-  if (!isOpen || !lead) return null;
+export default function OneRootCustomerModal(props) {
+  if (!props.isOpen || !props.lead) return null;
+  return <OneRootCustomerModalContent {...props} />;
+}
 
+function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }) {
   const { isOwner, profile, getTeamMembers } = useAuth();
 
   // Form states
@@ -79,22 +82,22 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [contactName, setContactName] = useState(
     lead.contact_person === '—' ? '' : lead.contact_person || ''
   );
-  const [phone, setPhone] = useState(lead.phone || '+7 495 729 13 94');
-  const [email, setEmail] = useState(lead.email || 'import@gkoptotorg.ru');
+  const [phone, setPhone] = useState(lead.phone || '');
+  const [email, setEmail] = useState(lead.email || '');
   const [designation, setDesignation] = useState(lead.designation || '');
-  const [linkedin, setLinkedin] = useState(lead.linkedin || 'https://linkedin.com/in/...');
+  const [linkedin, setLinkedin] = useState(lead.linkedin || '');
   const [whatsapp, setWhatsapp] = useState(lead.whatsapp || lead.phone || '');
-  const [website, setWebsite] = useState(lead.website || 'https://www.gkoptotorg.ru/');
-  const [country, setCountry] = useState(lead.country || 'Russia');
+  const [website, setWebsite] = useState(lead.website || '');
+  const [country, setCountry] = useState(lead.country || '');
   const [leadSource, setLeadSource] = useState(lead.source || '');
   const [address, setAddress] = useState(lead.address || '');
 
   // Profile
   const [creditRating, setCreditRating] = useState(lead.credit_rating || '');
-  const [turnover, setTurnover] = useState(lead.turnover || '0');
+  const [turnover, setTurnover] = useState(lead.turnover || '');
   const [sourcingRegion, setSourcingRegion] = useState(lead.sourcing_region || '');
   const [legacyIndustry, setLegacyIndustry] = useState(
-    lead.legacy_industry_type || lead.industry_type || 'TRADING Company'
+    lead.legacy_industry_type || lead.industry_type || ''
   );
 
   // Products
@@ -113,7 +116,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [selectedProducts, setSelectedProducts] = useState(
     Array.isArray(lead.products) && lead.products.length > 0
       ? lead.products
-      : [lead.product || 'Maize']
+      : (lead.product ? [lead.product] : [])
   );
   const [quantity, setQuantity] = useState(lead.quantity || 0);
   const [quantityUnit, setQuantityUnit] = useState(lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'));
@@ -140,8 +143,8 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   const [paymentDays, setPaymentDays] = useState(lead.export_requirements?.payment_days || '');
 
   // Assignment & Status
-  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || lead.agent_name || '');
-  const [status, setStatus] = useState(lead.stage || lead.status || 'Closed Lost');
+  const [assignedTo, setAssignedTo] = useState(lead.assigned_to || '');
+  const [status, setStatus] = useState(lead.stage || lead.status || 'Requirement Understood');
   const [teamReps, setTeamReps] = useState([]);
 
   useEffect(() => {
@@ -151,8 +154,8 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
           if (Array.isArray(res)) {
             setTeamReps(
               res
-                .map((u) => u.name?.trim())
-                .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'))
+                .filter((u) => u && u.id && u.name && !String(u.name).startsWith('usr_'))
+                .map((u) => ({ id: u.id, name: u.name.trim() }))
             );
           }
         })
@@ -160,42 +163,36 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
     }
   }, [getTeamMembers]);
 
+  // Options are { id, name }: the lead is assigned by user id, never by name
   const availableReps = useMemo(() => {
-    const set = new Set();
-    if (profile?.name && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') {
-      set.add(profile.name);
+    const map = new Map();
+    if (profile?.id) map.set(profile.id, { id: profile.id, name: `${profile.name || 'You'}${isOwner ? ' (Owner)' : ''}` });
+    teamReps.forEach((r) => { if (!map.has(r.id)) map.set(r.id, r); });
+    if (assignedTo && !map.has(assignedTo)) {
+      map.set(assignedTo, { id: assignedTo, name: lead.agent_name && !String(lead.agent_name).startsWith('usr_') ? lead.agent_name : 'Current assignee' });
     }
-    teamReps.forEach((r) => set.add(r));
-    if (assignedTo && !assignedTo.startsWith('usr_') && assignedTo !== 'Athish' && assignedTo !== 'Athish Ravikanth') {
-      set.add(assignedTo);
-    }
-    return Array.from(set).filter(Boolean);
-  }, [teamReps, profile, assignedTo]);
+    return Array.from(map.values());
+  }, [teamReps, profile, assignedTo, isOwner, lead.agent_name]);
 
   // Daily Activity
   const [activeChecks, setActiveChecks] = useState([]);
   const [activityNote, setActivityNote] = useState('');
 
   // Follow-up & Dual Remarks (Current vs. Future)
-  const [followUpDate, setFollowUpDate] = useState(lead.follow_up_date || '2026-05-27');
+  const [followUpDate, setFollowUpDate] = useState(lead.follow_up_date || '');
   const [followUpTime, setFollowUpTime] = useState(lead.follow_up_time || lead.time || '10:00');
   const [todayRemarks, setTodayRemarks] = useState(lead.today_remarks || '');
   const [nextFollowUpAction, setNextFollowUpAction] = useState(lead.next_follow_up_action || '');
   const [previousRemarks, setPreviousRemarks] = useState(
     Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0
       ? lead.previous_remarks
-      : [
-          {
-            text: 'Sent mail no response also call not connected try again',
-            timestamp: '5/25/2026, 4:32:20 PM'
-          }
-        ]
+      : []
   );
 
   // Sync state if lead prop changes
   useEffect(() => {
     if (lead) {
-      setFollowUpDate(lead.follow_up_date || '2026-05-27');
+      setFollowUpDate(lead.follow_up_date || '');
       setTodayRemarks(lead.today_remarks || '');
       setNextFollowUpAction(lead.next_follow_up_action || '');
       if (Array.isArray(lead.previous_remarks)) {
@@ -317,8 +314,54 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
       documents
     };
 
+    // Only send what really changed. The server keeps remark history itself and
+    // rejects staff edits to anything other than remarks, next follow-up and stage.
+    const before = {
+      type: lead.type || 'Export',
+      name: lead.name || lead.company_name || '',
+      contact_person: lead.contact_person === '—' ? '' : (lead.contact_person || ''),
+      phone: lead.phone || '', email: lead.email || '', designation: lead.designation || '',
+      linkedin: lead.linkedin || '', whatsapp: lead.whatsapp || lead.phone || '', website: lead.website || '',
+      country: lead.country || '', source: lead.source || '', address: lead.address || '',
+      credit_rating: lead.credit_rating || '', turnover: lead.turnover || '', sourcing_region: lead.sourcing_region || '',
+      legacy_industry_type: lead.legacy_industry_type || lead.industry_type || '',
+      products: Array.isArray(lead.products) && lead.products.length ? lead.products : (lead.product ? [lead.product] : []),
+      quantity: Number(lead.quantity) || 0, quantity_unit: lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'),
+      price: Number(lead.price) || 0, assigned_to: lead.assigned_to || '', stage: lead.stage || lead.status || 'Requirement Understood',
+      follow_up_date: lead.follow_up_date || '', follow_up_time: lead.follow_up_time || lead.time || '10:00',
+    };
+    const after = {
+      type, name: companyName, contact_person: contactName, phone, email, designation, linkedin, whatsapp, website,
+      country, source: leadSource, address, credit_rating: creditRating, turnover, sourcing_region: sourcingRegion,
+      legacy_industry_type: legacyIndustry, products: selectedProducts, quantity: Number(quantity) || 0,
+      quantity_unit: quantityUnit || 'MT', price: Number(price) || 0, assigned_to: assignedTo, stage: status,
+      follow_up_date: followUpDate, follow_up_time: followUpTime || '10:00',
+    };
+    const changes = {};
+    Object.keys(after).forEach((k) => {
+      if (JSON.stringify(after[k]) !== JSON.stringify(before[k])) changes[k] = after[k];
+    });
+    if (changes.name !== undefined) changes.company_name = changes.name;
+    if (changes.products !== undefined) changes.product = (changes.products || []).join(', ');
+    const req = lead.export_requirements || {};
+    const reqAfter = { ...req, industry_type: reqIndustry, material_type: materialType, polish_level: polishLevel, min_curcumin: minCurcumin, cultivation_method: cultivation, preferred_origin: preferredOrigin, quantity_needed_kg: quantityNeeded, max_price_inr: maxPrice, incoterm, port_delivery: portDelivery, payment_days: paymentDays };
+    const reqChanged = Object.keys(reqAfter).some((k) => String(reqAfter[k] || '') !== String(req[k] || ''));
+    if (reqChanged) changes.export_requirements = reqAfter;
+    if (hasToday) changes.today_remarks = todayRemarks.trim();
+    if (hasFuture) changes.next_follow_up_action = nextFollowUpAction.trim();
+
+    let toSend = changes;
+    if (!isOwner) {
+      const allowed = ['today_remarks', 'next_follow_up_action', 'follow_up_date', 'follow_up_time', 'stage'];
+      const blocked = Object.keys(changes).filter((k) => !allowed.includes(k));
+      toSend = Object.fromEntries(Object.entries(changes).filter(([k]) => allowed.includes(k)));
+      if (blocked.length) {
+        alert('Only your company owner can change the lead details. Your remark / follow-up will be saved; ask the owner to correct the rest.');
+      }
+    }
+
     if (onSave) {
-      onSave(updatedLead);
+      onSave(updatedLead, toSend);
     }
     onClose();
   };
@@ -351,14 +394,14 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
   };
 
   // Header display dates
-  const createdDateDisplay = lead.created_at || 'Created May 25, 2026';
+  const createdDateDisplay = lead.created_at ? `Created ${new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : '';
   const followUpFormatted = followUpDate
     ? new Date(followUpDate).toLocaleDateString('en-US', {
         month: 'short',
         day: 'numeric',
         year: 'numeric'
       })
-    : 'May 27, 2026';
+    : 'Not set';
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto bg-slate-900/70 backdrop-blur-xs flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
@@ -933,7 +976,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
 
               <div>
                 <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Max price (₹)
+                  Max price (USD)
                 </label>
                 <input
                   type="text"
@@ -1008,9 +1051,9 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
                       : 'bg-white border-slate-200 text-slate-800'
                   }`}
                 >
-                  {(availableReps.length > 0 ? availableReps : [assignedTo || 'Unassigned']).map((r) => (
-                    <option key={r} value={r}>
-                      {r}
+                  {availableReps.map((r) => (
+                    <option key={r.id} value={r.id}>
+                      {r.name}
                     </option>
                   ))}
                 </select>
@@ -1240,7 +1283,7 @@ export default function OneRootCustomerModal({ isOpen, onClose, lead, onSave, on
                       {/* Meta header */}
                       <div className="flex items-center justify-between text-[10px] text-slate-400 font-semibold border-b border-slate-100 pb-1.5">
                         <span className="text-slate-700 font-bold">
-                          {rem.author || 'Sales Representative'}
+                          {rem.author || 'Team member'}
                         </span>
                         <div className="flex items-center gap-2">
                           {rem.follow_up_date && (

@@ -103,41 +103,20 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
   // Detailed Modal state
   const [selectedLead, setSelectedLead] = useState(null);
 
-  const isKeerthanaCompany =
-    profile?.company_id === 'comp_bioniversio_1' ||
-    profile?.id === 'usr_1791814468302_hoa08z' ||
-    profile?.email === 'bioniversiobiologics@arggroups.com' ||
-    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
-
-  // Helper to sanitize assignees and remove legacy placeholders like usr_athish / Athish
-  const sanitizeLead = useCallback((l, idx = 0) => {
-    let assigned = l.agent_name || l.assigned_to;
-    let assignedId = l.assigned_to;
-
-    // Distribute any legacy, foreign or unassigned leads
-    if (
-      !assigned ||
-      assigned === 'usr_athish' ||
-      assigned === 'Athish' ||
-      assigned === 'Athish Ravikanth' ||
-      assigned.startsWith('usr_')
-    ) {
-      if (isKeerthanaCompany) {
-        const isSagar = idx % 2 === 0;
-        assigned = isSagar ? 'Sagar Punia' : 'Rahul';
-        assignedId = isSagar ? 'usr_staff_demo1' : 'usr_1792001466336_wwykxg';
-      } else {
-        assigned = profile?.name || 'Self';
-        assignedId = profile?.id || '';
-      }
-    }
-
+  // Helper to show the real assignee name (looked up by staff id)
+  const sanitizeLead = useCallback((l) => {
+    const assignedId = l.assigned_to || '';
+    const member = assignedId ? (teamMembers || []).find((t) => t.id === assignedId) : null;
+    let assigned = member?.name
+      || (assignedId && assignedId === profile?.id ? profile?.name : '')
+      || (l.agent_name && !String(l.agent_name).startsWith('usr_') ? l.agent_name : '');
+    if (!assigned) assigned = assignedId ? 'Team member' : (profile?.name || 'Unassigned');
     return {
       ...l,
       agent_name: assigned,
-      assigned_to: assignedId,
+      assigned_to: assignedId || profile?.id || '',
     };
-  }, [profile, isKeerthanaCompany]);
+  }, [profile, teamMembers]);
 
   // Load leads from API & storage
   const fetchActivities = useCallback(async () => {
@@ -182,7 +161,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     };
   }, [fetchActivities]);
 
-  // Load team members strictly belonging to this company (excluding external owners like Athish)
+  // Load team members strictly belonging to this company 
   useEffect(() => {
     const fetchTeam = async () => {
       try {
@@ -195,13 +174,9 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             members = res.data;
           }
         }
-        // Strict filter: never include foreign Athish or non-company users
+        // Team list comes from the server, already limited to this company
         const filtered = (members || []).filter(
-          (u) =>
-            u.name !== 'Athish' &&
-            u.name !== 'Athish Ravikanth' &&
-            u.id !== 'usr_athish' &&
-            u.email !== 'athishravikanth@gmail.com'
+          (u) => Boolean(u)
         );
         setTeamMembers(filtered);
       } catch (err) {
@@ -211,12 +186,12 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     fetchTeam();
   }, [getTeamMembers]);
 
-  // Responsible persons list: strictly company staff Sagar Punia, Rahul, Keerthana Ponni K
+  // Responsible persons are the current user and verified company staff.
   const responsiblePersons = useMemo(() => {
     const list = [];
     const staffNames = (teamMembers || [])
       .map((t) => t.name?.trim())
-      .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'));
+      .filter((n) => n && !n.startsWith('usr_'));
 
     if (staffNames.length > 0) {
       staffNames.forEach((s) => {
@@ -224,19 +199,13 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
       });
     }
 
-    // Only add Sagar Punia and Rahul if the owner is Keerthana Ponni K!
-    if (isKeerthanaCompany) {
-      if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
-      if (!list.includes('Rahul')) list.push('Rahul');
-    }
-
     const ownerName = profile?.name?.trim();
-    if (ownerName && !list.includes(ownerName) && ownerName !== 'Athish' && ownerName !== 'Athish Ravikanth') {
+    if (ownerName && !list.includes(ownerName)) {
       list.push(ownerName);
     }
 
     return list;
-  }, [teamMembers, profile, isKeerthanaCompany]);
+  }, [teamMembers, profile]);
 
   const saveLeads = (newLeads) => {
     setLeads(newLeads);
@@ -440,25 +409,52 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
     return acc;
   }, {});
 
-  // Handle stage change
-  const handleStageChange = (leadId, newStage, e) => {
-    if (e) e.stopPropagation();
-    const updated = leads.map((l) =>
-      l.id === leadId ? { ...l, stage: newStage, status: newStage, lead_stage: newStage } : l
-    );
-    saveLeads(updated);
-    if (selectedLead && selectedLead.id === leadId) {
-      setSelectedLead({ ...selectedLead, stage: newStage, status: newStage, lead_stage: newStage });
+  const isOwnerView = ['owner', 'admin', 'super_admin', 'superadmin'].includes(String(profile?.role || '').toLowerCase());
+
+  // Save one lead change on the server, then refresh the board from the server's answer
+  const persistLead = async (leadId, changes) => {
+    const before = leads;
+    setLeads((prev) => prev.map((l) => (l.id === leadId ? { ...l, ...changes } : l)));
+    try {
+      const res = await api.updateLead(leadId, changes);
+      if (!res || res.success === false) throw new Error(res?.message || 'Could not save the change');
+      if (res.data) {
+        const fresh = sanitizeLead(res.data, 0);
+        setLeads((prev) => {
+          const next = prev.map((l) => (l.id === leadId ? { ...l, ...fresh } : l));
+          try { localStorage.setItem('oneroot_leads_v3', JSON.stringify(next)); } catch {}
+          return next;
+        });
+        return fresh;
+      }
+      return null;
+    } catch (err) {
+      setLeads(before);
+      alert(err?.message || 'Could not save the change. Please try again.');
+      return null;
     }
   };
 
-  // Handle assigned to change
-  const handleAssigneeChange = (leadId, newAssignee, e) => {
+  // Handle stage change
+  const handleStageChange = async (leadId, newStage, e) => {
     if (e) e.stopPropagation();
-    const updated = leads.map((l) =>
-      l.id === leadId ? { ...l, assigned_to: newAssignee, agent_name: newAssignee } : l
-    );
-    saveLeads(updated);
+    const fresh = await persistLead(leadId, { stage: newStage });
+    if (fresh && selectedLead && selectedLead.id === leadId) {
+      setSelectedLead({ ...selectedLead, ...fresh });
+    }
+  };
+
+  // Handle assigned to change (owner only; the server stores the staff id)
+  const handleAssigneeChange = async (leadId, newAssignee, e) => {
+    if (e) e.stopPropagation();
+    if (!isOwnerView) {
+      alert('Only your company owner can reassign a lead.');
+      return;
+    }
+    const member = (teamMembers || []).find((t) => t.name?.trim() === newAssignee || t.id === newAssignee);
+    const assigneeId = member ? member.id : (newAssignee === profile?.name?.trim() ? profile?.id : null);
+    if (!assigneeId) return;
+    await persistLead(leadId, { assigned_to: assigneeId });
   };
 
   // Get distinct countries
@@ -747,7 +743,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                   ) : (
                     stageLeads.map((lead) => {
                       const details = getFollowUpDetails(lead);
-                      const assigned = lead.agent_name || lead.assigned_to || profile?.name || 'Keerthana Ponni K';
+                      const assigned = lead.agent_name || lead.assigned_to || profile?.name || 'Unassigned';
                       const remarkInfo = getLatestRemarkInfo(lead);
                       const productTags = getProductTags(lead);
                       const countryObj = findCountry(lead.country);
@@ -792,6 +788,8 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                             >
                               <select
                                 value={assigned}
+                                disabled={!isOwnerView}
+                                title={isOwnerView ? 'Reassign lead' : 'Only your company owner can reassign'}
                                 onChange={(e) => handleAssigneeChange(lead.id, e.target.value, e)}
                                 className="appearance-none bg-purple-100/90 hover:bg-purple-200 text-purple-900 text-xs font-bold pl-2.5 pr-6 py-1 rounded-lg border border-purple-200/90 cursor-pointer focus:outline-none transition-colors shadow-2xs"
                               >
@@ -904,15 +902,21 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
           isOpen={!!selectedLead}
           onClose={() => setSelectedLead(null)}
           lead={selectedLead}
-          onSave={(updatedLead) => {
-            const updated = leads.map((l) => (l.id === updatedLead.id ? updatedLead : l));
-            saveLeads(updated);
-            setSelectedLead(null);
+          onSave={async (updatedLead, changes) => {
+            if (changes && Object.keys(changes).length === 0) { setSelectedLead(null); return; }
+            const fresh = await persistLead(updatedLead.id, changes || updatedLead);
+            if (fresh) setSelectedLead(null);
           }}
-          onDelete={(leadId) => {
-            const updated = leads.filter((l) => l.id !== leadId);
-            saveLeads(updated);
-            setSelectedLead(null);
+          onDelete={async (leadId) => {
+            if (!isOwnerView) { alert('Only your company owner can delete a lead.'); return; }
+            try {
+              const res = await api.deleteLead(leadId);
+              if (res && res.success === false) throw new Error(res.message || 'Could not delete the lead');
+              saveLeads(leads.filter((l) => l.id !== leadId));
+              setSelectedLead(null);
+            } catch (err) {
+              alert(err?.message || 'Could not delete the lead. Please try again.');
+            }
           }}
         />
       )}

@@ -9,7 +9,17 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding, initial
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(() => Boolean(localStorage.getItem('crm_remembered_email')));
-  const [error, setError] = useState('');
+  // Show why the user was signed out (e.g. session ended) once, then forget it
+  const [error, setError] = useState(() => {
+    try {
+      const reason = sessionStorage.getItem('crm_logout_reason');
+      if (reason) {
+        sessionStorage.removeItem('crm_logout_reason');
+        return 'Your session ended. Please log in again.';
+      }
+    } catch {}
+    return '';
+  });
   const [loading, setLoading] = useState(false);
 
   React.useEffect(() => {
@@ -36,7 +46,7 @@ export default function LoginPage({ onSwitchToRegister, onBackToLanding, initial
         rawMsg.includes('500') ||
         rawMsg.toLowerCase().includes('internal server error')
       ) {
-        setError('Invalid email or password. No account found with this email.');
+        setError('Login service had a problem. Please try again in a moment.');
       } else {
         setError(rawMsg || 'Invalid email or password');
       }

@@ -10,7 +10,7 @@ const activitySchema = new mongoose.Schema(
     timestamp: { type: Date, default: Date.now },
     user_id: { type: String, index: true },
   },
-  { timestamps: true }
+  { timestamps: true, strict: false }
 );
 
 module.exports = mongoose.model('Activity', activitySchema);

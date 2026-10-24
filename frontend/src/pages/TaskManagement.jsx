@@ -65,7 +65,7 @@ export default function TaskManagement() {
       const members = await getTeamMembers();
       const staffList = Array.isArray(members) ? members : [];
       const ownerEntry = profile
-        ? [{ id: profile.id, full_name: `${profile.name || profile.full_name || 'Owner'} (Me / Owner)`, name: profile.name || 'Owner' }]
+        ? [{ id: profile.id, full_name: profile.name || profile.full_name || 'Owner', name: profile.name || 'Owner', department: 'You / Owner' }]
         : [];
       const merged = [...ownerEntry, ...staffList.filter((s) => s.id !== profile?.id && s.persona !== 'owner')];
       setTeamMembers(merged);
@@ -86,7 +86,8 @@ export default function TaskManagement() {
       if (stored) {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 0) {
-          base = parsed.filter((t) => !t.id?.startsWith('task_'));
+          // Drop entries an older version "saved locally" that never reached the server
+          base = parsed.filter((t) => t.id && !t.id.startsWith('task_') && !/^tsk_(corr_)?\d+$/.test(t.id));
         }
       }
     } catch (e) {}
@@ -294,144 +295,76 @@ export default function TaskManagement() {
       return;
     }
 
+    // Only send fields the server accepts; display-only values (like assigned_name) stay on screen
+    const assignedId = isStaff ? (profile?.id || null) : (form.assigned_to || null);
+    const payload = {
+      title: form.title,
+      description: form.description || '',
+      priority: form.priority || 'Medium',
+      due_date: form.due_date,
+      deadline_time: form.deadline_time || '18:00',
+      ...(assignedId ? { assigned_to: assignedId } : {}),
+    };
+
     try {
-      const assignedId = isStaff ? (profile?.id || 'usr_staff') : (form.assigned_to || null);
-      const assignedMember = teamMembers.find((m) => m.id === form.assigned_to || m.name === form.assigned_to);
-      const assignedName = isStaff
-        ? (profile?.name || 'Staff')
-        : (assignedMember ? (assignedMember.name || assignedMember.full_name) : (form.assigned_to || 'Unassigned'));
-
-      const payload = {
-        ...form,
-        due_date: form.due_date,
-        deadline_time: form.deadline_time || '18:00',
-        assigned_to: assignedId,
-        assigned_name: assignedName,
-        status: form.status || 'Pending',
-      };
-
       if (isCorrectionMode) {
-        const correctionTask = {
-          id: 'tsk_corr_' + Date.now(),
+        const res = await api.createTask({
           ...payload,
           is_correction: true,
-          original_task_id: targetCorrectionTask?.id,
-          assigned_name: profile?.name || 'Staff Member',
-        };
-
-        setTasks((prev) => {
-          const next = [correctionTask, ...prev];
-          try {
-            localStorage.setItem(getStorageKey(), JSON.stringify(next));
-          } catch {}
-          return next;
+          original_task_id: targetCorrectionTask?.id || null,
         });
-
-        try {
-          await api.createTask(correctionTask);
-        } catch (apiErr) {
-          console.warn('API error saving correction, cached locally:', apiErr);
-        }
-
+        if (!res?.success) throw new Error(res?.message || 'Correction request could not be sent.');
+        await loadTasks();
         setModalOpen(false);
         setIsCorrectionMode(false);
         setTargetCorrectionTask(null);
         setForm(initForm);
-        showNotification('Correction note submitted successfully for Company Owner/Admin review!', 'success');
+        showNotification('Correction request sent to your company owner.', 'success');
         return;
       }
 
       if (editingTask) {
         if (!isOwner) {
-          showNotification('Permission Denied: Only Company Owners can update tasks.', 'error');
+          showNotification('Only the company owner can edit a task. Send a correction request instead.', 'error');
           return;
         }
-
-        const updatedTask = {
-          ...editingTask,
-          ...payload,
-        };
-
-        setTasks((prev) => {
-          const next = prev.map((t) => (t.id === editingTask.id ? updatedTask : t));
-          try {
-            localStorage.setItem(getStorageKey(), JSON.stringify(next));
-          } catch {}
-          return next;
-        });
-
-        try {
-          await api.updateTask(editingTask.id, payload);
-        } catch (apiErr) {
-          console.warn('API update failed, local state updated:', apiErr);
-        }
-
+        const res = await api.updateTask(editingTask.id, { ...payload, status: form.status || editingTask.status });
+        if (!res?.success) throw new Error(res?.message || 'Task could not be updated.');
+        await loadTasks();
         setModalOpen(false);
         setEditingTask(null);
         setForm(initForm);
-        showNotification(`Task "${updatedTask.title}" updated successfully!`, 'success');
+        showNotification(`Task "${payload.title}" updated.`, 'success');
         return;
       }
 
-      // New task creation
       const res = await api.createTask(payload);
-      let createdTask = null;
-      if (res && res.success && res.data) {
-        createdTask = res.data;
-      } else {
-        createdTask = {
-          id: 'tsk_' + Date.now(),
-          ...payload,
-        };
-      }
-
-      setTasks((prev) => {
-        const next = [createdTask, ...prev];
-        try {
-          localStorage.setItem(getStorageKey(), JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-
+      if (!res?.success || !res.data) throw new Error(res?.message || 'Task could not be created.');
+      await loadTasks();
       setModalOpen(false);
       setEditingTask(null);
       setForm(initForm);
-      showNotification('New task dispatched successfully!', 'success');
+      showNotification(isStaff ? 'Task added to your list.' : 'New task assigned.', 'success');
     } catch (err) {
       console.error('Save task error:', err);
-      const fallbackTask = {
-        id: 'tsk_' + Date.now(),
-        ...form,
-        assigned_name: isStaff ? (profile?.name || 'Staff') : 'Unassigned',
-      };
-      setTasks((prev) => {
-        const next = [fallbackTask, ...prev];
-        try {
-          localStorage.setItem(getStorageKey(), JSON.stringify(next));
-        } catch {}
-        return next;
-      });
-      setModalOpen(false);
-      setEditingTask(null);
-      setForm(initForm);
-      showNotification('Task saved locally.', 'success');
+      // Nothing is saved "locally": the user must see that the server did not accept it
+      showNotification(err?.message || 'Task could not be saved. Please try again.', 'error');
     }
   };
 
   const handleStatusChange = async (taskId, newStatus) => {
-    setTasks((prev) => {
-      const next = prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t));
-      try {
-        localStorage.setItem(getStorageKey(), JSON.stringify(next));
-      } catch {}
-      return next;
-    });
+    const before = tasks.find((t) => t.id === taskId);
+    setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, status: newStatus } : t)));
 
     try {
-      await api.updateTask(taskId, { status: newStatus });
+      const res = await api.updateTask(taskId, { status: newStatus });
+      if (!res?.success) throw new Error(res?.message || 'Status could not be changed.');
+      setTasks((prev) => prev.map((t) => (t.id === taskId ? { ...t, ...res.data } : t)));
       showNotification(`Task marked as ${newStatus}`, 'success');
     } catch (err) {
-      console.warn('Status update API error:', err);
+      // Put the old status back so the screen matches the server
+      if (before) setTasks((prev) => prev.map((t) => (t.id === taskId ? before : t)));
+      showNotification(err?.message || 'Status could not be changed.', 'error');
     }
   };
 
@@ -445,20 +378,20 @@ export default function TaskManagement() {
       return;
     }
 
-    setTasks((prev) => {
-      const next = prev.filter((t) => t.id !== id);
-      try {
-        localStorage.setItem(getStorageKey(), JSON.stringify(next));
-      } catch {}
-      return next;
-    });
-
     try {
-      await api.deleteTask(id);
+      const res = await api.deleteTask(id);
+      if (!res?.success) throw new Error(res?.message || 'Task could not be deleted.');
+      setTasks((prev) => {
+        const next = prev.filter((t) => t.id !== id);
+        try {
+          localStorage.setItem(getStorageKey(), JSON.stringify(next));
+        } catch {}
+        return next;
+      });
+      showNotification('Task deleted successfully.', 'success');
     } catch (err) {
-      console.warn('API delete task notice:', err);
+      showNotification(err?.message || 'Task could not be deleted.', 'error');
     }
-    showNotification('Task deleted successfully.', 'success');
   };
 
   const updateField = (field, val) => setForm({ ...form, [field]: val });
@@ -681,11 +614,14 @@ export default function TaskManagement() {
                         <select
                           className="px-2.5 py-1 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                           value={task.status}
+                          disabled={!isOwner && (task.status === 'Completed' || task.status === 'Cancelled')}
+                          title={!isOwner && task.status === 'Completed' ? 'Completed tasks can only be reopened by the owner' : undefined}
                           onChange={(e) => handleStatusChange(task.id, e.target.value)}
                         >
                           <option value="Pending">Pending</option>
                           <option value="In Progress">In Progress</option>
                           <option value="Completed">Completed</option>
+                          {(isOwner || task.status === 'Cancelled') && <option value="Cancelled">Cancelled</option>}
                         </select>
                       </td>
 
@@ -817,11 +753,13 @@ export default function TaskManagement() {
                     <select
                       className="flex-1 px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 focus:outline-none focus:ring-1 focus:ring-emerald-500 cursor-pointer"
                       value={task.status}
+                      disabled={!isOwner && (task.status === 'Completed' || task.status === 'Cancelled')}
                       onChange={(e) => handleStatusChange(task.id, e.target.value)}
                     >
                       <option value="Pending">Pending</option>
                       <option value="In Progress">In Progress</option>
                       <option value="Completed">Completed</option>
+                      {(isOwner || task.status === 'Cancelled') && <option value="Cancelled">Cancelled</option>}
                     </select>
 
                     {isOwner ? (
@@ -1037,7 +975,6 @@ export default function TaskManagement() {
                   onChange={(e) => updateField('assigned_to', e.target.value)}
                 >
                   <option value="">Select team member</option>
-                  <option value={profile?.id}>{profile?.name || 'Owner'} (Direct / You)</option>
                   {teamMembers.map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.full_name || m.name} ({m.department || m.role || 'Staff'})

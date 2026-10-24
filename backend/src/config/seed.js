@@ -2,7 +2,7 @@ const fs = require('fs');
 const path = require('path');
 const bcrypt = require('bcryptjs');
 const models = require('../models');
-const { dataStore } = require('../repositories/dataStore');
+const { dataStore, withoutDemo } = require('../repositories/dataStore');
 
 const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
 
@@ -39,7 +39,7 @@ const hydrateFromSnapshot = () => {
  */
 const syncFromDB = async () => {
   try {
-    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns] =
+    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications] =
       await Promise.all([
         models.User.find().lean(),
         models.Company.findOne().lean(),
@@ -52,6 +52,7 @@ const syncFromDB = async () => {
         models.AuditLog.find().lean(),
         models.EmailSetting.find().lean(),
         models.EmailCampaign.find().lean(),
+        models.Notification ? models.Notification.find().lean() : Promise.resolve([]),
       ]);
 
     if (users && users.length > 0) {
@@ -62,13 +63,21 @@ const syncFromDB = async () => {
       } catch (e) {}
     }
     if (company) dataStore.company = company;
-    if (leads && leads.length > 0) dataStore.leads = leads;
-    if (tasks && tasks.length > 0) dataStore.tasks = tasks;
-    if (activities && activities.length > 0) dataStore.activities = activities;
-    if (followUps && followUps.length > 0) dataStore.followUps = followUps;
-    if (myDays && myDays.length > 0) dataStore.myDays = myDays;
-    if (outreach && outreach.length > 0) dataStore.outreach = outreach;
-    if (auditLogs && auditLogs.length > 0) dataStore.auditLogs = auditLogs;
+    if (leads && leads.length > 0) dataStore.leads = withoutDemo(leads);
+    if (tasks && tasks.length > 0) dataStore.tasks = withoutDemo(tasks);
+    if (activities && activities.length > 0) dataStore.activities = withoutDemo(activities);
+    if (followUps && followUps.length > 0) dataStore.followUps = withoutDemo(followUps);
+    if (myDays && myDays.length > 0) dataStore.myDays = withoutDemo(myDays);
+    if (outreach && outreach.length > 0) dataStore.outreach = withoutDemo(outreach);
+    if (auditLogs && auditLogs.length > 0) dataStore.auditLogs = withoutDemo(auditLogs);
+    if (notifications && notifications.length > 0) dataStore.notifications = notifications;
+    // A campaign cannot still be sending right after a restart: mark it paused so it can be resumed
+    (dataStore.emailCampaigns || []).forEach((c) => {
+      if (c.status === 'sending') {
+        c.status = 'paused';
+        c.error = 'Sending was interrupted by a server restart. Press Send to resume the remaining recipients.';
+      }
+    });
     if (emailSettings && emailSettings.length > 0) dataStore.emailSettings = emailSettings;
     if (emailCampaigns && emailCampaigns.length > 0) dataStore.emailCampaigns = emailCampaigns;
 

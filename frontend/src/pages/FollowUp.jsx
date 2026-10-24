@@ -25,6 +25,7 @@ import {
 import Modal from '../components/Modal';
 import OneRootCustomerModal from '../components/OneRootCustomerModal';
 import { api } from '../services/api';
+import { useAuth } from '../context/AuthContext';
 
 const STAGES = [
   'Lead Generation',
@@ -36,6 +37,7 @@ const STAGES = [
 ];
 
 export default function FollowUp() {
+  const { isOwner } = useAuth();
   const [leads, setLeads] = useState([]);
   const [search, setSearch] = useState('');
   const [responsibleFilter, setResponsibleFilter] = useState('All responsible');
@@ -258,31 +260,29 @@ export default function FollowUp() {
           : '● ACTIVE · ON TRACK',
       };
 
-      const nextList = leads.map((l) => (l.id === updatedLead.id ? updatedLead : l));
-      saveLeads(nextList);
-
       try {
-        await api.updateLead(updatedLead.id, {
+        // The server keeps the remark history itself; only send what changed today
+        const res = await api.updateLead(updatedLead.id, {
           follow_up_date: quickNextDate,
           follow_up_time: quickNextTime || '10:00',
-          today_remarks: updatedLead.today_remarks,
-          next_follow_up_action: updatedLead.next_follow_up_action,
-          stage: quickStage,
-          status: quickStage,
-          previous_remarks: updatedRemarks,
+          today_remarks: quickTodayRemark.trim(),
+          next_follow_up_action: quickFutureAction.trim(),
+          ...(quickStage && quickStage !== quickLead.stage ? { stage: quickStage } : {}),
         });
+        const saved = res?.data ? { ...updatedLead, ...res.data, follow_up_status: updatedLead.follow_up_status, follow_up_badge: updatedLead.follow_up_badge } : updatedLead;
+        saveLeads(leads.map((l) => (l.id === saved.id ? saved : l)));
+        setQuickLead(null);
       } catch (err) {
         console.warn('API error saving quick follow-up:', err);
+        alert(err?.message || 'Follow-up could not be saved. Please try again.');
       }
-
-      setQuickLead(null);
     } finally {
       setIsSubmittingQuick(false);
     }
   };
 
   // Save edited customer from OneRootCustomerModal
-  const handleSaveCustomer = async (updatedLead) => {
+  const handleSaveCustomer = async (updatedLead, changes) => {
     const isStillOverdue = new Date(updatedLead.follow_up_date) < today;
     const diff = Math.ceil((today - new Date(updatedLead.follow_up_date)) / (1000 * 60 * 60 * 24));
     const processedLead = {
@@ -292,26 +292,35 @@ export default function FollowUp() {
         ? `● ${diff > 7 ? 'RISK' : 'IDLE CRITICAL'} · FOLLOW-UP OVERDUE ${diff} DAYS`
         : '● ACTIVE · ON TRACK'
     };
-    const updated = leads.map((l) => (l.id === processedLead.id ? processedLead : l));
-    saveLeads(updated);
-
     try {
-      await api.updateLead(processedLead.id, processedLead);
+      // The server ignores unchanged and system fields, and tells us if a field is owner-only
+      if (changes && Object.keys(changes).length === 0) {
+        setEditingLead(null);
+        return;
+      }
+      const res = await api.updateLead(processedLead.id, changes || processedLead);
+      const saved = res?.data ? { ...res.data, follow_up_status: processedLead.follow_up_status, follow_up_badge: processedLead.follow_up_badge } : processedLead;
+      saveLeads(leads.map((l) => (l.id === saved.id ? saved : l)));
+      setEditingLead(null);
     } catch (err) {
       console.warn('API updateLead failed:', err);
+      alert(err?.message || 'Changes could not be saved. Please try again.');
     }
-
-    setEditingLead(null);
   };
 
   // Delete lead from OneRootCustomerModal
-  const handleDeleteCustomer = (leadId) => {
-    const updated = leads.filter((l) => l.id !== leadId);
-    saveLeads(updated);
+  const handleDeleteCustomer = async (leadId) => {
+    if (!isOwner) {
+      alert('Only the company owner can delete a lead.');
+      return;
+    }
     try {
-      api.deleteLead(leadId);
-    } catch {}
-    setEditingLead(null);
+      await api.deleteLead(leadId);
+      saveLeads(leads.filter((l) => l.id !== leadId));
+      setEditingLead(null);
+    } catch (err) {
+      alert(err?.message || 'Lead could not be deleted.');
+    }
   };
 
   // Status pill theme helper
@@ -497,7 +506,7 @@ export default function FollowUp() {
 
                       {/* RESPONSIBLE */}
                       <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">
-                        {lead.assigned_to || lead.agent_name || 'Rohan'}
+                        {lead.assigned_to || lead.agent_name || 'Unassigned'}
                       </td>
 
                       {/* FOLLOW-UP DATE & OVERDUE DAYS */}

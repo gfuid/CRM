@@ -1,6 +1,6 @@
 /**
  * Production-ready API client for OneRoot Sales CRM
- * Includes automatic auth headers, response time metrics, and fallback handling
+ * Adds bearer auth headers and normalizes backend responses and network errors
  */
 
 const isLocal = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
@@ -19,14 +19,20 @@ class ApiClient {
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
     }
-    try {
-      const sessionStr = localStorage.getItem('crm_user_session');
-      if (sessionStr) {
-        const session = JSON.parse(sessionStr);
-        if (session?.user?.id) headers['x-user-id'] = session.user.id;
-      }
-    } catch (e) {}
     return headers;
+  }
+
+  /** Ping the server until it answers (up to ~40s). True when it is awake. */
+  async wakeServer() {
+    const healthUrl = this.baseUrl.replace(/\/api\/v1\/?$/, '') + '/health';
+    for (let i = 0; i < 8; i++) {
+      try {
+        const r = await fetch(healthUrl, { cache: 'no-store' });
+        if (r.ok) return true;
+      } catch {}
+      await new Promise((res) => setTimeout(res, 5000));
+    }
+    return false;
   }
 
   async request(endpoint, options = {}) {
@@ -40,7 +46,31 @@ class ApiClient {
     };
 
     try {
-      const response = await fetch(url, config);
+      // The free server sleeps when idle. Wait and retry while it wakes up, so users do not see "Load failed".
+      // Reads are retried on any network error; writes only when the server clearly did not handle them (502/503/504).
+      const method = String(config.method || 'GET').toUpperCase();
+      const waits = [1500, 4000, 8000];
+      let response;
+      for (let attempt = 0; ; attempt++) {
+        try {
+          response = await fetch(url, config);
+          if ([502, 503, 504].includes(response.status) && attempt < waits.length) {
+            await new Promise((r) => setTimeout(r, waits[attempt]));
+            continue;
+          }
+          break;
+        } catch (netErr) {
+          if (method === 'GET' && attempt < waits.length) {
+            await new Promise((r) => setTimeout(r, waits[attempt]));
+            continue;
+          }
+          // A save failed before reaching the server (usually it was asleep): wake it, then try once more
+          if (method !== 'GET' && attempt === 0 && (await this.wakeServer())) {
+            continue;
+          }
+          throw netErr;
+        }
+      }
       let data = null;
       const contentType = response.headers.get('content-type') || '';
       if (contentType.includes('application/json')) {
@@ -65,7 +95,10 @@ class ApiClient {
             window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: errMsg } }));
           }
         }
-        throw new Error(data?.message || `HTTP error! status: ${response.status}`);
+        const httpErr = new Error(data?.message || `HTTP error! status: ${response.status}`);
+        httpErr.status = response.status;
+        httpErr.code = data?.code;
+        throw httpErr;
       }
 
       return data;
@@ -81,7 +114,7 @@ class ApiClient {
         msg.includes('network request failed') ||
         msg.includes('network')
       ) {
-        const netErr = new Error('Network connection issue or backend server is spinning up. Local offline mode enabled.');
+        const netErr = new Error('Network connection issue or backend server is starting. Please check your connection and retry.');
         netErr.isNetworkError = true;
         netErr.originalMessage = error.message;
         throw netErr;
@@ -132,6 +165,10 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(leadData),
     });
+  }
+
+  getLead(id) {
+    return this.request(`/leads/${id}`);
   }
 
   updateLead(id, updates) {
@@ -198,9 +235,26 @@ class ApiClient {
     });
   }
 
-  // MyDays
-  getMyDays() {
-    return this.request('/mydays');
+  // MyDays (planner items + daily reports). params: { scope: 'team' } or { user_id }
+  getMyDays(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/mydays${query ? `?${query}` : ''}`);
+  }
+
+  // Reminders: what is due today / overdue for the logged-in user
+  getReminders() {
+    return this.request('/reminders');
+  }
+
+  // Staff performance review
+  getTeamPerformance(params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/analytics/team${query ? `?${query}` : ''}`);
+  }
+
+  getStaffPerformance(userId, params = {}) {
+    const query = new URLSearchParams(params).toString();
+    return this.request(`/analytics/staff/${encodeURIComponent(userId)}${query ? `?${query}` : ''}`);
   }
 
   addMyDay(item) {

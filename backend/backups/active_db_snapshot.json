@@ -357,7 +357,7 @@
       "data_scope": "own_only",
       "company_id": "comp_bioniversio_1",
       "created_by": "",
-      "staff_limit": 2,
+      "staff_limit": 10,
       "last_login": "2026-10-15T09:03:06.469Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
@@ -488,6 +488,66 @@
       "updatedAt": "2026-10-14T16:26:54.985Z",
       "company_name": "soch's Workspace"
     }
+  ],
+  "deletedUserIds": [
+    "usr_1792684210581_ia7xsd",
+    "usr_1792684210031_5cf6og",
+    "usr_1792684209828_fkvcfz",
+    "ci_delete_staff_1792684213219",
+    "usr_1792684405120_q9x8zk",
+    "usr_1792684404658_fcbaxc",
+    "usr_1792684404405_7rgxra",
+    "ci_delete_staff_1792684405885",
+    "usr_1792684528977_5ilxug",
+    "usr_1792684528499_6yic0m",
+    "usr_1792684528231_4awdyw",
+    "ci_delete_staff_1792684530066",
+    "usr_1792684614582_1t9v0e",
+    "usr_1792684613982_bg4jgz",
+    "usr_1792684613738_71el9z",
+    "ci_delete_staff_1792684615502",
+    "usr_1792687208654_beepct",
+    "usr_1792687208261_7f13z5",
+    "usr_1792687208080_ygbg45",
+    "ci_delete_staff_1792687209464",
+    "usr_1792687680918_0z5aak",
+    "usr_1792687680433_1qsj4x",
+    "usr_1792687680031_x1n00v",
+    "ci_delete_staff_1792687683798",
+    "usr_1792688045853_rdr1ko",
+    "usr_1792688045380_7n33a0",
+    "usr_1792688045151_7a18ol",
+    "ci_delete_staff_1792688046973"
+  ],
+  "deletedUserEmails": [
+    "ci_observer_1792684210349@travel-trade.com",
+    "ci_staff_1792684209837@travel-trade.com",
+    "ci_owner_1792684209545@travel-trade.com",
+    "ci_delete_staff_1792684213219@travel-trade.com",
+    "ci_observer_1792684404913@travel-trade.com",
+    "ci_staff_1792684404414@travel-trade.com",
+    "ci_owner_1792684404177@travel-trade.com",
+    "ci_delete_staff_1792684405885@travel-trade.com",
+    "ci_observer_1792684528785@travel-trade.com",
+    "ci_staff_1792684528240@travel-trade.com",
+    "ci_owner_1792684527988@travel-trade.com",
+    "ci_delete_staff_1792684530066@travel-trade.com",
+    "ci_observer_1792684614314@travel-trade.com",
+    "ci_staff_1792684613749@travel-trade.com",
+    "ci_owner_1792684613538@travel-trade.com",
+    "ci_delete_staff_1792684615502@travel-trade.com",
+    "ci_observer_1792687208480@travel-trade.com",
+    "ci_staff_1792687208089@travel-trade.com",
+    "ci_owner_1792687207870@travel-trade.com",
+    "ci_delete_staff_1792687209464@travel-trade.com",
+    "ci_observer_1792687680713@travel-trade.com",
+    "ci_staff_1792687680082@travel-trade.com",
+    "ci_owner_1792687679579@travel-trade.com",
+    "ci_delete_staff_1792687683798@travel-trade.com",
+    "ci_observer_1792688045648@travel-trade.com",
+    "ci_staff_1792688045160@travel-trade.com",
+    "ci_owner_1792688044920@travel-trade.com",
+    "ci_delete_staff_1792688046973@travel-trade.com"
   ],
   "leads": [
     {
@@ -4010,6 +4070,90 @@
       "completed": false,
       "time_slot": "04:00 PM - 04:30 PM",
       "category": "Market Sourcing"
+    },
+    {
+      "id": "day_1792684211850_4zpl9q",
+      "user_id": "usr_1792684210031_5cf6og",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T15:50:11.850Z"
+    },
+    {
+      "id": "day_1792684405694_sbulxf",
+      "user_id": "usr_1792684404658_fcbaxc",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T15:53:25.694Z"
+    },
+    {
+      "id": "day_1792684529797_m7mehm",
+      "user_id": "usr_1792684528499_6yic0m",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T15:55:29.798Z"
+    },
+    {
+      "id": "day_1792684615283_dquux3",
+      "user_id": "usr_1792684613982_bg4jgz",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T15:56:55.283Z"
+    },
+    {
+      "id": "day_1792687209269_5h4d4c",
+      "user_id": "usr_1792687208261_7f13z5",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T16:40:09.269Z"
+    },
+    {
+      "id": "day_1792687683152_76lj4h",
+      "user_id": "usr_1792687680433_1qsj4x",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T16:48:03.152Z"
+    },
+    {
+      "id": "day_1792688046622_83pebz",
+      "user_id": "usr_1792688045380_7n33a0",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-25",
+      "created_at": "2026-10-22T16:54:06.622Z"
     }
   ],
   "outreach": [
@@ -4025,6 +4169,251 @@
     }
   ],
   "auditLogs": [
+    {
+      "id": "audit_1792688046993_uovrkx",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792688044920@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792688044920@travel-trade.com",
+      "timestamp": "2026-10-22T16:54:06.993Z"
+    },
+    {
+      "id": "log_1792688046775_4xsukj",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792688044920@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T16:54:06.775Z"
+    },
+    {
+      "id": "audit_1792688046708_obndf1",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792688044920@travel-trade.com",
+      "target": "ci_staff_1792688045160@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792688045160@travel-trade.com)",
+      "timestamp": "2026-10-22T16:54:06.708Z"
+    },
+    {
+      "id": "audit_1792688046696_tlvd23",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792688044920@travel-trade.com",
+      "target": "ci_observer_1792688045648@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792688045648@travel-trade.com)",
+      "timestamp": "2026-10-22T16:54:06.696Z"
+    },
+    {
+      "id": "audit_1792687683828_rqn5sk",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792687679579@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792687679579@travel-trade.com",
+      "timestamp": "2026-10-22T16:48:03.828Z"
+    },
+    {
+      "id": "log_1792687683527_tcrhxt",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792687679579@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T16:48:03.528Z"
+    },
+    {
+      "id": "audit_1792687683318_l2444e",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792687679579@travel-trade.com",
+      "target": "ci_staff_1792687680082@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792687680082@travel-trade.com)",
+      "timestamp": "2026-10-22T16:48:03.318Z"
+    },
+    {
+      "id": "audit_1792687683291_ggw3ku",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792687679579@travel-trade.com",
+      "target": "ci_observer_1792687680713@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792687680713@travel-trade.com)",
+      "timestamp": "2026-10-22T16:48:03.291Z"
+    },
+    {
+      "id": "audit_1792687209475_xcf1qu",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792687207870@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792687207870@travel-trade.com",
+      "timestamp": "2026-10-22T16:40:09.475Z"
+    },
+    {
+      "id": "log_1792687209382_pkfa36",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792687207870@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T16:40:09.382Z"
+    },
+    {
+      "id": "audit_1792687209337_mf0p8b",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792687207870@travel-trade.com",
+      "target": "ci_staff_1792687208089@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792687208089@travel-trade.com)",
+      "timestamp": "2026-10-22T16:40:09.337Z"
+    },
+    {
+      "id": "audit_1792687209319_ae3bzy",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792687207870@travel-trade.com",
+      "target": "ci_observer_1792687208480@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792687208480@travel-trade.com)",
+      "timestamp": "2026-10-22T16:40:09.319Z"
+    },
+    {
+      "id": "audit_1792684615520_lvofki",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792684613538@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792684613538@travel-trade.com",
+      "timestamp": "2026-10-22T15:56:55.520Z"
+    },
+    {
+      "id": "log_1792684615388_ldxax9",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684613538@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T15:56:55.388Z"
+    },
+    {
+      "id": "audit_1792684615333_h0t7gj",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684613538@travel-trade.com",
+      "target": "ci_staff_1792684613749@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684613749@travel-trade.com)",
+      "timestamp": "2026-10-22T15:56:55.333Z"
+    },
+    {
+      "id": "audit_1792684615322_dv26be",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684613538@travel-trade.com",
+      "target": "ci_observer_1792684614314@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684614314@travel-trade.com)",
+      "timestamp": "2026-10-22T15:56:55.322Z"
+    },
+    {
+      "id": "audit_1792684530083_tcxwtm",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792684527988@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792684527988@travel-trade.com",
+      "timestamp": "2026-10-22T15:55:30.083Z"
+    },
+    {
+      "id": "log_1792684529942_q81ees",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684527988@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T15:55:29.942Z"
+    },
+    {
+      "id": "audit_1792684529890_153kc4",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684527988@travel-trade.com",
+      "target": "ci_staff_1792684528240@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684528240@travel-trade.com)",
+      "timestamp": "2026-10-22T15:55:29.890Z"
+    },
+    {
+      "id": "audit_1792684529878_uvayyc",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684527988@travel-trade.com",
+      "target": "ci_observer_1792684528785@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684528785@travel-trade.com)",
+      "timestamp": "2026-10-22T15:55:29.878Z"
+    },
+    {
+      "id": "audit_1792684405900_uhz237",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792684404177@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792684404177@travel-trade.com",
+      "timestamp": "2026-10-22T15:53:25.900Z"
+    },
+    {
+      "id": "log_1792684405792_ud3c9x",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684404177@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T15:53:25.792Z"
+    },
+    {
+      "id": "audit_1792684405741_aemx2k",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684404177@travel-trade.com",
+      "target": "ci_staff_1792684404414@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684404414@travel-trade.com)",
+      "timestamp": "2026-10-22T15:53:25.741Z"
+    },
+    {
+      "id": "audit_1792684405731_rxsl8l",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684404177@travel-trade.com",
+      "target": "ci_observer_1792684404913@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684404913@travel-trade.com)",
+      "timestamp": "2026-10-22T15:53:25.731Z"
+    },
+    {
+      "id": "audit_1792684213273_ch0oh3",
+      "action": "DELETE_OWNER",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "performed_by": "admin@travel-trade.com",
+      "target": "ci_owner_1792684209545@travel-trade.com",
+      "details": "Deleted owner account and tenant data for ci_owner_1792684209545@travel-trade.com",
+      "timestamp": "2026-10-22T15:50:13.273Z"
+    },
+    {
+      "id": "log_1792684212896_its4xy",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "FEATURES_UPDATED",
+      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684209545@travel-trade.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-22T15:50:12.897Z"
+    },
+    {
+      "id": "audit_1792684212280_1vu4aj",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684209545@travel-trade.com",
+      "target": "ci_staff_1792684209837@travel-trade.com",
+      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684209837@travel-trade.com)",
+      "timestamp": "2026-10-22T15:50:12.280Z"
+    },
+    {
+      "id": "audit_1792684212204_isvw7h",
+      "action": "DELETE_STAFF",
+      "performed_by": "ci_owner_1792684209545@travel-trade.com",
+      "target": "ci_observer_1792684210349@travel-trade.com",
+      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684210349@travel-trade.com)",
+      "timestamp": "2026-10-22T15:50:12.204Z"
+    },
     {
       "_id": "6ab02667a4bad8c45828dd4f",
       "id": "log_1789929063747_5pgbkq",
@@ -4289,7 +4678,7 @@
   "company": {
     "_id": "6aafbb27aecb8143782f84f7",
     "id": "comp_stellarsync_1",
-    "name": "innovativesoch",
+    "name": "CI Agro Global Corp",
     "domain": "",
     "owner_name": "",
     "owner_email": "",
@@ -4297,8 +4686,8 @@
     "currency": "USD",
     "timezone": "UTC+05:30",
     "revenueTargetMonthly": 150000,
-    "plan": "enterprise",
-    "maxStaff": 999999,
+    "plan": "growth",
+    "maxStaff": 15,
     "currentStaff": 4,
     "status": "active",
     "monthlyRevenue": 79,
@@ -4307,6 +4696,5 @@
     "createdAt": "2026-09-20T10:53:27.953Z",
     "updatedAt": "2026-10-14T14:32:33.656Z",
     "__v": 0
-  },
-  "timestamp": "2026-10-18T17:42:30.899Z"
+  }
 }

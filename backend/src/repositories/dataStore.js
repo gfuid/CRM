@@ -8,6 +8,24 @@
 const crypto = require('crypto');
 
 const generateId = (prefix = 'item') => `${prefix}_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`;
+// IDs of the old built-in demo records. They are never real customer data and are filtered out everywhere.
+const DEMO_RECORD_IDS = new Set([
+  'lead_1', 'lead_2', 'lead_3', 'lead_4', 'lead_5',
+  'tsk_1', 'tsk_2', 'tsk_3',
+  'act_1', 'act_2',
+  'out_1',
+  'day_1', 'day_2', 'day_3',
+  'flw_1', 'flw_2', 'flw_3',
+  'log_1', 'log_2', 'log_3',
+]);
+const withoutDemo = (list) => (Array.isArray(list) ? list.filter((r) => !(r && DEMO_RECORD_IDS.has(String(r.id)))) : list);
+
+const GENERIC_COMPANY_IDS = new Set(['', 'comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default']);
+
+const valuesForTenantQuery = (fields, values) => {
+  const refs = values.filter(Boolean);
+  return refs.length ? fields.map((field) => ({ [field]: { $in: refs } })) : [];
+};
 
 // Subscription Plans Configuration
 const SUBSCRIPTION_PLANS = {
@@ -64,434 +82,13 @@ const dataStore = {
   emailCampaigns: [],
   outreach: [],
 
-  leads: [
-    {
-      id: 'lead_1',
-      name: 'Al-Barakah Global Agro Foods LLC',
-      type: 'Export',
-      contacts: [
-        {
-          name: 'Tariq Mansoor',
-          phone: '+971 50 892 4110',
-          extra_phones: ['+971 4 332 8900'],
-          email: 'tmansoor@albarakahagro.ae',
-          designation: 'VP Procurement & Sourcing',
-          linkedin: 'https://linkedin.com/in/tariq-mansoor-agro',
-        },
-      ],
-      contact_person: 'Tariq Mansoor',
-      email: 'tmansoor@albarakahagro.ae',
-      phone: '+971 50 892 4110',
-      whatsapp: '+971 50 892 4110',
-      website: 'https://albarakahagro.ae',
-      country: 'United Arab Emirates 🇦🇪',
-      source: 'Gulfood Trade Show Dubai',
-      address: 'Warehouse #14, Al Quoz Industrial Area 3, Dubai, UAE',
-      credit_rating: 'AAA',
-      turnover: '120 cr',
-      sourcing_region: 'Nizamabad & Salem, India',
-      legacy_industry_type: 'Spice Milling & Wholesale Distribution',
-      products: ['Turmeric', 'Ginger'],
-      quantity: 50000, // 50 MT
-      price: 84000,
-      value: 84000,
-      stage: 'Quotation Sent',
-      priority: 'High',
-      export_requirements: {
-        industry_type: 'Food & Spice Processing',
-        material_type: 'Whole Raw',
-        polish_level: 'Double Polish',
-        min_curcumin: '3.5%',
-        cultivation_method: 'Conventional Cleaned',
-        preferred_origin: 'Nizamabad / Salem',
-        quantity_needed_kg: 50000,
-        max_price_inr: 145,
-        incoterm: 'CIF',
-        port_delivery: 'Jebel Ali Port, Dubai',
-        payment_days: 'CAD (Cash Against Documents via Bank)',
-      },
-      assigned_to: 'usr_1791814468302_hoa08z',
-      follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-      notes: 'Requested certificate of analysis for curcumin content min 3.5%. Samples dispatched via DHL.',
-      created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'lead_2',
-      name: 'VietSpices Import & Distribution Co.',
-      type: 'Export',
-      contacts: [
-        {
-          name: 'Nguyen Van Minh',
-          phone: '+84 90 345 6789',
-          extra_phones: [],
-          email: 'minh.nguyen@vietspices.vn',
-          designation: 'General Manager',
-          linkedin: 'https://linkedin.com/in/nguyen-minh-spices',
-        },
-      ],
-      contact_person: 'Nguyen Van Minh',
-      email: 'minh.nguyen@vietspices.vn',
-      phone: '+84 90 345 6789',
-      whatsapp: '+84 90 345 6789',
-      website: 'https://vietspices.vn',
-      country: 'Vietnam 🇻🇳',
-      source: 'Direct Inbound',
-      address: 'District 7, Ho Chi Minh City, Vietnam',
-      credit_rating: 'AA+',
-      turnover: '65 cr',
-      sourcing_region: 'Guntur, Andhra Pradesh',
-      legacy_industry_type: 'Agro Commodity Trading',
-      products: ['Red Chilli', 'Turmeric'],
-      quantity: 36000,
-      price: 68500,
-      value: 68500,
-      stage: 'Requirement Understood',
-      priority: 'High',
-      export_requirements: {
-        industry_type: 'Food Processing',
-        material_type: 'Whole Raw Stemless',
-        polish_level: 'Sortex Cleaned',
-        min_curcumin: '3.0%',
-        cultivation_method: 'Conventional',
-        preferred_origin: 'Guntur Sannam S4 / Teja',
-        quantity_needed_kg: 36000,
-        max_price_inr: 160,
-        incoterm: 'FOB',
-        port_delivery: 'Chennai Port / Nhava Sheva',
-        payment_days: '100% LC at Sight',
-      },
-      assigned_to: 'usr_1791814468302_hoa08z',
-      follow_up_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-      notes: 'Looking for 2x40ft containers of Teja Red Chilli stemless. Awaiting lab moisture test report.',
-      created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'lead_3',
-      name: 'Continental Feeds & Bio-Nutrition BV',
-      type: 'Export',
-      contacts: [
-        {
-          name: 'Hendrik Van Dijk',
-          phone: '+31 10 789 2200',
-          extra_phones: ['+31 6 5432 1980'],
-          email: 'h.vandijk@continentalfeeds.nl',
-          designation: 'Head of Feed Ingredients',
-          linkedin: 'https://linkedin.com/in/hendrik-vandijk',
-        },
-      ],
-      contact_person: 'Hendrik Van Dijk',
-      email: 'h.vandijk@continentalfeeds.nl',
-      phone: '+31 10 789 2200',
-      whatsapp: '+31 6 5432 1980',
-      website: 'https://continentalfeeds.nl',
-      country: 'Netherlands 🇳🇱',
-      source: 'B2B Trade Portal',
-      address: 'Haven 420, Port of Rotterdam, Netherlands',
-      credit_rating: 'AAA',
-      turnover: '350 cr',
-      sourcing_region: 'Punjab & Haryana, India',
-      legacy_industry_type: 'Animal Feed & Biofuel Ingredients',
-      products: ['Rice DDGS', 'DORB', 'Corn DDGS'],
-      quantity: 120000, // 120 MT
-      price: 142000,
-      value: 142000,
-      stage: 'Negotiation',
-      priority: 'Urgent',
-      export_requirements: {
-        industry_type: 'Animal Feed & Poultry Nutrition',
-        material_type: 'Pellets & Mash',
-        polish_level: 'Machine Cleaned',
-        min_curcumin: 'N/A',
-        cultivation_method: 'Non-GMO',
-        preferred_origin: 'North India Grain Distilleries',
-        quantity_needed_kg: 120000,
-        max_price_inr: 28,
-        incoterm: 'CIF',
-        port_delivery: 'Port of Rotterdam',
-        payment_days: 'CAD on arrival of vessel',
-      },
-      assigned_to: 'usr_1791814468302_hoa08z',
-      follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-      notes: 'High protein content (min 45% profat) required. Ocean freight rates confirmed from Mundra Port.',
-      created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'lead_4',
-      name: 'Dhaka Agro Feeds & Poultry Ltd',
-      type: 'Export',
-      contacts: [
-        {
-          name: 'Kamal Hossain',
-          phone: '+880 17 1234 5678',
-          extra_phones: [],
-          email: 'kamal@dhakafeed.com.bd',
-          designation: 'Managing Director',
-          linkedin: '',
-        },
-      ],
-      contact_person: 'Kamal Hossain',
-      email: 'kamal@dhakafeed.com.bd',
-      phone: '+880 17 1234 5678',
-      whatsapp: '+880 17 1234 5678',
-      website: 'https://dhakafeed.com.bd',
-      country: 'Bangladesh 🇧🇩',
-      source: 'Direct Inquiry',
-      address: 'Tejgaon Industrial Area, Dhaka, Bangladesh',
-      credit_rating: 'AA',
-      turnover: '80 cr',
-      sourcing_region: 'West Bengal & Bihar border',
-      legacy_industry_type: 'Feed Milling & Agro Processing',
-      products: ['Maize', 'RSM', 'Soya seed'],
-      quantity: 85000,
-      price: 76000,
-      value: 76000,
-      stage: 'Closed Won',
-      priority: 'High',
-      export_requirements: {
-        industry_type: 'Poultry Feed Production',
-        material_type: 'Whole Grain / De-oiled Cake',
-        polish_level: 'Machine Cleaned',
-        min_curcumin: 'N/A',
-        cultivation_method: 'Conventional',
-        preferred_origin: 'Bihar / MP',
-        quantity_needed_kg: 85000,
-        max_price_inr: 24,
-        incoterm: 'CFR',
-        port_delivery: 'Chittagong Port / Petrapole Border',
-        payment_days: 'Irrevocable LC at Sight',
-      },
-      assigned_to: 'usr_1791814468302_hoa08z',
-      follow_up_date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
-      notes: 'Initial 3 rake consignment completed. Repeat order contract for Q3 under preparation.',
-      created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    {
-      id: 'lead_5',
-      name: 'Ceylon Tropical Goods PLC',
-      type: 'Export',
-      contacts: [
-        {
-          name: 'Rohan Jayasuriya',
-          phone: '+94 11 234 5678',
-          extra_phones: [],
-          email: 'rohan@ceylontropical.lk',
-          designation: 'Director of Imports',
-          linkedin: '',
-        },
-      ],
-      contact_person: 'Rohan Jayasuriya',
-      email: 'rohan@ceylontropical.lk',
-      phone: '+94 11 234 5678',
-      whatsapp: '+94 77 123 4567',
-      website: 'https://ceylontropical.lk',
-      country: 'Sri Lanka 🇱🇰',
-      source: 'Referral',
-      address: 'Colombo Harbour Area, Sri Lanka',
-      credit_rating: 'A',
-      turnover: '30 cr',
-      sourcing_region: 'Pollachi & Karnataka, India',
-      legacy_industry_type: 'Fresh Produce & Beverage Bottling',
-      products: ['Tender Coconut', 'Ginger'],
-      quantity: 25000,
-      price: 32000,
-      value: 32000,
-      stage: 'Contact Established',
-      priority: 'Medium',
-      export_requirements: {
-        industry_type: 'Fresh Fruits & Beverage Packing',
-        material_type: 'Fresh Whole Diamonds Cut',
-        polish_level: 'Cleaned & Wrapped',
-        min_curcumin: 'N/A',
-        cultivation_method: 'Natural Plantation',
-        preferred_origin: 'Pollachi, Tamil Nadu',
-        quantity_needed_kg: 25000,
-        max_price_inr: 45,
-        incoterm: 'CIF',
-        port_delivery: 'Colombo Port',
-        payment_days: '30% Advance, 70% on BL',
-      },
-      assigned_to: 'usr_1791814468302_hoa08z',
-      follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-      notes: 'Reefer container logistics quote obtained from Tuticorin Port. Schedule call tomorrow.',
-      created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-  ],
-
-  tasks: [
-    {
-      id: 'tsk_1',
-      title: 'Send Pre-Shipment Sample of Curcumin 3.5% Turmeric to Al-Barakah',
-      description: 'Prepare 500g double-polished turmeric finger samples with lab certificate and dispatch via DHL.',
-      priority: 'Urgent',
-      status: 'In Progress',
-      due_date: new Date(Date.now() + 86400000 * 1).toISOString(),
-      assigned_to: 'usr_1791814468302_hoa08z',
-      lead_id: 'lead_1',
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 'tsk_2',
-      title: 'Confirm Phytosanitary Certificate for VietSpices Red Chilli',
-      description: 'Coordinate with Plant Quarantine department at Chennai Port for Teja Red Chilli container.',
-      priority: 'High',
-      status: 'Pending',
-      due_date: new Date(Date.now() + 86400000 * 2).toISOString(),
-      assigned_to: 'usr_1791814468302_hoa08z',
-      lead_id: 'lead_2',
-      created_at: new Date().toISOString(),
-    },
-    {
-      id: 'tsk_3',
-      title: 'Review Mundra Port Ocean Freight Rates for Rice DDGS to Rotterdam',
-      description: 'Compare Maersk and MSC 40ft container freight quotes for 120 MT consignment.',
-      priority: 'High',
-      status: 'Completed',
-      due_date: new Date(Date.now() - 86400000 * 1).toISOString(),
-      assigned_to: 'usr_1791814468302_hoa08z',
-      lead_id: 'lead_3',
-      created_at: new Date().toISOString(),
-    },
-  ],
-
-  activities: [
-    {
-      id: 'act_1',
-      type: 'call',
-      title: 'Pricing & Incoterm Negotiation with Tariq Mansoor',
-      description: 'Discussed CIF Jebel Ali rates ($1,680/MT) for 50 MT double-polish turmeric.',
-      lead_id: 'lead_1',
-      user_id: 'usr_1791814468302_hoa08z',
-      duration_minutes: 25,
-      timestamp: new Date(Date.now() - 3600000 * 3).toISOString(),
-    },
-    {
-      id: 'act_2',
-      type: 'email',
-      title: 'Proforma Invoice & Lab Certificate Dispatched',
-      description: 'Sent PI and SGS moisture analysis certificate to minh.nguyen@vietspices.vn.',
-      lead_id: 'lead_2',
-      user_id: 'usr_1791814468302_hoa08z',
-      duration_minutes: null,
-      timestamp: new Date(Date.now() - 3600000 * 5).toISOString(),
-    },
-  ],
-
-  outreach: [
-    {
-      id: 'out_1',
-      employee_id: 'usr_1791814468302_hoa08z',
-      date: new Date().toISOString().split('T')[0],
-      calls_made: 34,
-      emails_sent: 58,
-      linkedin_touches: 22,
-      meetings_booked: 3,
-      target_met: true,
-    },
-  ],
-
-  myDays: [
-    {
-      id: 'day_1',
-      user_id: 'usr_1791814468302_hoa08z',
-      task: 'Finalize SGS Inspection booking for JNPT container',
-      priority: 'high',
-      completed: false,
-      time_slot: '10:00 AM - 11:00 AM',
-      category: 'Export Compliance',
-    },
-    {
-      id: 'day_2',
-      user_id: 'usr_1791814468302_hoa08z',
-      task: 'Call Al-Barakah VP Procurement regarding LC opening',
-      priority: 'high',
-      completed: true,
-      time_slot: '02:30 PM - 03:00 PM',
-      category: 'Client Sync',
-    },
-    {
-      id: 'day_3',
-      user_id: 'usr_1791814468302_hoa08z',
-      task: 'Check Guntur Red Chilli mandi spot prices',
-      priority: 'medium',
-      completed: false,
-      time_slot: '04:00 PM - 04:30 PM',
-      category: 'Market Sourcing',
-    },
-  ],
-
-  followUps: [
-    {
-      id: 'flw_1',
-      lead_id: 'lead_1',
-      client_name: 'Tariq Mansoor',
-      company: 'Al-Barakah Global Agro Foods LLC',
-      scheduled_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-      scheduled_time: '11:00 AM',
-      type: 'WhatsApp Call',
-      agenda: 'Verify DHL tracking for sample turmeric and confirm LC draft',
-      status: 'Scheduled',
-      assigned_to: 'usr_1791814468302_hoa08z',
-    },
-    {
-      id: 'flw_2',
-      lead_id: 'lead_2',
-      client_name: 'Nguyen Van Minh',
-      company: 'VietSpices Import & Distribution Co.',
-      scheduled_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-      scheduled_time: '02:00 PM',
-      type: 'Video Call',
-      agenda: 'Confirm 2x40ft Teja stemless red chilli booking',
-      status: 'Scheduled',
-      assigned_to: 'usr_1791814468302_hoa08z',
-    },
-    {
-      id: 'flw_3',
-      lead_id: 'lead_3',
-      client_name: 'Dr. Robert Zhang',
-      company: 'Quantum Health Bio',
-      scheduled_date: new Date(Date.now() - 86400000).toISOString().split('T')[0],
-      scheduled_time: '04:00 PM',
-      type: 'Email',
-      agenda: 'Send revised seat tier pricing breakdown',
-      status: 'Pending',
-      assigned_to: 'usr_agent_1',
-    },
-  ],
-
-  auditLogs: [
-    {
-      id: 'log_1',
-      actor_name: 'Admin Chief',
-      actor_id: 'usr_admin_1',
-      action: 'USER_ROLE_UPDATED',
-      details: 'Updated role of Michael Vance from Agent to Manager',
-      ip_address: '192.168.1.10',
-      timestamp: new Date(Date.now() - 86400000).toISOString(),
-    },
-    {
-      id: 'log_2',
-      actor_name: 'Sarah Jenkins',
-      actor_id: 'usr_agent_1',
-      action: 'LEAD_STAGE_CHANGED',
-      details: 'Moved Apex Global Logistics to Negotiation ($48,000)',
-      ip_address: '192.168.1.14',
-      timestamp: new Date(Date.now() - 3600000 * 4).toISOString(),
-    },
-    {
-      id: 'log_3',
-      actor_name: 'Admin Chief',
-      actor_id: 'usr_admin_1',
-      action: 'SETTINGS_UPDATED',
-      details: 'Updated Monthly Target from $120,000 to $150,000',
-      ip_address: '192.168.1.10',
-      timestamp: new Date(Date.now() - 86400000 * 3).toISOString(),
-    },
-  ],
+  // No demo data: every company starts empty and only sees what its own people create.
+  leads: [],
+  tasks: [],
+  activities: [],
+  myDays: [],
+  followUps: [],
+  auditLogs: [],
 };
 
 // Lazy reference to DB status & models
@@ -505,7 +102,11 @@ const getDb = () => {
   }
 };
 
+// Tests must never read or overwrite the real local snapshot file
+const SNAPSHOT_DISABLED = process.env.NODE_ENV === 'test' || process.env.DISABLE_SNAPSHOT === '1';
+
 const saveSnapshot = () => {
+  if (SNAPSHOT_DISABLED) return;
   try {
     const fs = require('fs');
     const path = require('path');
@@ -546,7 +147,6 @@ const dbSync = {
     }
   },
   deleteUser: async (id) => {
-    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.User) {
       try {
@@ -558,8 +158,132 @@ const dbSync = {
         await models.User.deleteMany({ $or: conditions });
       } catch (e) {
         console.warn('[DB User Delete]:', e.message);
+        throw e;
       }
     }
+    return true;
+  },
+  deleteTenantData: async ({ ownerId, ownerEmail, companyId }) => {
+    const { isConnected, models } = getDb();
+    const ownerRefs = [...new Set([ownerId, ownerEmail].filter(Boolean))];
+    const companyIds = companyId && !GENERIC_COMPANY_IDS.has(companyId) ? [companyId] : [];
+    const inMemoryUsers = dataStore.users.filter((user) =>
+      user.id === ownerId ||
+      (ownerEmail && user.email?.toLowerCase() === ownerEmail.toLowerCase()) ||
+      ownerRefs.includes(user.created_by) ||
+      (companyIds.length > 0 && companyIds.includes(user.company_id))
+    );
+    const userIds = new Set(inMemoryUsers.flatMap((user) => [user.id, user._id].filter(Boolean).map(String)));
+    const userEmails = new Set(inMemoryUsers.map((user) => user.email).filter(Boolean).map((email) => email.toLowerCase()));
+    const userRefs = new Set([...userIds, ...userEmails, ...ownerRefs]);
+    const leadIds = new Set();
+    const counts = {};
+
+    const matchesLead = (lead) =>
+      (lead.company_id && companyIds.includes(lead.company_id)) ||
+      ['created_by', 'created_by_id', 'owner_id', 'assigned_to'].some((field) => userRefs.has(String(lead[field] || '')));
+    const recordFilter = (fields, additional = []) => {
+      const conditions = [
+        ...valuesForTenantQuery(fields, [...userRefs]),
+        ...valuesForTenantQuery(['company_id'], companyIds),
+        ...(leadIds.size ? valuesForTenantQuery(['lead_id'], [...leadIds]) : []),
+        ...additional,
+      ];
+      return conditions.length ? { $or: conditions } : { _id: { $exists: false } };
+    };
+    for (const lead of dataStore.leads) {
+      if (matchesLead(lead) && lead.id) leadIds.add(String(lead.id));
+    }
+
+    if (isConnected && models) {
+      const mongoose = require('mongoose');
+      const session = await mongoose.startSession();
+      try {
+        await session.withTransaction(async () => {
+          const ownerDocs = await models.User.find({
+            $or: [{ id: ownerId }, { email: ownerEmail?.toLowerCase() }],
+          }).session(session).lean();
+          const ownerIdentity = new Set([
+            ...ownerRefs,
+            ...ownerDocs.flatMap((user) => [user.id, user.email].filter(Boolean)),
+          ]);
+          for (const owner of ownerDocs) {
+            if (
+              owner.company_id &&
+              !GENERIC_COMPANY_IDS.has(owner.company_id) &&
+              !companyIds.includes(owner.company_id)
+            ) {
+              companyIds.push(owner.company_id);
+            }
+          }
+          const teamConditions = [
+            ...valuesForTenantQuery(['created_by'], [...ownerIdentity]),
+            ...valuesForTenantQuery(['company_id'], companyIds),
+          ];
+          const teamDocs = teamConditions.length
+            ? await models.User.find({ $or: teamConditions }).session(session).lean()
+            : [];
+          for (const user of [...ownerDocs, ...teamDocs]) {
+            if (user.id) userIds.add(String(user.id));
+            if (user._id) userIds.add(String(user._id));
+            if (user.email) userEmails.add(user.email.toLowerCase());
+          }
+          for (const email of userEmails) userRefs.add(email);
+          for (const id of userIds) userRefs.add(id);
+
+          const tenantLeadConditions = [
+            ...valuesForTenantQuery(['created_by', 'created_by_id', 'owner_id', 'assigned_to'], [...userRefs]),
+            ...valuesForTenantQuery(['company_id'], companyIds),
+          ];
+          const tenantLeadFilter = { $or: tenantLeadConditions };
+          const leadDocs = await models.Lead.collection
+            .find(tenantLeadFilter, { session, projection: { id: 1 } })
+            .toArray();
+          for (const lead of leadDocs) {
+            if (lead.id) leadIds.add(String(lead.id));
+          }
+
+          const filters = {
+            User: {
+              $or: [
+                ...valuesForTenantQuery(['id'], [...userIds]),
+                ...valuesForTenantQuery(['email'], [...userEmails]),
+                ...valuesForTenantQuery(['created_by'], ownerRefs),
+                ...valuesForTenantQuery(['company_id'], companyIds),
+              ],
+            },
+            Lead: tenantLeadFilter,
+            Task: recordFilter(['assigned_to', 'created_by', 'created_by_id', 'owner_id']),
+            Activity: recordFilter(['user_id', 'actor_id', 'created_by', 'created_by_id', 'owner_id']),
+            FollowUp: recordFilter(['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id']),
+            MyDay: recordFilter(['user_id']),
+            Outreach: recordFilter(['owner_id', 'created_by', 'created_by_id']),
+            AuditLog: recordFilter(['actor_id', 'user_id', 'created_by', 'owner_id']),
+            Notification: recordFilter(['target_user_id', 'owner_id']),
+            EmailSetting: recordFilter(['owner_id', 'created_by']),
+            EmailCampaign: recordFilter(['owner_id', 'created_by', 'created_by_id']),
+          };
+
+          if (companyIds.length) {
+            filters.Company = { id: { $in: companyIds } };
+          }
+          for (const [modelName, filter] of Object.entries(filters)) {
+            const result = await models[modelName].collection.deleteMany(filter, { session });
+            counts[modelName] = result.deletedCount || 0;
+          }
+        });
+      } finally {
+        await session.endSession();
+      }
+    }
+
+    return {
+      userIds: [...userIds],
+      userEmails: [...userEmails],
+      leadIds: [...leadIds],
+      companyIds,
+      counts,
+    };
   },
   saveLead: async (lead) => {
     const { isConnected, models } = getDb();
@@ -718,19 +442,19 @@ try {
   const fs = require('fs');
   const path = require('path');
   const snapshotPath = path.join(__dirname, '../../backups/active_db_snapshot.json');
-  if (fs.existsSync(snapshotPath)) {
+  if (!SNAPSHOT_DISABLED && fs.existsSync(snapshotPath)) {
     const raw = fs.readFileSync(snapshotPath, 'utf-8');
     const snap = JSON.parse(raw);
     if (snap.users && snap.users.length > 0) dataStore.users = snap.users;
     if (snap.deletedUserIds && Array.isArray(snap.deletedUserIds)) dataStore.deletedUserIds = snap.deletedUserIds;
     if (snap.deletedUserEmails && Array.isArray(snap.deletedUserEmails)) dataStore.deletedUserEmails = snap.deletedUserEmails;
-    if (snap.leads && snap.leads.length > 0) dataStore.leads = snap.leads;
-    if (snap.tasks && snap.tasks.length > 0) dataStore.tasks = snap.tasks;
-    if (snap.activities && snap.activities.length > 0) dataStore.activities = snap.activities;
-    if (snap.followUps && snap.followUps.length > 0) dataStore.followUps = snap.followUps;
-    if (snap.myDays && snap.myDays.length > 0) dataStore.myDays = snap.myDays;
-    if (snap.outreach && snap.outreach.length > 0) dataStore.outreach = snap.outreach;
-    if (snap.auditLogs && snap.auditLogs.length > 0) dataStore.auditLogs = snap.auditLogs;
+    if (snap.leads && snap.leads.length > 0) dataStore.leads = withoutDemo(snap.leads);
+    if (snap.tasks && snap.tasks.length > 0) dataStore.tasks = withoutDemo(snap.tasks);
+    if (snap.activities && snap.activities.length > 0) dataStore.activities = withoutDemo(snap.activities);
+    if (snap.followUps && snap.followUps.length > 0) dataStore.followUps = withoutDemo(snap.followUps);
+    if (snap.myDays && snap.myDays.length > 0) dataStore.myDays = withoutDemo(snap.myDays);
+    if (snap.outreach && snap.outreach.length > 0) dataStore.outreach = withoutDemo(snap.outreach);
+    if (snap.auditLogs && snap.auditLogs.length > 0) dataStore.auditLogs = withoutDemo(snap.auditLogs);
     if (snap.company) dataStore.company = snap.company;
 
     const isUserDeleted = (email, id) => {
@@ -745,109 +469,6 @@ try {
     // Strip out any previously deleted users
     if (dataStore.users && dataStore.users.length > 0) {
       dataStore.users = dataStore.users.filter((u) => !isUserDeleted(u.email, u.id));
-    }
-
-    // Ensure company staff for Bioniversio Biologics (Keerthana Ponni K)
-    let sagar = dataStore.users.find(
-      (u) => u.email === 'sagarpunia163@gmail.com' || u.id === 'usr_1789929063747_allpa4'
-    );
-    if (!sagar && !isUserDeleted('sagarpunia163@gmail.com', 'usr_1789929063747_allpa4')) {
-      sagar = {
-        _id: '6ab4c5ba40b19d6b9bf4cd91',
-        id: 'usr_1789929063747_allpa4',
-        name: 'Sagar Punia',
-        email: 'sagarpunia163@gmail.com',
-        password: '$2a$10$q3fhgmN8HX2nK9qFm.wqeeHUfl2M2VlBdPgN809vPWMPrZxSWgsR2',
-        staff_password: 'staff123',
-        role: 'agent',
-        persona: 'staff',
-        department: 'Commodity Sales Executive',
-        phone: '08307967782',
-        is_active: true,
-        avatar_url:
-          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-        data_scope: 'own_only',
-        company_id: 'comp_bioniversio_1',
-        company_name: 'Bioniversio Biologics',
-        created_by: 'usr_1791814468302_hoa08z',
-        permissions: {
-          view_analytics: false,
-          view_leads: true,
-          view_tasks: true,
-          tasks_assign: false,
-          view_followup: true,
-          view_outreach: false,
-          view_activity: true,
-          view_mydays: true,
-          can_read: true,
-          can_create: true,
-          can_update: true,
-          can_delete: false,
-          can_export: false,
-          admin_access: false,
-        },
-        last_login: null,
-        created_at: '2026-10-07T10:00:19.168Z',
-        createdAt: '2026-10-07T10:00:19.168Z',
-        updatedAt: '2026-10-07T10:00:19.168Z',
-        __v: 0,
-      };
-      dataStore.users.push(sagar);
-    } else if (sagar && !isUserDeleted(sagar.email, sagar.id)) {
-      sagar.company_id = 'comp_bioniversio_1';
-      sagar.company_name = 'Bioniversio Biologics';
-      sagar.created_by = 'usr_1791814468302_hoa08z';
-      sagar.staff_password = 'staff123';
-      sagar.persona = 'staff';
-      sagar.role = 'agent';
-      sagar.department = 'Commodity Sales Executive';
-      sagar.is_active = true;
-    }
-
-    const hasRahul = dataStore.users.some(
-      (u) => (u.name && u.name.toLowerCase() === 'rahul') || u.email === 'rahul@gmail.com'
-    );
-    if (!hasRahul && !isUserDeleted('rahul@gmail.com', 'usr_1792001466336_wwykxg')) {
-      dataStore.users.push({
-        _id: '6acfc5ba40b19d6b9bf4cd97',
-        id: 'usr_1792001466336_wwykxg',
-        name: 'Rahul',
-        email: 'rahul@gmail.com',
-        password: '$2a$10$q3fhgmN8HX2nK9qFm.wqeeHUfl2M2VlBdPgN809vPWMPrZxSWgsR2',
-        staff_password: 'staff123',
-        role: 'agent',
-        persona: 'staff',
-        department: 'Commodity Sales Executive',
-        phone: '+91 98765 43210',
-        is_active: true,
-        avatar_url:
-          'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-        data_scope: 'own_only',
-        company_id: 'comp_bioniversio_1',
-        company_name: 'Bioniversio Biologics',
-        created_by: 'usr_1791814468302_hoa08z',
-        permissions: {
-          view_analytics: false,
-          view_leads: true,
-          view_tasks: true,
-          tasks_assign: false,
-          view_followup: true,
-          view_outreach: false,
-          view_activity: true,
-          view_mydays: true,
-          can_read: true,
-          can_create: true,
-          can_update: true,
-          can_delete: false,
-          can_export: false,
-          admin_access: false,
-        },
-        last_login: null,
-        created_at: '2026-10-14T18:11:06.337Z',
-        createdAt: '2026-10-14T18:11:06.424Z',
-        updatedAt: '2026-10-14T18:11:06.424Z',
-        __v: 0,
-      });
     }
 
     const keerthana = dataStore.users.find(
@@ -872,6 +493,8 @@ try {
 } catch (e) {}
 
 module.exports = {
+  DEMO_RECORD_IDS,
+  withoutDemo,
   dataStore,
   generateId,
   dbSync,

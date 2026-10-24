@@ -12,7 +12,8 @@ import {
   UserPlus,
   LogOut,
   ExternalLink,
-  Mail
+  Mail,
+  ClipboardCheck,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -43,6 +44,7 @@ export default function MobileTabBar({
     { id: 'activity', label: 'Activity Logs', icon: LayoutGrid, desc: 'Audit trail of trade updates' },
     { id: 'outreach', label: 'Outreach Matrix', icon: Table, desc: 'Touchpoint conversions' },
     { id: 'mydays', label: 'My Days Worklog', icon: Calendar, desc: 'Daily work timeline' },
+    { id: 'review', label: isOwner ? 'Team Review' : 'My Performance', icon: ClipboardCheck, desc: 'Tasks, follow-ups and remarks per person' },
     { id: 'email', label: 'Email Marketing', icon: Mail, desc: 'Premium: campaigns to tagged leads', visible: isOwner },
   ].filter((t) => t.visible !== false);
 
@@ -131,7 +133,7 @@ export default function MobileTabBar({
         {primaryTabs.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          const showBadge = item.badge && (taskBadgeCount > 0 || taskBadgeCount === undefined);
+          const showBadge = item.badge && taskBadgeCount > 0;
 
           return (
             <button
@@ -150,7 +152,7 @@ export default function MobileTabBar({
                 <Icon size={20} className={isActive ? 'text-emerald-600 scale-110 transition-transform' : 'text-slate-500'} />
                 {showBadge && (
                   <span className="absolute -top-1 -right-2 px-1 py-0.2 min-w-[14px] text-center rounded-full text-[9px] font-black bg-rose-500 text-white shadow-xs">
-                    {taskBadgeCount || 1}
+                    {taskBadgeCount}
                   </span>
                 )}
               </div>

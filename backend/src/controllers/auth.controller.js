@@ -34,21 +34,32 @@ const login = async (req, res) => {
 
   // If user not found, reject with clean error (strictly no demo fallbacks)
   if (!user) {
-    return ApiResponse.error(res, 'Invalid email or password. No account found with this email.', 401);
+    return ApiResponse.error(res, 'Invalid email or password. Please check your credentials.', 401);
   }
 
-  // Verify active status
-  if (!user.is_active) {
-    return ApiResponse.error(res, 'Account is deactivated. Please contact your administrator.', 403);
-  }
 
   // Password verification: require password and check match
-  if (!password || !user.password) {
+  if (!password) {
     return ApiResponse.error(res, 'Password is required.', 400);
+  }
+  if (!user.password) {
+    return ApiResponse.error(res, 'Invalid email or password. Please check your credentials.', 401);
   }
   const isMatch = await bcrypt.compare(password, user.password);
   if (!isMatch) {
     return ApiResponse.error(res, 'Invalid email or password. Please check your credentials.', 401);
+  }
+
+  // Verify active status (only after the password is proven, so account state is not leaked)
+  if (!user.is_active) {
+    return ApiResponse.error(res, 'Account is deactivated. Please contact your administrator.', 403);
+  }
+  // Staff of a suspended company cannot log in either
+  if (user.persona === 'staff' && user.created_by) {
+    const ownerRec = dataStore.users.find((o) => o.id === user.created_by || (o.email && o.email.toLowerCase() === String(user.created_by).toLowerCase()));
+    if (ownerRec && ownerRec.is_active === false) {
+      return ApiResponse.error(res, 'Your company account is suspended. Please contact your company owner.', 403);
+    }
   }
 
   // Update last login
@@ -116,6 +127,7 @@ const login = async (req, res) => {
     created_by: user.created_by || '',
     data_scope: user.data_scope || 'own_only',
     permissions: user.permissions || {},
+    staff_limit: user.staff_limit !== undefined && user.staff_limit !== null ? Number(user.staff_limit) : 2,
     last_login: user.last_login,
     created_at: user.created_at,
   };
@@ -138,8 +150,18 @@ const register = async (req, res) => {
   if (!email || !name) {
     return ApiResponse.error(res, 'Name and Email are required', 400);
   }
+  if (typeof password !== 'string' || password.length < 6) {
+    return ApiResponse.error(res, 'Password must be at least 6 characters long', 400);
+  }
+  // Public sign-up always creates a company owner. Staff accounts are created by their owner.
+  if (persona && persona !== 'owner') {
+    return ApiResponse.error(res, 'Staff accounts are created by your company owner. Please ask them to add you.', 403);
+  }
 
   const cleanEmail = email.toLowerCase().trim();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(cleanEmail)) {
+    return ApiResponse.error(res, 'Email address is not valid', 400);
+  }
 
   // Check if exists in DB or cache
   let existing = null;
@@ -157,11 +179,11 @@ const register = async (req, res) => {
     return ApiResponse.error(res, 'User with this email already exists', 409);
   }
 
-  const isOwner = persona === 'owner' || !persona;
+  const isOwner = true;
   const chosenPlan = plan && dataStore.plans[plan] ? plan : 'growth';
 
   // Hash password
-  const rawPassword = password || (isOwner ? 'admin123' : 'agent123');
+  const rawPassword = password;
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
@@ -179,6 +201,7 @@ const register = async (req, res) => {
     company_name: cleanCompanyName,
     created_by: isOwner ? '' : (req.user?.id || ''),
     staff_limit: isOwner ? 2 : undefined,
+    plan: chosenPlan,
     department: department || (isOwner ? 'Executive Management' : 'Sales Outreach'),
     phone: phone || '',
     is_active: true,
@@ -199,19 +222,11 @@ const register = async (req, res) => {
   // Update in-memory dataStore
   dataStore.users.push(newUser);
 
-  // If company name given, update company
-  if (company_name) {
-    dataStore.company.name = company_name;
-  }
-  if (isOwner && dataStore.plans[chosenPlan]) {
-    dataStore.company.plan = chosenPlan;
-    dataStore.company.maxStaff = dataStore.plans[chosenPlan].maxStaff;
-  }
-  dbSync.saveCompany(dataStore.company);
+  // Each owner keeps their own company name/plan on their user record; the global company record is not touched.
 
   // Thank-you / welcome email from the platform sender (non-blocking, never fails registration)
   if (isOwner) {
-    mailer.sendWelcomeEmail(newUser, company_name || dataStore.company.name).catch(() => {});
+    mailer.sendWelcomeEmail(newUser, cleanCompanyName).catch(() => {});
   }
 
   const token = jwt.sign(
@@ -277,7 +292,21 @@ const getProfile = async (req, res) => {
 
   const resolvedCompanyId = req.user.company_id || (isOwner ? ('comp_' + req.user.id) : 'comp_1');
 
+  // Sliding session: every app start hands back a fresh 30-day token, so active users are never logged out
+  const freshToken = jwt.sign(
+    {
+      id: req.user.id,
+      email: req.user.email,
+      role: req.user.role,
+      persona: req.user.persona || 'staff',
+      company_id: req.user.company_id || '',
+    },
+    config.jwtSecret,
+    { expiresIn: config.jwtExpiresIn }
+  );
+
   return ApiResponse.success(res, {
+    token: freshToken,
     user: userWithCompany,
     company: {
       id: resolvedCompanyId,
@@ -301,9 +330,16 @@ const updateProfile = async (req, res) => {
 
   const user = dataStore.users[userIdx];
 
-  // If changing password, verify old password
-  if (new_password) {
-    if (user.password && current_password) {
+  // If changing password, the current password is always required
+  let passwordChanged = false;
+  if (new_password !== undefined && new_password !== '') {
+    if (typeof new_password !== 'string' || new_password.length < 6) {
+      return ApiResponse.error(res, 'New password must be at least 6 characters long', 400);
+    }
+    if (user.password) {
+      if (!current_password) {
+        return ApiResponse.error(res, 'Please enter your current password to set a new one', 400);
+      }
       const match = await bcrypt.compare(current_password, user.password);
       if (!match) {
         return ApiResponse.error(res, 'Current password is incorrect', 400);
@@ -311,6 +347,8 @@ const updateProfile = async (req, res) => {
     }
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(new_password, salt);
+    user.password_changed_at = new Date().toISOString();
+    passwordChanged = true;
   }
 
   if (name) user.name = name;
@@ -324,7 +362,16 @@ const updateProfile = async (req, res) => {
   const cleanUser = { ...user };
   delete cleanUser.password;
 
-  return ApiResponse.success(res, cleanUser, 'Profile updated successfully');
+  // Old sessions stop working after a password change; hand this device a fresh token
+  if (passwordChanged) {
+    cleanUser.token = jwt.sign(
+      { id: user.id, email: user.email, role: user.role, persona: user.persona || 'staff', company_id: user.company_id || '' },
+      config.jwtSecret,
+      { expiresIn: config.jwtExpiresIn }
+    );
+  }
+
+  return ApiResponse.success(res, cleanUser, passwordChanged ? 'Password changed. Other devices have been signed out.' : 'Profile updated successfully');
 };
 
 /**
@@ -335,6 +382,14 @@ const adminLogin = async (req, res) => {
 
   if (!username || !password) {
     return ApiResponse.error(res, 'Admin username and password are required', 400);
+  }
+
+  if (
+    config.nodeEnv === 'production' &&
+    (config.adminPassword === 'admin123' ||
+      config.jwtSecret === 'crm_default_jwt_secret_key_change_in_prod')
+  ) {
+    return ApiResponse.error(res, 'Administrator authentication is not securely configured.', 503);
   }
 
   const cleanUser = (username || '').toLowerCase().trim();

@@ -1,10 +1,15 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
+const { isLeadInUserScope } = require('../utils/tenantScope');
+const { isOwnerUser, isSuperAdmin, viewBlocked } = require('../utils/access');
 
 /**
  * Get all activities (chronological timeline)
  */
 const getActivities = async (req, res) => {
+  if (viewBlocked(req.user, 'view_activity')) {
+    return ApiResponse.error(res, 'Access denied: Your company owner has not given you access to Activity.', 403);
+  }
   const { type, lead_id } = req.query;
   let list = [...dataStore.activities];
 
@@ -51,6 +56,15 @@ const createActivity = async (req, res) => {
   if (!title) {
     return ApiResponse.error(res, 'Activity title is required', 400);
   }
+  if (lead_id) {
+    const lead = dataStore.leads.find((item) => item.id === lead_id);
+    if (!lead || !isLeadInUserScope(lead, req.user)) {
+      return ApiResponse.error(res, 'Lead not found', 404);
+    }
+    if (!isOwnerUser(req.user) && !isSuperAdmin(req.user) && lead.assigned_to !== req.user.id) {
+      return ApiResponse.error(res, 'You can only log activity for your own assigned leads.', 403);
+    }
+  }
 
   const newActivity = {
     id: generateId('act'),
@@ -58,7 +72,7 @@ const createActivity = async (req, res) => {
     title,
     description: description || '',
     lead_id: lead_id || null,
-    user_id: req.user ? req.user.id : 'usr_agent_1',
+    user_id: req.user.id,
     duration_minutes: duration_minutes ? Number(duration_minutes) : null,
     timestamp: new Date().toISOString(),
     created_at: new Date().toISOString(),

@@ -5,6 +5,19 @@ const { dataStore, generateId, dbSync, saveSnapshot } = require('../repositories
 const { systemMetrics } = require('../middlewares/responseTime.middleware');
 const { mongoose, isDbConnected } = require('../config/db');
 const config = require('../config/env');
+const { isSuperAdmin, isOwnerUser, staffBelongsToOwner } = require('../utils/access');
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const STAFF_ROLES = ['manager', 'agent'];
+const DATA_SCOPES = ['own_only', 'all'];
+const stripSecrets = (u) => {
+  if (!u) return u;
+  const clean = { ...u };
+  delete clean.password;
+  delete clean.staff_password;
+  delete clean.plain_password;
+  return clean;
+};
 
 const GENERIC_COMPANY_IDS = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
 
@@ -21,15 +34,9 @@ const getAllUsers = async (req, res) => {
     const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
     const ownerCompanyId = req.user.company_id || (isOwner ? ('comp_' + req.user.id) : null);
     const includeSelf = req.query.include_self === 'true';
-    const isKeerthanaCompany =
-      ownerCompanyId === 'comp_bioniversio_1' ||
-      ownerId === 'usr_1791814468302_hoa08z' ||
-      req.user.email === 'bioniversiobiologics@arggroups.com' ||
-      (req.user.name && req.user.name.includes('Keerthana'));
-
     results = results.filter((u) => {
-      // Never return super admin or test accounts
-      if (u.id === 'usr_super_admin' || u.id === 'usr_athish' || u.name === 'Athish' || u.name === 'Athish Ravikanth' || u.email === 'athishravikanth@gmail.com') {
+      // Never return the super admin as staff
+      if (u.id === 'usr_super_admin') {
         return false;
       }
 
@@ -41,17 +48,6 @@ const getAllUsers = async (req, res) => {
       // Never return another owner as staff
       if (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff')) {
         return false;
-      }
-
-      // For Keerthana's company, specifically allow Sagar Punia and Rahul
-      if (isKeerthanaCompany && (
-        u.email === 'sagarpunia163@gmail.com' ||
-        u.id === 'usr_1789929063747_allpa4' ||
-        u.name === 'Sagar Punia' ||
-        u.email === 'rahul@gmail.com' ||
-        u.name === 'Rahul'
-      )) {
-        return true;
       }
 
       // STRICT OWNERSHIP CHECK:
@@ -96,31 +92,14 @@ const getAllUsers = async (req, res) => {
     const isOwner = u.persona === 'owner' || u.role === 'admin';
     const cleanUser = { ...u };
     delete cleanUser.password;
+    delete cleanUser.staff_password;
+    delete cleanUser.plain_password;
 
     if (isOwner) {
-      // Keerthana company check for this owner
-      const isKeerthana =
-        u.company_id === 'comp_bioniversio_1' ||
-        u.id === 'usr_1791814468302_hoa08z' ||
-        u.email === 'bioniversiobiologics@arggroups.com' ||
-        (u.name && u.name.includes('Keerthana'));
-
       // Find all staff members strictly belonging to this owner
       const staffList = dataStore.users
         .filter((s) => {
           if (s.id === u.id || s.persona === 'owner' || s.role === 'admin') return false;
-          if (s.id === 'usr_athish' || s.name === 'Athish' || s.name === 'Athish Ravikanth' || s.email === 'athishravikanth@gmail.com') return false;
-
-          if (isKeerthana && (
-            s.email === 'sagarpunia163@gmail.com' ||
-            s.id === 'usr_1789929063747_allpa4' ||
-            s.name === 'Sagar Punia' ||
-            s.email === 'rahul@gmail.com' ||
-            s.name === 'Rahul'
-          )) {
-            return true;
-          }
-
           if (s.created_by) {
             return s.created_by === u.id || (u.email && s.created_by.toLowerCase() === u.email.toLowerCase());
           }
@@ -142,7 +121,6 @@ const getAllUsers = async (req, res) => {
           avatar_url: s.avatar_url,
           created_at: s.created_at,
           data_scope: s.data_scope,
-          staff_password: s.staff_password || s.plain_password || '123456',
         }));
 
       // Free Trial / Default limit is 2 staff seats per owner unless adjusted by Admin
@@ -179,7 +157,6 @@ const getAllUsers = async (req, res) => {
         staff_limit: u.staff_limit !== undefined ? Number(u.staff_limit) : 2,
         staff_count: 0,
         staff_list: [],
-        staff_password: u.staff_password || u.plain_password || '123456',
       };
     }
   });
@@ -206,8 +183,14 @@ const createUser = async (req, res) => {
   if (!name || !email) {
     return ApiResponse.error(res, 'Staff Name and Email are required', 400);
   }
+  if (typeof password !== 'string' || password.length < 6) {
+    return ApiResponse.error(res, 'Staff password must be at least 6 characters long', 400);
+  }
 
-  const existing = dataStore.users.find((u) => u.email.toLowerCase() === email.toLowerCase().trim());
+  if (!EMAIL_RE.test(String(email).toLowerCase().trim())) {
+    return ApiResponse.error(res, 'Email address is not valid', 400);
+  }
+  const existing = dataStore.users.find((u) => String(u.email || '').toLowerCase() === email.toLowerCase().trim());
   if (existing) {
     return ApiResponse.error(res, 'A staff member with this email already exists', 409);
   }
@@ -261,9 +244,12 @@ const createUser = async (req, res) => {
   }
 
   // Staff is not an admin - default to 'agent' / 'staff'
-  const userRole = role === 'admin' ? 'manager' : (role || 'agent');
+  const userRole = role === 'admin' ? 'manager' : (STAFF_ROLES.includes(role) ? role : 'agent');
+  if (data_scope !== undefined && !DATA_SCOPES.includes(data_scope)) {
+    return ApiResponse.error(res, `Invalid data scope. Allowed: ${DATA_SCOPES.join(', ')}`, 400);
+  }
 
-  const rawPassword = password || 'staff123';
+  const rawPassword = password;
   const salt = await bcrypt.genSalt(10);
   const hashedPassword = await bcrypt.hash(rawPassword, salt);
 
@@ -297,7 +283,6 @@ const createUser = async (req, res) => {
       name: name.trim(),
       email: email.toLowerCase().trim(),
       password: hashedPassword,
-      staff_password: rawPassword,
       role: userRole,
       persona: 'staff',
       department: department || 'Commodity Sales & Operations',
@@ -332,7 +317,7 @@ const createUser = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  const cleanUser = { ...newUser, staff_password: rawPassword, company_name: ownerCompanyName };
+  const cleanUser = { ...newUser, company_name: ownerCompanyName };
   delete cleanUser.password;
 
   return ApiResponse.created(res, cleanUser, 'Staff member created successfully');
@@ -344,6 +329,12 @@ const createUser = async (req, res) => {
 const updateUser = async (req, res) => {
   const { id } = req.params;
   const { name, email, role, department, phone, permissions, data_scope, is_active } = req.body;
+  if (
+    req.body.password !== undefined &&
+    (typeof req.body.password !== 'string' || req.body.password.length < 6)
+  ) {
+    return ApiResponse.error(res, 'Password must be at least 6 characters long', 400);
+  }
 
   const user = dataStore.users.find(
     (u) => u.id === id || String(u._id) === id || u.email?.toLowerCase() === id?.toLowerCase()
@@ -351,44 +342,60 @@ const updateUser = async (req, res) => {
   if (!user) {
     return ApiResponse.error(res, 'User not found', 404);
   }
+  if (user.id === 'usr_super_admin') {
+    return ApiResponse.error(res, 'The Super Admin account cannot be edited here.', 403);
+  }
 
-  // Strict tenant authorization: owner can only modify their own staff
-  if (req.user && req.user.id !== 'usr_super_admin') {
-    const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
-    const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
-    const ownerCompId = req.user.company_id;
+  const actorIsSuperAdmin = isSuperAdmin(req.user);
+  const editingSelf = user.id === req.user.id;
+  const targetIsOwner = user.persona === 'owner' || (user.role === 'admin' && user.persona !== 'staff');
 
-    const belongsToMe =
-      user.id === req.user.id ||
-      (user.created_by
-        ? (user.created_by === ownerId || (req.user.email && user.created_by.toLowerCase() === req.user.email.toLowerCase()))
-        : (ownerCompId && !GENERIC_COMPANY_IDS.includes(ownerCompId) && user.company_id === ownerCompId));
-
-    if (!belongsToMe) {
+  // Strict tenant authorization: an owner can only modify their own staff (or their own basic profile)
+  if (!actorIsSuperAdmin) {
+    if (!editingSelf && !staffBelongsToOwner(user, req.user)) {
       return ApiResponse.error(res, 'Access denied: You can only modify personnel belonging to your organization.', 403);
     }
-  }
-
-  if (name) user.name = name.trim();
-  if (email) user.email = email.toLowerCase().trim();
-  if (role && ['admin', 'manager', 'agent'].includes(role)) {
-    if (user.role !== 'admin' || req.user.id === user.id) {
-      user.role = role;
+    if (editingSelf) {
+      const forbidden = ['role', 'is_active', 'data_scope', 'permissions', 'email', 'password']
+        .filter((f) => req.body[f] !== undefined);
+      if (forbidden.length) {
+        return ApiResponse.error(res, `Use your profile settings to change your own account (${forbidden.join(', ')}).`, 403);
+      }
     }
   }
+
+  // Validate before changing anything
+  if (role !== undefined && !targetIsOwner && !STAFF_ROLES.includes(role)) {
+    return ApiResponse.error(res, `Invalid staff role. Allowed: ${STAFF_ROLES.join(', ')}`, 400);
+  }
+  if (data_scope !== undefined && !DATA_SCOPES.includes(data_scope)) {
+    return ApiResponse.error(res, `Invalid data scope. Allowed: ${DATA_SCOPES.join(', ')}`, 400);
+  }
+  if (email !== undefined) {
+    const cleanEmail = String(email).toLowerCase().trim();
+    if (!EMAIL_RE.test(cleanEmail)) {
+      return ApiResponse.error(res, 'Email address is not valid', 400);
+    }
+    const taken = dataStore.users.find((u) => u.id !== user.id && String(u.email || '').toLowerCase() === cleanEmail);
+    if (taken) {
+      return ApiResponse.error(res, 'Another account already uses this email address', 409);
+    }
+  }
+
+  if (name) user.name = String(name).trim();
+  if (email) user.email = String(email).toLowerCase().trim();
+  if (role !== undefined && !targetIsOwner) user.role = role;
   if (department !== undefined) user.department = department;
   if (phone !== undefined) user.phone = phone;
-  if (is_active !== undefined) user.is_active = is_active;
+  if (is_active !== undefined && !editingSelf) user.is_active = Boolean(is_active);
   if (data_scope !== undefined) user.data_scope = data_scope;
   if (req.body.avatar_url !== undefined) user.avatar_url = req.body.avatar_url;
-  if (req.body.password && req.body.password.length >= 6) {
+  if (req.body.password !== undefined) {
     const salt = await bcrypt.genSalt(10);
     user.password = await bcrypt.hash(req.body.password, salt);
-    user.staff_password = req.body.password;
-  } else if (req.body.staff_password) {
-    user.staff_password = req.body.staff_password;
+    user.password_changed_at = new Date().toISOString();
   }
-  if (permissions !== undefined) {
+  if (permissions !== undefined && !targetIsOwner) {
     user.permissions = {
       ...(user.permissions || {}),
       ...permissions,
@@ -411,8 +418,10 @@ const updateUser = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  const cleanUser = { ...user, staff_password: user.staff_password || '' };
+  const cleanUser = { ...user };
   delete cleanUser.password;
+  delete cleanUser.staff_password;
+  delete cleanUser.plain_password;
 
   return ApiResponse.success(res, cleanUser, 'Staff member permissions updated successfully');
 };
@@ -434,13 +443,111 @@ const deleteUser = async (req, res) => {
 
   let user = userIndex !== -1 ? dataStore.users[userIndex] : null;
 
-  // 2. Prevent deleting Company Owner account or Super Admin
-  if (user && (user.id === 'usr_super_admin' || user.persona === 'owner' || (user.role === 'admin' && user.persona !== 'staff'))) {
+  if (!user) {
+    return ApiResponse.error(res, 'Staff member not found', 404);
+  }
+
+  const isOwnerAccount = user.persona === 'owner' || (user.role === 'admin' && user.persona !== 'staff');
+  const isSuperAdmin = req.user?.id === 'usr_super_admin';
+
+  if (user.id === 'usr_super_admin') {
+    return ApiResponse.error(res, 'Cannot delete the Super Admin account', 400);
+  }
+
+  if (isOwnerAccount && !isSuperAdmin) {
     return ApiResponse.error(res, 'Cannot delete Company Owner account', 400);
   }
 
+  if (isOwnerAccount && isSuperAdmin) {
+    const deletedTenant = await dbSync.deleteTenantData({
+      ownerId: user.id,
+      ownerEmail: user.email,
+      companyId: user.company_id,
+    });
+    const userRefs = new Set([
+      ...deletedTenant.userIds,
+      ...deletedTenant.userEmails.map((email) => email.toLowerCase()),
+      user.id,
+      user.email.toLowerCase(),
+    ]);
+    const companyIds = new Set(deletedTenant.companyIds);
+    const leadIds = new Set(deletedTenant.leadIds);
+    const belongsToTenant = (record, fields) =>
+      (record.company_id && companyIds.has(record.company_id)) ||
+      fields.some((field) => userRefs.has(String(record[field] || ''))) ||
+      (record.lead_id && leadIds.has(String(record.lead_id)));
+
+    dataStore.users = dataStore.users.filter((record) =>
+      !userRefs.has(String(record.id || '')) &&
+      !userRefs.has(String(record.email || '').toLowerCase()) &&
+      !belongsToTenant(record, ['created_by'])
+    );
+    dataStore.leads = dataStore.leads.filter((record) =>
+      !leadIds.has(String(record.id || '')) &&
+      !belongsToTenant(record, ['created_by', 'created_by_id', 'owner_id', 'assigned_to'])
+    );
+    dataStore.tasks = dataStore.tasks.filter((record) =>
+      !belongsToTenant(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
+    );
+    dataStore.activities = dataStore.activities.filter((record) =>
+      !belongsToTenant(record, ['user_id', 'actor_id', 'created_by', 'created_by_id', 'owner_id'])
+    );
+    dataStore.followUps = dataStore.followUps.filter((record) =>
+      !belongsToTenant(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
+    );
+    dataStore.myDays = dataStore.myDays.filter((record) =>
+      !belongsToTenant(record, ['user_id'])
+    );
+    dataStore.outreach = dataStore.outreach.filter((record) =>
+      !belongsToTenant(record, ['owner_id', 'created_by', 'created_by_id'])
+    );
+    dataStore.auditLogs = dataStore.auditLogs.filter((record) =>
+      !belongsToTenant(record, ['actor_id', 'user_id', 'created_by', 'owner_id'])
+    );
+    dataStore.notifications = dataStore.notifications.filter((record) =>
+      !belongsToTenant(record, ['target_user_id', 'owner_id'])
+    );
+    for (const collectionName of ['emailSettings', 'emailCampaigns', 'tenants']) {
+      if (Array.isArray(dataStore[collectionName])) {
+        dataStore[collectionName] = dataStore[collectionName].filter((record) =>
+          !belongsToTenant(record, ['owner_id', 'created_by', 'created_by_id', 'id'])
+        );
+      }
+    }
+
+    dataStore.deletedUserIds = [...new Set([...(dataStore.deletedUserIds || []), ...deletedTenant.userIds])];
+    dataStore.deletedUserEmails = [...new Set([
+      ...(dataStore.deletedUserEmails || []),
+      ...deletedTenant.userEmails.map((email) => email.toLowerCase()),
+    ])];
+    for (const userId of deletedTenant.userIds) {
+      delete systemMetrics.userRequests[userId];
+    }
+    saveSnapshot();
+
+    const auditEntry = {
+      id: generateId('audit'),
+      action: 'DELETE_OWNER',
+      actor_name: req.user?.name || 'Super Administrator',
+      actor_id: req.user?.id || 'usr_super_admin',
+      performed_by: req.user?.email || req.user?.name || 'Super Administrator',
+      target: user.email || user.name || targetId,
+      details: `Deleted owner account and tenant data for ${user.email || targetId}`,
+      timestamp: new Date().toISOString(),
+    };
+    dataStore.auditLogs.unshift(auditEntry);
+    await dbSync.saveAuditLog(auditEntry);
+    saveSnapshot();
+
+    return ApiResponse.success(
+      res,
+      { id: targetId, deleted: true, removed: deletedTenant.counts },
+      'Owner account and tenant data deleted successfully'
+    );
+  }
+
   // Strict tenant authorization: owner can only delete their own personnel
-  if (req.user && req.user.id !== 'usr_super_admin' && user) {
+  if (req.user && !isSuperAdmin && user) {
     const isOwner = req.user.persona === 'owner' || req.user.role === 'admin';
     const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.id);
     const ownerCompId = req.user.company_id;
@@ -455,17 +562,12 @@ const deleteUser = async (req, res) => {
     }
   }
 
-  // 3. Remove from in-memory dataStore.users
-  if (userIndex !== -1) {
-    dataStore.users.splice(userIndex, 1);
-  } else {
-    dataStore.users = dataStore.users.filter(
-      (u) =>
-        u.id !== targetId &&
-        String(u._id) !== targetId &&
-        (!u.email || u.email.toLowerCase() !== targetId.toLowerCase())
-    );
-  }
+  // Delete from MongoDB before changing in-memory state so failures are not reported as success.
+  const identifierToDelete = user.id || user._id || user.email;
+  await dbSync.deleteUser(String(identifierToDelete));
+
+  // Remove from in-memory dataStore.users only after the database delete succeeds.
+  dataStore.users.splice(userIndex, 1);
 
   // 4. Add to backend deleted tombstones so restarts or snapshots don't re-seed
   dataStore.deletedUserIds = dataStore.deletedUserIds || [];
@@ -477,11 +579,7 @@ const deleteUser = async (req, res) => {
     dataStore.deletedUserEmails.push(user.email.toLowerCase());
   }
 
-  // 5. Delete from DB via dbSync
-  const identifierToDelete = user?.id || user?._id || user?.email || targetId;
-  await dbSync.deleteUser(identifierToDelete);
-
-  // 6. Audit log
+  // Audit log
   try {
     const auditEntry = {
       id: generateId('audit'),
@@ -516,9 +614,15 @@ const toggleUserStatus = async (req, res) => {
     return ApiResponse.error(res, 'User not found', 404);
   }
 
-  // Prevent self-deactivation if sole admin
-  if (req.user && req.user.id === user.id && user.role === 'admin') {
-    return ApiResponse.error(res, 'You cannot deactivate your own admin account', 400);
+  if (req.user && req.user.id === user.id) {
+    return ApiResponse.error(res, 'You cannot deactivate your own account', 400);
+  }
+  if (user.id === 'usr_super_admin') {
+    return ApiResponse.error(res, 'The Super Admin account cannot be deactivated', 400);
+  }
+  // Owners may only switch their own staff on/off; only the Super Admin can suspend an owner
+  if (!isSuperAdmin(req.user) && !staffBelongsToOwner(user, req.user)) {
+    return ApiResponse.error(res, 'Access denied: You can only change staff belonging to your organization.', 403);
   }
 
   user.is_active = !user.is_active;
@@ -538,7 +642,11 @@ const toggleUserStatus = async (req, res) => {
   dataStore.auditLogs.unshift(auditLog);
   dbSync.saveAuditLog(auditLog);
 
-  return ApiResponse.success(res, user, `User ${user.is_active ? 'activated' : 'deactivated'} successfully`);
+  const cleanUser = { ...user };
+  delete cleanUser.password;
+  delete cleanUser.staff_password;
+  delete cleanUser.plain_password;
+  return ApiResponse.success(res, cleanUser, `User ${user.is_active ? 'activated' : 'deactivated'} successfully`);
 };
 
 /**
@@ -961,7 +1069,7 @@ const getOverviewSummary = async (req, res) => {
       admins: adminsCount,
       managers: managersCount,
       agents: agentsCount,
-      recentUsers: users.slice(-5).reverse(),
+      recentUsers: users.slice(-5).reverse().map(stripSecrets),
     },
     crm: {
       totalLeads,
@@ -1142,13 +1250,23 @@ const getDeveloperMetrics = async (req, res) => {
 
     // In-memory collections fallback / local metrics calculation
     const inMemoryCollections = [
-      { name: 'users', count: dataStore.users.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.users)) },
-      { name: 'leads', count: dataStore.leads.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.leads)) },
-      { name: 'tasks', count: dataStore.tasks.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.tasks)) },
-      { name: 'audit_logs', count: dataStore.auditLogs.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.auditLogs)) },
-      { name: 'activities', count: dataStore.activities.length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.activities)) },
-      { name: 'notifications', count: (dataStore.adminNotifications || []).length, sizeBytes: Buffer.byteLength(JSON.stringify(dataStore.adminNotifications || [])) },
-    ].map((col) => ({
+      ['users', dataStore.users],
+      ['leads', dataStore.leads],
+      ['tasks', dataStore.tasks],
+      ['audit_logs', dataStore.auditLogs],
+      ['activities', dataStore.activities],
+      ['follow_ups', dataStore.followUps || []],
+      ['my_days', dataStore.myDays || []],
+      ['notifications', dataStore.notifications || []],
+      ['outreach', dataStore.outreach || []],
+      ['email_settings', dataStore.emailSettings || []],
+      ['email_campaigns', dataStore.emailCampaigns || []],
+      ['tenants', dataStore.tenants || []],
+    ].map(([name, records]) => ({
+      name,
+      count: records.length,
+      sizeBytes: Buffer.byteLength(JSON.stringify(records)),
+    })).map((col) => ({
       ...col,
       sizeKb: (col.sizeBytes / 1024).toFixed(2),
       storageSizeKb: (col.sizeBytes / 1024).toFixed(2),
@@ -1162,8 +1280,8 @@ const getDeveloperMetrics = async (req, res) => {
       mongoStats.dataSizeMb = (totalMemBytes / 1024 / 1024).toFixed(2);
       mongoStats.totalUsedBytes = totalMemBytes;
       mongoStats.totalUsedMb = (totalMemBytes / 1024 / 1024).toFixed(2);
-      mongoStats.freeMb = (512 - parseFloat(mongoStats.totalUsedMb)).toFixed(2);
-      mongoStats.percentUsed = ((totalMemBytes / 536870912) * 100).toFixed(2);
+      mongoStats.freeMb = Math.max(0, (mongoStats.storageLimitBytes - totalMemBytes) / 1024 / 1024).toFixed(2);
+      mongoStats.percentUsed = Math.min(100, (totalMemBytes / mongoStats.storageLimitBytes) * 100).toFixed(2);
       mongoStats.collectionsCount = inMemoryCollections.length;
       mongoStats.objectsCount = inMemoryCollections.reduce((acc, c) => acc + c.count, 0);
     }
@@ -1172,18 +1290,84 @@ const getDeveloperMetrics = async (req, res) => {
     const owners = dataStore.users.filter((u) => u.persona === 'owner' || u.role === 'admin');
 
     const userFootprint = owners.map((owner) => {
-      const staffList = dataStore.users.filter(
-        (s) => (s.created_by && (s.created_by === owner.id || s.created_by === owner.email)) ||
-               (owner.company_id && s.company_id === owner.company_id)
+      const ownerCompanyId = owner.company_id && !GENERIC_COMPANY_IDS.includes(owner.company_id)
+        ? owner.company_id
+        : null;
+      const staffList = dataStore.users.filter((staff) => {
+        if (staff.id === owner.id || staff.persona === 'owner' || (staff.role === 'admin' && staff.persona !== 'staff')) {
+          return false;
+        }
+        if (staff.created_by) {
+          return staff.created_by === owner.id || staff.created_by.toLowerCase() === owner.email?.toLowerCase();
+        }
+        return Boolean(ownerCompanyId && staff.company_id === ownerCompanyId);
+      });
+      const tenantUserRefs = new Set([
+        owner.id,
+        owner.email?.toLowerCase(),
+        ...staffList.flatMap((staff) => [staff.id, staff.email?.toLowerCase()]),
+      ].filter(Boolean));
+      const belongsToOwner = (record, fields) =>
+        (ownerCompanyId && record.company_id === ownerCompanyId) ||
+        fields.some((field) => tenantUserRefs.has(String(record[field] || '').toLowerCase()));
+      const ownerLeads = dataStore.leads.filter((lead) =>
+        belongsToOwner(lead, ['created_by', 'created_by_id', 'owner_id', 'assigned_to'])
       );
-      const ownerLeads = dataStore.leads.filter(
-        (l) => l.company_id === owner.company_id || l.created_by_id === owner.id || staffList.some((s) => s.id === l.assigned_to)
+      const ownerLeadIds = new Set(ownerLeads.map((lead) => String(lead.id)));
+      const belongsToOwnerOrLead = (record, fields) =>
+        belongsToOwner(record, fields) || (record.lead_id && ownerLeadIds.has(String(record.lead_id)));
+      const ownerTasks = dataStore.tasks.filter((record) =>
+        belongsToOwnerOrLead(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
       );
-
-      const estimatedBytes =
-        Buffer.byteLength(JSON.stringify(owner)) +
-        Buffer.byteLength(JSON.stringify(staffList)) +
-        Buffer.byteLength(JSON.stringify(ownerLeads));
+      const ownerActivities = dataStore.activities.filter((record) =>
+        belongsToOwnerOrLead(record, ['user_id', 'actor_id', 'created_by', 'created_by_id', 'owner_id'])
+      );
+      const ownerFollowUps = dataStore.followUps.filter((record) =>
+        belongsToOwnerOrLead(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
+      );
+      const ownerMyDays = dataStore.myDays.filter((record) => belongsToOwner(record, ['user_id']));
+      const ownerOutreach = dataStore.outreach.filter((record) =>
+        belongsToOwner(record, ['owner_id', 'created_by', 'created_by_id'])
+      );
+      const ownerEmailSettings = (dataStore.emailSettings || []).filter((record) =>
+        belongsToOwner(record, ['owner_id', 'created_by'])
+      );
+      const ownerEmailCampaigns = (dataStore.emailCampaigns || []).filter((record) =>
+        belongsToOwnerOrLead(record, ['owner_id', 'created_by', 'created_by_id'])
+      );
+      const ownerAuditLogs = dataStore.auditLogs.filter((record) =>
+        belongsToOwner(record, ['actor_id', 'user_id', 'created_by', 'owner_id'])
+      );
+      const ownerNotifications = dataStore.notifications.filter((record) =>
+        belongsToOwner(record, ['target_user_id', 'owner_id'])
+      );
+      const ownerTenants = (dataStore.tenants || []).filter((record) =>
+        belongsToOwner(record, ['owner_id', 'created_by', 'id'])
+      );
+      const tenantRecords = [
+        owner,
+        ...staffList,
+        ...ownerLeads,
+        ...ownerTasks,
+        ...ownerActivities,
+        ...ownerFollowUps,
+        ...ownerMyDays,
+        ...ownerOutreach,
+        ...ownerEmailSettings,
+        ...ownerEmailCampaigns,
+        ...ownerAuditLogs,
+        ...ownerNotifications,
+        ...ownerTenants,
+      ];
+      const estimatedBytes = tenantRecords.reduce(
+        (total, record) => total + Buffer.byteLength(JSON.stringify(record)),
+        0
+      );
+      const tenantUserIds = [owner.id, ...staffList.map((staff) => staff.id)].filter(Boolean);
+      const apiRequests = tenantUserIds.reduce(
+        (total, userId) => total + (systemMetrics.userRequests?.[userId] || 0),
+        0
+      );
 
       return {
         id: owner.id,
@@ -1195,10 +1379,17 @@ const getDeveloperMetrics = async (req, res) => {
         estimatedBytes,
         estimatedKb: (estimatedBytes / 1024).toFixed(2),
         sharePercent: ((estimatedBytes / (mongoStats.dataSizeBytes || 1024)) * 100).toFixed(1),
+        apiRequests,
         lastLogin: owner.last_login || owner.created_at,
         isActive: owner.is_active,
       };
     }).sort((a, b) => b.estimatedBytes - a.estimatedBytes);
+    const attributedApiRequests = userFootprint.reduce((total, owner) => total + owner.apiRequests, 0);
+    userFootprint.forEach((owner) => {
+      owner.apiUsageSharePercent = attributedApiRequests
+        ? ((owner.apiRequests / attributedApiRequests) * 100).toFixed(1)
+        : '0.0';
+    });
 
     // 3. API & Server Performance Metrics
     const topEndpoints = Object.entries(systemMetrics.endpoints || {})
@@ -1335,4 +1526,3 @@ module.exports = {
   createTenant,
   updateTenant,
 };
-

@@ -22,21 +22,19 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import { useAuth } from '../context/AuthContext';
-import { TEAM_MEMBERS, INITIAL_MY_DAYS_REPORTS } from '../data/myDaysData';
+import { INITIAL_MY_DAYS_REPORTS } from '../data/myDaysData';
+import { api } from '../services/api';
 
 export default function MyDays() {
   const { isOwner, isStaff, profile, getTeamMembers } = useAuth();
 
-  const isKeerthana =
-    profile?.company_id === 'comp_bioniversio_1' ||
-    profile?.id === 'usr_1791814468302_hoa08z' ||
-    profile?.email === 'bioniversiobiologics@arggroups.com' ||
-    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
-
   const [reports, setReports] = useState(INITIAL_MY_DAYS_REPORTS);
   const [selectedMember, setSelectedMember] = useState('All users');
   const [viewMode, setViewMode] = useState('list'); // 'list' | 'calendar'
-  const [teamMembers, setTeamMembers] = useState(isKeerthana ? ['Sagar Punia', 'Rahul'] : []);
+  const [teamMembers, setTeamMembers] = useState([]);
+  const [memberIds, setMemberIds] = useState({}); // name (lower case) -> user id
+  const [saving, setSaving] = useState(false);
+  const [loadError, setLoadError] = useState('');
 
   // Fetch verified active team members
   useEffect(() => {
@@ -44,10 +42,10 @@ export default function MyDays() {
       getTeamMembers()
         .then((res) => {
           if (Array.isArray(res) && res.length > 0) {
-            const names = res
-              .map((u) => u.name?.trim())
-              .filter((n) => n && n !== 'Athish' && n !== 'Athish Ravikanth' && !n.startsWith('usr_'));
+            const valid = res.filter((u) => u.name?.trim() && !u.name.startsWith('usr_'));
+            const names = valid.map((u) => u.name.trim());
             if (names.length > 0) setTeamMembers(names);
+            setMemberIds(Object.fromEntries(valid.map((u) => [u.name.trim().toLowerCase(), u.id])));
           }
         })
         .catch(() => {});
@@ -57,22 +55,18 @@ export default function MyDays() {
   // Dynamic filter buttons and select options
   const memberList = useMemo(() => {
     const list = ['All users'];
-    if (profile?.name && !list.includes(profile.name) && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') {
+    if (profile?.name && !list.includes(profile.name)) {
       list.push(profile.name);
     }
     teamMembers.forEach((m) => {
       if (!list.includes(m)) list.push(m);
     });
-    if (isKeerthana) {
-      if (!list.includes('Sagar Punia')) list.push('Sagar Punia');
-      if (!list.includes('Rahul')) list.push('Rahul');
-    }
     return list;
-  }, [teamMembers, profile, isKeerthana]);
+  }, [teamMembers, profile]);
 
-  // Calendar state - Default to September 2026
-  const [currentYear, setCurrentYear] = useState(2026);
-  const [currentMonth, setCurrentMonth] = useState(8); // 8 is September (0-indexed)
+  // Calendar state - starts on the current month
+  const [currentYear, setCurrentYear] = useState(() => new Date().getFullYear());
+  const [currentMonth, setCurrentMonth] = useState(() => new Date().getMonth());
 
   // Modals
   const [selectedReport, setSelectedReport] = useState(null);
@@ -80,7 +74,7 @@ export default function MyDays() {
 
   // New report form state
   const [newReport, setNewReport] = useState({
-    user: profile?.name || (isKeerthana ? 'Sagar Punia' : 'Self'),
+    user: profile?.name || 'Self',
     date_iso: new Date().toISOString().split('T')[0],
     leads: 1,
     status: 0,
@@ -92,39 +86,53 @@ export default function MyDays() {
     task_note: '',
   });
 
-  // Load from localStorage on mount & ensure My Days starts clean at 0 until user manually logs reports
-  useEffect(() => {
-    try {
-      const stored = localStorage.getItem('oneroot_mydays_v3');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
-          // Strictly keep ONLY genuine user-logged reports (having id starting with 'report_')
-          // Purge any prefilled mock data like rep_1, rep_2, etc. or legacy demo names
-          const realReports = parsed.filter(
-            (r) =>
-              r &&
-              r.id &&
-              !r.id.startsWith('rep_') &&
-              r.id.startsWith('report_') &&
-              !['adric', 'shiva', 'rohan', 'david'].includes((r.user || '').toLowerCase())
-          );
-          setReports(realReports);
-          localStorage.setItem('oneroot_mydays_v3', JSON.stringify(realReports));
-          return;
-        }
-      }
-      setReports([]);
-      localStorage.setItem('oneroot_mydays_v3', JSON.stringify([]));
-    } catch {}
-  }, []);
+  // Daily reports live on the server so the owner can review the whole team from any device
+  const toScreenReport = (r) => ({
+    ...r,
+    user: r.user_name || r.user || '',
+    date: r.date && r.date !== r.date_iso ? r.date : new Date(`${r.date_iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }),
+    tasks: Array.isArray(r.tasks) ? r.tasks : [],
+  });
 
-  const saveReports = (updated) => {
-    setReports(updated);
+  const loadReports = async () => {
     try {
-      localStorage.setItem('oneroot_mydays_v3', JSON.stringify(updated));
-    } catch {}
+      const res = await api.getMyDays(isOwner ? { scope: 'team', kind: 'report' } : { kind: 'report' });
+      const list = Array.isArray(res?.data) ? res.data.map(toScreenReport) : [];
+      list.sort((a, b) => String(b.date_iso || '').localeCompare(String(a.date_iso || '')));
+      setReports(list);
+      setLoadError('');
+    } catch (err) {
+      setLoadError(err?.message || 'Daily reports could not be loaded.');
+    }
   };
+
+  // One-time move of reports an older version kept only in this browser
+  const migrateLocalReports = async () => {
+    try {
+      if (localStorage.getItem('oneroot_mydays_migrated') === 'true') return;
+      const parsed = JSON.parse(localStorage.getItem('oneroot_mydays_v3') || '[]');
+      const mine = (Array.isArray(parsed) ? parsed : []).filter(
+        (r) => r && typeof r.id === 'string' && r.id.startsWith('report_') &&
+          (r.user || '').trim().toLowerCase() === (profile?.name || '').trim().toLowerCase()
+      );
+      for (const r of mine) {
+        await api.addMyDay({ kind: 'report', date_iso: r.date_iso, date: r.date, leads: r.leads, status: r.status, reassign: r.reassign, remarks: r.remarks, summary: r.summary, tasks: r.tasks, updated: r.updated });
+      }
+      localStorage.setItem('oneroot_mydays_migrated', 'true');
+      localStorage.removeItem('oneroot_mydays_v3');
+    } catch (err) {
+      console.warn('Could not move old local daily reports:', err?.message);
+    }
+  };
+
+  useEffect(() => {
+    if (!profile?.id) return;
+    (async () => {
+      await migrateLocalReports();
+      await loadReports();
+    })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.id, isOwner]);
 
   // Filter reports by selected team member
   const filteredReports = reports.filter((r) => {
@@ -157,8 +165,8 @@ export default function MyDays() {
   };
 
   const handleTodayMonth = () => {
-    setCurrentYear(2026);
-    setCurrentMonth(8); // September 2026
+    setCurrentYear(new Date().getFullYear());
+    setCurrentMonth(new Date().getMonth());
   };
 
   // Generate calendar grid days
@@ -200,78 +208,58 @@ export default function MyDays() {
     return filteredReports.filter((r) => r.date_iso === date_iso);
   };
 
-  // Add new day report
-  const handleCreateReport = (e) => {
+  // Add new day report (saved on the server)
+  const handleCreateReport = async (e) => {
     e.preventDefault();
-    const dateObj = new Date(newReport.date_iso);
-    const dateFormatted = dateObj.toLocaleDateString('en-US', {
-      weekday: 'short',
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    });
-    const nowTime = new Date().toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true
-    });
+    if (saving) return;
+    const nowTime = new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true });
+    const dateFormatted = new Date(`${newReport.date_iso}T00:00:00`).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' });
+    const selectedName = (newReport.user || '').trim().toLowerCase();
+    const forUserId = isOwner && selectedName && selectedName !== (profile?.name || '').trim().toLowerCase() ? memberIds[selectedName] : undefined;
 
-    const created = {
-      id: `report_${Date.now()}`,
-      date: dateFormatted,
-      date_iso: newReport.date_iso,
-      user: newReport.user,
-      leads: Number(newReport.leads) || 0,
-      status: Number(newReport.status) || 0,
-      reassign: Number(newReport.reassign) || 0,
-      remarks: Number(newReport.remarks) || 0,
-      updated: `${dateFormatted.split(',')[1]} ${nowTime}`,
-      summary: newReport.summary || 'Logged customer interactions and market outreach',
-      tasks: newReport.task_lead
-        ? [
-            {
-              lead_name: newReport.task_lead,
-              contact: 'Customer Desk',
-              time: nowTime,
-              action: newReport.task_action,
-              note: newReport.task_note || 'Discussed product specs and shipment pricing',
-              status: 'Contact Established'
-            }
-          ]
-        : []
-    };
-
-    const updated = [created, ...reports];
-    saveReports(updated);
-    setIsAddModalOpen(false);
-    setSelectedReport(created);
-    setNewReport({
-      user: profile?.name || (isKeerthana ? 'Sagar Punia' : 'Self'),
-      date_iso: new Date().toISOString().split('T')[0],
-      leads: 1,
-      status: 0,
-      reassign: 0,
-      remarks: 1,
-      summary: '',
-      task_lead: '',
-      task_action: 'Call Initiated & Price Discussion',
-      task_note: '',
-    });
+    setSaving(true);
+    try {
+      const res = await api.addMyDay({
+        kind: 'report',
+        ...(forUserId ? { user_id: forUserId } : {}),
+        date_iso: newReport.date_iso,
+        date: dateFormatted,
+        leads: Number(newReport.leads) || 0,
+        status: Number(newReport.status) || 0,
+        reassign: Number(newReport.reassign) || 0,
+        remarks: Number(newReport.remarks) || 0,
+        updated: `${dateFormatted.split(',')[1] || dateFormatted} ${nowTime}`,
+        summary: newReport.summary || '',
+        tasks: newReport.task_lead
+          ? [{ lead_name: newReport.task_lead, contact: '', time: nowTime, action: newReport.task_action, note: newReport.task_note || '', status: '' }]
+          : [],
+      });
+      if (!res?.data) throw new Error(res?.message || 'Report could not be saved.');
+      const created = toScreenReport(res.data);
+      setReports((prev) => [created, ...prev]);
+      setIsAddModalOpen(false);
+      setSelectedReport(created);
+      setNewReport({
+        user: profile?.name || 'Self',
+        date_iso: new Date().toISOString().split('T')[0],
+        leads: 1,
+        status: 0,
+        reassign: 0,
+        remarks: 1,
+        summary: '',
+        task_lead: '',
+        task_action: 'Call Initiated & Price Discussion',
+        task_note: '',
+      });
+    } catch (err) {
+      alert(err?.message || 'Report could not be saved. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   // User pill colors
-  const getUserBadge = (user) => {
-    switch (user) {
-      case 'Sagar Punia':
-        return 'bg-emerald-100 text-emerald-800 border-emerald-200';
-      case 'Rahul':
-        return 'bg-purple-100 text-purple-800 border-purple-200';
-      case 'Keerthana Ponni K':
-        return 'bg-blue-100 text-blue-800 border-blue-200';
-      default:
-        return 'bg-slate-100 text-slate-800 border-slate-200';
-    }
-  };
+  const getUserBadge = () => 'bg-slate-100 text-slate-800 border-slate-200';
 
   return (
     <div className="space-y-6">
@@ -285,8 +273,11 @@ export default function MyDays() {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1 font-medium">
-            View sales team daily reports (admin days are not tracked)
+            {isOwner ? 'Daily reports from your whole team' : 'Your daily reports (your owner can see them)'}
           </p>
+          {loadError && (
+            <p className="text-xs text-rose-600 mt-1 font-bold">{loadError}</p>
+          )}
         </div>
 
         <div className="flex items-center gap-3">
@@ -395,7 +386,7 @@ export default function MyDays() {
                         </p>
                         <p className="text-xs text-slate-400 max-w-md">
                           {selectedMember === 'All users'
-                            ? 'Abhi tak koi daily report add nahi hui hai. Sales team jab daily task complete karegi ya aap "+ Log Day Report" karenge tab yahan record aayega.'
+                            ? 'No daily reports yet. Reports appear here when your team (or you) use "+ Log Day Report".'
                             : `No reports logged yet for ${selectedMember}.`}
                         </p>
                       </div>
@@ -750,7 +741,7 @@ export default function MyDays() {
                   onChange={(e) => setNewReport({ ...newReport, user: e.target.value })}
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500"
                 >
-                  {memberList.filter((m) => m !== 'All users').map((m) => (
+                  {memberList.filter((m) => m !== 'All users' && (isOwner || m === profile?.name)).map((m) => (
                     <option key={m} value={m}>
                       {m}
                     </option>

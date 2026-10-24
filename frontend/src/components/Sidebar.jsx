@@ -12,6 +12,7 @@ import {
   ChevronRight,
   Shield,
   Mail,
+  ClipboardCheck,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import { useAuth, isStaffDeleted } from '../context/AuthContext';
@@ -24,7 +25,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
       if (ownerKey) {
         const cached = JSON.parse(localStorage.getItem(ownerKey) || '[]');
         if (Array.isArray(cached) && cached.length > 0) {
-          return cached.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
+          return cached.filter((m) => m.persona !== 'owner' && !isStaffDeleted(m));
         }
       }
     } catch {}
@@ -36,7 +37,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
       getTeamMembers()
         .then((members) => {
           if (Array.isArray(members)) {
-            const staff = members.filter((m) => m.persona !== 'owner' && m.name !== 'Athish' && !isStaffDeleted(m));
+            const staff = members.filter((m) => m.persona !== 'owner' && !isStaffDeleted(m));
             setStaffList(staff);
           }
         })
@@ -68,6 +69,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     { id: 'outreach', label: 'Outreach', icon: Table, visible: canViewOutreach },
     { id: 'mydays', label: 'My Days', icon: Calendar, visible: canViewMyDays },
     { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
+    { id: 'review', label: isStaff ? 'My Performance' : 'Team Review', icon: ClipboardCheck },
     { id: 'email', label: 'Email Marketing', icon: Mail, visible: isOwner, pro: true },
   ];
 
@@ -105,7 +107,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
         {navItems.map((item) => {
           const Icon = item.icon;
           const isActive = activeTab === item.id;
-          const showBadge = item.badge && (taskBadgeCount > 0 || taskBadgeCount === undefined);
+          const showBadge = item.badge && taskBadgeCount > 0;
 
           return (
             <button
@@ -126,7 +128,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
 
               {showBadge ? (
                 <span className="px-2 py-0.5 text-xs font-bold text-white bg-[#F88F61] rounded-full shadow-sm">
-                  {taskBadgeCount || 1}
+                  {taskBadgeCount}
                 </span>
               ) : item.pro ? (
                 <span className="px-1.5 py-0.5 text-[9px] font-black uppercase rounded-md bg-amber-100 text-amber-800 border border-amber-200">

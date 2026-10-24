@@ -17,17 +17,31 @@ A modern, high-performance Customer Relationship Management (CRM) system and Adm
 
 ## 🔐 Credentials
 
-### 1. Super Admin Console
-- **URL**: [https://crm-b2g7.vercel.app](https://crm-b2g7.vercel.app/)
-- **Username**: `admin` (or `admin@travel-trade.com`)
-- **Password**: `admin123`
+Passwords are **never** written in this repository.
 
-### 2. Sales CRM Workspace
-- **URL**: [https://crm-amber-nine.vercel.app](https://crm-amber-nine.vercel.app/)
-- **Owner Login**: Register a new company workspace or log in with:
-  - **Email**: `owner@travel-trade.com`
-  - **Password**: `password123` (or any newly registered company)
-- **Staff Login**: Added via the "+ Add Staff" modal inside the Sales CRM workspace.
+- **Super Admin Console**: username/email and password come from the `ADMIN_USERNAME` / `ADMIN_EMAIL` / `ADMIN_PASSWORD` environment variables on the backend (Render → Environment). In production the server refuses to start admin login while the password is still `admin123`.
+- **Sales CRM owners** register their own company at the Sales CRM URL (password of at least 6 characters).
+- **Staff** accounts are created only by their company owner (Staff management). Public sign-up as staff is blocked.
+
+---
+
+## 👥 Roles & rules (enforced by the server)
+
+| Who | Can | Cannot |
+| :--- | :--- | :--- |
+| **Super Admin** | Everything in the Admin Console: owners, staff limits, premium features, broadcasts, audit log, tenants | — |
+| **Owner** | Create/edit/deactivate/delete **own** staff (within the staff limit), create/edit/delete leads, tasks and follow-ups, correct any field, see Team Review | Change their own staff limit or premium features, see other companies, use any Admin Console route |
+| **Staff** | Create leads, add remarks / next follow-up, move a lead forward, complete tasks and follow-ups (with what was discussed), create personal tasks, send correction requests, log daily reports | Edit or delete what was created, mark Won/Lost, cancel or reopen tasks, rewrite follow-ups, see other staff's data (unless the owner gives "all data"), assign work to others |
+
+- Remark history is append-only; owner corrections are listed in each lead's `edit_history`.
+- Overdue follow-ups show as **Missed**; reschedules need a reason and are logged.
+- **Team Review** (`/analytics/team`, `/analytics/staff/:id`) shows per person: tasks on time / late / overdue, follow-ups done / missed / rescheduled, overdue leads and what was written.
+- **Reminders** (`/reminders`) list today's and overdue items; they appear in the bell menu.
+- Business time zone for "today" and deadlines: `BUSINESS_TZ_OFFSET` (default `+05:30`).
+- Extra web domains that may call the API: `CORS_ORIGIN` (comma-separated). `*` is ignored.
+
+Tests: `npm --prefix backend test` (CI suite + 122 owner/staff/attacker role scenarios, no database needed).
+Remove old demo records from MongoDB: `npm --prefix backend run cleanup:demo` (dry run) then `... -- --apply`.
 
 ---
 
@@ -56,7 +70,7 @@ If `SMTP_HOST` is empty the backend simply logs and skips the mail; registration
 - API: `/api/v1/email/*` (see `/api/v1/docs`).
 
 ### Super Admin login
-The console verifies credentials **only** against the backend (`ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars; defaults `admin` / `admin123`). There is no client-side fallback any more. Admins can set a new password for any owner or staff member from Owners & Staff → **Password**.
+The console verifies credentials **only** against the backend (`ADMIN_USERNAME` / `ADMIN_PASSWORD` env vars). There is no client-side fallback any more. Admins can set a new password for any owner or staff member from Owners & Staff → **Password**.
 
 ## Architecture
 

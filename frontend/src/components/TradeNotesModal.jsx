@@ -8,31 +8,13 @@ export default function TradeNotesModal({ isOpen, onClose }) {
   const [notes, setNotes] = useState(() => {
     try {
       const saved = localStorage.getItem('crm_trade_notes');
-      if (saved) return JSON.parse(saved);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        // Drop the old built-in sample notes (ids 1-3) that were never real
+        if (Array.isArray(parsed)) return parsed.filter((n) => ![1, 2, 3].includes(n?.id));
+      }
     } catch {}
-    return [
-      {
-        id: 1,
-        author: 'punia (Admin)',
-        text: 'Buyer Al Barakah Agro requested revised proforma invoice with CIF Jebel Ali terms.',
-        timestamp: 'Today, 2:30 PM',
-        tag: 'Negotiation',
-      },
-      {
-        id: 2,
-        author: 'Export Desk',
-        text: 'Nhava Sheva shipping line confirmed container slot for 40ft High Cube Basmati Rice dispatch.',
-        timestamp: 'Yesterday, 5:15 PM',
-        tag: 'Shipping',
-      },
-      {
-        id: 3,
-        author: 'punia (Admin)',
-        text: 'Sample parcel dispatched via DHL to Singapore Spices. Tracking ID sent to buyer on WhatsApp.',
-        timestamp: 'Sep 18, 11:20 AM',
-        tag: 'Samples',
-      },
-    ];
+    return [];
   });
 
   const [newNote, setNewNote] = useState('');
@@ -52,7 +34,7 @@ export default function TradeNotesModal({ isOpen, onClose }) {
 
     const item = {
       id: Date.now(),
-      author: profile?.name || 'punia',
+      author: profile?.name || 'User',
       text: newNote.trim(),
       timestamp: 'Just now',
       tag,

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { supabase } from './lib/supabase';
+import { api } from './services/api';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import MobileTopHeader from './components/MobileTopHeader';
@@ -45,6 +45,7 @@ const FollowUp = lazyWithRetry(() => import('./pages/FollowUp'));
 const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
+const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
 
 const tabNames = {
   analytics: 'Analytics',
@@ -55,6 +56,7 @@ const tabNames = {
   mydays: 'My Days',
   followup: 'Follow up',
   email: 'Email Marketing',
+  review: 'Team Review',
 };
 
 function AppContent() {
@@ -76,7 +78,7 @@ function AppContent() {
   };
 
   const [authMode, setAuthMode] = useState(getInitialAuthMode);
-  const [taskBadgeCount, setTaskBadgeCount] = useState(1);
+  const [taskBadgeCount, setTaskBadgeCount] = useState(0);
   const [staffModalOpen, setStaffModalOpen] = useState(false);
   const [staffToEdit, setStaffToEdit] = useState(null);
   const [loginInitialPersona, setLoginInitialPersona] = useState('owner');
@@ -193,7 +195,8 @@ function AppContent() {
   // Keep-alive heartbeat: ping backend health endpoint every 10 minutes so Render free-tier never sleeps during active browser sessions
   useEffect(() => {
     const keepAlive = () => {
-      fetch('https://crm-ep4i.onrender.com/health', { mode: 'no-cors' }).catch(() => {});
+      const apiBase = (api?.baseUrl || '').replace(/\/api\/v1\/?$/, '');
+      if (apiBase) fetch(`${apiBase}/health`, { mode: 'no-cors' }).catch(() => {});
     };
     keepAlive();
     const interval = setInterval(keepAlive, 10 * 60 * 1000); // every 10 mins
@@ -204,27 +207,21 @@ function AppContent() {
   useEffect(() => {
     if (!profile) return;
     const countTasks = async () => {
+      // Badge = my open tasks that are overdue or due today (0 = no badge)
       try {
-        const { data } = await supabase
-          .from('tasks')
-          .select('id, due_date, status')
-          .eq('company_id', profile.company_id)
-          .neq('status', 'Completed');
-
-        if (!data || data.length === 0) {
-          setTaskBadgeCount(1);
-          return;
-        }
+        const res = await api.getTasks();
+        const list = Array.isArray(res?.data) ? res.data : [];
         const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        const alertCount = data.filter((t) => {
+        today.setHours(23, 59, 59, 999);
+        const alertCount = list.filter((t) => {
+          if (t.status === 'Completed' || t.status === 'Cancelled') return false;
+          if (isStaff && t.assigned_to !== profile.id) return false;
           const due = new Date(t.due_date);
-          due.setHours(0, 0, 0, 0);
-          return due <= today;
+          return !Number.isNaN(due.getTime()) && due <= today;
         }).length;
-        setTaskBadgeCount(alertCount || 1);
+        setTaskBadgeCount(alertCount);
       } catch {
-        setTaskBadgeCount(1);
+        setTaskBadgeCount(0);
       }
     };
     countTasks();
@@ -297,6 +294,8 @@ function AppContent() {
         return <FollowUp />;
       case 'email':
         return isOwner ? <EmailMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
+      case 'review':
+        return <TeamReview />;
       default:
         return <Analytics />;
     }

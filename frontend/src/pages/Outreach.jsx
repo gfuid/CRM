@@ -25,7 +25,6 @@ import {
   Tag
 } from 'lucide-react';
 import { OUTREACH_COLUMNS, INITIAL_OUTREACH_LOGS } from '../data/outreachData';
-import { SEED_LEADS } from '../data/seedLeads';
 
 // ISO formatting helper (YYYY-MM-DD)
 export const parseToIso = (d) => {
@@ -177,15 +176,12 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
   // 1. Process all leads
   leads.forEach((lead) => {
     const leadDateIso = parseToIso(lead.created_at || lead.created_date) || getTodayIso();
-    let leadUser = (lead.agent_name || lead.created_by_name || 'Keerthana Ponni K').trim();
+    let leadUser = (lead.agent_name || lead.created_by_name || 'Unassigned').trim();
     if (
       !leadUser ||
-      leadUser === 'usr_athish' ||
-      leadUser === 'Athish' ||
-      leadUser === 'Athish Ravikanth' ||
       leadUser.startsWith('usr_')
     ) {
-      leadUser = 'Keerthana Ponni K';
+      leadUser = 'Unassigned';
     }
 
     const row = getOrCreateRow(leadDateIso, leadUser);
@@ -195,8 +191,8 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
       company_name: lead.company_name || lead.name || 'Unnamed Company',
       contact_person: lead.contact_person || (lead.contacts && lead.contacts[0]?.name) || 'Contact Person',
       time: extractTime(lead.created_at) || '10:00 AM',
-      note: lead.notes || `Created trade lead for ${Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Agricultural Commodities')}`,
-      product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Rice DDGS'),
+      note: lead.notes || `Created trade lead for ${Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'a buyer')}`,
+      product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || ''),
       country: lead.country || 'International',
       phone: lead.phone || '',
       email: lead.email || '',
@@ -212,9 +208,6 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
         let actUser = (act.author ? act.author.replace(/^by\s+/i, '') : leadUser) || leadUser;
         if (
           !actUser ||
-          actUser === 'usr_athish' ||
-          actUser === 'Athish' ||
-          actUser === 'Athish Ravikanth' ||
           actUser.startsWith('usr_')
         ) {
           actUser = leadUser;
@@ -253,9 +246,6 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
         let remUser = (rem.author || leadUser).trim();
         if (
           !remUser ||
-          remUser === 'usr_athish' ||
-          remUser === 'Athish' ||
-          remUser === 'Athish Ravikanth' ||
           remUser.startsWith('usr_')
         ) {
           remUser = leadUser;
@@ -339,16 +329,12 @@ export default function Outreach() {
 
       if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
         const cleanUsers = usersRes.data.filter(
-          (u) =>
-            u.name !== 'Athish' &&
-            u.name !== 'Athish Ravikanth' &&
-            u.id !== 'usr_athish' &&
-            u.email !== 'athishravikanth@gmail.com'
+          (u) => Boolean(u)
         );
         setTeamMembers(cleanUsers);
       }
 
-      if (leadsRes && leadsRes.success && Array.isArray(leadsRes.data) && leadsRes.data.length > 0) {
+      if (leadsRes && leadsRes.success && Array.isArray(leadsRes.data)) {
         setLeads(leadsRes.data);
         try {
           localStorage.setItem('oneroot_leads_v3', JSON.stringify(leadsRes.data));
@@ -453,85 +439,49 @@ export default function Outreach() {
       } catch {}
     }
 
-    // 3. Try SEED_LEADS
-    if (!fullLead) {
-      fullLead = SEED_LEADS.find(
-        (l) =>
-          (l.company_name && l.company_name.toLowerCase() === leadSummary.company_name?.toLowerCase()) ||
-          (l.name && l.name.toLowerCase() === leadSummary.company_name?.toLowerCase())
-      );
-    }
-
     if (fullLead) {
       setActivePreviewLead(fullLead);
-    } else {
-      // Build a comprehensive lead object from summary
-      setActivePreviewLead({
-        id: leadSummary.id || 'lead_prev_' + Date.now(),
-        company_name: leadSummary.company_name,
-        name: leadSummary.company_name,
-        country: leadSummary.country || 'India 🇮🇳',
-        type: 'Export',
-        contact_person: leadSummary.contact_person || 'Procurement Manager',
-        phone: leadSummary.phone || '+91 98452 11890',
-        email: leadSummary.email || 'procurement@company.com',
-        website: 'https://' + (leadSummary.company_name || 'company').toLowerCase().replace(/[^a-z0-9]/g, '') + '.com',
-        address: 'Industrial Processing Zone, India',
-        products: leadSummary.product ? [leadSummary.product] : ['Agricultural Commodities'],
-        quantity: leadSummary.quantity || 50000,
-        price: leadSummary.price || 50000,
-        stage: leadSummary.stage || 'Requirement Understood',
-        agent_name: activeBreakdown?.user || profile?.name || 'Keerthana Ponni K',
-        activity_history: [
-          {
-            activity: 'Call initiated',
-            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '14/10/2026'} · ${leadSummary.time || '11:00 AM'}`,
-            note: leadSummary.note || 'Discussed product specs and shipment schedule',
-            author: `by ${activeBreakdown?.user || profile?.name || 'Keerthana Ponni K'}`,
-          },
-        ],
-        previous_remarks: [
-          {
-            remark: leadSummary.note || 'Follow up scheduled',
-            date: `${formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '14/10/2026'}`,
-            author: activeBreakdown?.user || profile?.name || 'Keerthana Ponni K',
-          },
-        ],
-        export_requirements: {
-          incoterm: 'CIF',
-          port_delivery: 'Nhava Sheva / Mundra Port',
-          payment_days: 'CAD on BL copy',
-          polish_level: 'Machine Cleaned',
-        },
-      });
+      return;
+    }
+
+    // 3. Show only what we really know, then load the full record from the server
+    setActivePreviewLead({
+      id: leadSummary.id,
+      company_name: leadSummary.company_name,
+      name: leadSummary.company_name,
+      country: leadSummary.country || '',
+      contact_person: leadSummary.contact_person || '',
+      products: leadSummary.product ? [leadSummary.product] : [],
+      stage: leadSummary.stage || '',
+      agent_name: activeBreakdown?.user || '',
+      activity_history: [],
+      previous_remarks: leadSummary.note
+        ? [{ remark: leadSummary.note, date: formatDMY(activeBreakdown?.date, activeBreakdown?.date_iso) || '', author: activeBreakdown?.user || '' }]
+        : [],
+      export_requirements: {},
+    });
+    if (leadSummary.id && api.getLead) {
+      api.getLead(leadSummary.id)
+        .then((res) => { if (res?.data) setActivePreviewLead(res.data); })
+        .catch(() => {});
     }
   };
 
-  const isKeerthana =
-    profile?.company_id === 'comp_bioniversio_1' ||
-    profile?.id === 'usr_1791814468302_hoa08z' ||
-    profile?.email === 'bioniversiobiologics@arggroups.com' ||
-    (profile?.name && profile.name.toLowerCase().includes('keerthana'));
-
   const allUserOptions = useMemo(() => {
     const set = new Set(['All users']);
-    if (profile?.name && profile.name !== 'Athish' && profile.name !== 'Athish Ravikanth') set.add(profile.name);
+    if (profile?.name) set.add(profile.name);
     (teamMembers || []).forEach((t) => {
-      if (t.name && t.name !== 'Athish' && t.name !== 'Athish Ravikanth' && !t.name.startsWith('usr_')) {
+      if (t.name && !t.name.startsWith('usr_')) {
         set.add(t.name);
       }
     });
-    if (isKeerthana) {
-      set.add('Sagar Punia');
-      set.add('Rahul');
-    }
     (logs || []).forEach((l) => {
-      if (l.user && l.user !== 'Athish' && l.user !== 'Athish Ravikanth' && !l.user.startsWith('usr_')) {
+      if (l.user && !l.user.startsWith('usr_')) {
         set.add(l.user);
       }
     });
     return Array.from(set);
-  }, [teamMembers, profile, logs, isKeerthana]);
+  }, [teamMembers, profile, logs]);
 
   return (
     <div className="space-y-6 antialiased pb-12">
@@ -944,7 +894,7 @@ export default function Outreach() {
                   </span>
                 )}
                 <span className="px-2.5 py-1 rounded-xl text-[11px] font-bold bg-cyan-50 text-cyan-800 border border-cyan-200">
-                  👤 Rep: {activePreviewLead.agent_name || activeBreakdown?.user || 'Shiva'}
+                  👤 Rep: {activePreviewLead.agent_name || activeBreakdown?.user || '—'}
                 </span>
               </div>
             </div>
@@ -956,7 +906,7 @@ export default function Outreach() {
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {(Array.isArray(activePreviewLead.products) && activePreviewLead.products.length > 0
                     ? activePreviewLead.products
-                    : (activePreviewLead.product ? activePreviewLead.product.split(',').map(p => p.trim()) : ['Rice DDGS'])
+                    : (activePreviewLead.product ? activePreviewLead.product.split(',').map(p => p.trim()) : [])
                   ).map((p, idx) => (
                     <span key={idx} className="px-2.5 py-1 rounded-lg text-xs font-black bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-200 border border-amber-300 shadow-2xs">
                       {p}
@@ -971,16 +921,15 @@ export default function Outreach() {
                   const dealVal = Number(activePreviewLead.price) || Number(activePreviewLead.value) || 0;
                   const dealQty = Number(activePreviewLead.quantity) || 0;
                   const unit = activePreviewLead.quantity_unit || (dealQty >= 1000 ? 'kg' : 'MT');
-                  const lakhs = (dealVal / 100000).toFixed(2);
                   const isMT = unit.toLowerCase() === 'mt' || unit.toLowerCase().includes('tonne');
                   const mt = isMT ? dealQty : (dealQty / 1000);
                   return (
                     <div className="mt-1">
                       <div className="text-base font-black text-rose-950 dark:text-rose-200">
-                        {dealVal > 0 ? `₹${dealVal.toLocaleString('en-IN')}` : '₹0 (Unpriced inquiry)'}
+                        {dealVal > 0 ? `$${dealVal.toLocaleString('en-US')}` : 'Price not set'}
                       </div>
                       <div className="text-xs font-semibold text-slate-500 dark:text-slate-400 mt-0.5">
-                        {dealVal >= 100000 ? `₹${lakhs} Lakhs INR • ` : ''}
+                        
                         {dealQty.toLocaleString()} {unit} {mt > 0 && !isMT ? `(≈ ${mt.toFixed(1)} MT)` : ''}
                       </div>
                     </div>
@@ -1035,7 +984,7 @@ export default function Outreach() {
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1.5">
                   <div className="font-bold text-slate-800 dark:text-slate-200">Company Location & Address</div>
                   <div className="text-slate-600 dark:text-slate-400">
-                    {activePreviewLead.address || 'Industrial Area / Commercial Trading Zone'}
+                    {activePreviewLead.address || '—'}
                   </div>
                   {activePreviewLead.website && (
                     <div className="flex items-center gap-1 pt-0.5">

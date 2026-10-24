@@ -228,7 +228,7 @@ function SenderSettings({ profile, onSaved }) {
 
           <div>
             <label className={labelCls}>From name</label>
-            <input className={inputCls} value={form.from_name} onChange={(e) => setForm({ ...form, from_name: e.target.value })} placeholder="Rahul from Travel-Trade" />
+            <input className={inputCls} value={form.from_name} onChange={(e) => setForm({ ...form, from_name: e.target.value })} placeholder="Your name from your company" />
           </div>
           <div>
             <label className={labelCls}>From email</label>

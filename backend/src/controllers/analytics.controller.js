@@ -1,11 +1,15 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore } = require('../repositories/dataStore');
 const { isLeadInUserScope, getTenantContext } = require('../utils/tenantScope');
+const { isOwnerUser, isSuperAdmin } = require('../utils/access');
 
 /**
  * Get aggregated analytics, KPIs, pipeline metrics, and sales velocity
  */
 const getAnalytics = async (req, res) => {
+  if (!isOwnerUser(req.user) && !isSuperAdmin(req.user) && !req.user?.permissions?.view_analytics) {
+    return ApiResponse.error(res, 'Access denied: Analytics access is not enabled for this account.', 403);
+  }
   const leads = (dataStore.leads || []).filter((l) => isLeadInUserScope(l, req.user));
   const ctx = getTenantContext(req.user);
 
@@ -17,7 +21,7 @@ const getAnalytics = async (req, res) => {
     return false;
   });
 
-  if (req.user && req.user.role !== 'admin') {
+  if (!isOwnerUser(req.user) && !isSuperAdmin(req.user)) {
     tasks = tasks.filter((t) => t.assigned_to === req.user.id);
   }
 
@@ -87,7 +91,9 @@ const getAnalytics = async (req, res) => {
       monthlyTarget,
       targetAchievedPercent,
       overdueTasksCount,
-      activeTeamMembers: dataStore.users.filter((u) => u.is_active).length,
+      activeTeamMembers: ctx.isSuperAdmin
+        ? dataStore.users.filter((u) => u.is_active).length
+        : dataStore.users.filter((u) => u.is_active !== false && ctx.allowedUserIds.has(u.id)).length,
     },
     stageBreakdown,
     leadSources,

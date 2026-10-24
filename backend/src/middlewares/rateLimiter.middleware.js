@@ -20,23 +20,41 @@ const apiLimiter = rateLimit({
 });
 
 /**
- * Stricter Limiter for Auth endpoints (Login / Register)
+ * Login / register limiter.
+ * Counted per IP + email, so a whole office on one internet connection is not locked out
+ * by each other's logins, while one account still cannot be brute-forced.
  */
 const authLimiter = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
-  max: 20, // 20 attempts
+  max: 10, // 10 attempts per account per IP
   standardHeaders: true,
   legacyHeaders: false,
+  keyGenerator: (req) => {
+    const who = String((req.body && (req.body.email || req.body.username)) || '').toLowerCase().trim();
+    return `${req.ip}|${who}`;
+  },
   handler: (req, res) => {
     return ApiResponse.error(
       res,
-      'Too many authentication attempts. Please try again in 15 minutes',
+      'Too many login attempts for this account. Please try again in 15 minutes',
       429
     );
   },
 });
 
+/**
+ * Overall cap per IP on the auth endpoints (stops scripted attacks across many emails).
+ */
+const authIpLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 200,
+  standardHeaders: true,
+  legacyHeaders: false,
+  handler: (req, res) => ApiResponse.error(res, 'Too many requests from this network. Please try again in 15 minutes', 429),
+});
+
 module.exports = {
   apiLimiter,
   authLimiter,
+  authIpLimiter,
 };

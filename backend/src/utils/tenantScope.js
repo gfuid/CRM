@@ -17,7 +17,8 @@ function getTenantContext(user) {
     return { isSuperAdmin: true };
   }
 
-  const isOwner = user.persona === 'owner' || user.role === 'admin';
+  const { isOwnerUser } = require('./access');
+  const isOwner = isOwnerUser(user);
   const ownerId = isOwner ? user.id : (user.created_by || user.company_id || user.id);
   const companyId = user.company_id || (isOwner ? ('comp_' + user.id) : null);
 
@@ -28,7 +29,7 @@ function getTenantContext(user) {
   const staffMembers = users.filter(
     (u) =>
       u.persona !== 'owner' &&
-      u.role !== 'admin' &&
+      !(u.role === 'admin' && u.persona !== 'staff') &&
       (u.created_by === ownerId ||
         (user.email && u.created_by && u.created_by.toLowerCase() === user.email.toLowerCase()) ||
         (companyId && companyId !== 'comp_1' && companyId !== 'comp_traveltrade_1' && u.company_id === companyId))
@@ -121,10 +122,6 @@ function enforceTenantIsolation(users) {
   };
 
   const staffOwnerMap = {
-    'usr_1789929063747_allpa4': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'sagarpunia163@gmail.com': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'usr_1792001466336_wwykxg': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
-    'rahul@gmail.com': { created_by: 'usr_1791814468302_hoa08z', company_id: 'comp_bioniversio_1', company_name: 'Bioniversio Biologics' },
     'usr_1791306183682_rh51dw': { created_by: 'usr_1791306043083_9p353t', company_id: 'comp_sagarpunia_1791306043083', company_name: "sagarpunia's Workspace" },
     'papu@gmail.com': { created_by: 'usr_1791306043083_9p353t', company_id: 'comp_sagarpunia_1791306043083', company_name: "sagarpunia's Workspace" },
     'usr_1791309008897_voir4i': { created_by: 'usr_1791308692781_zo9rj5', company_id: 'comp_ambani_1791308692781', company_name: "ambani's Workspace" },
@@ -161,6 +158,8 @@ function enforceTenantIsolation(users) {
   for (const u of users) {
     if (u.persona === 'staff' || (u.role !== 'admin' && u.id !== 'usr_super_admin')) {
       u.persona = 'staff';
+      // Staff can never carry the owner/admin role (older data could have it)
+      if (u.role === 'admin') u.role = 'manager';
       const mapping = staffOwnerMap[u.id] || (u.email && staffOwnerMap[u.email.toLowerCase()]);
       if (mapping) {
         u.created_by = mapping.created_by;

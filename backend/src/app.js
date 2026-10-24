@@ -13,6 +13,9 @@ const ApiResponse = require('./utils/apiResponse');
 
 const app = express();
 
+// Render / Vercel put a proxy in front of us: use the real client IP for rate limiting
+app.set('trust proxy', 1);
+
 // Security HTTP headers
 app.use(
   helmet({
@@ -32,11 +35,30 @@ app.use(
 app.use(responseTimeMiddleware);
 
 // CORS configuration - dynamic origin reflection to support credentials
+// Only our own web apps may call the API from a browser.
+// Add more domains with CORS_ORIGIN as a comma-separated list (e.g. "https://crm.mycompany.com").
+// A value of "*" is ignored on purpose: allowing every website is not safe with logged-in users.
+const DEFAULT_ORIGINS = [
+  'https://crm-amber-nine.vercel.app',
+  'https://crm-b2g7.vercel.app',
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+];
+const configuredOrigins = String(config.corsOrigin || '')
+  .split(',')
+  .map((o) => o.trim().replace(/\/$/, ''))
+  .filter(Boolean);
+const allowedOrigins = new Set([...DEFAULT_ORIGINS, ...configuredOrigins.filter((o) => o !== '*')]);
+const isAllowedOrigin = (origin) =>
+  !origin || // server-to-server, curl, mobile apps
+  allowedOrigins.has(origin);
+
 app.use(
   cors({
     origin: (origin, callback) => {
-      // Allow any caller origin dynamically so credentials: true works seamlessly
-      callback(null, true);
+      callback(null, isAllowedOrigin(origin));
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'x-user-email', 'x-dev-bypass'],

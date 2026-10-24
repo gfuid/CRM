@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { api } from '../services/api';
 import {
   ChevronLeft,
   ChevronRight,
@@ -15,7 +16,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import UserProfileModal from './UserProfileModal';
 import PremiumPlanModal from './PremiumPlanModal';
-import NotificationsPopover from './NotificationsPopover';
+import NotificationsPopover, { remindersToItems } from './NotificationsPopover';
 import TradeNotesModal from './TradeNotesModal';
 import DashboardCustomizerModal from './DashboardCustomizerModal';
 
@@ -32,14 +33,33 @@ export default function TopBar({
   const [premiumOpen, setPremiumOpen] = useState(false);
   const [notesOpen, setNotesOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [hasUnread, setHasUnread] = useState(false);
+
+  // Red dot only when there is something unread (server messages or reminders due today / overdue)
+  useEffect(() => {
+    let alive = true;
+    const check = async () => {
+      try {
+        const [n, r] = await Promise.all([api.getNotifications().catch(() => null), api.getReminders().catch(() => null)]);
+        const unreadMsgs = Array.isArray(n?.data) ? n.data.some((x) => !x.is_read) : false;
+        const reminderCount = remindersToItems(r?.data).length;
+        if (alive) setHasUnread(unreadMsgs || reminderCount > 0);
+      } catch {
+        if (alive) setHasUnread(false);
+      }
+    };
+    if (!notifOpen) check();
+    const t = setInterval(check, 5 * 60 * 1000);
+    return () => { alive = false; clearInterval(t); };
+  }, [notifOpen]);
   const [customizerOpen, setCustomizerOpen] = useState(false);
 
   const parts = breadcrumb.split('/');
   const rootName = parts[0]?.trim() || 'Main Menu';
   const currentName = parts[1]?.trim() || 'Analytics';
 
-  const displayName = profile?.name || profile?.full_name || user?.name || 'punia';
-  const displayRole = isOwner ? 'admin' : (profile?.role || 'staff');
+  const displayName = profile?.name || profile?.full_name || user?.name || 'User';
+  const displayRole = isOwner ? 'Owner' : (profile?.department || 'Staff');
   const avatarUrl = profile?.avatar_url;
   const initials = displayName.slice(0, 2).toUpperCase();
 
@@ -47,8 +67,8 @@ export default function TopBar({
     <>
       <header className="sticky top-0 z-20 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors">
         {/* Left: Breadcrumbs & Navigation Controls */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => window.history.back()}
               className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
@@ -65,19 +85,19 @@ export default function TopBar({
             </button>
           </div>
 
-          <div className="flex items-center gap-1.5 text-xs md:text-sm">
-            <span className="text-slate-400 dark:text-slate-500 font-medium">{rootName}</span>
-            <span className="text-slate-300 dark:text-slate-600">/</span>
+          <div className="flex items-center gap-1.5 text-xs md:text-sm min-w-0 truncate">
+            <span className="hidden lg:inline text-slate-400 dark:text-slate-500 font-medium">{rootName}</span>
+            <span className="hidden lg:inline text-slate-300 dark:text-slate-600">/</span>
             <span className="font-bold text-slate-900 dark:text-white">{currentName}</span>
           </div>
         </div>
 
         {/* Right Controls */}
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Interactive Crown Premium Access Pill */}
           <button
             onClick={() => setPremiumOpen(true)}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100/80 dark:hover:bg-amber-900/60 shadow-xs transition-all cursor-pointer group"
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100/80 dark:hover:bg-amber-900/60 shadow-xs transition-all cursor-pointer group"
             title="Click to view Premium Trade License & Unlocked Features"
           >
             <Crown size={14} className="text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
@@ -107,7 +127,9 @@ export default function TopBar({
                 title="Trade Notifications & Alerts"
               >
                 <Bell size={16} />
-                <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                {hasUnread && (
+                  <span className="absolute top-1.5 right-1.5 w-2 h-2 rounded-full bg-rose-500 ring-2 ring-white dark:ring-slate-900 animate-pulse" />
+                )}
               </button>
 
               <NotificationsPopover isOpen={notifOpen} onClose={() => setNotifOpen(false)} />
@@ -130,7 +152,7 @@ export default function TopBar({
 
           {/* Customize Widget Button */}
           <button
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs transition-colors cursor-pointer"
+            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs transition-colors cursor-pointer"
             onClick={() => {
               if (customOnCustomize) customOnCustomize();
               setCustomizerOpen(true);

@@ -4,8 +4,6 @@ import {
   Check,
   Clock,
   AlertTriangle,
-  Ship,
-  FileCheck,
   CheckCheck,
   X,
   Crown,
@@ -15,38 +13,38 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 
-const DEFAULT_TRADE_NOTIFICATIONS = [
-  {
-    id: 'mock-1',
-    type: 'urgent',
-    title: 'High-Value Follow-up Due Today',
-    desc: 'Al Barakah Global Agro ($125,000 CIF Dubai) follow-up scheduled.',
-    time: '15 mins ago',
-    read: false,
-    icon: AlertTriangle,
-    iconColor: 'text-amber-600 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400',
-  },
-  {
-    id: 'mock-2',
-    type: 'shipping',
-    title: 'Port Clearance Notice',
-    desc: 'Export consignment container #4089 cleared Jebel Ali port inspection.',
-    time: '1 hour ago',
-    read: false,
-    icon: Ship,
-    iconColor: 'text-emerald-600 bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400',
-  },
-  {
-    id: 'mock-3',
-    type: 'import',
-    title: 'Bulk CSV Leads Imported',
-    desc: '15 new trade buyer records successfully parsed and verified in CRM.',
-    time: '3 hours ago',
-    read: true,
-    icon: FileCheck,
-    iconColor: 'text-blue-600 bg-blue-100 dark:bg-blue-950/60 dark:text-blue-400',
-  },
-];
+// No sample notifications: everything shown here comes from the server
+const DEFAULT_TRADE_NOTIFICATIONS = [];
+
+/** Turn the /reminders answer into notification rows (due today / overdue). */
+export function remindersToItems(r) {
+  if (!r) return [];
+  const items = [];
+  const push = (id, title, desc, urgent) =>
+    items.push({
+      id,
+      type: urgent ? 'urgent' : 'reminder',
+      title,
+      desc,
+      time: urgent ? 'Overdue' : 'Today',
+      read: false,
+      isServer: false,
+      icon: urgent ? AlertTriangle : Clock,
+      iconColor: urgent
+        ? 'text-rose-600 bg-rose-100 dark:bg-rose-950/60 dark:text-rose-400'
+        : 'text-amber-600 bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400',
+    });
+  (r.tasks_overdue || []).forEach((t) => push(`rem-to-${t.id}`, 'Task overdue', `${t.title} (due ${t.due_date}${t.deadline_time ? ' ' + t.deadline_time : ''})`, true));
+  (r.followups_missed || []).forEach((f) => push(`rem-fm-${f.id}`, 'Follow-up missed', `${f.client_name} (was due ${f.scheduled_date})`, true));
+  (r.leads_overdue || []).forEach((l) => push(`rem-lo-${l.id}`, 'Lead follow-up overdue', `${l.name} (was due ${l.follow_up_date})${l.next_action ? ' · ' + l.next_action : ''}`, true));
+  (r.tasks_today || []).forEach((t) => push(`rem-tt-${t.id}`, 'Task due today', `${t.title}${t.deadline_time ? ' by ' + t.deadline_time : ''}`, false));
+  (r.followups_today || []).forEach((f) => push(`rem-ft-${f.id}`, 'Follow-up today', `${f.client_name}${f.scheduled_time ? ' at ' + f.scheduled_time : ''}`, false));
+  (r.leads_today || []).forEach((l) => push(`rem-lt-${l.id}`, 'Call today', `${l.name}${l.next_action ? ' · ' + l.next_action : ''}`, false));
+  (r.team || [])
+    .filter((m) => m.tasks_overdue || m.followups_missed || m.leads_overdue)
+    .forEach((m) => push(`rem-team-${m.user_id}`, `${m.name} is behind`, `${m.tasks_overdue} overdue task(s), ${m.followups_missed} missed follow-up(s), ${m.leads_overdue} overdue lead(s)`, true));
+  return items;
+}
 
 function formatTimeAgo(dateStr) {
   if (!dateStr) return 'Just now';
@@ -67,10 +65,16 @@ export default function NotificationsPopover({ isOpen, onClose }) {
     let isMounted = true;
     setLoading(true);
 
-    api
-      .getNotifications()
-      .then((res) => {
+    Promise.all([
+      api.getNotifications(),
+      api.getReminders().catch(() => null),
+    ])
+      .then(([res, rem]) => {
         if (!isMounted) return;
+        const reminderItems = remindersToItems(rem?.data);
+        if (!(res && res.success && Array.isArray(res.data) && res.data.length > 0)) {
+          setNotifications(reminderItems);
+        }
         if (res && res.success && Array.isArray(res.data) && res.data.length > 0) {
           const liveItems = res.data.map((item) => {
             let Icon = Bell;
@@ -101,8 +105,8 @@ export default function NotificationsPopover({ isOpen, onClose }) {
             };
           });
 
-          // Prepend server broadcasts to default trade list
-          setNotifications([...liveItems, ...DEFAULT_TRADE_NOTIFICATIONS]);
+          // Reminders first, then messages from the server
+          setNotifications([...reminderItems, ...liveItems]);
         }
       })
       .catch((err) => {

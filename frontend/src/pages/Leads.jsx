@@ -78,48 +78,208 @@ export const SOCIAL_PLATFORMS = [
 
 // Comprehensive Countries with Flags — Alphabetically Sorted A to Z
 export const COUNTRIES_WITH_FLAGS = [
+  { code: 'AF', name: 'Afghanistan', flag: '🇦🇫' },
+  { code: 'AL', name: 'Albania', flag: '🇦🇱' },
+  { code: 'DZ', name: 'Algeria', flag: '🇩🇿' },
+  { code: 'AD', name: 'Andorra', flag: '🇦🇩' },
+  { code: 'AO', name: 'Angola', flag: '🇦🇴' },
+  { code: 'AG', name: 'Antigua and Barbuda', flag: '🇦🇬' },
+  { code: 'AR', name: 'Argentina', flag: '🇦🇷' },
+  { code: 'AM', name: 'Armenia', flag: '🇦🇲' },
+  { code: 'AW', name: 'Aruba', flag: '🇦🇼' },
   { code: 'AU', name: 'Australia', flag: '🇦🇺' },
+  { code: 'AT', name: 'Austria', flag: '🇦🇹' },
+  { code: 'AZ', name: 'Azerbaijan', flag: '🇦🇿' },
+  { code: 'BS', name: 'Bahamas', flag: '🇧🇸' },
   { code: 'BH', name: 'Bahrain', flag: '🇧🇭' },
   { code: 'BD', name: 'Bangladesh', flag: '🇧🇩' },
+  { code: 'BB', name: 'Barbados', flag: '🇧🇧' },
+  { code: 'BY', name: 'Belarus', flag: '🇧🇾' },
   { code: 'BE', name: 'Belgium', flag: '🇧🇪' },
+  { code: 'BZ', name: 'Belize', flag: '🇧🇿' },
+  { code: 'BJ', name: 'Benin', flag: '🇧🇯' },
+  { code: 'BT', name: 'Bhutan', flag: '🇧🇹' },
+  { code: 'BO', name: 'Bolivia', flag: '🇧🇴' },
+  { code: 'BA', name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+  { code: 'BW', name: 'Botswana', flag: '🇧🇼' },
   { code: 'BR', name: 'Brazil', flag: '🇧🇷' },
+  { code: 'BN', name: 'Brunei', flag: '🇧🇳' },
+  { code: 'BG', name: 'Bulgaria', flag: '🇧🇬' },
+  { code: 'BF', name: 'Burkina Faso', flag: '🇧🇫' },
+  { code: 'BI', name: 'Burundi', flag: '🇧🇮' },
+  { code: 'KH', name: 'Cambodia', flag: '🇰🇭' },
+  { code: 'CM', name: 'Cameroon', flag: '🇨🇲' },
   { code: 'CA', name: 'Canada', flag: '🇨🇦' },
+  { code: 'CV', name: 'Cape Verde', flag: '🇨🇻' },
+  { code: 'CF', name: 'Central African Republic', flag: '🇨🇫' },
+  { code: 'TD', name: 'Chad', flag: '🇹🇩' },
+  { code: 'CL', name: 'Chile', flag: '🇨🇱' },
   { code: 'CN', name: 'China', flag: '🇨🇳' },
+  { code: 'CO', name: 'Colombia', flag: '🇨🇴' },
+  { code: 'KM', name: 'Comoros', flag: '🇰🇲' },
+  { code: 'CG', name: 'Congo', flag: '🇨🇬' },
+  { code: 'CD', name: 'Congo (DRC)', flag: '🇨🇩' },
+  { code: 'CR', name: 'Costa Rica', flag: '🇨🇷' },
+  { code: 'CI', name: 'Côte d\'Ivoire', flag: '🇨🇮' },
+  { code: 'HR', name: 'Croatia', flag: '🇭🇷' },
+  { code: 'CU', name: 'Cuba', flag: '🇨🇺' },
+  { code: 'CY', name: 'Cyprus', flag: '🇨🇾' },
+  { code: 'CZ', name: 'Czech Republic', flag: '🇨🇿' },
+  { code: 'DK', name: 'Denmark', flag: '🇩🇰' },
+  { code: 'DJ', name: 'Djibouti', flag: '🇩🇯' },
+  { code: 'DM', name: 'Dominica', flag: '🇩🇲' },
+  { code: 'DO', name: 'Dominican Republic', flag: '🇩🇴' },
+  { code: 'EC', name: 'Ecuador', flag: '🇪🇨' },
   { code: 'EG', name: 'Egypt', flag: '🇪🇬' },
+  { code: 'SV', name: 'El Salvador', flag: '🇸🇻' },
+  { code: 'GQ', name: 'Equatorial Guinea', flag: '🇬🇶' },
+  { code: 'ER', name: 'Eritrea', flag: '🇪🇷' },
+  { code: 'EE', name: 'Estonia', flag: '🇪🇪' },
+  { code: 'SZ', name: 'Eswatini', flag: '🇸🇿' },
+  { code: 'ET', name: 'Ethiopia', flag: '🇪🇹' },
+  { code: 'FJ', name: 'Fiji', flag: '🇫🇯' },
+  { code: 'FI', name: 'Finland', flag: '🇫🇮' },
   { code: 'FR', name: 'France', flag: '🇫🇷' },
+  { code: 'GA', name: 'Gabon', flag: '🇬🇦' },
+  { code: 'GM', name: 'Gambia', flag: '🇬🇲' },
+  { code: 'GE', name: 'Georgia', flag: '🇬🇪' },
   { code: 'DE', name: 'Germany', flag: '🇩🇪' },
+  { code: 'GH', name: 'Ghana', flag: '🇬🇭' },
+  { code: 'GR', name: 'Greece', flag: '🇬🇷' },
+  { code: 'GD', name: 'Grenada', flag: '🇬🇩' },
+  { code: 'GT', name: 'Guatemala', flag: '🇬🇹' },
+  { code: 'GN', name: 'Guinea', flag: '🇬🇳' },
+  { code: 'GW', name: 'Guinea-Bissau', flag: '🇬🇼' },
+  { code: 'GY', name: 'Guyana', flag: '🇬🇾' },
+  { code: 'HT', name: 'Haiti', flag: '🇭🇹' },
+  { code: 'HN', name: 'Honduras', flag: '🇭🇳' },
+  { code: 'HK', name: 'Hong Kong', flag: '🇭🇰' },
+  { code: 'HU', name: 'Hungary', flag: '🇭🇺' },
+  { code: 'IS', name: 'Iceland', flag: '🇮🇸' },
   { code: 'IN', name: 'India', flag: '🇮🇳' },
   { code: 'ID', name: 'Indonesia', flag: '🇮🇩' },
   { code: 'IR', name: 'Iran', flag: '🇮🇷' },
   { code: 'IQ', name: 'Iraq', flag: '🇮🇶' },
+  { code: 'IE', name: 'Ireland', flag: '🇮🇪' },
+  { code: 'IL', name: 'Israel', flag: '🇮🇱' },
   { code: 'IT', name: 'Italy', flag: '🇮🇹' },
+  { code: 'JM', name: 'Jamaica', flag: '🇯🇲' },
   { code: 'JP', name: 'Japan', flag: '🇯🇵' },
+  { code: 'JO', name: 'Jordan', flag: '🇯🇴' },
+  { code: 'KZ', name: 'Kazakhstan', flag: '🇰🇿' },
   { code: 'KE', name: 'Kenya', flag: '🇰🇪' },
+  { code: 'KI', name: 'Kiribati', flag: '🇰🇮' },
+  { code: 'XK', name: 'Kosovo', flag: '🇽🇰' },
   { code: 'KW', name: 'Kuwait', flag: '🇰🇼' },
+  { code: 'KG', name: 'Kyrgyzstan', flag: '🇰🇬' },
+  { code: 'LA', name: 'Laos', flag: '🇱🇦' },
+  { code: 'LV', name: 'Latvia', flag: '🇱🇻' },
+  { code: 'LB', name: 'Lebanon', flag: '🇱🇧' },
+  { code: 'LS', name: 'Lesotho', flag: '🇱🇸' },
+  { code: 'LR', name: 'Liberia', flag: '🇱🇷' },
+  { code: 'LY', name: 'Libya', flag: '🇱🇾' },
+  { code: 'LI', name: 'Liechtenstein', flag: '🇱🇮' },
+  { code: 'LT', name: 'Lithuania', flag: '🇱🇹' },
+  { code: 'LU', name: 'Luxembourg', flag: '🇱🇺' },
+  { code: 'MO', name: 'Macau', flag: '🇲🇴' },
+  { code: 'MG', name: 'Madagascar', flag: '🇲🇬' },
+  { code: 'MW', name: 'Malawi', flag: '🇲🇼' },
   { code: 'MY', name: 'Malaysia', flag: '🇲🇾' },
+  { code: 'MV', name: 'Maldives', flag: '🇲🇻' },
+  { code: 'ML', name: 'Mali', flag: '🇲🇱' },
+  { code: 'MT', name: 'Malta', flag: '🇲🇹' },
+  { code: 'MH', name: 'Marshall Islands', flag: '🇲🇭' },
+  { code: 'MR', name: 'Mauritania', flag: '🇲🇷' },
+  { code: 'MU', name: 'Mauritius', flag: '🇲🇺' },
+  { code: 'MX', name: 'Mexico', flag: '🇲🇽' },
+  { code: 'FM', name: 'Micronesia', flag: '🇫🇲' },
+  { code: 'MD', name: 'Moldova', flag: '🇲🇩' },
+  { code: 'MC', name: 'Monaco', flag: '🇲🇨' },
+  { code: 'MN', name: 'Mongolia', flag: '🇲🇳' },
+  { code: 'ME', name: 'Montenegro', flag: '🇲🇪' },
+  { code: 'MA', name: 'Morocco', flag: '🇲🇦' },
+  { code: 'MZ', name: 'Mozambique', flag: '🇲🇿' },
+  { code: 'MM', name: 'Myanmar', flag: '🇲🇲' },
+  { code: 'NA', name: 'Namibia', flag: '🇳🇦' },
+  { code: 'NR', name: 'Nauru', flag: '🇳🇷' },
   { code: 'NP', name: 'Nepal', flag: '🇳🇵' },
   { code: 'NL', name: 'Netherlands', flag: '🇳🇱' },
   { code: 'NZ', name: 'New Zealand', flag: '🇳🇿' },
+  { code: 'NI', name: 'Nicaragua', flag: '🇳🇮' },
+  { code: 'NE', name: 'Niger', flag: '🇳🇪' },
   { code: 'NG', name: 'Nigeria', flag: '🇳🇬' },
+  { code: 'KP', name: 'North Korea', flag: '🇰🇵' },
+  { code: 'MK', name: 'North Macedonia', flag: '🇲🇰' },
+  { code: 'NO', name: 'Norway', flag: '🇳🇴' },
   { code: 'OM', name: 'Oman', flag: '🇴🇲' },
+  { code: 'PK', name: 'Pakistan', flag: '🇵🇰' },
+  { code: 'PW', name: 'Palau', flag: '🇵🇼' },
+  { code: 'PS', name: 'Palestine', flag: '🇵🇸' },
+  { code: 'PA', name: 'Panama', flag: '🇵🇦' },
+  { code: 'PG', name: 'Papua New Guinea', flag: '🇵🇬' },
+  { code: 'PY', name: 'Paraguay', flag: '🇵🇾' },
+  { code: 'PE', name: 'Peru', flag: '🇵🇪' },
   { code: 'PH', name: 'Philippines', flag: '🇵🇭' },
   { code: 'PL', name: 'Poland', flag: '🇵🇱' },
+  { code: 'PT', name: 'Portugal', flag: '🇵🇹' },
+  { code: 'PR', name: 'Puerto Rico', flag: '🇵🇷' },
   { code: 'QA', name: 'Qatar', flag: '🇶🇦' },
+  { code: 'RO', name: 'Romania', flag: '🇷🇴' },
   { code: 'RU', name: 'Russia', flag: '🇷🇺' },
+  { code: 'RW', name: 'Rwanda', flag: '🇷🇼' },
+  { code: 'KN', name: 'Saint Kitts and Nevis', flag: '🇰🇳' },
+  { code: 'LC', name: 'Saint Lucia', flag: '🇱🇨' },
+  { code: 'VC', name: 'Saint Vincent and the Grenadines', flag: '🇻🇨' },
+  { code: 'WS', name: 'Samoa', flag: '🇼🇸' },
+  { code: 'SM', name: 'San Marino', flag: '🇸🇲' },
+  { code: 'ST', name: 'São Tomé and Príncipe', flag: '🇸🇹' },
   { code: 'SA', name: 'Saudi Arabia', flag: '🇸🇦' },
+  { code: 'SN', name: 'Senegal', flag: '🇸🇳' },
+  { code: 'RS', name: 'Serbia', flag: '🇷🇸' },
+  { code: 'SC', name: 'Seychelles', flag: '🇸🇨' },
+  { code: 'SL', name: 'Sierra Leone', flag: '🇸🇱' },
   { code: 'SG', name: 'Singapore', flag: '🇸🇬' },
+  { code: 'SK', name: 'Slovakia', flag: '🇸🇰' },
+  { code: 'SI', name: 'Slovenia', flag: '🇸🇮' },
+  { code: 'SB', name: 'Solomon Islands', flag: '🇸🇧' },
+  { code: 'SO', name: 'Somalia', flag: '🇸🇴' },
   { code: 'ZA', name: 'South Africa', flag: '🇿🇦' },
   { code: 'KR', name: 'South Korea', flag: '🇰🇷' },
+  { code: 'SS', name: 'South Sudan', flag: '🇸🇸' },
   { code: 'ES', name: 'Spain', flag: '🇪🇸' },
   { code: 'LK', name: 'Sri Lanka', flag: '🇱🇰' },
+  { code: 'SD', name: 'Sudan', flag: '🇸🇩' },
+  { code: 'SR', name: 'Suriname', flag: '🇸🇷' },
+  { code: 'SE', name: 'Sweden', flag: '🇸🇪' },
+  { code: 'CH', name: 'Switzerland', flag: '🇨🇭' },
+  { code: 'SY', name: 'Syria', flag: '🇸🇾' },
+  { code: 'TW', name: 'Taiwan', flag: '🇹🇼' },
+  { code: 'TJ', name: 'Tajikistan', flag: '🇹🇯' },
   { code: 'TZ', name: 'Tanzania', flag: '🇹🇿' },
   { code: 'TH', name: 'Thailand', flag: '🇹🇭' },
+  { code: 'TL', name: 'Timor-Leste', flag: '🇹🇱' },
+  { code: 'TG', name: 'Togo', flag: '🇹🇬' },
+  { code: 'TO', name: 'Tonga', flag: '🇹🇴' },
+  { code: 'TT', name: 'Trinidad and Tobago', flag: '🇹🇹' },
+  { code: 'TN', name: 'Tunisia', flag: '🇹🇳' },
   { code: 'TR', name: 'Turkey', flag: '🇹🇷' },
+  { code: 'TM', name: 'Turkmenistan', flag: '🇹🇲' },
+  { code: 'TV', name: 'Tuvalu', flag: '🇹🇻' },
+  { code: 'UG', name: 'Uganda', flag: '🇺🇬' },
+  { code: 'UA', name: 'Ukraine', flag: '🇺🇦' },
   { code: 'AE', name: 'United Arab Emirates', flag: '🇦🇪' },
   { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
   { code: 'US', name: 'United States', flag: '🇺🇸' },
+  { code: 'UY', name: 'Uruguay', flag: '🇺🇾' },
+  { code: 'UZ', name: 'Uzbekistan', flag: '🇺🇿' },
+  { code: 'VU', name: 'Vanuatu', flag: '🇻🇺' },
+  { code: 'VA', name: 'Vatican City', flag: '🇻🇦' },
+  { code: 'VE', name: 'Venezuela', flag: '🇻🇪' },
   { code: 'VN', name: 'Vietnam', flag: '🇻🇳' },
-].sort((a, b) => a.name.localeCompare(b.name));
+  { code: 'YE', name: 'Yemen', flag: '🇾🇪' },
+  { code: 'ZM', name: 'Zambia', flag: '🇿🇲' },
+  { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
+];
 
 export const COMMODITY_PRODUCTS = [
   'Turmeric',
@@ -269,273 +429,6 @@ export const formatQuantityEquivalent = (qty, unit = 'MT') => {
 };
 
 export const INITIAL_LEADS = SEED_LEADS;
-const _OLD_LEADS_UNUSED = [
-  {
-    id: 'lead_1',
-    name: 'Al-Barakah Global Agro Foods LLC',
-    company_name: 'Al-Barakah Global Agro Foods LLC',
-    type: 'Export',
-    contacts: [
-      {
-        name: 'Tariq Mansoor',
-        phone: '+971 50 892 4110',
-        extra_phones: ['+971 4 332 8900'],
-        email: 'tmansoor@albarakahagro.ae',
-        designation: 'VP Procurement & Sourcing',
-        linkedin: 'https://linkedin.com/in/tariq-mansoor-agro',
-      },
-    ],
-    contact_person: 'Tariq Mansoor',
-    email: 'tmansoor@albarakahagro.ae',
-    phone: '+971 50 892 4110',
-    whatsapp: '+971 50 892 4110',
-    website: 'https://albarakahagro.ae',
-    country: 'United Arab Emirates 🇦🇪',
-    source: 'Gulfood Trade Show',
-    address: 'Warehouse #14, Al Quoz Industrial Area 3, Dubai, UAE',
-    credit_rating: 'AAA',
-    turnover: '120 cr',
-    sourcing_region: 'Nizamabad & Salem, India',
-    legacy_industry_type: 'Spice Milling & Wholesale Distribution',
-    products: ['Turmeric', 'Ginger'],
-    product: 'Turmeric, Ginger',
-    quantity: 50000,
-    price: 84000,
-    value: 84000,
-    stage: 'Quotation Sent',
-    priority: 'High',
-    export_requirements: {
-      industry_type: 'Food & Spice Processing',
-      material_type: 'Whole Raw',
-      polish_level: 'Double Polish',
-      min_curcumin: '3.5%',
-      cultivation_method: 'Conventional Cleaned',
-      preferred_origin: 'Nizamabad / Salem',
-      quantity_needed_kg: 50000,
-      max_price_inr: 145,
-      incoterm: 'CIF',
-      port_delivery: 'Jebel Ali Port, Dubai',
-      payment_days: 'CAD (Cash Against Documents via Bank)',
-    },
-    assigned_to: 'usr_staff_demo1',
-    agent_name: 'Sagar Punia',
-    follow_up_date: new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-    notes: 'Requested certificate of analysis for curcumin content min 3.5%. Samples dispatched via DHL.',
-    created_at: new Date(Date.now() - 86400000 * 3).toISOString(),
-  },
-  {
-    id: 'lead_2',
-    name: 'VietSpices Import & Distribution Co.',
-    company_name: 'VietSpices Import & Distribution Co.',
-    type: 'Export',
-    contacts: [
-      {
-        name: 'Nguyen Van Minh',
-        phone: '+84 90 345 6789',
-        extra_phones: [],
-        email: 'minh.nguyen@vietspices.vn',
-        designation: 'General Manager',
-        linkedin: 'https://linkedin.com/in/nguyen-minh-spices',
-      },
-    ],
-    contact_person: 'Nguyen Van Minh',
-    email: 'minh.nguyen@vietspices.vn',
-    phone: '+84 90 345 6789',
-    whatsapp: '+84 90 345 6789',
-    website: 'https://vietspices.vn',
-    country: 'Vietnam 🇻🇳',
-    source: 'Direct Inquiry',
-    address: 'District 7, Ho Chi Minh City, Vietnam',
-    credit_rating: 'AA+',
-    turnover: '65 cr',
-    sourcing_region: 'Guntur, Andhra Pradesh',
-    legacy_industry_type: 'Agro Commodity Trading',
-    products: ['Red Chilli', 'Turmeric'],
-    product: 'Red Chilli, Turmeric',
-    quantity: 36000,
-    price: 68500,
-    value: 68500,
-    stage: 'Requirement Understood',
-    priority: 'High',
-    export_requirements: {
-      industry_type: 'Food & Spice Processing',
-      material_type: 'Whole Raw Stemless',
-      polish_level: 'Sortex Cleaned',
-      min_curcumin: '3.0%',
-      cultivation_method: 'Conventional Cleaned',
-      preferred_origin: 'Guntur Sannam S4 / Teja',
-      quantity_needed_kg: 36000,
-      max_price_inr: 160,
-      incoterm: 'FOB',
-      port_delivery: 'Chennai Port / Nhava Sheva',
-      payment_days: '100% LC at Sight',
-    },
-    assigned_to: 'usr_staff_demo1',
-    agent_name: 'Sagar Punia',
-    follow_up_date: new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-    notes: 'Looking for 2x40ft containers of Teja Red Chilli stemless. Awaiting lab moisture test report.',
-    created_at: new Date(Date.now() - 86400000 * 5).toISOString(),
-  },
-  {
-    id: 'lead_3',
-    name: 'Continental Feeds & Bio-Nutrition BV',
-    company_name: 'Continental Feeds & Bio-Nutrition BV',
-    type: 'Export',
-    contacts: [
-      {
-        name: 'Hendrik Van Dijk',
-        phone: '+31 10 789 2200',
-        extra_phones: ['+31 6 5432 1980'],
-        email: 'h.vandijk@continentalfeeds.nl',
-        designation: 'Head of Feed Ingredients',
-        linkedin: 'https://linkedin.com/in/hendrik-vandijk',
-      },
-    ],
-    contact_person: 'Hendrik Van Dijk',
-    email: 'h.vandijk@continentalfeeds.nl',
-    phone: '+31 10 789 2200',
-    whatsapp: '+31 6 5432 1980',
-    website: 'https://continentalfeeds.nl',
-    country: 'Netherlands 🇳🇱',
-    source: 'B2B Trade Portal',
-    address: 'Haven 420, Port of Rotterdam, Netherlands',
-    credit_rating: 'AAA',
-    turnover: '350 cr',
-    sourcing_region: 'Punjab & Haryana, India',
-    legacy_industry_type: 'Animal Feed & Biofuel Ingredients',
-    products: ['Rice DDGS', 'DORB', 'Corn DDGS'],
-    product: 'Rice DDGS, DORB, Corn DDGS',
-    quantity: 120000,
-    price: 142000,
-    value: 142000,
-    stage: 'Negotiation',
-    priority: 'High',
-    export_requirements: {
-      industry_type: 'Animal Feed & Poultry',
-      material_type: 'Pellets',
-      polish_level: 'Machine Cleaned',
-      min_curcumin: 'N/A',
-      cultivation_method: 'Conventional Cleaned',
-      preferred_origin: 'North India Grain Distilleries',
-      quantity_needed_kg: 120000,
-      max_price_inr: 28,
-      incoterm: 'CIF',
-      port_delivery: 'Port of Rotterdam',
-      payment_days: 'CAD on arrival of vessel',
-    },
-    assigned_to: 'usr_staff_demo1',
-    agent_name: 'Sagar Punia',
-    follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-    notes: 'High protein content (min 45% profat) required. Ocean freight rates confirmed from Mundra Port.',
-    created_at: new Date(Date.now() - 86400000 * 8).toISOString(),
-  },
-  {
-    id: 'lead_4',
-    name: 'Dhaka Agro Feeds & Poultry Ltd',
-    company_name: 'Dhaka Agro Feeds & Poultry Ltd',
-    type: 'Export',
-    contacts: [
-      {
-        name: 'Kamal Hossain',
-        phone: '+880 17 1234 5678',
-        extra_phones: [],
-        email: 'kamal@dhakafeed.com.bd',
-        designation: 'Managing Director',
-        linkedin: '',
-      },
-    ],
-    contact_person: 'Kamal Hossain',
-    email: 'kamal@dhakafeed.com.bd',
-    phone: '+880 17 1234 5678',
-    whatsapp: '+880 17 1234 5678',
-    website: 'https://dhakafeed.com.bd',
-    country: 'Bangladesh 🇧🇩',
-    source: 'Direct Inquiry',
-    address: 'Tejgaon Industrial Area, Dhaka, Bangladesh',
-    credit_rating: 'AA',
-    turnover: '80 cr',
-    sourcing_region: 'West Bengal & Bihar border',
-    legacy_industry_type: 'Feed Milling & Agro Processing',
-    products: ['Maize', 'RSM', 'Soya seed'],
-    product: 'Maize, RSM, Soya seed',
-    quantity: 85000,
-    price: 76000,
-    value: 76000,
-    stage: 'Closed Won',
-    priority: 'High',
-    export_requirements: {
-      industry_type: 'Animal Feed & Poultry',
-      material_type: 'Whole Raw',
-      polish_level: 'Machine Cleaned',
-      min_curcumin: 'N/A',
-      cultivation_method: 'Conventional Cleaned',
-      preferred_origin: 'Bihar / MP',
-      quantity_needed_kg: 85000,
-      max_price_inr: 24,
-      incoterm: 'CFR',
-      port_delivery: 'Chittagong Port / Petrapole Border',
-      payment_days: 'Irrevocable LC at Sight',
-    },
-    assigned_to: 'usr_staff_demo1',
-    agent_name: 'Sagar Punia',
-    follow_up_date: new Date(Date.now() + 86400000 * 7).toISOString().split('T')[0],
-    notes: 'Initial 3 rake consignment completed. Repeat order contract for Q3 under preparation.',
-    created_at: new Date(Date.now() - 86400000 * 12).toISOString(),
-  },
-  {
-    id: 'lead_5',
-    name: 'Ceylon Tropical Goods PLC',
-    company_name: 'Ceylon Tropical Goods PLC',
-    type: 'Export',
-    contacts: [
-      {
-        name: 'Rohan Jayasuriya',
-        phone: '+94 11 234 5678',
-        extra_phones: [],
-        email: 'rohan@ceylontropical.lk',
-        designation: 'Director of Imports',
-        linkedin: '',
-      },
-    ],
-    contact_person: 'Rohan Jayasuriya',
-    email: 'rohan@ceylontropical.lk',
-    phone: '+94 11 234 5678',
-    whatsapp: '+94 77 123 4567',
-    website: 'https://ceylontropical.lk',
-    country: 'Sri Lanka 🇱🇰',
-    source: 'Referral',
-    address: 'Colombo Harbour Area, Sri Lanka',
-    credit_rating: 'A',
-    turnover: '30 cr',
-    sourcing_region: 'Pollachi & Karnataka, India',
-    legacy_industry_type: 'Fresh Produce & Beverage Bottling',
-    products: ['Tender Coconut', 'Ginger'],
-    product: 'Tender Coconut, Ginger',
-    quantity: 25000,
-    price: 32000,
-    value: 32000,
-    stage: 'Requirement Understood',
-    priority: 'Medium',
-    export_requirements: {
-      industry_type: 'Fresh Produce & Beverages',
-      material_type: 'Fresh Whole Diamonds Cut',
-      polish_level: 'Sortex Cleaned',
-      min_curcumin: 'N/A',
-      cultivation_method: 'Natural Sun-Dried Plantation',
-      preferred_origin: 'Pollachi, Tamil Nadu',
-      quantity_needed_kg: 25000,
-      max_price_inr: 45,
-      incoterm: 'CIF',
-      port_delivery: 'Colombo Port',
-      payment_days: '30% Advance, 70% on BL copy',
-    },
-    assigned_to: 'usr_staff_demo1',
-    agent_name: 'Sagar Punia',
-    follow_up_date: new Date(Date.now() + 86400000 * 1).toISOString().split('T')[0],
-    notes: 'Reefer container logistics quote obtained from Tuticorin Port. Schedule call tomorrow.',
-    created_at: new Date(Date.now() - 86400000 * 2).toISOString(),
-  },
-];
 
 const getStatusBadge = (status) => {
   switch (status) {
@@ -602,9 +495,16 @@ function SearchableCountrySelect({ value, onChange, className = '' }) {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const selectedObj = COUNTRIES_WITH_FLAGS.find(
-    (c) => value && (value.includes(c.name) || value === c.name || value === `${c.name} ${c.flag}`)
-  );
+  // Exact match first ("Niger" must not show for "Nigeria"); the stored value may carry a flag after the name
+  const selectedObj = useMemo(() => {
+    const v = String(value || '').trim();
+    if (!v) return null;
+    const matches = COUNTRIES_WITH_FLAGS.filter(
+      (c) => v === c.name || v === `${c.name} ${c.flag}` || v.startsWith(`${c.name} `)
+    );
+    if (!matches.length) return null;
+    return matches.sort((a, b) => b.name.length - a.name.length)[0];
+  }, [value]);
 
   return (
     <div className={`relative ${className}`} ref={wrapperRef}>
@@ -897,14 +797,27 @@ export default function Leads() {
   }, [profile?.id, isOwner]);
 
   // Dossier Action Handlers
-  const handleLogDossierActivity = () => {
+  const handleLogDossierActivity = async () => {
     if (!activeDetailLead || !dossierActivityType) return;
     const newEntry = {
       activity: dossierActivityType,
       note: dossierActivityNote.trim() || 'Activity logged',
       date: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      author: `by ${profile?.name || 'adric'}`,
+      author: `by ${profile?.name || 'User'}`,
     };
+
+    // Save it on the server so the owner and other devices see it too
+    try {
+      await api.createActivity({
+        type: 'note',
+        title: dossierActivityType,
+        description: newEntry.note,
+        lead_id: activeDetailLead.id,
+      });
+    } catch (err) {
+      showNotification(err?.message || 'Activity could not be saved.', 'error');
+      return;
+    }
 
     const updatedHistory = [newEntry, ...(activeDetailLead.activity_history || [])];
     const updatedLead = {
@@ -976,26 +889,29 @@ export default function Leads() {
       previous_remarks: updatedRemarks,
     };
 
-    setActiveDetailLead(updatedLead);
-    setDossierTodayRemark('');
-    setDossierFutureAction('');
-
-    updateAndPersistLeads((prev) =>
-      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
-    );
-
+    let saved = updatedLead;
     try {
-      await api.updateLead(updatedLead.id, {
+      // The server appends this to the permanent remark history; we never send the history itself
+      const res = await api.updateLead(updatedLead.id, {
         follow_up_date: dateToSave,
         follow_up_time: timeToSave,
-        today_remarks: updatedLead.today_remarks,
-        next_follow_up_action: updatedLead.next_follow_up_action,
+        today_remarks: dossierTodayRemark.trim(),
+        next_follow_up_action: dossierFutureAction.trim(),
         notes: compositeNotes,
-        previous_remarks: updatedRemarks,
       });
+      if (res?.data) saved = { ...updatedLead, ...res.data };
     } catch (apiErr) {
       console.warn('API update follow-up error:', apiErr);
+      showNotification(apiErr?.message || 'Remark could not be saved. Please try again.', 'error');
+      return;
     }
+
+    setActiveDetailLead(saved);
+    setDossierTodayRemark('');
+    setDossierFutureAction('');
+    updateAndPersistLeads((prev) =>
+      prev.map((l) => (l.id === saved.id ? saved : l))
+    );
 
     showNotification('Follow-up schedule and remarks saved successfully!', 'success');
   };
@@ -1214,14 +1130,17 @@ export default function Leads() {
 
   // Quick Stage Update from Table or Card
   const handleQuickStageChange = async (leadId, newStage) => {
+    const before = leads.find((l) => l.id === leadId);
     setLeads((prev) =>
       prev.map((l) => (l.id === leadId ? { ...l, stage: newStage, status: newStage, lead_stage: newStage } : l))
     );
     try {
-      await api.updateLead(leadId, { stage: newStage, lead_stage: newStage, status: newStage });
+      await api.updateLead(leadId, { stage: newStage });
       showNotification(`Lead stage updated to "${newStage}"`, 'success');
     } catch (err) {
       console.warn('Failed to update stage on server:', err.message);
+      if (before) setLeads((prev) => prev.map((l) => (l.id === leadId ? before : l)));
+      showNotification(err?.message || 'Stage could not be changed.', 'error');
     }
   };
 
@@ -1325,7 +1244,7 @@ export default function Leads() {
       website: lead.website || '',
       social_media: lead.social_media || '',
       social_links: leadSocialLinks,
-      country: lead.country || 'India 🇮🇳',
+      country: lead.country || '',
       lead_source: lead.source || 'Direct Inquiry',
       address: lead.address || '',
       credit_rating: lead.credit_rating || 'AA',
@@ -1334,7 +1253,7 @@ export default function Leads() {
       products: leadProducts,
       quantity: lead.quantity || 0,
       quantity_unit: lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'),
-      price: lead.price || lead.value || 0,
+      price: lead.price || 0,
       product_notes: exp.product_notes || lead.product_notes || '',
       incoterm: exp.incoterm || 'CIF',
       port_delivery: exp.port_delivery || '',
@@ -1406,22 +1325,9 @@ export default function Leads() {
         }
       }
 
-      // Preserve original creator info (Task 6): If Deepak created, creator remains Deepak even if assigned to Japneet!
-      const originalCreatorName = editingLead
-        ? (editingLead.created_by_name || form.created_by_name || 'Deepak')
-        : (profile?.name || profile?.full_name || 'Deepak');
-      const originalCreatorId = editingLead
-        ? (editingLead.created_by_id || form.created_by_id || profile?.id)
-        : (profile?.id || 'usr_staff_creator');
-      const originalCreatedAt = editingLead
-        ? (editingLead.created_at || form.created_at || new Date().toISOString())
-        : new Date().toISOString();
-
       const leadPayload = {
-        type: form.type,
         company_name: form.company_name,
         name: form.company_name,
-        industry_type: form.industry_type,
         contacts: form.contacts,
         contact_person: primary.name,
         email: primary.email,
@@ -1433,91 +1339,55 @@ export default function Leads() {
         country: form.country,
         source: form.lead_source,
         address: form.address,
-        credit_rating: form.credit_rating,
-        turnover: form.turnover,
-        sourcing_region: form.sourcing_region,
-        legacy_industry_type: form.industry_type,
-        products: form.products,
-        product: form.products.join(', '),
         tags: Array.isArray(form.tags) ? form.tags : [],
-        quantity: Number(form.quantity) || 0,
-        quantity_unit: form.quantity_unit || 'MT',
-        price: Number(form.price) || 0,
-        value: Number(form.price) || 0,
         stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
         status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
         lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-        export_requirements: {
-          industry_type: form.industry_type,
-          incoterm: form.incoterm,
-          port_delivery: form.port_delivery,
-          payment_days: form.payment_days,
-          product_notes: form.product_notes,
-          quantity_unit: form.quantity_unit || 'MT',
-        },
-        assigned_to: finalAssignedTo,
-        agent_name: finalAgentName,
-        created_by_id: originalCreatorId,
-        created_by_name: originalCreatorName,
-        created_at: originalCreatedAt,
         follow_up_date: form.follow_up_date,
         follow_up_time: form.follow_up_time || '10:00',
         today_remarks: form.today_remarks || '',
         next_follow_up_action: form.next_follow_up_action || '',
-        previous_remarks: (form.today_remarks || form.next_follow_up_action)
-          ? [
-              {
-                today_remark: form.today_remarks || '',
-                planned_action: form.next_follow_up_action || '',
-                remark: [
-                  form.today_remarks ? `Interaction: ${form.today_remarks}` : null,
-                  form.next_follow_up_action ? `Planned for ${form.follow_up_date} at ${form.follow_up_time || '10:00'}: ${form.next_follow_up_action}` : null,
-                ].filter(Boolean).join(' | '),
-                follow_up_date: form.follow_up_date,
-                follow_up_time: form.follow_up_time || '10:00',
-                date: new Date().toLocaleString('en-IN', {
-                  day: '2-digit',
-                  month: 'short',
-                  year: 'numeric',
-                  hour: '2-digit',
-                  minute: '2-digit',
-                }),
-                author: profile?.name || 'User',
-              },
-              ...(editingLead?.previous_remarks || []),
-            ]
-          : (editingLead?.previous_remarks || []),
         notes: [
           form.today_remarks ? `[Today's Notes]: ${form.today_remarks}` : null,
           form.next_follow_up_action ? `[Planned Action on ${form.follow_up_date}]: ${form.next_follow_up_action}` : null,
           form.notes || null,
         ].filter(Boolean).join('\n') || form.notes || '',
+        ...(isOwner ? {
+          type: form.type,
+          industry_type: form.industry_type,
+          credit_rating: form.credit_rating,
+          turnover: form.turnover,
+          sourcing_region: form.sourcing_region,
+          legacy_industry_type: form.industry_type,
+          products: form.products,
+          product: form.products.join(', '),
+          quantity: Number(form.quantity) || 0,
+          quantity_unit: form.quantity_unit || 'MT',
+          price: Number(form.price) || 0,
+          value: Number(form.price) || 0,
+          export_requirements: {
+            industry_type: form.industry_type,
+            incoterm: form.incoterm,
+            port_delivery: form.port_delivery,
+            payment_days: form.payment_days,
+            product_notes: form.product_notes,
+            quantity_unit: form.quantity_unit || 'MT',
+          },
+          assigned_to: finalAssignedTo,
+          agent_name: finalAgentName,
+        } : {}),
       };
 
       if (editingLead) {
-        try {
-          await api.updateLead(editingLead.id, leadPayload);
-        } catch (apiErr) {
-          console.warn('API update failed, updating local state:', apiErr);
-        }
+        const res = await api.updateLead(editingLead.id, leadPayload);
         updateAndPersistLeads((prev) =>
-          prev.map((l) => (l.id === editingLead.id ? { ...l, ...leadPayload } : l))
+          prev.map((l) => (l.id === editingLead.id ? { ...l, ...(res?.data || leadPayload) } : l))
         );
         showNotification('Lead updated successfully!', 'success');
       } else {
-        let created = null;
-        try {
-          const res = await api.createLead(leadPayload);
-          if (res && res.data) created = res.data;
-        } catch (apiErr) {
-          console.warn('API create failed, falling back to local entry:', apiErr);
-        }
-
-        const newRecord = created || {
-          ...leadPayload,
-          id: 'lead_' + Date.now(),
-          created_at: new Date().toISOString(),
-        };
+        const res = await api.createLead(leadPayload);
+        const newRecord = res.data;
+        if (!newRecord?.id) throw new Error('Lead creation response did not include a lead ID.');
         // Avoid duplicate in local state if already present
         updateAndPersistLeads((prev) => {
           if (prev.some((l) => l.id === newRecord.id)) return prev;
@@ -1529,7 +1399,7 @@ export default function Leads() {
       setModalOpen(false);
     } catch (err) {
       console.error('Error saving lead:', err);
-      showNotification('Error saving lead. Please try again.', 'error');
+      showNotification(err?.message || 'Error saving lead. Please try again.', 'error');
     } finally {
       setIsSubmitting(false);
     }
@@ -1544,7 +1414,10 @@ export default function Leads() {
     if (window.confirm('Are you sure you want to delete this export trade lead?')) {
       try {
         await api.deleteLead(id);
-      } catch {}
+      } catch (err) {
+        showNotification(err?.message || 'Lead could not be deleted.', 'error');
+        return;
+      }
       setLeads((prev) => prev.filter((l) => l.id !== id));
       if (activeDetailLead?.id === id) setDetailModalOpen(false);
       showNotification('Trade lead deleted successfully.', 'success');
@@ -1723,7 +1596,7 @@ export default function Leads() {
         'Requirement Understood',
         'CIF',
         'Jebel Ali Port',
-        'Sagar Punia',
+        '',
         new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
         'Customer requested COA min 3.5% curcumin',
       ],
@@ -1743,7 +1616,7 @@ export default function Leads() {
         'Sample Sent',
         'FOB',
         'Rotterdam',
-        'Rahul',
+        '',
         new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
         'Feed grade protein analysis submitted',
       ],
@@ -1795,13 +1668,19 @@ export default function Leads() {
             const contactName = r.contactperson || r.contact || '';
             const phone = r.phone || '';
             const email = r.email || '';
-            const products = (r.products || r.product || 'Turmeric').split(',').map((p) => p.trim());
+            const products = String(r.products || r.product || '')
+              .split(',')
+              .map((p) => p.trim())
+              .filter(Boolean);
+            const today = new Date().toISOString().split('T')[0];
+            const followUpDate = /^\d{4}-\d{2}-\d{2}$/.test(String(r.followupdate || '').trim()) ? String(r.followupdate).trim() : today;
+            const qtyUnit = r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT');
 
-            return {
-              type: r.type || 'Export',
+            // Basic details every user may import; commercial details only for the owner
+            const base = {
               company_name: companyName,
               name: companyName,
-              country: r.country || 'India 🇮🇳',
+              country: r.country || '',
               contacts: [
                 {
                   name: contactName,
@@ -1819,36 +1698,36 @@ export default function Leads() {
               website: r.website || '',
               source: r.leadsource || r.source || 'Bulk CSV Import',
               address: r.address || '',
-              credit_rating: r.creditrating || 'AA',
+              stage: r.stage || 'Requirement Understood',
+              priority: r.priority || 'Medium',
+              follow_up_date: followUpDate,
+              today_remarks: r.remarks || r.todayremarks || 'Imported via bulk CSV upload',
+              next_follow_up_action: r.nextaction || r.plannedaction || 'First contact with buyer',
+              notes: r.notes || 'Imported via bulk CSV upload',
+            };
+            if (!isOwner) return base;
+
+            const matchedRep = teamList.find((t) => (r.assignedrep || '').trim() && t.name?.toLowerCase() === String(r.assignedrep).trim().toLowerCase());
+            return {
+              ...base,
+              type: r.type || 'Export',
+              credit_rating: r.creditrating || '',
               turnover: r.turnover || '',
               sourcing_region: r.sourcingregion || '',
-              legacy_industry_type: '',
               products,
               product: products.join(', '),
               quantity: Number(r.quantity || r.quantitykg) || 0,
-              quantity_unit: r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT'),
+              quantity_unit: qtyUnit,
               price: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
               value: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
-              stage: r.stage || 'Requirement Understood',
-              priority: r.priority || 'High',
               export_requirements: {
-                industry_type: r.industrytype || 'Food & Spice Processing',
-                material_type: 'Whole Raw',
-                polish_level: 'Double Polish',
-                min_curcumin: '3.5%',
-                cultivation_method: 'Conventional Cleaned',
-                preferred_origin: '',
-                quantity_needed_kg: Number(r.quantity || r.quantitykg) || 0,
-                quantity_unit: r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT'),
-                max_price_inr: 0,
-                incoterm: r.incoterm || 'CIF',
+                industry_type: r.industrytype || '',
+                quantity_unit: qtyUnit,
+                incoterm: r.incoterm || '',
                 port_delivery: r.portdelivery || r.port || '',
-                payment_days: r.paymentdays || 'CAD on BL copy',
+                payment_days: r.paymentdays || '',
               },
-              assigned_to: isStaff ? (profile?.id || 'staff') : (profile?.id || ''),
-              agent_name: isStaff ? (profile?.name || 'Staff') : (r.assignedrep || profile?.name || 'Self'),
-              follow_up_date: r.followupdate || '',
-              notes: r.notes || 'Imported via bulk CSV upload',
+              assigned_to: matchedRep ? matchedRep.id : (profile?.id || ''),
             };
           })
           .filter(Boolean);
@@ -1875,28 +1754,28 @@ export default function Leads() {
     setImportError('');
     try {
       const addedLeads = [];
+      const failed = [];
       for (const leadData of importPreview) {
         try {
           const res = await api.createLead(leadData);
-          if (res && res.data) {
+          if (res && res.data && res.data.id) {
             addedLeads.push(res.data);
           } else {
-            addedLeads.push({
-              ...leadData,
-              id: 'lead_imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-              created_at: new Date().toISOString(),
-            });
+            failed.push(`${leadData.company_name}: ${res?.message || 'not saved'}`);
           }
-        } catch {
-          addedLeads.push({
-            ...leadData,
-            id: 'lead_imp_' + Date.now() + '_' + Math.random().toString(36).substr(2, 4),
-            created_at: new Date().toISOString(),
-          });
+        } catch (err) {
+          // Never add a lead to the screen that the server did not save
+          failed.push(`${leadData.company_name}: ${err?.message || 'not saved'}`);
         }
       }
 
       setLeads((prev) => [...addedLeads, ...prev]);
+      if (failed.length) {
+        setImportPreview([]);
+        setImportError(`${addedLeads.length} imported, ${failed.length} not imported:\n${failed.slice(0, 15).join('\n')}${failed.length > 15 ? `\n…and ${failed.length - 15} more` : ''}`);
+        showNotification(`${addedLeads.length} imported, ${failed.length} skipped (see details).`, addedLeads.length ? 'success' : 'error');
+        return;
+      }
       setImportModalOpen(false);
       setImportPreview([]);
       setImportFile(null);
@@ -1912,7 +1791,7 @@ export default function Leads() {
   const filteredLeads = leads
     .filter((lead) => {
       // Role Isolation for Staff: Staff can ONLY see their own leads!
-      if (isStaff) {
+      if (isStaff && profile?.data_scope !== 'all') {
         const isAssignedToMe =
           lead.assigned_to === profile?.id ||
           lead.assigned_to === profile?.name ||
@@ -1920,13 +1799,12 @@ export default function Leads() {
           lead.agent_id === profile?.id;
         if (!isAssignedToMe) return false;
       } else if (filterStaff) {
-        // Owner filtering by specific staff member (e.g. Deepak, Japneet, Athish)
-        const staffQ = filterStaff.toLowerCase();
+        // Owner filtering by specific staff member 
+        // Filter by the staff member the lead is assigned to (by id; the creator stays unchanged)
+        const member = filterStaff === profile?.id ? profile : teamList.find((t) => t.id === filterStaff);
         const matchesStaff =
           lead.assigned_to === filterStaff ||
-          lead.agent_name === filterStaff ||
-          (lead.agent_name && lead.agent_name.toLowerCase().includes(staffQ)) ||
-          (lead.assigned_to && String(lead.assigned_to).toLowerCase().includes(staffQ));
+          (!lead.assigned_to && member?.name && lead.agent_name === member.name);
         if (!matchesStaff) return false;
       }
 
@@ -1998,7 +1876,7 @@ export default function Leads() {
   return (
     <div className="w-full space-y-5 pb-12">
       {/* Top Header */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
+      <div className="flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 bg-white p-5 rounded-2xl border border-slate-200/80 shadow-sm">
         <div>
           <div className="flex items-center gap-2">
             <h1 className="text-xl sm:text-2xl font-black text-slate-900 tracking-tight">
@@ -2009,13 +1887,15 @@ export default function Leads() {
             </span>
           </div>
           <p className="text-xs text-slate-500 mt-1">
-            {isStaff
+            {isStaff && profile?.data_scope === 'all'
+              ? `Showing all company leads (you have full-company view). You can update only leads assigned to you.`
+              : isStaff
               ? `Showing exclusively leads assigned to you (${profile?.name || 'Staff'}). Data isolated from other employees.`
               : 'Manage global commodity buyers, turmeric, chillies, DDGS, and export shipping requirements across all staff.'}
           </p>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 sm:gap-3 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3 min-w-0">
           {/* Export CSV - Owner Security Protection */}
           {isOwner && (
             <button
@@ -2306,7 +2186,7 @@ export default function Leads() {
               <option value="">All Staff Activity</option>
               <option value={profile?.id || 'owner'}>{profile?.name || 'Owner'} (Direct)</option>
               {teamList.map((tm) => (
-                <option key={tm.id} value={tm.name}>
+                <option key={tm.id} value={tm.id}>
                   {tm.name} ({tm.department || tm.role || 'Staff'})
                 </option>
               ))}
@@ -2449,16 +2329,21 @@ export default function Leads() {
                       <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5 font-bold text-slate-800 dark:text-slate-200 text-xs">
                           <span className="w-5 h-5 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 flex items-center justify-center text-[10px] font-black shrink-0">
-                            {(lead.created_by_name || lead.agent_name || 'D')[0]?.toUpperCase()}
+                            {(lead.created_by_name || lead.agent_name || '?')[0]?.toUpperCase()}
                           </span>
-                          <span className="truncate max-w-[125px]">{lead.created_by_name || lead.agent_name || 'Deepak'}</span>
+                          <span className="truncate max-w-[125px]">{lead.created_by_name || lead.agent_name || 'Unknown'}</span>
                         </div>
+                        {lead.agent_name && lead.created_by_name && lead.agent_name !== lead.created_by_name && lead.agent_name !== 'Unassigned' && (
+                          <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-semibold mt-0.5 truncate max-w-[150px]" title="Currently assigned to">
+                            → Assigned: {lead.agent_name}
+                          </div>
+                        )}
                         <div className="text-[10px] text-slate-400 dark:text-slate-500 flex items-center gap-1 mt-0.5 font-medium">
                           <Calendar size={10} className="text-slate-400" />
                           <span>
                             {lead.created_at
                               ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
-                              : '04 Oct 2026'}
+                              : '—'}
                           </span>
                         </div>
                       </td>
@@ -2646,10 +2531,10 @@ export default function Leads() {
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
                     <div className="text-[10px]">
                       <span className="font-bold text-slate-800 dark:text-slate-200">
-                        Created by: {lead.created_by_name || lead.agent_name || 'Deepak'}
+                        Created by: {lead.created_by_name || lead.agent_name || 'Unknown'}
                       </span>
                       <span className="text-slate-400 block">
-                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '04 Oct 2026'}
+                        {lead.created_at ? new Date(lead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                       </span>
                     </div>
                     <div className="flex items-center gap-1.5">
@@ -2748,7 +2633,7 @@ export default function Leads() {
               </div>
 
               {/* Type Selection — International or Domestic only */}
-              <div>
+              {isOwner && <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Trade Type <span className="text-rose-500 font-bold">*</span>
                 </label>
@@ -2773,7 +2658,7 @@ export default function Leads() {
                 <p className="text-[11px] text-slate-400 mt-1.5">
                   {form.type === 'International' ? 'Cross-border export/import trade lead' : 'India domestic trade lead'}
                 </p>
-              </div>
+              </div>}
 
               {/* Company Name & Country */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -2803,7 +2688,7 @@ export default function Leads() {
               </div>
 
               {/* Industry Type & Custom Industry Creation */}
-              <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+              {isOwner && <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                     <Factory size={13} className="text-emerald-600" />
@@ -2874,7 +2759,7 @@ export default function Leads() {
                   <span>Selected Industry: <strong className="text-emerald-700 dark:text-emerald-400 font-bold">{form.industry_type || 'Food & Spice Processing'}</strong></span>
                   <span className="text-[10px] text-slate-400">Export sector category</span>
                 </div>
-              </div>
+              </div>}
 
               {/* Lead Source & Website */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -3226,7 +3111,7 @@ export default function Leads() {
             </div>
 
             {/* SECTION 3: PRODUCTS & DEAL */}
-            <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+            {isOwner && <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 flex items-center justify-center font-black text-xs">
                   3
@@ -3411,6 +3296,7 @@ export default function Leads() {
                 />
               </div>
             </div>
+            }
 
             {/* SECTION 4: EXPORT SPECS & ASSIGNMENT */}
             <div id="form-sec-shipping" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
@@ -3425,7 +3311,7 @@ export default function Leads() {
               </div>
 
               {/* Shipping & Trade Terms */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {isOwner && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Incoterms / Shipping Terms with Custom Input */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
@@ -3538,7 +3424,7 @@ export default function Leads() {
                     </div>
                   )}
                 </div>
-              </div>
+              </div>}
 
               {/* Lead Pipeline Stage */}
               <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
@@ -3766,7 +3652,7 @@ export default function Leads() {
           {importError && (
             <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
               <AlertCircle size={15} className="shrink-0" />
-              <span>{importError}</span>
+              <span className="whitespace-pre-line">{importError}</span>
             </div>
           )}
 
@@ -3891,7 +3777,7 @@ export default function Leads() {
                 <div className="flex flex-wrap gap-1.5 mt-1.5">
                   {(Array.isArray(activeDetailLead.products) && activeDetailLead.products.length > 0
                     ? activeDetailLead.products
-                    : (activeDetailLead.product ? activeDetailLead.product.split(',').map(p => p.trim()) : ['Rice DDGS'])
+                    : (activeDetailLead.product ? activeDetailLead.product.split(',').map(p => p.trim()) : [])
                   ).map((p, idx) => (
                     <span key={idx} className="px-2.5 py-1 rounded-lg text-xs font-black bg-white dark:bg-slate-900 text-amber-900 dark:text-amber-200 border border-amber-300 shadow-2xs">
                       {p}
@@ -3930,7 +3816,7 @@ export default function Leads() {
                   <User size={14} className="text-emerald-600" /> Customer & Buyer Details
                 </span>
                 <span className="text-[11px] text-slate-400 font-normal">
-                  {activeDetailLead.country} • Source: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.source || 'Self/own'}</strong>
+                  {activeDetailLead.country} • Source: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.source || activeDetailLead.lead_source || '—'}</strong>
                 </span>
               </div>
 
@@ -3978,7 +3864,9 @@ export default function Leads() {
                   ))
                 ) : (
                   <div className="p-3 bg-slate-50 rounded-xl border text-slate-600 text-[11px]">
-                    <strong>{activeDetailLead.contact_person || 'Mr Duy'}</strong> • {activeDetailLead.phone || '0913108364'} • {activeDetailLead.email || 'email@example.com'}
+                    {[activeDetailLead.contact_person, activeDetailLead.phone, activeDetailLead.email].filter(Boolean).length
+                      ? (<><strong>{activeDetailLead.contact_person || '—'}</strong>{activeDetailLead.phone ? ` • ${activeDetailLead.phone}` : ''}{activeDetailLead.email ? ` • ${activeDetailLead.email}` : ''}</>)
+                      : 'No contact person added yet.'}
                   </div>
                 )}
 
@@ -3987,7 +3875,7 @@ export default function Leads() {
                   <div className="font-bold text-slate-800 dark:text-slate-200">Company Profile & Location</div>
                   <div className="text-slate-600 dark:text-slate-400">
                     <span className="font-semibold text-slate-700 dark:text-slate-300">Address: </span>
-                    {activeDetailLead.address || 'Room 302A, Floor 3, 241 Dien Bien Phu St., Ho Chi Minh City, Vietnam'}
+                    {activeDetailLead.address || '—'}
                   </div>
                   {activeDetailLead.website && (
                     <div className="flex items-center gap-1 pt-0.5">
@@ -3998,11 +3886,11 @@ export default function Leads() {
                     </div>
                   )}
                   <div className="flex flex-wrap gap-2 pt-1 text-[10px] text-slate-500">
-                    <span>Credit: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.credit_rating || 'AA'}</strong></span>
+                    <span>Credit: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.credit_rating || '—'}</strong></span>
                     <span>•</span>
-                    <span>Turnover: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.turnover || '50 cr'}</strong></span>
+                    <span>Turnover: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.turnover || '—'}</strong></span>
                     <span>•</span>
-                    <span>Industry: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.industry_type || 'Animal Feed'}</strong></span>
+                    <span>Industry: <strong className="text-slate-700 dark:text-slate-300">{activeDetailLead.industry_type || '—'}</strong></span>
                   </div>
                 </div>
               </div>
@@ -4041,24 +3929,24 @@ export default function Leads() {
               <div className="p-3 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200 dark:border-slate-700/60 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs">
                 <div className="flex items-center gap-2.5">
                   <div className="w-8 h-8 rounded-full bg-emerald-100 dark:bg-emerald-950 text-emerald-800 dark:text-emerald-300 font-black flex items-center justify-center text-xs shrink-0">
-                    {(activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Deepak')[0]?.toUpperCase()}
+                    {(activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Unknown')[0]?.toUpperCase()}
                   </div>
                   <div>
                     <div className="font-extrabold text-slate-900 dark:text-slate-100 flex items-center gap-1.5">
                       <span>Created by:</span>
                       <span className="text-emerald-700 dark:text-emerald-400 font-black">
-                        {activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Deepak'}
+                        {activeDetailLead.created_by_name || activeDetailLead.agent_name || 'Unknown'}
                       </span>
                     </div>
                     <div className="text-[11px] text-slate-500 dark:text-slate-400">
-                      Record created on {activeDetailLead.created_at ? new Date(activeDetailLead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '04 Oct 2026'}
+                      Record created on {activeDetailLead.created_at ? new Date(activeDetailLead.created_at).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '—'}
                     </div>
                   </div>
                 </div>
                 <div className="sm:text-right">
                   <div className="text-[10px] uppercase font-bold text-slate-400">Current Assignee</div>
                   <div className="font-extrabold text-indigo-700 dark:text-indigo-400 text-xs">
-                    {activeDetailLead.agent_name || 'Staff Member'}
+                    {(activeDetailLead.assigned_to && (activeDetailLead.assigned_to === profile?.id ? profile?.name : teamList.find((t) => t.id === activeDetailLead.assigned_to)?.name)) || activeDetailLead.agent_name || '—'}
                   </div>
                 </div>
               </div>
@@ -4070,21 +3958,34 @@ export default function Leads() {
                   </label>
                   <select
                     disabled={!isOwner}
-                    value={activeDetailLead.agent_name || activeDetailLead.assigned_to || (profile?.name || 'Owner')}
-                    onChange={(e) => {
-                      const newAgent = e.target.value;
-                      const updatedLead = { ...activeDetailLead, agent_name: newAgent, assigned_to: newAgent };
+                    value={activeDetailLead.assigned_to || profile?.id || ''}
+                    onChange={async (e) => {
+                      const newId = e.target.value;
+                      const member = newId === profile?.id ? profile : teamList.find((t) => t.id === newId);
+                      const before = activeDetailLead;
+                      const updatedLead = { ...activeDetailLead, assigned_to: newId, agent_name: member?.name || activeDetailLead.agent_name };
                       setActiveDetailLead(updatedLead);
-                      updateAndPersistLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
-                      showNotification(`Lead reassigned to ${newAgent}`, 'success');
+                      setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+                      try {
+                        const res = await api.updateLead(updatedLead.id, { assigned_to: newId });
+                        if (res && res.success === false) throw new Error(res.message);
+                        const saved = res?.data ? { ...updatedLead, ...res.data } : updatedLead;
+                        setActiveDetailLead(saved);
+                        setLeads((prev) => prev.map((l) => (l.id === saved.id ? saved : l)));
+                        showNotification(`Lead reassigned to ${member?.name || 'team member'}`, 'success');
+                      } catch (err) {
+                        setActiveDetailLead(before);
+                        setLeads((prev) => prev.map((l) => (l.id === before.id ? before : l)));
+                        showNotification(err?.message || 'Lead could not be reassigned.', 'error');
+                      }
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                   >
-                    {[profile?.name || 'Owner', ...teamList.map((t) => t.name)]
-                      .filter(Boolean)
-                      .filter((val, idx, self) => self.indexOf(val) === idx)
-                      .map((name) => (
-                        <option key={name} value={name}>{name}</option>
+                    {[{ id: profile?.id || '', name: `${profile?.name || 'Owner'} (You)` }, ...teamList.map((t) => ({ id: t.id, name: t.name }))]
+                      .filter((m) => m.id)
+                      .filter((m, idx, self) => self.findIndex((x) => x.id === m.id) === idx)
+                      .map((m) => (
+                        <option key={m.id} value={m.id}>{m.name}</option>
                       ))}
                   </select>
                   <p className="text-[10px] text-slate-400 mt-1">Only admins can reassign this lead to another user.</p>
@@ -4094,13 +3995,22 @@ export default function Leads() {
                     Status <span className="text-rose-500">*</span>
                   </label>
                   <select
-                    value={activeDetailLead.stage || activeDetailLead.status || 'Closed Lost'}
-                    onChange={(e) => {
+                    value={activeDetailLead.stage || activeDetailLead.status || 'Requirement Understood'}
+                    onChange={async (e) => {
                       const newStage = e.target.value;
+                      const before = activeDetailLead;
                       const updatedLead = { ...activeDetailLead, stage: newStage, status: newStage, lead_stage: newStage };
                       setActiveDetailLead(updatedLead);
-                      updateAndPersistLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
-                      showNotification(`Lead status updated to ${newStage}`, 'success');
+                      setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+                      try {
+                        const res = await api.updateLead(updatedLead.id, { stage: newStage });
+                        if (res && res.success === false) throw new Error(res.message);
+                        showNotification(`Lead status updated to ${newStage}`, 'success');
+                      } catch (err) {
+                        setActiveDetailLead(before);
+                        setLeads((prev) => prev.map((l) => (l.id === before.id ? before : l)));
+                        showNotification(err?.message || 'Status could not be changed.', 'error');
+                      }
                     }}
                     className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none font-bold"
                   >
@@ -4413,19 +4323,19 @@ export default function Leads() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                   <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
                     <span className="text-slate-400 block text-[10px]">Incoterm</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.incoterm || 'CIF'}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.incoterm || activeDetailLead.incoterm || '—'}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
                     <span className="text-slate-400 block text-[10px]">Port Delivery</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.port_delivery || 'Hai Phong / Cat Lai Port'}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.port_delivery || '—'}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
                     <span className="text-slate-400 block text-[10px]">Payment Terms</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.payment_days || 'CAD on BL copy'}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.payment_days || activeDetailLead.payment_terms || '—'}</span>
                   </div>
                   <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
                     <span className="text-slate-400 block text-[10px]">Polish / Treatment</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.polish_level || 'Machine Cleaned'}</span>
+                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.polish_level || '—'}</span>
                   </div>
                 </div>
               </div>

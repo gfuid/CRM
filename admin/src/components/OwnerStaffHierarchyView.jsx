@@ -16,6 +16,7 @@ import {
   AlertTriangle,
   UserPlus,
   Lock,
+  Trash2,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -26,6 +27,7 @@ export default function OwnerStaffHierarchyView({
   onAddStaffForOwner = () => {},
   onResetPassword = null,
   onToggleFeature = null,
+  onDeleteOwner = null,
 }) {
   // Store expanded owner IDs. Default to having all owners expanded so staff are immediately visible!
   const [expandedOwners, setExpandedOwners] = useState({});
@@ -54,27 +56,10 @@ export default function OwnerStaffHierarchyView({
   const getStaffForOwner = (owner) => {
     let staff = (owner.staff_list && Array.isArray(owner.staff_list)) ? [...owner.staff_list] : [];
 
-    const isKeerthana =
-      owner.company_id === 'comp_bioniversio_1' ||
-      owner.id === 'usr_1791814468302_hoa08z' ||
-      owner.email === 'bioniversiobiologics@arggroups.com' ||
-      (owner.name && owner.name.toLowerCase().includes('keerthana'));
-
     if (staff.length === 0) {
       const genericCompanyIds = ['comp_1', 'comp_traveltrade_1', 'comp_stellarsync_1', 'comp_default', ''];
       staff = users.filter((s) => {
         if (s.id === owner.id || s.persona === 'owner' || s.role === 'admin') return false;
-        if (s.id === 'usr_athish' || s.name === 'Athish' || s.name === 'Athish Ravikanth' || s.email === 'athishravikanth@gmail.com') return false;
-
-        // Special Keerthana staff match
-        if (isKeerthana && (
-          s.email?.toLowerCase() === 'sagarpunia163@gmail.com' ||
-          s.name?.toLowerCase().includes('sagar') ||
-          s.email?.toLowerCase() === 'rahul@gmail.com' ||
-          s.name?.toLowerCase().includes('rahul')
-        )) {
-          return true;
-        }
 
         // Primary check: explicitly created by this owner
         if (s.created_by) {
@@ -95,42 +80,6 @@ export default function OwnerStaffHierarchyView({
 
         return false;
       });
-    }
-
-    // For Keerthana (Bioniversio Biologics), guarantee both Sagar Punia and Rahul are present
-    if (isKeerthana) {
-      const hasSagar = staff.some((s) => s.email?.toLowerCase() === 'sagarpunia163@gmail.com' || s.name?.toLowerCase().includes('sagar'));
-      if (!hasSagar) {
-        staff.unshift({
-          id: 'usr_1789929063747_allpa4',
-          name: 'Sagar Punia',
-          email: 'sagarpunia163@gmail.com',
-          role: 'agent',
-          department: 'Commodity Sales Executive',
-          phone: '08307967782',
-          is_active: true,
-          company_id: 'comp_bioniversio_1',
-          created_by: 'usr_1791814468302_hoa08z',
-          avatar_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-          staff_password: 'staff123',
-        });
-      }
-      const hasRahul = staff.some((s) => s.email?.toLowerCase() === 'rahul@gmail.com' || s.name?.toLowerCase().includes('rahul'));
-      if (!hasRahul) {
-        staff.push({
-          id: 'usr_1792001466336_wwykxg',
-          name: 'Rahul',
-          email: 'rahul@gmail.com',
-          role: 'agent',
-          department: 'Commodity Sales Executive',
-          phone: '+91 98765 43210',
-          is_active: true,
-          company_id: 'comp_bioniversio_1',
-          created_by: 'usr_1791814468302_hoa08z',
-          avatar_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-          staff_password: 'staff123',
-        });
-      }
     }
 
     return staff;
@@ -339,6 +288,20 @@ export default function OwnerStaffHierarchyView({
                 >
                   {staff.length} / {staffLimit} Used {isQuotaFull ? '(Full)' : ''}
                 </span>
+                {onDeleteOwner && (
+                  <button
+                    type="button"
+                    onClick={(event) => {
+                      event.stopPropagation();
+                      onDeleteOwner(owner);
+                    }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 transition-colors"
+                    title="Permanently delete this owner and all associated tenant data"
+                  >
+                    <Trash2 size={13} />
+                    Delete workspace
+                  </button>
+                )}
               </div>
             </div>
 
@@ -458,7 +421,6 @@ export default function OwnerStaffHierarchyView({
                               >
                                 <option value="agent">Agent</option>
                                 <option value="manager">Manager</option>
-                                <option value="admin">Admin</option>
                               </select>
                             </td>
 

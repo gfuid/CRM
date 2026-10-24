@@ -20,7 +20,8 @@ import {
   SlidersHorizontal,
   Sparkles,
   Layers,
-  List
+  List,
+  Trash2,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import OwnerStaffHierarchyView from '../components/OwnerStaffHierarchyView';
@@ -33,6 +34,7 @@ export default function UsersSection({
   onUpdateStaffLimit,
   onToggleFeature,
   onResetPassword,
+  onDeleteOwner,
 }) {
   const [viewMode, setViewMode] = useState('hierarchy'); // 'hierarchy' | 'flat'
   const [search, setSearch] = useState('');
@@ -46,6 +48,30 @@ export default function UsersSection({
   const [resetPassword, setResetPassword] = useState('');
   const [resetBusy, setResetBusy] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [deletingOwner, setDeletingOwner] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleteBusy, setDeleteBusy] = useState(false);
+
+  const openDeleteOwner = (owner) => {
+    setDeletingOwner(owner);
+    setDeleteConfirmation('');
+    setDeleteError('');
+  };
+
+  const handleDeleteOwner = async (event) => {
+    event.preventDefault();
+    if (!deletingOwner || !onDeleteOwner) return;
+    if (deleteConfirmation.trim().toLowerCase() !== deletingOwner.email.toLowerCase()) {
+      setDeleteError('Type the owner email exactly to confirm permanent deletion.');
+      return;
+    }
+
+    setDeleteBusy(true);
+    const deleted = await onDeleteOwner(deletingOwner.id);
+    setDeleteBusy(false);
+    if (deleted) setDeletingOwner(null);
+  };
 
   const openReset = (user) => {
     setResetUser(user);
@@ -285,6 +311,7 @@ export default function UsersSection({
             onToggleStatus={onToggleStatus}
             onResetPassword={openReset}
             onToggleFeature={onToggleFeature}
+            onDeleteOwner={openDeleteOwner}
             onAddStaffForOwner={(owner) => {
               setNewUser((prev) => ({
                 ...prev,
@@ -406,6 +433,15 @@ export default function UsersSection({
                     <Lock size={13} />
                     <span>Reset password</span>
                   </button>
+                  {isOwner && onDeleteOwner && (
+                    <button
+                      onClick={() => openDeleteOwner(u)}
+                      className="w-full flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-xs font-bold bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 transition-colors cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                      <span>Delete owner and workspace</span>
+                    </button>
+                  )}
 
                   <div className="flex items-center justify-between pt-1 gap-2">
                     <div className="flex items-center gap-1.5">
@@ -418,7 +454,7 @@ export default function UsersSection({
                           u.role
                         )} ${isOwner ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer'}`}
                       >
-                        <option value="admin">Admin</option>
+                        {isOwner && <option value="admin">Owner</option>}
                         <option value="manager">Manager</option>
                         <option value="agent">Agent</option>
                       </select>
@@ -519,7 +555,7 @@ export default function UsersSection({
                             u.role
                           )} ${isOwner ? 'opacity-80 cursor-not-allowed' : 'cursor-pointer hover:border-slate-400'}`}
                         >
-                          <option value="admin">Admin</option>
+                          {isOwner && <option value="admin">Owner</option>}
                           <option value="manager">Manager</option>
                           <option value="agent">Agent</option>
                         </select>
@@ -614,6 +650,16 @@ export default function UsersSection({
                               <Lock size={11} />
                               <span>Password</span>
                             </button>
+                            {onDeleteOwner && (
+                              <button
+                                onClick={() => openDeleteOwner(u)}
+                                className="px-3 py-1 rounded-full text-[11px] font-bold border border-rose-200 bg-rose-50 hover:bg-rose-100 text-rose-700 shadow-2xs transition-all cursor-pointer flex items-center gap-1"
+                                title="Permanently delete this owner and all associated tenant data"
+                              >
+                                <Trash2 size={11} />
+                                <span>Delete</span>
+                              </button>
+                            )}
                           </div>
                         ) : (
                           <button
@@ -744,7 +790,6 @@ export default function UsersSection({
               >
                 <option value="agent">Agent (Sales Rep)</option>
                 <option value="manager">Manager</option>
-                <option value="admin">Admin</option>
               </select>
             </div>
 
@@ -814,6 +859,49 @@ export default function UsersSection({
             </button>
             <button type="submit" disabled={resetBusy} className="px-4 py-2 rounded-full text-xs font-bold bg-slate-900 hover:bg-slate-800 text-white cursor-pointer disabled:opacity-50">
               {resetBusy ? 'Saving…' : 'Set password'}
+            </button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal
+        isOpen={!!deletingOwner}
+        onClose={() => !deleteBusy && setDeletingOwner(null)}
+        title="Permanently delete owner workspace?"
+      >
+        <form onSubmit={handleDeleteOwner} className="space-y-4">
+          <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
+            This permanently removes <strong>{deletingOwner?.name}</strong>, their staff accounts, leads, tasks, activity, follow-ups, campaigns, settings and related tenant records. This cannot be undone.
+          </div>
+          <div>
+            <label className="block text-xs font-bold text-slate-700 mb-1">
+              Type {deletingOwner?.email} to confirm
+            </label>
+            <input
+              type="email"
+              required
+              value={deleteConfirmation}
+              onChange={(event) => setDeleteConfirmation(event.target.value)}
+              className="w-full px-3.5 py-2 text-sm bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-rose-500/20 focus:border-rose-500 focus:outline-none"
+              autoComplete="off"
+            />
+            {deleteError && <p className="text-xs text-rose-600 mt-1 font-semibold">{deleteError}</p>}
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => setDeletingOwner(null)}
+              disabled={deleteBusy}
+              className="px-4 py-2 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-700 hover:bg-slate-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={deleteBusy}
+              className="px-4 py-2 rounded-full text-xs font-bold bg-rose-600 hover:bg-rose-700 text-white disabled:opacity-50"
+            >
+              {deleteBusy ? 'Deleting…' : 'Delete workspace permanently'}
             </button>
           </div>
         </form>

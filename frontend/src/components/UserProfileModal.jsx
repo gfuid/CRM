@@ -164,7 +164,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
 
   const displayName = profile?.name || profile?.full_name || user?.name || 'User';
   const displayEmail = profile?.email || user?.email || '';
-  const roleName = isOwner ? 'Super Admin / Owner' : (profile?.role || 'Sales Executive');
+  const roleName = isOwner ? 'Company Owner' : (profile?.department || 'Staff');
   const workspaceName =
     profile?.company_name ||
     user?.company_name ||
@@ -343,7 +343,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Department / Desk</span>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5 block flex items-center gap-1.5">
                       <Briefcase size={14} className="text-emerald-600 dark:text-emerald-400" />
-                      {formData.department || 'Commodity Export Operations'}
+                      {formData.department || '—'}
                     </span>
                   </div>
 
@@ -525,7 +525,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                           <div className="text-[11px] text-slate-400 flex items-center gap-2 mt-0.5">
                             <span>{lead.country || 'Global'}</span>
                             <span>•</span>
-                            <span className="truncate">{lead.commodities || lead.product_name || 'Agro Produce'}</span>
+                            <span className="truncate">{lead.commodities || lead.product_name || lead.product || '—'}</span>
                           </div>
                         </div>
 
@@ -534,7 +534,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                             ${Number(lead.deal_value_usd || lead.deal_value || 0).toLocaleString()}
                           </span>
                           <span className="text-[10px] font-semibold text-emerald-600 block">
-                            {lead.lead_stage || lead.stage || 'Discovery'}
+                            {lead.lead_stage || lead.stage || '—'}
                           </span>
                         </div>
                       </div>

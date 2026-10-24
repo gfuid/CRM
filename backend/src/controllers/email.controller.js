@@ -17,8 +17,8 @@ const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 /* Access helpers                                                      */
 /* ------------------------------------------------------------------ */
 
-const isSuperAdmin = (u) => Boolean(u && u.id === 'usr_super_admin');
-const isOwnerUser = (u) => Boolean(u && (u.persona === 'owner' || u.role === 'admin'));
+const { isSuperAdmin, isOwnerUser } = require('../utils/access');
+const { isLeadInUserScope } = require('../utils/tenantScope');
 
 const featureEnabledFor = (user) => {
   if (isSuperAdmin(user)) return true;
@@ -47,8 +47,8 @@ const requireFeature = (req, res, next) => {
 
 /** Leads visible to this owner (same scoping rule as the leads list). */
 const ownerLeads = (user) => {
-  if (isSuperAdmin(user) || !user.company_id) return dataStore.leads;
-  return dataStore.leads.filter((l) => l.company_id === user.company_id || !l.company_id);
+  if (isSuperAdmin(user)) return [];
+  return dataStore.leads.filter((l) => isLeadInUserScope(l, user));
 };
 
 const getSettingsRecord = (ownerId) => dataStore.emailSettings.find((s) => s.owner_id === ownerId) || null;
@@ -388,8 +388,12 @@ const startSending = async (req, res, campaign) => {
   }
   if (campaign.status === 'sending') return ApiResponse.error(res, 'Campaign is already sending', 409);
 
-  // Rebuild the audience at send time so new tags/unsubscribes are respected (custom lists stay as saved)
-  if (campaign.audience && campaign.audience.mode !== 'custom' && campaign.status === 'draft') {
+  // A campaign interrupted by a restart continues with the recipients that were not sent yet
+  if (campaign.status === 'draft_resume') {
+    campaign.status = 'draft';
+    campaign.resumed = true;
+  } else if (campaign.audience && campaign.audience.mode !== 'custom' && campaign.status === 'draft') {
+    // Rebuild the audience at send time so new tags/unsubscribes are respected (custom lists stay as saved)
     const built = buildRecipients(req.user, campaign.audience);
     campaign.recipients = built.recipients;
     campaign.total = built.recipients.length;
@@ -414,6 +418,9 @@ const startSending = async (req, res, campaign) => {
 const sendCampaign = async (req, res) => {
   const c = ownerCampaigns(req.user).find((x) => x.id === req.params.id);
   if (!c) return ApiResponse.error(res, 'Campaign not found', 404);
+  if (c.status === 'paused') {
+    c.status = 'draft_resume';
+  }
   if (c.status === 'sent' && !(req.body && req.body.retry_failed)) {
     return ApiResponse.error(res, 'Campaign already sent. Use retry_failed to resend failed recipients.', 409);
   }
@@ -444,7 +451,7 @@ const sendTestCampaign = async (req, res) => {
     name: sample.contact_person || 'Sample Contact',
     company: sample.company_name || sample.name || 'Sample Company',
     country: String(sample.country || 'India').replace(/[\uD83C-􏰀-\uDFFF]+/g, '').trim(),
-    product: sample.product || 'Turmeric',
+    product: sample.product || 'your product',
   };
   const msg = buildMessage({ campaign: { subject, body }, settings, ownerId: req.user.id, recipient });
   try {
@@ -488,7 +495,10 @@ const unsubscribe = async (req, res) => {
     dataStore.emailSettings.push(rec);
     dbSync.saveEmailSetting(rec);
   }
+  // Only this sender's own company leads are flagged; other companies are not affected
+  const senderUser = dataStore.users.find((u) => u.id === ownerId);
   dataStore.leads.forEach((l) => {
+    if (!senderUser || !isLeadInUserScope(l, senderUser)) return;
     const match =
       String(l.email || '').toLowerCase() === email ||
       (Array.isArray(l.contacts) && l.contacts.some((c) => c && String(c.email || '').toLowerCase() === email));

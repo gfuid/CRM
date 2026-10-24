@@ -54,7 +54,7 @@ export default function App() {
     const token = localStorage.getItem('crm_admin_token');
     return {
       'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : { 'x-user-id': 'usr_super_admin' }),
+      ...(token ? { Authorization: `Bearer ${token}` } : {}),
     };
   };
 
@@ -122,6 +122,26 @@ export default function App() {
       return true;
     } else {
       throw new Error(data.message || 'Failed to create user');
+    }
+  };
+
+  const handleDeleteOwner = async (id) => {
+    try {
+      const res = await fetch(`${API_BASE}/users/${encodeURIComponent(id)}`, {
+        method: 'DELETE',
+        headers: getHeaders(),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        showToast(data.message || 'Failed to delete owner account', 'error');
+        return false;
+      }
+      showToast('Owner account and tenant data permanently deleted');
+      await fetchAllData();
+      return true;
+    } catch (err) {
+      showToast(`Network error deleting owner: ${err.message}`, 'error');
+      return false;
     }
   };
 
@@ -310,6 +330,7 @@ export default function App() {
                   onUpdateStaffLimit={handleUpdateStaffLimit}
                   onToggleFeature={handleToggleFeature}
                   onResetPassword={handleResetPassword}
+                  onDeleteOwner={handleDeleteOwner}
                 />
               )}
 

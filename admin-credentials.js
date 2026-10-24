@@ -13,7 +13,7 @@ module.exports = {
     title: 'Travel-Trade Super Administrator',
     username: 'admin',
     email: 'admin@travel-trade.com',
-    password: 'admin123',
+    password: '(set with the ADMIN_PASSWORD environment variable on the server - never write it here)',
     accessLevel: 'SuperAdmin / System Owner',
     loginUrl: 'https://crm-b2g7.vercel.app/',
     permissions: [

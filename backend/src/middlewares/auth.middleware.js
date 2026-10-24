@@ -4,187 +4,80 @@ const ApiResponse = require('../utils/apiResponse');
 const { dataStore } = require('../repositories/dataStore');
 const { isDbConnected } = require('../config/db');
 const models = require('../models');
+const { isSuperAdmin, isOwnerUser } = require('../utils/access');
 
-/**
- * Authenticates requests via JWT Bearer Token or x-user-id header
- */
+const DEFAULT_JWT_SECRET = 'crm_default_jwt_secret_key_change_in_prod';
+
 const authenticate = async (req, res, next) => {
   const authHeader = req.headers.authorization;
+  const tokenMatch = typeof authHeader === 'string' && authHeader.match(/^Bearer\s+(\S+)$/i);
 
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // Check fallback x-user-id header (useful for admin dashboard & dev sync)
-    const testUserId = req.headers['x-user-id'];
-    if (testUserId) {
-      if (testUserId === 'usr_super_admin') {
-        req.user = {
-          id: 'usr_super_admin',
-          name: 'Super Administrator',
-          email: config.adminEmail || 'admin@travel-trade.com',
-          username: config.adminUsername || 'admin',
-          role: 'admin',
-          persona: 'owner',
-          is_active: true,
-        };
-        return next();
-      }
-
-      let foundUser = null;
-      try {
-        if (isDbConnected() && models.User) {
-          foundUser = await models.User.findOne({ id: testUserId }).lean();
-        }
-      } catch (e) {}
-
-      if (!foundUser) {
-        foundUser = dataStore.users.find((u) => u.id === testUserId);
-      }
-
-      if (foundUser) {
-        delete foundUser.password;
-        req.user = foundUser;
-        return next();
-      }
-    }
-
-    // Only bypass in dev if explicitly requested via x-dev-bypass header
-    if (config.nodeEnv === 'development' && req.headers['x-dev-bypass'] === 'true' && dataStore.users.length > 0) {
-      const defaultUser = { ...dataStore.users[0] };
-      delete defaultUser.password;
-      req.user = defaultUser;
-      return next();
-    }
-
-    return ApiResponse.error(res, 'Authentication required. Missing Bearer token.', 401);
+  if (!tokenMatch) {
+    return ApiResponse.error(res, 'Authentication required. Missing bearer token.', 401);
   }
 
-  const token = authHeader.split(' ')[1];
+  if (config.nodeEnv === 'production' && config.jwtSecret === DEFAULT_JWT_SECRET) {
+    return ApiResponse.error(res, 'Authentication is not securely configured.', 503);
+  }
 
+  let decoded;
   try {
-    const decoded = jwt.verify(token, config.jwtSecret);
-
-    if (decoded.id === 'usr_super_admin' || decoded.username === config.adminUsername) {
-      req.user = {
-        id: 'usr_super_admin',
-        name: 'Super Administrator',
-        email: config.adminEmail || 'admin@travel-trade.com',
-        username: config.adminUsername || 'admin',
-        role: 'admin',
-        persona: 'owner',
-        is_active: true,
-      };
-      return next();
-    }
-
-    let user = null;
-    try {
-      if (isDbConnected() && models.User) {
-        user = await models.User.findOne({ id: decoded.id }).lean();
-      }
-    } catch (e) {}
-
-    if (!user) {
-      user = dataStore.users.find((u) => u.id === decoded.id);
-    }
-
-    if (!user) {
-      // Resilient session recovery: If JWT is cryptographically valid, reconstruct session user
-      // so users are not unexpectedly logged out when serverless or in-memory stores restart
-      if (decoded.id && (decoded.email || decoded.name)) {
-        user = {
-          id: decoded.id,
-          name: decoded.name || decoded.email?.split('@')[0] || 'Team Member',
-          email: decoded.email,
-          role: decoded.role || 'agent',
-          persona: decoded.persona || (decoded.role === 'admin' ? 'owner' : 'staff'),
-          company_id: decoded.company_id || (decoded.id ? ('comp_' + decoded.id) : ('comp_' + Date.now())),
-          department: decoded.department || 'Commodity Sales & Export Operations',
-          is_active: true,
-        };
-        dataStore.users.push(user);
-      } else {
-        return ApiResponse.error(res, 'User account no longer exists.', 401);
-      }
-    }
-
-    if (!user.is_active) {
-      return ApiResponse.error(res, 'Your account has been deactivated. Please contact support.', 403);
-    }
-
-    const cleanUser = { ...user };
-    delete cleanUser.password;
-    req.user = cleanUser;
-    next();
-  } catch (err) {
-    // Resilient fallback: If JWT failed verification (expired, local session, or server restart),
-    // check x-user-id or x-user-email or unverified payload before rejecting
-    const testUserId = req.headers['x-user-id'];
-    const testUserEmail = req.headers['x-user-email'];
-    const unverified = !token.startsWith('local_session_') ? jwt.decode(token) : null;
-
-    const candidateId = testUserId || unverified?.id;
-    const candidateEmail = testUserEmail || unverified?.email;
-
-    if (candidateId || candidateEmail) {
-      if (candidateId === 'usr_super_admin') {
-        req.user = {
-          id: 'usr_super_admin',
-          name: 'Super Administrator',
-          email: config.adminEmail || 'admin@travel-trade.com',
-          username: config.adminUsername || 'admin',
-          role: 'admin',
-          persona: 'owner',
-          is_active: true,
-        };
-        return next();
-      }
-
-      let recovered = null;
-      try {
-        if (isDbConnected() && models.User) {
-          recovered = await models.User.findOne({
-            $or: [
-              candidateId ? { id: candidateId } : null,
-              candidateEmail ? { email: candidateEmail.toLowerCase() } : null,
-            ].filter(Boolean),
-          }).lean();
-        }
-      } catch (e) {}
-
-      if (!recovered && dataStore.users) {
-        recovered = dataStore.users.find(
-          (u) =>
-            (candidateId && u.id === candidateId) ||
-            (candidateEmail && u.email && u.email.toLowerCase() === candidateEmail.toLowerCase())
-        );
-      }
-
-      if (recovered && recovered.is_active) {
-        const cleanUser = { ...recovered };
-        delete cleanUser.password;
-        req.user = cleanUser;
-        return next();
-      }
-
-      // Reconstruct owner session so valid users are never rejected when in-memory stores restart
-      if (candidateEmail || candidateId) {
-        const reconstructed = {
-          id: candidateId || 'usr_' + Date.now(),
-          name: unverified?.name || candidateEmail?.split('@')[0] || 'Company Owner',
-          email: candidateEmail || unverified?.email || 'owner@travel-trade.com',
-          role: unverified?.role || 'admin',
-          persona: unverified?.persona || 'owner',
-          company_id: unverified?.company_id || (candidateId ? ('comp_' + candidateId) : ('comp_' + Date.now())),
-          department: unverified?.department || 'Executive Management',
-          is_active: true,
-        };
-        dataStore.users.push(reconstructed);
-        req.user = reconstructed;
-        return next();
-      }
-    }
-
+    decoded = jwt.verify(tokenMatch[1], config.jwtSecret);
+  } catch {
     return ApiResponse.error(res, 'Invalid or expired session token. Please log in again.', 401);
   }
+
+  if (!decoded || typeof decoded !== 'object' || typeof decoded.id !== 'string') {
+    return ApiResponse.error(res, 'Invalid session token. Please log in again.', 401);
+  }
+
+  if (decoded.id === 'usr_super_admin') {
+    req.user = {
+      id: 'usr_super_admin',
+      name: 'Super Administrator',
+      email: config.adminEmail || 'admin@travel-trade.com',
+      username: config.adminUsername || 'admin',
+      role: 'admin',
+      persona: 'owner',
+      is_active: true,
+    };
+    return next();
+  }
+
+  let user = null;
+  if (isDbConnected() && models.User) {
+    try {
+      user = await models.User.findOne({ id: decoded.id }).lean();
+    } catch (err) {
+      console.error('[Authentication] User lookup failed:', err.message);
+      return ApiResponse.error(res, 'Authentication service is temporarily unavailable.', 503);
+    }
+  } else {
+    user = dataStore.users.find((candidate) => candidate.id === decoded.id) || null;
+  }
+
+  if (!user) {
+    return ApiResponse.error(res, 'User account no longer exists. Please log in again.', 401);
+  }
+
+  if (user.is_active === false) {
+    return ApiResponse.error(res, 'Your account has been deactivated. Please contact support.', 403);
+  }
+
+  // Tokens issued before the last password change are no longer valid
+  if (user.password_changed_at && decoded.iat) {
+    const changedAt = new Date(user.password_changed_at).getTime();
+    if (!Number.isNaN(changedAt) && decoded.iat * 1000 < changedAt - 1000) {
+      return ApiResponse.error(res, 'Your password was changed. Please log in again.', 401);
+    }
+  }
+
+  const cleanUser = { ...user };
+  delete cleanUser.password;
+  delete cleanUser.staff_password;
+  delete cleanUser.plain_password;
+  req.user = cleanUser;
+  return next();
 };
 
 /**
@@ -197,8 +90,8 @@ const authorize = (...allowedRoles) => {
       return ApiResponse.error(res, 'Unauthenticated user.', 401);
     }
 
-    // Admin or Company Owner has superuser access to all routes
-    if (req.user.role === 'admin' || req.user.persona === 'owner' || req.user.role === 'owner') {
+    // Super Admin and Company Owners pass role checks (owners are still scoped to their own company in controllers)
+    if (isSuperAdmin(req.user) || isOwnerUser(req.user)) {
       return next();
     }
 
@@ -210,11 +103,33 @@ const authorize = (...allowedRoles) => {
       );
     }
 
-    next();
+    return next();
   };
+};
+
+/**
+ * Platform operator only. Company owners are NOT allowed here.
+ */
+const requireSuperAdmin = (req, res, next) => {
+  if (!isSuperAdmin(req.user)) {
+    return ApiResponse.error(res, 'Access denied: Super Admin only.', 403);
+  }
+  return next();
+};
+
+/**
+ * Company owner (or Super Admin acting on behalf of one).
+ */
+const requireOwner = (req, res, next) => {
+  if (!isSuperAdmin(req.user) && !isOwnerUser(req.user)) {
+    return ApiResponse.error(res, 'Access denied: Only the company owner can do this.', 403);
+  }
+  return next();
 };
 
 module.exports = {
   authenticate,
   authorize,
+  requireSuperAdmin,
+  requireOwner,
 };
