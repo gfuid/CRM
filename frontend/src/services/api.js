@@ -302,6 +302,14 @@ class ApiClient {
   }
 
   // Admin
+  getMyUsage() {
+    return this.request('/admin/my-usage');
+  }
+
+  getDailyReport(date) {
+    return this.request(`/analytics/daily-report${date ? `?date=${encodeURIComponent(date)}` : ''}`);
+  }
+
   getUsers(params = {}) {
     const query = new URLSearchParams(params).toString();
     return this.request(`/admin/users${query ? `?${query}` : ''}`);

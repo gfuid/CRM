@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const myDaysController = require('../controllers/myDays.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { enforceStorageQuota } = require('../utils/usage');
 const asyncHandler = require('../utils/asyncHandler');
 
 router.use(authenticate);
+router.use(enforceStorageQuota);
 
 router.get('/', asyncHandler(myDaysController.getMyDays));
 router.post('/', asyncHandler(myDaysController.addMyDayItem));

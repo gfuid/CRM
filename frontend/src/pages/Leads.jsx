@@ -430,6 +430,28 @@ export const formatQuantityEquivalent = (qty, unit = 'MT') => {
 
 export const INITIAL_LEADS = SEED_LEADS;
 
+
+// Local calendar day as YYYY-MM-DD (offset in days from today)
+const localDay = (offset = 0) => {
+  const d = new Date(Date.now() + offset * 86400000);
+  return new Date(d.getTime() - d.getTimezoneOffset() * 60000).toISOString().split('T')[0];
+};
+const monthStart = () => localDay(0).slice(0, 8) + '01';
+
+// "Last contact 9 days ago" text and colour for a lead (server sends days_since_contact / no_contact_alert)
+const lastContactBadge = (lead) => {
+  const d = lead?.days_since_contact;
+  if (d === null || d === undefined) return null;
+  const text = d === 0 ? 'Last contact: today' : d === 1 ? 'Last contact: yesterday' : `Last contact: ${d} days ago`;
+  return {
+    text,
+    alert: Boolean(lead.no_contact_alert),
+    cls: lead.no_contact_alert
+      ? 'text-rose-700 bg-rose-50 border-rose-200 dark:text-rose-300 dark:bg-rose-950/50 dark:border-rose-900'
+      : 'text-slate-500 bg-slate-50 border-slate-200 dark:text-slate-400 dark:bg-slate-800/60 dark:border-slate-700',
+  };
+};
+
 const getStatusBadge = (status) => {
   switch (status) {
     case 'Lead Generation':
@@ -582,6 +604,7 @@ export default function Leads() {
   const [editingLead, setEditingLead] = useState(null);
   const [teamList, setTeamList] = useState([]);
   const [filterStaff, setFilterStaff] = useState('');
+  const [filterNoContact, setFilterNoContact] = useState(false);
 
   // Form Tab & Modal Polish
   const [activeFormTab, setActiveFormTab] = useState('basic'); // 'basic' | 'contact' | 'deal' | 'export'
@@ -723,6 +746,8 @@ export default function Leads() {
   const [dossierTodayRemark, setDossierTodayRemark] = useState('');
   const [dossierFutureAction, setDossierFutureAction] = useState('');
   const [isUploadingDoc, setIsUploadingDoc] = useState(false);
+  const [docLinkName, setDocLinkName] = useState('');
+  const [docLinkUrl, setDocLinkUrl] = useState('');
 
   // Persistence helper: saves to React state and localStorage
   const updateAndPersistLeads = (updater) => {
@@ -916,41 +941,46 @@ export default function Leads() {
     showNotification('Follow-up schedule and remarks saved successfully!', 'success');
   };
 
-  const handleUploadDossierDoc = (e) => {
-    const file = e.target.files?.[0];
-    if (!file || !activeDetailLead) return;
-    setIsUploadingDoc(true);
-    setTimeout(() => {
-      const newDoc = {
-        id: 'doc_' + Date.now(),
-        name: file.name,
-        size: (file.size / (1024 * 1024)).toFixed(1) + ' MB',
-        upload_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-      };
-      const updatedLead = {
-        ...activeDetailLead,
-        documents: [newDoc, ...(activeDetailLead.documents || [])],
-      };
-      setActiveDetailLead(updatedLead);
-      updateAndPersistLeads((prev) =>
-        prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
-      );
-      setIsUploadingDoc(false);
-      showNotification(`Document "${file.name}" uploaded successfully!`, 'success');
-    }, 400);
+  // Documents are saved as links (Google Drive, Dropbox, OneDrive...). The file itself stays in that drive.
+  const saveLeadDocuments = async (documents, okMsg) => {
+    if (!activeDetailLead) return;
+    const before = activeDetailLead;
+    const updatedLead = { ...activeDetailLead, documents };
+    setActiveDetailLead(updatedLead);
+    setLeads((prev) => prev.map((l) => (l.id === updatedLead.id ? updatedLead : l)));
+    try {
+      const res = await api.updateLead(updatedLead.id, { documents });
+      if (res && res.success === false) throw new Error(res.message);
+      showNotification(okMsg, 'success');
+    } catch (err) {
+      setActiveDetailLead(before);
+      setLeads((prev) => prev.map((l) => (l.id === before.id ? before : l)));
+      showNotification(err?.message || 'Document could not be saved.', 'error');
+    }
   };
 
-  const handleDeleteDossierDoc = (docId) => {
+  const handleUploadDossierDoc = async () => {
     if (!activeDetailLead) return;
-    const updatedLead = {
-      ...activeDetailLead,
-      documents: (activeDetailLead.documents || []).filter((d) => d.id !== docId),
+    const name = (docLinkName || '').trim();
+    let url = (docLinkUrl || '').trim();
+    if (!name || !url) { showNotification('Enter a document name and its link.', 'error'); return; }
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    try { new URL(url); } catch { showNotification('Please paste a valid link (e.g. a Google Drive share link).', 'error'); return; }
+    setIsUploadingDoc(true);
+    const newDoc = {
+      id: 'doc_' + Date.now(),
+      name: name.slice(0, 150),
+      url: url.slice(0, 1000),
+      upload_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      added_by: profile?.name || '',
     };
-    setActiveDetailLead(updatedLead);
-    updateAndPersistLeads((prev) =>
-      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
-    );
-    showNotification('Document removed.', 'success');
+    await saveLeadDocuments([newDoc, ...(activeDetailLead.documents || [])], `Document "${newDoc.name}" saved.`);
+    setDocLinkName(''); setDocLinkUrl(''); setIsUploadingDoc(false);
+  };
+
+  const handleDeleteDossierDoc = async (docId) => {
+    if (!activeDetailLead) return;
+    await saveLeadDocuments((activeDetailLead.documents || []).filter((d) => d.id !== docId), 'Document removed.');
   };
 
   // Contact person dynamic helpers
@@ -1788,8 +1818,10 @@ export default function Leads() {
   };
 
   // Filter & Sort Logic
+  const noContactCount = leads.filter((l) => l.no_contact_alert).length;
   const filteredLeads = leads
     .filter((lead) => {
+      if (filterNoContact && !lead.no_contact_alert) return false;
       // Role Isolation for Staff: Staff can ONLY see their own leads!
       if (isStaff && profile?.data_scope !== 'all') {
         const isAssignedToMe =
@@ -1869,7 +1901,7 @@ export default function Leads() {
   const atRiskLeadsList = filteredLeads.filter((l) => {
     const isClosed = ['Closed Won', 'Closed Lost'].includes(l.stage || l.status);
     if (isClosed) return false;
-    return l.follow_up_date && new Date(l.follow_up_date) < new Date('2026-09-20');
+    return l.follow_up_date && String(l.follow_up_date).split('T')[0] < localDay(0);
   });
   const atRiskValueUSD = atRiskLeadsList.reduce((sum, l) => sum + (Number(l.price) || Number(l.value) || 0), 0);
 
@@ -2048,9 +2080,9 @@ export default function Leads() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setFromDate('2026-09-20'); setToDate('2026-09-20'); }}
+                  onClick={() => { setFromDate(localDay(0)); setToDate(localDay(0)); }}
                   className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                    fromDate === '2026-09-20' && toDate === '2026-09-20'
+                    fromDate === localDay(0) && toDate === localDay(0)
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
@@ -2059,9 +2091,9 @@ export default function Leads() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setFromDate('2026-09-14'); setToDate('2026-09-20'); }}
+                  onClick={() => { setFromDate(localDay(-6)); setToDate(localDay(0)); }}
                   className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                    fromDate === '2026-09-14' && toDate === '2026-09-20'
+                    fromDate === localDay(-6) && toDate === localDay(0)
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
@@ -2070,9 +2102,9 @@ export default function Leads() {
                 </button>
                 <button
                   type="button"
-                  onClick={() => { setFromDate('2026-09-01'); setToDate('2026-09-30'); }}
+                  onClick={() => { setFromDate(monthStart()); setToDate(localDay(0)); }}
                   className={`px-2 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                    fromDate === '2026-09-01' && toDate === '2026-09-30'
+                    fromDate === monthStart() && toDate === localDay(0)
                       ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
                       : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
                   }`}
@@ -2194,6 +2226,22 @@ export default function Leads() {
           )}
         </div>
       </div>
+
+      {/* Buyers nobody has talked to for 7+ days */}
+      {(noContactCount > 0 || filterNoContact) && (
+        <div className={`flex flex-col sm:flex-row sm:items-center justify-between gap-2 px-4 py-3 rounded-2xl border text-xs font-semibold ${filterNoContact ? 'bg-rose-600 border-rose-600 text-white' : 'bg-rose-50 border-rose-200 text-rose-800'}`}>
+          <span>
+            ⚠️ {noContactCount} {noContactCount === 1 ? 'buyer has' : 'buyers have'} had no contact for 7+ days. Call or write a remark today so no buyer is lost.
+          </span>
+          <button
+            type="button"
+            onClick={() => setFilterNoContact((v) => !v)}
+            className={`px-3 py-1.5 rounded-xl font-bold shrink-0 cursor-pointer ${filterNoContact ? 'bg-white text-rose-700' : 'bg-rose-600 text-white hover:bg-rose-700'}`}
+          >
+            {filterNoContact ? 'Show all leads' : 'Show only these'}
+          </button>
+        </div>
+      )}
 
       {/* Leads Table & Mobile View Cards */}
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
@@ -2369,6 +2417,11 @@ export default function Leads() {
                                   </span>
                                 )}
                               </div>
+                              {lastContactBadge(lead) && (
+                                <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border ${lastContactBadge(lead).cls}`} title={lead.last_contact_type || ''}>
+                                  {lastContactBadge(lead).alert ? '⚠ ' : ''}{lastContactBadge(lead).text}
+                                </span>
+                              )}
                             </div>
                           );
                         })()}
@@ -2526,6 +2579,12 @@ export default function Leads() {
                       )}
                     </div>
                   </div>
+
+                  {lastContactBadge(lead) && (
+                    <div className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${lastContactBadge(lead).cls}`}>
+                      {lastContactBadge(lead).alert ? '⚠ ' : ''}{lastContactBadge(lead).text}
+                    </div>
+                  )}
 
                   {/* Creator Info (Requirement 4 & 5) & Actions */}
                   <div className="flex items-center justify-between pt-2 border-t border-slate-100 dark:border-slate-800" onClick={(e) => e.stopPropagation()}>
@@ -3745,8 +3804,13 @@ export default function Leads() {
                   {activeDetailLead.type === 'Domestic' ? '🏠 Domestic' : '🌐 Export'}
                 </span>
                 {activeDetailLead.follow_up_date && (
-                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border ${new Date(activeDetailLead.follow_up_date) < new Date('2026-09-25') ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
-                    ⏰ Follow-up: {new Date(activeDetailLead.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {new Date(activeDetailLead.follow_up_date) < new Date('2026-09-25') ? '· Overdue' : ''}
+                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border ${String(activeDetailLead.follow_up_date).split('T')[0] < new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] ? 'bg-rose-50 text-rose-700 border-rose-200' : 'bg-blue-50 text-blue-700 border-blue-200'}`}>
+                    ⏰ Follow-up: {new Date(activeDetailLead.follow_up_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })} {String(activeDetailLead.follow_up_date).split('T')[0] < new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0] ? '· Overdue' : ''}
+                  </span>
+                )}
+                {lastContactBadge(activeDetailLead) && (
+                  <span className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border ${lastContactBadge(activeDetailLead).cls}`} title={activeDetailLead.last_contact_type || ''}>
+                    {lastContactBadge(activeDetailLead).alert ? '⚠ ' : '💬 '}{lastContactBadge(activeDetailLead).text}
                   </span>
                 )}
                 {activeDetailLead.activity_history?.[0] && (
@@ -4256,20 +4320,37 @@ export default function Leads() {
                   </div>
                   <div>
                     <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Documents & Specifications</h4>
-                    <p className="text-[10px] text-slate-400">Images, PDF, Office docs, text, ZIP · max 20 MB</p>
+                    <p className="text-[10px] text-slate-400">Save the share link of a file from Google Drive, Dropbox or OneDrive</p>
                   </div>
                 </div>
-                <label className="px-3 py-1.5 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer flex items-center gap-1.5 border border-blue-200 dark:border-blue-800">
-                  <Upload size={13} />
-                  <span>{isUploadingDoc ? 'Uploading...' : 'Upload Document'}</span>
-                  <input
-                    type="file"
-                    className="hidden"
-                    onChange={handleUploadDossierDoc}
-                    disabled={isUploadingDoc}
-                  />
-                </label>
               </div>
+              {isOwner && (
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <input
+                    type="text"
+                    value={docLinkName}
+                    onChange={(e) => setDocLinkName(e.target.value)}
+                    placeholder="Document name (e.g. Proforma Invoice)"
+                    className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <input
+                    type="url"
+                    value={docLinkUrl}
+                    onChange={(e) => setDocLinkUrl(e.target.value)}
+                    placeholder="Paste share link"
+                    className="flex-1 min-w-0 px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+                  />
+                  <button
+                    type="button"
+                    onClick={handleUploadDossierDoc}
+                    disabled={isUploadingDoc}
+                    className="px-3 py-2 text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 rounded-xl transition-colors cursor-pointer flex items-center justify-center gap-1.5 border border-blue-200 dark:border-blue-800 shrink-0"
+                  >
+                    <Upload size={13} />
+                    <span>{isUploadingDoc ? 'Saving...' : 'Add Document'}</span>
+                  </button>
+                </div>
+              )}
 
               {/* Document List */}
               {activeDetailLead.documents && activeDetailLead.documents.length > 0 ? (
@@ -4280,18 +4361,22 @@ export default function Leads() {
                         <FileText size={16} className="text-blue-600" />
                         <div>
                           <div className="font-bold text-slate-900 dark:text-slate-100">{doc.name}</div>
-                          <div className="text-[10px] text-slate-400">{doc.size} • Uploaded {doc.upload_date}</div>
+                          <div className="text-[10px] text-slate-400">{doc.url ? 'Link' : (doc.size || 'Name only, no file')} • Added {doc.upload_date || doc.uploaded_at || ''}{doc.added_by ? ` by ${doc.added_by}` : ''}</div>
                         </div>
                       </div>
                       <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => showNotification(`Downloading ${doc.name}...`, 'success')}
-                          className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg cursor-pointer"
-                          title="Download document"
-                        >
-                          <Download size={14} />
-                        </button>
+                        {doc.url && (
+                          <a
+                            href={doc.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-1.5 text-slate-500 hover:text-blue-600 rounded-lg cursor-pointer"
+                            title="Open document"
+                          >
+                            <Download size={14} />
+                          </a>
+                        )}
+                        {isOwner && (
                         <button
                           type="button"
                           onClick={() => handleDeleteDossierDoc(doc.id)}
@@ -4300,6 +4385,7 @@ export default function Leads() {
                         >
                           <Trash2 size={14} />
                         </button>
+                        )}
                       </div>
                     </div>
                   ))}
@@ -4307,8 +4393,8 @@ export default function Leads() {
               ) : (
                 <div className="p-6 text-center border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-xl text-slate-400">
                   <Paperclip size={20} className="mx-auto text-slate-300 mb-1" />
-                  <p className="text-xs font-semibold">No documents uploaded yet.</p>
-                  <p className="text-[10px] text-slate-400 mt-0.5">Click 'Upload Document' to attach trade agreements, COA, or lab test certificates</p>
+                  <p className="text-xs font-semibold">No documents added yet.</p>
+                  <p className="text-[10px] text-slate-400 mt-0.5">Add the share link of trade agreements, COA or lab test certificates</p>
                 </div>
               )}
             </div>

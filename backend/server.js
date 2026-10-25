@@ -24,6 +24,11 @@ const startServer = async () => {
     console.log(`🔌 API v1 Root: http://localhost:${config.port}/api/v1`);
     console.log(`====================================================`);
   });
+
+  // Owner's evening team report (in-app notification + email when SMTP is set)
+  if (process.env.DAILY_REPORT_DISABLED !== 'true') {
+    require('./src/services/dailyReport.service').startDailyReportScheduler();
+  }
 };
 
 // Graceful shutdown handling

@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { ClipboardCheck, AlertTriangle, CheckCircle2, Clock, MessageSquare, RefreshCw, ChevronLeft } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import DailyReport from '../components/DailyReport';
 
 const RANGES = [
   { key: '7', label: 'Last 7 days' },
@@ -172,6 +173,7 @@ export default function TeamReview() {
   const [report, setReport] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [view, setView] = useState('daily');
 
   const params = useMemo(() => ({ from: isoDaysAgo(range), to: new Date().toISOString().split('T')[0] }), [range]);
 
@@ -232,7 +234,7 @@ export default function TeamReview() {
               : 'Your tasks, follow-ups and remarks. Your company owner sees the same numbers.'}
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className={`flex items-center gap-2 ${isOwner && view === 'daily' ? 'hidden' : ''}`}>
           <select
             value={range}
             onChange={(e) => setRange(e.target.value)}
@@ -251,9 +253,26 @@ export default function TeamReview() {
         </div>
       </div>
 
-      {error && <div className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+      {isOwner && (
+        <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+          {[['daily', 'Daily Report'], ['range', 'Performance']].map(([k, label]) => (
+            <button
+              key={k}
+              type="button"
+              onClick={() => setView(k)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold cursor-pointer ${view === k ? 'bg-white dark:bg-slate-900 text-slate-900 dark:text-white shadow-sm' : 'text-slate-500'}`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
 
-      {isOwner && !selectedId && (
+      {isOwner && view === 'daily' && <DailyReport />}
+
+      {error && view !== 'daily' && <div className="text-xs font-bold text-rose-700 bg-rose-50 border border-rose-200 rounded-xl px-3 py-2">{error}</div>}
+
+      {isOwner && view === 'range' && !selectedId && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-x-auto">
           <table className="w-full text-xs">
             <thead>
@@ -303,7 +322,7 @@ export default function TeamReview() {
         </div>
       )}
 
-      {isOwner && selectedId && (
+      {isOwner && view === 'range' && selectedId && (
         <button
           type="button"
           onClick={() => { setSelectedId(null); setReport(null); }}
@@ -313,7 +332,7 @@ export default function TeamReview() {
         </button>
       )}
 
-      {report && (isOwner ? selectedId : true) && (
+      {report && (isOwner ? view === 'range' && selectedId : true) && (
         <div className="space-y-3">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={16} className="text-emerald-600" />

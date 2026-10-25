@@ -775,6 +775,12 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                             </span>
                           </div>
 
+                          {lead.no_contact_alert && (
+                            <div className="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border text-rose-700 bg-rose-50 border-rose-200">
+                              ⚠ No contact for {lead.days_since_contact} days
+                            </div>
+                          )}
+
                           {/* 2. Company Name & Assignee Dropdown Pill (Image 3: Pavithra ⌄) */}
                           <div className="flex items-start justify-between gap-2">
                             <h3 className="font-black text-slate-900 text-sm leading-snug group-hover:text-purple-700 transition-colors line-clamp-2">

@@ -13,8 +13,8 @@ const mailer = require('../services/mailer.service');
 const login = async (req, res) => {
   const { email, password } = req.body;
 
-  if (!email) {
-    return ApiResponse.error(res, 'Email is required', 400);
+  if (!email || typeof email !== 'string' || (password !== undefined && typeof password !== 'string')) {
+    return ApiResponse.error(res, 'Email and password are required', 400);
   }
 
   // 1. Try finding in MongoDB first
@@ -147,8 +147,11 @@ const login = async (req, res) => {
 const register = async (req, res) => {
   const { name, email, password, company_name, department, phone, persona, plan } = req.body;
 
-  if (!email || !name) {
+  if (!email || !name || typeof email !== 'string' || typeof name !== 'string') {
     return ApiResponse.error(res, 'Name and Email are required', 400);
+  }
+  if (email.length > 200 || name.length > 100 || (company_name && (typeof company_name !== 'string' || company_name.length > 150))) {
+    return ApiResponse.error(res, 'Name, email or company name is too long', 400);
   }
   if (typeof password !== 'string' || password.length < 6) {
     return ApiResponse.error(res, 'Password must be at least 6 characters long', 400);
@@ -351,7 +354,20 @@ const updateProfile = async (req, res) => {
     passwordChanged = true;
   }
 
-  if (name) user.name = name;
+  if (name !== undefined && (typeof name !== 'string' || !name.trim() || name.length > 100)) {
+    return ApiResponse.error(res, 'Name must be 1-100 characters', 400);
+  }
+  if (phone !== undefined && (typeof phone !== 'string' || phone.length > 40)) {
+    return ApiResponse.error(res, 'Phone number is too long', 400);
+  }
+  if (department !== undefined && (typeof department !== 'string' || department.length > 100)) {
+    return ApiResponse.error(res, 'Department is too long', 400);
+  }
+  if (avatar_url !== undefined && avatar_url !== '' && (typeof avatar_url !== 'string' || avatar_url.length > 2048 || !/^https:\/\//i.test(avatar_url))) {
+    return ApiResponse.error(res, 'Profile photo must be an https:// link (max 2048 characters)', 400);
+  }
+
+  if (name) user.name = name.trim();
   if (phone !== undefined) user.phone = phone;
   if (department) user.department = department;
   if (avatar_url) user.avatar_url = avatar_url;
@@ -380,7 +396,7 @@ const updateProfile = async (req, res) => {
 const adminLogin = async (req, res) => {
   const { username, password } = req.body;
 
-  if (!username || !password) {
+  if (!username || !password || typeof username !== 'string' || typeof password !== 'string') {
     return ApiResponse.error(res, 'Admin username and password are required', 400);
   }
 

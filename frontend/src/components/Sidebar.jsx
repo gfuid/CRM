@@ -15,6 +15,7 @@ import {
   ClipboardCheck,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
+import StorageMeter from './StorageMeter';
 import { useAuth, isStaffDeleted } from '../context/AuthContext';
 
 export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadgeCount, onOpenStaffModal }) {
@@ -217,6 +218,8 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
                 </div>
               )}
             </div>
+
+            <StorageMeter />
           </div>
         )}
       </nav>

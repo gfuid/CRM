@@ -13,13 +13,13 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
   return (
     <>
       <header className="md:hidden sticky top-0 z-30 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 py-2.5 shadow-xs transition-colors">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-2">
           {/* Brand & CRM Info */}
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2.5 min-w-0">
             <BrandLogo size={28} />
-            <div>
-              <div className="flex items-center gap-1.5">
-                <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight">
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="text-sm font-black text-slate-900 dark:text-white tracking-tight truncate">
                   {companyName || 'My Organization'}
                 </span>
                 <span
@@ -32,14 +32,14 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
                   {isOwner ? 'Owner' : 'Staff'}
                 </span>
               </div>
-              <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400">
+              <div className="text-[10px] font-semibold text-emerald-600 dark:text-emerald-400 truncate">
                 Export & Commodity Trade CRM
               </div>
             </div>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             {/* Theme Switcher */}
             <button
               onClick={toggleTheme}
@@ -60,7 +60,7 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
                 title="Add New Staff Member"
               >
                 <UserPlus size={13} className="text-emerald-700 dark:text-emerald-400" />
-                <span>+ Staff</span>
+                <span className="hidden sm:inline">+ Staff</span>
               </button>
             )}
 

@@ -271,7 +271,24 @@ const getReminders = async (req, res) => {
   return ApiResponse.success(res, data, 'Reminders');
 };
 
+/**
+ * GET /analytics/daily-report?date=YYYY-MM-DD — owner's evening report (default: today)
+ */
+const getDailyReport = async (req, res) => {
+  if (!isOwnerUser(req.user)) {
+    return ApiResponse.error(res, 'Access denied: Only the company owner can see the daily team report.', 403);
+  }
+  const { ownerOf } = require('../utils/usage');
+  const owner = ownerOf(req.user);
+  if (!owner) return ApiResponse.error(res, 'Company owner not found', 404);
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(String(req.query.date || '')) ? req.query.date : todayISO();
+  if (date > todayISO()) return ApiResponse.error(res, 'The report date cannot be in the future', 400);
+  const { buildDailyReport } = require('../services/dailyReport.service');
+  return ApiResponse.success(res, buildDailyReport(owner, date), 'Daily team report');
+};
+
 module.exports = {
+  getDailyReport,
   getStaffPerformance,
   getTeamPerformance,
   getReminders,

@@ -10,6 +10,7 @@ router.use(authenticate);
 // Staff management: company owners (scoped to their own staff) + Super Admin
 // ------------------------------------------------------------------
 router.get('/users', requireOwner, asyncHandler(adminController.getAllUsers));
+router.get('/my-usage', requireOwner, asyncHandler(adminController.getMyUsage));
 router.post('/users', requireOwner, asyncHandler(adminController.createUser));
 router.patch('/users/:id', requireOwner, asyncHandler(adminController.updateUser));
 router.patch('/users/:id/role', requireOwner, asyncHandler(adminController.updateUserRole));
@@ -22,6 +23,7 @@ router.delete('/users/:id', requireOwner, asyncHandler(adminController.deleteUse
 router.use(requireSuperAdmin);
 
 router.patch('/users/:id/staff-limit', asyncHandler(adminController.updateStaffLimit));
+router.patch('/users/:id/storage-limit', asyncHandler(adminController.updateStorageLimit));
 router.patch('/users/:id/features', asyncHandler(adminController.updateUserFeatures));
 
 router.get('/overview-summary', asyncHandler(adminController.getOverviewSummary));

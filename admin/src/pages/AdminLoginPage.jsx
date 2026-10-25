@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Shield, Lock, User, ArrowRight, AlertCircle, Eye, EyeOff, CheckCircle2 } from 'lucide-react';
 
-const API_BASE = import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1';
+const isLocalHost = typeof window !== 'undefined' && (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1');
+const API_BASE = isLocalHost ? 'http://localhost:5000/api/v1' : (import.meta.env.VITE_API_URL || 'https://crm-ep4i.onrender.com/api/v1');
 
 export default function AdminLoginPage({ onLoginSuccess }) {
   const [username, setUsername] = useState(() => localStorage.getItem('crm_admin_remembered_user') || '');

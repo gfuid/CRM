@@ -6,6 +6,7 @@ const { systemMetrics } = require('../middlewares/responseTime.middleware');
 const { mongoose, isDbConnected } = require('../config/db');
 const config = require('../config/env');
 const { isSuperAdmin, isOwnerUser, staffBelongsToOwner } = require('../utils/access');
+const { tenantFootprint, storageLimitMb, usageSummary, clearUsageCache, DEFAULT_STORAGE_LIMIT_MB } = require('../utils/usage');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const STAFF_ROLES = ['manager', 'agent'];
@@ -652,6 +653,47 @@ const toggleUserStatus = async (req, res) => {
 /**
  * Update staff seat limit for an owner / company (Super Admin only)
  */
+/**
+ * The signed-in owner's own company storage (used / limit). Owner only.
+ */
+const getMyUsage = async (req, res) => {
+  const { ownerOf } = require('../utils/usage');
+  const owner = ownerOf(req.user);
+  if (!owner) return ApiResponse.error(res, 'Company owner not found', 404);
+  return ApiResponse.success(res, usageSummary(owner), 'Storage usage');
+};
+
+/**
+ * Set how much storage a company (owner + staff) may use. Super Admin only.
+ */
+const updateStorageLimit = async (req, res) => {
+  const { id } = req.params;
+  const mb = Number(req.body && req.body.storage_limit_mb);
+  if (!Number.isFinite(mb) || mb < 1 || mb > 10240) {
+    return ApiResponse.error(res, 'storage_limit_mb must be a number between 1 and 10240', 400);
+  }
+  const user = dataStore.users.find((u) => u.id === id);
+  if (!user) return ApiResponse.error(res, 'Owner not found', 404);
+  if (user.persona !== 'owner' && !(user.role === 'admin' && user.persona !== 'staff')) {
+    return ApiResponse.error(res, 'Storage limit is set per company. Choose the company owner.', 400);
+  }
+  user.storage_limit_mb = mb;
+  dbSync.saveUser(user);
+  clearUsageCache();
+  const auditLog = {
+    id: generateId('log'),
+    actor_name: req.user ? req.user.name : 'Super Admin',
+    actor_id: req.user ? req.user.id : 'usr_super_admin',
+    action: 'STORAGE_LIMIT_UPDATED',
+    details: `Storage limit for ${user.name} (${user.email}) set to ${mb} MB`,
+    ip_address: req.ip || '',
+    timestamp: new Date().toISOString(),
+  };
+  dataStore.auditLogs.unshift(auditLog);
+  dbSync.saveAuditLog(auditLog);
+  return ApiResponse.success(res, { id: user.id, storage_limit_mb: mb, usage: usageSummary(user) }, `Storage limit set to ${mb} MB`);
+};
+
 const updateStaffLimit = async (req, res) => {
   const { id } = req.params;
   const { staff_limit } = req.body;
@@ -667,13 +709,13 @@ const updateStaffLimit = async (req, res) => {
     return ApiResponse.error(res, 'Owner / User not found', 404);
   }
 
+  // A staff limit only makes sense for a company owner; never silently turn a staff member into an owner
+  if (user.persona !== 'owner' && !(user.role === 'admin' && user.persona !== 'staff')) {
+    return ApiResponse.error(res, 'Staff limit can only be set for a company owner.', 400);
+  }
+
   const newLimit = Number(staff_limit);
   user.staff_limit = newLimit;
-
-  // Mark user as owner so they can manage staff up to their new quota
-  if (user.persona !== 'owner' && user.role !== 'admin') {
-    user.persona = 'owner';
-  }
 
   // Sync with company quota if primary owner or admin
   if (user.persona === 'owner' || user.role === 'admin') {
@@ -1290,79 +1332,11 @@ const getDeveloperMetrics = async (req, res) => {
     const owners = dataStore.users.filter((u) => u.persona === 'owner' || u.role === 'admin');
 
     const userFootprint = owners.map((owner) => {
-      const ownerCompanyId = owner.company_id && !GENERIC_COMPANY_IDS.includes(owner.company_id)
-        ? owner.company_id
-        : null;
-      const staffList = dataStore.users.filter((staff) => {
-        if (staff.id === owner.id || staff.persona === 'owner' || (staff.role === 'admin' && staff.persona !== 'staff')) {
-          return false;
-        }
-        if (staff.created_by) {
-          return staff.created_by === owner.id || staff.created_by.toLowerCase() === owner.email?.toLowerCase();
-        }
-        return Boolean(ownerCompanyId && staff.company_id === ownerCompanyId);
-      });
-      const tenantUserRefs = new Set([
-        owner.id,
-        owner.email?.toLowerCase(),
-        ...staffList.flatMap((staff) => [staff.id, staff.email?.toLowerCase()]),
-      ].filter(Boolean));
-      const belongsToOwner = (record, fields) =>
-        (ownerCompanyId && record.company_id === ownerCompanyId) ||
-        fields.some((field) => tenantUserRefs.has(String(record[field] || '').toLowerCase()));
-      const ownerLeads = dataStore.leads.filter((lead) =>
-        belongsToOwner(lead, ['created_by', 'created_by_id', 'owner_id', 'assigned_to'])
-      );
-      const ownerLeadIds = new Set(ownerLeads.map((lead) => String(lead.id)));
-      const belongsToOwnerOrLead = (record, fields) =>
-        belongsToOwner(record, fields) || (record.lead_id && ownerLeadIds.has(String(record.lead_id)));
-      const ownerTasks = dataStore.tasks.filter((record) =>
-        belongsToOwnerOrLead(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
-      );
-      const ownerActivities = dataStore.activities.filter((record) =>
-        belongsToOwnerOrLead(record, ['user_id', 'actor_id', 'created_by', 'created_by_id', 'owner_id'])
-      );
-      const ownerFollowUps = dataStore.followUps.filter((record) =>
-        belongsToOwnerOrLead(record, ['assigned_to', 'user_id', 'created_by', 'created_by_id', 'owner_id'])
-      );
-      const ownerMyDays = dataStore.myDays.filter((record) => belongsToOwner(record, ['user_id']));
-      const ownerOutreach = dataStore.outreach.filter((record) =>
-        belongsToOwner(record, ['owner_id', 'created_by', 'created_by_id'])
-      );
-      const ownerEmailSettings = (dataStore.emailSettings || []).filter((record) =>
-        belongsToOwner(record, ['owner_id', 'created_by'])
-      );
-      const ownerEmailCampaigns = (dataStore.emailCampaigns || []).filter((record) =>
-        belongsToOwnerOrLead(record, ['owner_id', 'created_by', 'created_by_id'])
-      );
-      const ownerAuditLogs = dataStore.auditLogs.filter((record) =>
-        belongsToOwner(record, ['actor_id', 'user_id', 'created_by', 'owner_id'])
-      );
-      const ownerNotifications = dataStore.notifications.filter((record) =>
-        belongsToOwner(record, ['target_user_id', 'owner_id'])
-      );
-      const ownerTenants = (dataStore.tenants || []).filter((record) =>
-        belongsToOwner(record, ['owner_id', 'created_by', 'id'])
-      );
-      const tenantRecords = [
-        owner,
-        ...staffList,
-        ...ownerLeads,
-        ...ownerTasks,
-        ...ownerActivities,
-        ...ownerFollowUps,
-        ...ownerMyDays,
-        ...ownerOutreach,
-        ...ownerEmailSettings,
-        ...ownerEmailCampaigns,
-        ...ownerAuditLogs,
-        ...ownerNotifications,
-        ...ownerTenants,
-      ];
-      const estimatedBytes = tenantRecords.reduce(
-        (total, record) => total + Buffer.byteLength(JSON.stringify(record)),
-        0
-      );
+      const fp = tenantFootprint(owner);
+      const staffList = fp.staffList;
+      const ownerLeads = fp.groups.leads;
+      const estimatedBytes = fp.bytes;
+      const limitMb = storageLimitMb(owner);
       const tenantUserIds = [owner.id, ...staffList.map((staff) => staff.id)].filter(Boolean);
       const apiRequests = tenantUserIds.reduce(
         (total, userId) => total + (systemMetrics.userRequests?.[userId] || 0),
@@ -1380,6 +1354,14 @@ const getDeveloperMetrics = async (req, res) => {
         estimatedKb: (estimatedBytes / 1024).toFixed(2),
         sharePercent: ((estimatedBytes / (mongoStats.dataSizeBytes || 1024)) * 100).toFixed(1),
         apiRequests,
+        storageLimitMb: limitMb,
+        storageUsedMb: (estimatedBytes / 1024 / 1024).toFixed(2),
+        storagePercent: Math.min(100, (estimatedBytes / (limitMb * 1024 * 1024)) * 100).toFixed(1),
+        members: fp.members.map((m) => ({
+          ...m,
+          apiRequests: systemMetrics.userRequests?.[m.id] || 0,
+          lastLogin: (dataStore.users.find((u) => u.id === m.id) || {}).last_login || null,
+        })),
         lastLogin: owner.last_login || owner.created_at,
         isActive: owner.is_active,
       };
@@ -1502,6 +1484,8 @@ const clearMetrics = async (req, res) => {
 };
 
 module.exports = {
+  updateStorageLimit,
+  getMyUsage,
   getOverviewSummary,
   getAllUsers,
   createUser,

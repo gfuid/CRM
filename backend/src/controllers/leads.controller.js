@@ -31,13 +31,14 @@ const LEAD_OWNERSHIP_FIELDS = [
   'created_at',
 ];
 const { isOwnerUser, isSuperAdmin, sameValue, viewBlocked } = require('../utils/access');
+const { buildContactIndex, contactInfo } = require('../utils/contact');
 
 // Fields the server manages itself. Clients may send them back (e.g. a whole lead object) and they are ignored.
 const SERVER_MANAGED_FIELDS = [
   'id', '_id', '__v', 'owner_id', 'company_id', 'created_by_id', 'created_by_name', 'created_at', 'updated_at',
   'createdAt', 'updatedAt', 'previous_remarks', 'agent_name', 'agent_avatar', 'activities', 'tasks',
   'follow_up_status', 'follow_up_badge', 'email_unsubscribed', 'last_edited_by', 'last_edited_at',
-  'allow_duplicate',
+  'allow_duplicate', 'last_contact_at', 'last_contact_type', 'days_since_contact', 'no_contact_alert',
 ];
 // What a staff member may change on their own lead: only add today's discussion and plan the next step.
 const STAFF_APPEND_FIELDS = ['today_remarks', 'next_follow_up_action', 'follow_up_date', 'follow_up_time', 'notes', 'stage'];
@@ -92,7 +93,11 @@ const getLeads = async (req, res) => {
     );
   }
 
-  // Populate assigned user info & creator user info
+  // Populate assigned user info & creator user info, plus "last contact" for the 7-day alert
+  const contactIndex = buildContactIndex();
+  if (req.query.no_contact === 'true' || req.query.no_contact === '1') {
+    list = list.filter((l) => contactInfo(l, contactIndex).no_contact_alert);
+  }
   const populated = list.map((l) => {
     const agent = dataStore.users.find((u) => u.id === l.assigned_to);
     const creator = dataStore.users.find((u) => u.id === l.created_by_id);
@@ -106,6 +111,7 @@ const getLeads = async (req, res) => {
       created_by_name: l.created_by_name || (creator ? creator.name : resolvedAgentName),
       created_by_id: l.created_by_id || (creator ? creator.id : l.assigned_to),
       created_at: l.created_at || null,
+      ...contactInfo(l, contactIndex),
     };
   });
 
@@ -140,6 +146,7 @@ const getLeadById = async (req, res) => {
     agent_avatar: agent ? agent.avatar_url : null,
     activities: leadActivities,
     tasks: leadTasks,
+    ...contactInfo(lead, buildContactIndex()),
   });
 };
 
@@ -336,6 +343,7 @@ const createLead = async (req, res) => {
   const act = {
     id: generateId('act'),
     type: 'note',
+    system: true,
     title: 'Export Lead Created',
     description: `Created lead for ${leadName}${newLead.product ? ` (Products: ${newLead.product}, Value: $${newLead.value.toLocaleString()})` : ''} by ${newLead.created_by_name}`,
     lead_id: newLead.id,
@@ -346,7 +354,7 @@ const createLead = async (req, res) => {
   dataStore.activities.unshift(act);
   dbSync.saveActivity(act);
 
-  return ApiResponse.created(res, newLead, 'Export lead created successfully');
+  return ApiResponse.created(res, { ...newLead, ...contactInfo(newLead, null) }, 'Export lead created successfully');
 };
 
 /**
@@ -496,7 +504,7 @@ const updateLead = async (req, res) => {
     dbSync.saveActivity(act);
   }
 
-  return ApiResponse.success(res, updated, 'Lead updated successfully');
+  return ApiResponse.success(res, { ...updated, ...contactInfo(updated, buildContactIndex()) }, 'Lead updated successfully');
 };
 
 /**

@@ -203,6 +203,8 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
 
   // Documents
   const [documents, setDocuments] = useState(lead.documents || []);
+  const [docName, setDocName] = useState('');
+  const [docUrl, setDocUrl] = useState('');
 
   const toggleProduct = (prod) => {
     if (selectedProducts.includes(prod)) {
@@ -349,6 +351,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     if (reqChanged) changes.export_requirements = reqAfter;
     if (hasToday) changes.today_remarks = todayRemarks.trim();
     if (hasFuture) changes.next_follow_up_action = nextFollowUpAction.trim();
+    if (JSON.stringify(documents) !== JSON.stringify(lead.documents || [])) changes.documents = documents;
 
     let toSend = changes;
     if (!isOwner) {
@@ -379,19 +382,20 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     }
   };
 
-  const handleUploadDummy = () => {
-    const fileName = prompt('Enter document name to attach (e.g. Export_Specification_Sheet.pdf):');
-    if (fileName) {
-      setDocuments([
-        ...documents,
-        {
-          name: fileName,
-          size: '1.2 MB',
-          uploaded_at: new Date().toLocaleDateString('en-US')
-        }
-      ]);
-    }
+  // Documents are saved as share links (Google Drive, Dropbox, OneDrive). Owner only.
+  const handleAddDocLink = () => {
+    const name = docName.trim();
+    let url = docUrl.trim();
+    if (!name || !url) { alert('Enter a document name and its share link.'); return; }
+    if (!/^https?:\/\//i.test(url)) url = `https://${url}`;
+    try { new URL(url); } catch { alert('Please paste a valid link.'); return; }
+    setDocuments([
+      { id: 'doc_' + Date.now(), name: name.slice(0, 150), url: url.slice(0, 1000), upload_date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }), added_by: profile?.name || '' },
+      ...documents,
+    ]);
+    setDocName(''); setDocUrl('');
   };
+
 
   // Header display dates
   const createdDateDisplay = lead.created_at ? `Created ${new Date(lead.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}` : '';
@@ -1371,22 +1375,31 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 <span>Documents</span>
               </div>
 
-              <button
-                type="button"
-                onClick={handleUploadDummy}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold transition-all shadow-2xs cursor-pointer"
-              >
-                <Upload size={12} />
-                <span>Upload</span>
-              </button>
             </div>
 
             <p className="text-[11px] text-slate-400 font-medium">
-              Images, PDF, Office docs, text, ZIP &bull; max 20 MB
+              Save the share link of a file from Google Drive, Dropbox or OneDrive
             </p>
 
+            {isOwner && (
+              <div className="flex flex-col sm:flex-row gap-2">
+                <input type="text" value={docName} onChange={(e) => setDocName(e.target.value)} placeholder="Document name"
+                  className="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" />
+                <input type="url" value={docUrl} onChange={(e) => setDocUrl(e.target.value)} placeholder="Paste share link"
+                  className="flex-1 min-w-0 px-3 py-2 text-xs rounded-lg border border-slate-200 bg-white focus:outline-none focus:ring-2 focus:ring-purple-500/20" />
+                <button
+                  type="button"
+                  onClick={handleAddDocLink}
+                  className="inline-flex items-center justify-center gap-1.5 px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white text-[11px] font-bold transition-all shadow-2xs cursor-pointer shrink-0"
+                >
+                  <Upload size={12} />
+                  <span>Add</span>
+                </button>
+              </div>
+            )}
+
             {documents.length === 0 ? (
-              <p className="text-xs text-slate-400 font-medium">No documents uploaded yet.</p>
+              <p className="text-xs text-slate-400 font-medium">No documents added yet.</p>
             ) : (
               <div className="space-y-1.5 pt-1">
                 {documents.map((doc, idx) => (
@@ -1394,8 +1407,17 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                     key={idx}
                     className="flex items-center justify-between p-2 rounded-lg bg-white border border-slate-200 text-xs font-medium text-slate-700"
                   >
-                    <span>{doc.name}</span>
-                    <span className="text-[10px] text-slate-400">{doc.size}</span>
+                    {doc.url ? (
+                      <a href={doc.url} target="_blank" rel="noopener noreferrer" className="text-purple-700 hover:underline truncate">{doc.name}</a>
+                    ) : (
+                      <span className="truncate">{doc.name}</span>
+                    )}
+                    <span className="flex items-center gap-2 shrink-0">
+                      <span className="text-[10px] text-slate-400">{doc.url ? 'Link' : (doc.size || '')}</span>
+                      {isOwner && (
+                        <button type="button" onClick={() => setDocuments(documents.filter((_, i) => i !== idx))} className="text-[10px] font-bold text-rose-600 hover:underline cursor-pointer">Remove</button>
+                      )}
+                    </span>
                   </div>
                 ))}
               </div>

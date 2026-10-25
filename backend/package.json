@@ -7,12 +7,15 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node src/scripts/seed.js",
-    "test": "node src/scripts/ci-test.js && node src/scripts/role-scenarios-test.js",
+    "test": "node src/scripts/ci-test.js && node src/scripts/role-scenarios-test.js && node src/scripts/security-audit-test.js && node src/scripts/daily-report-test.js",
     "test:features": "node src/scripts/test-100-features.js",
     "backup": "node src/scripts/backup-db.js",
     "restore": "node src/scripts/restore-db.js",
     "test:roles": "node src/scripts/role-scenarios-test.js",
-    "cleanup:demo": "node scripts/remove-demo-data.js"
+    "cleanup:demo": "node scripts/remove-demo-data.js",
+    "test:security": "node src/scripts/security-audit-test.js",
+    "backup:nightly": "node src/scripts/nightly-backup.js",
+    "restore:nightly": "node src/scripts/restore-nightly.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",

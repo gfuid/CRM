@@ -7,7 +7,7 @@ const morgan = require('morgan');
 const config = require('./config/env');
 const apiRoutes = require('./routes');
 const { notFoundHandler, errorHandler } = require('./middlewares/error.middleware');
-const { apiLimiter } = require('./middlewares/rateLimiter.middleware');
+const { apiLimiter, apiIpLimiter } = require('./middlewares/rateLimiter.middleware');
 const { responseTimeMiddleware } = require('./middlewares/responseTime.middleware');
 const ApiResponse = require('./utils/apiResponse');
 
@@ -61,14 +61,15 @@ app.use(
       callback(null, isAllowedOrigin(origin));
     },
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'x-user-id', 'x-user-email', 'x-dev-bypass'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
   })
 );
 
 // Request body parsers with payload size limits to avoid memory bloat
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(express.json({ limit: '2mb' }));
+app.use(express.urlencoded({ extended: true, limit: '2mb' }));
+app.use('/api', require('./middlewares/bodyLimits.middleware').limitBodySizes);
 
 // Request logging (dev mode)
 if (config.nodeEnv === 'development') {
@@ -76,7 +77,7 @@ if (config.nodeEnv === 'development') {
 }
 
 // Global API rate limiting
-app.use('/api', apiLimiter);
+app.use('/api', apiIpLimiter, apiLimiter);
 
 // System root healthcheck
 app.get('/health', (req, res) => {

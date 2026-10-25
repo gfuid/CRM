@@ -497,7 +497,7 @@ export default function MyDays() {
               {calendarDays.map((cell, idx) => {
                 const dayReports = getReportsForDate(cell.date_iso);
                 const hasReports = dayReports.length > 0;
-                const isToday = cell.date_iso === '2026-09-27';
+                const isToday = cell.date_iso === new Date(Date.now() - new Date().getTimezoneOffset() * 60000).toISOString().split('T')[0];
 
                 return (
                   <div

@@ -70,6 +70,10 @@ const viewBlocked = (user, key) => isStaffUser(user) && Boolean(user.permissions
 
 /** Today's date (YYYY-MM-DD) in the business time zone. */
 const todayISO = () => new Date(Date.now() + tzOffsetMinutes() * 60000).toISOString().split('T')[0];
+/** Current hour (0-23) in the business time zone. */
+const businessHourNow = () => new Date(Date.now() + tzOffsetMinutes() * 60000).getUTCHours();
+/** The business-local calendar day (YYYY-MM-DD) of a timestamp (ms). */
+const businessDayOf = (t) => new Date(t + tzOffsetMinutes() * 60000).toISOString().split('T')[0];
 /** A business-local date + "HH:MM" as a real Date. */
 const localDateTime = (day, time = '23:59') => {
   const d = new Date(`${day}T${String(time).padStart(5, '0')}:00${TZ_OFFSET}`);
@@ -86,6 +90,8 @@ module.exports = {
   staffBelongsToOwner,
   sameValue,
   todayISO,
+  businessDayOf,
+  businessHourNow,
   viewBlocked,
   localDateTime,
   TZ_OFFSET,

@@ -43,6 +43,8 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
 
   // Search & filter in User Consumption
   const [userSearch, setUserSearch] = useState('');
+  const [expandedOwner, setExpandedOwner] = useState(null);
+  const [savingLimitFor, setSavingLimitFor] = useState(null);
 
   // Live Ping state
   const [pingTesting, setPingTesting] = useState(false);
@@ -156,6 +158,36 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
       showToast('Failed to trigger database sync: ' + err.message, 'error');
     } finally {
       setSyncingDb(false);
+    }
+  };
+
+  // Set a company's storage limit (MB)
+  const handleSetStorageLimit = async (owner) => {
+    const input = window.prompt(`Storage limit for ${owner.companyName} (${owner.name}) in MB:`, String(owner.storageLimitMb || 50));
+    if (input === null) return;
+    const mb = Number(input);
+    if (!Number.isFinite(mb) || mb < 1 || mb > 10240) {
+      showToast('Enter a number between 1 and 10240 MB', 'error');
+      return;
+    }
+    setSavingLimitFor(owner.id);
+    try {
+      const res = await fetch(`${apiBase}/users/${owner.id}/storage-limit`, {
+        method: 'PATCH',
+        headers: { ...getHeaders(), 'Content-Type': 'application/json' },
+        body: JSON.stringify({ storage_limit_mb: mb }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        showToast(data.message || `Storage limit set to ${mb} MB`);
+        fetchMetrics(false);
+      } else {
+        showToast(data.message || 'Could not change the storage limit', 'error');
+      }
+    } catch (err) {
+      showToast('Could not change the storage limit: ' + err.message, 'error');
+    } finally {
+      setSavingLimitFor(null);
     }
   };
 
@@ -901,7 +933,7 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                     <th className="py-3 px-4">Business Owner & Company</th>
                     <th className="py-3 px-4">Staff Count</th>
                     <th className="py-3 px-4">Leads Count</th>
-                    <th className="py-3 px-4">Data Footprint (est.)</th>
+                    <th className="py-3 px-4">Storage Used / Limit</th>
                     <th className="py-3 px-4">DB Share (est.)</th>
                     <th className="py-3 px-4">API Requests</th>
                     <th className="py-3 px-4">API Usage Share</th>
@@ -912,21 +944,50 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                 <tbody className="divide-y divide-slate-100 bg-white">
                   {filteredUserFootprint.length === 0 ? (
                     <tr>
-                      <td colSpan={9} className="py-8 text-center text-slate-400 text-xs">
+                      <td colSpan={10} className="py-8 text-center text-slate-400 text-xs">
                         No tenant matching search query.
                       </td>
                     </tr>
                   ) : (
                     filteredUserFootprint.map((u) => (
-                      <tr key={u.id} className="hover:bg-slate-50/80 transition-colors">
+                      <React.Fragment key={u.id}>
+                      <tr className="hover:bg-slate-50/80 transition-colors">
                         <td className="py-3 px-4">
                           <div className="font-extrabold text-slate-900">{u.name}</div>
                           <div className="text-[11px] text-slate-400">{u.email} · <span className="text-slate-600 font-semibold">{u.companyName}</span></div>
                         </td>
                         <td className="py-3 px-4 font-bold text-slate-700">{u.staffCount} seats</td>
                         <td className="py-3 px-4 font-bold text-slate-700">{u.leadsCount} leads</td>
-                        <td className="py-3 px-4 font-mono font-extrabold text-indigo-700">
-                          {u.estimatedKb} KB
+                        <td className="py-3 px-4 min-w-[170px]">
+                          <div className="font-mono font-extrabold text-indigo-700">
+                            {u.storageUsedMb ?? (u.estimatedKb / 1024).toFixed(2)} MB
+                            <span className="text-slate-400 font-sans font-semibold"> / {u.storageLimitMb ?? 50} MB</span>
+                          </div>
+                          <div className="w-28 bg-slate-100 rounded-full h-1.5 overflow-hidden mt-1">
+                            <div
+                              className={`h-1.5 rounded-full ${Number(u.storagePercent) >= 90 ? 'bg-rose-500' : Number(u.storagePercent) >= 70 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+                              style={{ width: `${Math.max(3, Math.min(100, Number(u.storagePercent) || 0))}%` }}
+                            />
+                          </div>
+                          <div className="flex items-center gap-2 mt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleSetStorageLimit(u)}
+                              disabled={savingLimitFor === u.id}
+                              className="text-[10px] font-bold text-indigo-600 hover:underline cursor-pointer"
+                            >
+                              {savingLimitFor === u.id ? 'Saving…' : 'Change limit'}
+                            </button>
+                            {Array.isArray(u.members) && (
+                              <button
+                                type="button"
+                                onClick={() => setExpandedOwner(expandedOwner === u.id ? null : u.id)}
+                                className="text-[10px] font-bold text-slate-500 hover:underline cursor-pointer"
+                              >
+                                {expandedOwner === u.id ? 'Hide members' : `Per member (${u.members.length})`}
+                              </button>
+                            )}
+                          </div>
                         </td>
                         <td className="py-3 px-4">
                           <div className="flex items-center gap-2">
@@ -955,6 +1016,52 @@ export default function DeveloperSection({ apiBase, getHeaders, showToast }) {
                           {u.lastLogin ? new Date(u.lastLogin).toLocaleDateString() : 'Never'}
                         </td>
                       </tr>
+                      {expandedOwner === u.id && Array.isArray(u.members) && (
+                        <tr className="bg-slate-50/70">
+                          <td colSpan={10} className="px-4 py-3">
+                            <div className="overflow-x-auto">
+                              <table className="w-full text-[11px]">
+                                <thead className="text-slate-500 uppercase text-[9px] font-bold">
+                                  <tr>
+                                    <th className="py-1.5 pr-3 text-left">Member</th>
+                                    <th className="py-1.5 pr-3 text-left">Role</th>
+                                    <th className="py-1.5 pr-3 text-right">Storage</th>
+                                    <th className="py-1.5 pr-3 text-right">Leads</th>
+                                    <th className="py-1.5 pr-3 text-right">Tasks</th>
+                                    <th className="py-1.5 pr-3 text-right">Follow-ups</th>
+                                    <th className="py-1.5 pr-3 text-right">Remarks</th>
+                                    <th className="py-1.5 pr-3 text-right">API requests</th>
+                                    <th className="py-1.5 text-right">Last login</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-slate-200/70">
+                                  {u.members.map((m) => (
+                                    <tr key={m.id}>
+                                      <td className="py-1.5 pr-3">
+                                        <span className="font-bold text-slate-800">{m.name}</span>
+                                        <span className="text-slate-400"> · {m.email}</span>
+                                        {!m.isActive && <span className="ml-1 text-rose-500 font-bold">(inactive)</span>}
+                                      </td>
+                                      <td className="py-1.5 pr-3 text-slate-600">{m.role}</td>
+                                      <td className="py-1.5 pr-3 text-right font-mono font-bold text-indigo-700">{m.kb} KB</td>
+                                      <td className="py-1.5 pr-3 text-right">{m.leads}</td>
+                                      <td className="py-1.5 pr-3 text-right">{m.tasks}</td>
+                                      <td className="py-1.5 pr-3 text-right">{m.followUps}</td>
+                                      <td className="py-1.5 pr-3 text-right">{m.remarks}</td>
+                                      <td className="py-1.5 pr-3 text-right font-mono">{m.apiRequests}</td>
+                                      <td className="py-1.5 text-right text-slate-400">{m.lastLogin ? new Date(m.lastLogin).toLocaleDateString() : 'Never'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                            <p className="text-[10px] text-slate-400 mt-2">
+                              The limit is for the whole company (owner + staff). When it is full, new entries are refused with a clear message; reading and deleting keep working.
+                            </p>
+                          </td>
+                        </tr>
+                      )}
+                      </React.Fragment>
                     ))
                   )}
                 </tbody>

@@ -2,12 +2,14 @@ const express = require('express');
 const router = express.Router();
 const emailController = require('../controllers/email.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { enforceStorageQuota } = require('../utils/usage');
 const asyncHandler = require('../utils/asyncHandler');
 
 // Public one-click unsubscribe (signed token, no login)
 router.get('/unsubscribe/:token', asyncHandler(emailController.unsubscribe));
 
 router.use(authenticate);
+router.use(enforceStorageQuota);
 
 // Feature status is readable by any signed-in user so the UI can show the locked state
 router.get('/status', asyncHandler(emailController.getStatus));

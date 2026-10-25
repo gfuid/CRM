@@ -2,9 +2,11 @@ const express = require('express');
 const router = express.Router();
 const leadsController = require('../controllers/leads.controller');
 const { authenticate } = require('../middlewares/auth.middleware');
+const { enforceStorageQuota } = require('../utils/usage');
 const asyncHandler = require('../utils/asyncHandler');
 
 router.use(authenticate);
+router.use(enforceStorageQuota);
 
 router.get('/', asyncHandler(leadsController.getLeads));
 router.get('/:id', asyncHandler(leadsController.getLeadById));

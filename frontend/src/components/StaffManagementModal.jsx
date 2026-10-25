@@ -1,3 +1,4 @@
+import StorageMeter from './StorageMeter';
 import React, { useState, useEffect } from 'react';
 import { api } from '../services/api';
 import Modal from './Modal';
@@ -646,6 +647,11 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             <div className="text-[11px] text-emerald-800 mt-0.5 max-w-xl">
               By default, business owners can add up to {staffQuota} staff members. Contact the platform administrator to increase this quota.
             </div>
+            {currentUser?.persona !== 'staff' && (
+              <div className="mt-2 max-w-xs">
+                <StorageMeter compact />
+              </div>
+            )}
           </div>
           {!showAddForm && !editingStaff && (
             <button

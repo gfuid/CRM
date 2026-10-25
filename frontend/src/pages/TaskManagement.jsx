@@ -552,7 +552,7 @@ export default function TaskManagement() {
                   const alert = getAlert(task);
                   const badgeStyle = getBadgeColors(alert.type);
                   const priorityStyle = getPriorityBadge(task.priority);
-                  const taskDate = task.due_date ? task.due_date.split('T')[0] : '2026-09-21';
+                  const taskDate = task.due_date ? task.due_date.split('T')[0] : '';
                   const taskTime = task.deadline_time || '18:00';
 
                   return (
@@ -698,7 +698,7 @@ export default function TaskManagement() {
               const alert = getAlert(task);
               const badgeStyle = getBadgeColors(alert.type);
               const priorityStyle = getPriorityBadge(task.priority);
-              const taskDate = task.due_date ? task.due_date.split('T')[0] : '2026-09-21';
+              const taskDate = task.due_date ? task.due_date.split('T')[0] : '';
               const taskTime = task.deadline_time || '18:00';
 
               return (
