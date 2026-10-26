@@ -1,6 +1,131 @@
 {
   "users": [
     {
+      "_id": "6ab0165d48b291848c61fb51",
+      "id": "usr_1789924957033_xthwzi",
+      "name": "punia",
+      "email": "reamercoded@gmail.com",
+      "password": "$2a$10$9MxnoFkjVjrkJcz5CYpF.uO0VrYCpMQlkxNJ3pFAsNtduzoIH1isK",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "08307967782",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=punia",
+      "last_login": "2026-09-27T08:08:42.711Z",
+      "created_at": "2026-09-20T17:22:37.033Z",
+      "createdAt": "2026-09-20T17:22:37.042Z",
+      "updatedAt": "2026-10-26T13:43:43.693Z",
+      "__v": 0,
+      "company_id": "comp_punia_1789924957033",
+      "company_name": "punia's Workspace",
+      "created_by": "",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ab8a598c126a0c55f6a2179",
+      "id": "usr_1790485912422_52s5fh",
+      "name": "sagar",
+      "email": "sagar@gmail.com",
+      "password": "$2a$10$U6HACLx9AogFbMHpLe76CewOLFysImS0EJR0OLeOcy7Niu9FaCFpq",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=sagar",
+      "last_login": "2026-09-27T05:11:52.422Z",
+      "created_at": "2026-09-27T05:11:52.422Z",
+      "createdAt": "2026-09-27T05:11:52.431Z",
+      "updatedAt": "2026-10-26T13:43:43.791Z",
+      "__v": 0,
+      "company_id": "comp_sagar_1790485912422",
+      "company_name": "sagar's Workspace",
+      "created_by": "",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ab8d2d616f4fcd01678ec3d",
+      "id": "usr_1790497494307_dcds9e",
+      "name": "Test Owner",
+      "email": "owner@travel-trade.com",
+      "password": "$2a$10$ZjsjZEdU0DYD78EHxFLjter2WJX1f85nliOGonE9lf6hF3I5MKupm",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Test%20Owner",
+      "last_login": "2026-09-27T08:24:54.307Z",
+      "created_at": "2026-09-27T08:24:54.307Z",
+      "createdAt": "2026-09-27T08:24:54.311Z",
+      "updatedAt": "2026-10-26T13:43:43.798Z",
+      "__v": 0,
+      "company_id": "comp_testowner_1790497494307",
+      "company_name": "Travel-Trade",
+      "created_by": "",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ac5293bce3860acc32ee587",
+      "id": "usr_1791306043083_9p353t",
+      "name": "sagarpunia",
+      "email": "reamercode@gmail.com",
+      "password": "$2a$10$xLX8JOwWamEodxfSY0ykwO7N4zW49HVu2N4vTsmy0zWPFL6k0EAtS",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "1234567890",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=sagarpunia",
+      "last_login": "2026-10-06T18:41:27.025Z",
+      "created_at": "2026-10-06T17:00:43.083Z",
+      "createdAt": "2026-10-06T17:00:43.087Z",
+      "updatedAt": "2026-10-26T13:43:43.891Z",
+      "__v": 0,
+      "company_id": "comp_sagarpunia_1791306043083",
+      "company_name": "sagarpunia's Workspace",
+      "created_by": "",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ac529c7542c8e21972cf754",
+      "id": "usr_1791306183682_rh51dw",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80",
+      "createdAt": "2026-10-06T17:03:03.683Z",
+      "created_at": "2026-10-06T17:03:03.682Z",
+      "department": "faltubanda",
+      "email": "papu@gmail.com",
+      "is_active": true,
+      "last_login": "2026-10-07T15:31:11.178Z",
+      "name": "papu",
+      "password": "$2a$10$BJSHvhTmpeRm154nlEzZWOZtA7/AjDiJu0fytVK/4llZ6DihZfg9G",
+      "persona": "staff",
+      "phone": "1234567895",
+      "role": "agent",
+      "updatedAt": "2026-10-07T15:31:11.273Z",
+      "company_id": "comp_sagarpunia_1791306043083",
+      "created_by": "usr_1791306043083_9p353t",
+      "data_scope": "own_only",
+      "permissions": {
+        "view_analytics": false,
+        "view_leads": true,
+        "view_tasks": true,
+        "tasks_assign": false,
+        "view_followup": true,
+        "view_outreach": false,
+        "view_activity": true,
+        "view_mydays": false,
+        "can_read": true,
+        "can_create": true,
+        "can_update": false,
+        "can_delete": false,
+        "admin_access": false
+      },
+      "company_name": "sagarpunia's Workspace"
+    },
+    {
       "_id": "6ac53394ce3860acc32ee589",
       "id": "usr_1791308692781_zo9rj5",
       "name": "ambani",
@@ -15,11 +140,12 @@
       "last_login": "2026-10-07T11:35:13.351Z",
       "created_at": "2026-10-06T17:44:52.781Z",
       "createdAt": "2026-10-06T17:44:52.782Z",
-      "updatedAt": "2026-10-07T11:35:13.352Z",
+      "updatedAt": "2026-10-26T13:43:43.900Z",
       "__v": 0,
       "company_id": "comp_ambani_1791308692781",
       "company_name": "ambani's Workspace",
-      "created_by": ""
+      "created_by": "",
+      "last_daily_report_on": "2026-10-26"
     },
     {
       "_id": "6ac534d1542c8e21972d18c5",
@@ -82,6 +208,108 @@
       "company_name": "ambani's Workspace"
     },
     {
+      "_id": "6ac780660c69b3b6f1580c6a",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_sagar_1790485912422",
+      "createdAt": "2026-10-08T11:37:10.144Z",
+      "created_at": "2026-10-08T11:37:10.052Z",
+      "created_by": "usr_1790485912422_52s5fh",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "sagarpunia@gmail.com",
+      "id": "usr_1791459430052_bmpz72",
+      "is_active": true,
+      "last_login": null,
+      "name": "Ramesh",
+      "password": "$2a$10$z/jKigJ7r56rzPL8xL5huOZQ2pD0OEkEzMFjVp1waUm28NtYDrhFG",
+      "permissions": {
+        "view_analytics": true,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": true,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 3,
+      "updatedAt": "2026-10-08T11:37:10.144Z",
+      "company_name": "sagar's Workspace"
+    },
+    {
+      "_id": "6ac783351c03af4e273e0877",
+      "id": "usr_1791460149959_h6fqui",
+      "name": "Athish Ravikanth",
+      "email": "athishravikanth@gmail.com",
+      "password": "$2a$10$5KTekzoAqqNnlzYjGcZFHew3BeCxX8wt5OEc8Gk8iPQo1qGMLtzza",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Athish%20Ravikanth",
+      "data_scope": "own_only",
+      "company_id": "comp_athish_1791460149959",
+      "created_by": "",
+      "staff_limit": 3,
+      "last_login": "2026-10-12T15:09:44.588Z",
+      "created_at": "2026-10-08T11:49:09.959Z",
+      "createdAt": "2026-10-08T11:49:09.960Z",
+      "updatedAt": "2026-10-26T13:43:43.994Z",
+      "__v": 0,
+      "company_name": "Athish Ravikanth's Workspace",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ac783940c69b3b6f1581630",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_athish_1791460149959",
+      "createdAt": "2026-10-08T11:50:44.643Z",
+      "created_at": "2026-10-08T11:50:44.556Z",
+      "created_by": "usr_1791460149959_h6fqui",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "sagarpunia789@gmail.com",
+      "id": "usr_1791460244556_5226eo",
+      "is_active": true,
+      "last_login": "2026-10-12T14:21:29.683Z",
+      "name": "Sagar",
+      "password": "$2a$10$I/AuqKLFcSc1DE2V8cFDHeNFBbI/LXPAe1C60hvwBDKsbJQQY9zee",
+      "permissions": {
+        "view_analytics": true,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": true,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 3,
+      "updatedAt": "2026-10-12T14:21:29.684Z",
+      "company_name": "Athish Ravikanth's Workspace"
+    },
+    {
       "_id": "6accead89aa6b5965e596f99",
       "id": "usr_1791814360788_t8vbux",
       "name": "Sunil Chaithanya",
@@ -100,7 +328,7 @@
       "last_login": "2026-10-12T15:13:19.786Z",
       "created_at": "2026-10-12T14:12:40.788Z",
       "createdAt": "2026-10-12T14:12:40.882Z",
-      "updatedAt": "2026-10-12T15:13:19.787Z",
+      "updatedAt": "2026-10-26T13:43:44.022Z",
       "__v": 0,
       "permissions": {
         "view_analytics": true,
@@ -118,7 +346,8 @@
         "can_export": false,
         "admin_access": false
       },
-      "company_name": "Ambavi International"
+      "company_name": "Ambavi International",
+      "last_daily_report_on": "2026-10-26"
     },
     {
       "_id": "6acceb449aa6b5965e596f9a",
@@ -135,112 +364,300 @@
       "data_scope": "own_only",
       "company_id": "comp_bioniversio_1",
       "created_by": "",
-      "staff_limit": 10,
-      "last_login": "2026-10-15T09:03:06.469Z",
+      "staff_limit": 2,
+      "last_login": "2026-10-26T10:16:56.200Z",
       "created_at": "2026-10-12T14:14:28.302Z",
       "createdAt": "2026-10-12T14:14:28.303Z",
-      "updatedAt": "2026-10-15T09:03:06.474Z",
+      "updatedAt": "2026-10-26T13:43:44.098Z",
       "__v": 0,
-      "company_name": "Bioniversio Biologics"
+      "company_name": "Bioniversio Biologics",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6ace51f8f02c6edd77867ad6",
+      "id": "usr_1791906296111_uweyz8",
+      "name": "binti",
+      "email": "binti@gmail.com",
+      "password": "$2a$10$BzCZ3irIRE8otcCofnrWg.0iHaskmC0CNro3LfFfW2WYX/e6j6Eg2",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "7894561235",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=binti",
+      "data_scope": "own_only",
+      "company_id": "comp_binti_1791906296111",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-15T09:01:52.765Z",
+      "created_at": "2026-10-13T15:44:56.111Z",
+      "createdAt": "2026-10-13T15:44:56.121Z",
+      "updatedAt": "2026-10-26T13:43:44.193Z",
+      "__v": 0,
+      "company_name": "binti's Workspace",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6acf9281c8e54b290300574a",
+      "id": "usr_1791988353309_kln9hb",
+      "name": "soch",
+      "email": "soch@gmail.com",
+      "password": "$2a$10$0Etex0csAjkzZK7EglCGPOsYhmO49BhoRdvbmnSQrpvHlj5OpV84y",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=soch",
+      "data_scope": "own_only",
+      "company_id": "comp_1791988353309_h1djru",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-14T16:17:17.650Z",
+      "created_at": "2026-10-14T14:32:33.309Z",
+      "createdAt": "2026-10-14T14:32:33.399Z",
+      "updatedAt": "2026-10-26T13:43:44.199Z",
+      "__v": 0,
+      "company_name": "soch's Workspace",
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6acfa6740c69b3b6f1712543",
+      "__v": 0,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=deepak",
+      "company_id": "comp_1791988353309_h1djru",
+      "createdAt": "2026-10-14T15:57:50.610Z",
+      "created_at": "2026-10-14T15:57:50.575Z",
+      "created_by": "usr_1791988353309_kln9hb",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "deepak@gmail.com",
+      "id": "usr_1791993470575_8mv3oh",
+      "is_active": true,
+      "last_login": null,
+      "name": "deepak",
+      "password": "$2a$10$b1Rcng0QOL6mMuQHCJJyJOv2JUy/B7DWcDyaw9ZhMptgtwqHzzy46",
+      "permissions": {
+        "view_analytics": false,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": true,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false
+      },
+      "persona": "staff",
+      "phone": "+919845112345",
+      "role": "agent",
+      "staff_limit": 2,
+      "updatedAt": "2026-10-14T15:57:50.610Z",
+      "staff_password": "123456",
+      "company_name": "soch's Workspace"
+    },
+    {
+      "_id": "6acfad450c69b3b6f1713b9a",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_1791988353309_h1djru",
+      "createdAt": "2026-10-14T16:26:54.985Z",
+      "created_at": "2026-10-14T16:26:54.954Z",
+      "created_by": "usr_1791988353309_kln9hb",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "vasu@gmail.com",
+      "id": "usr_1791995214954_dldsfy",
+      "is_active": true,
+      "last_login": null,
+      "name": "vasu",
+      "password": "$2a$10$vQn1HDNLvAmolPIEt19G6e2aDbTe5lPt0jgb3tkofn.eDf0TDx6Ue",
+      "permissions": {
+        "view_analytics": false,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": false,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": true,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 2,
+      "updatedAt": "2026-10-21T16:06:49.783Z",
+      "company_name": "soch's Workspace",
+      "status": "active"
+    },
+    {
+      "_id": "6ad7915f272650f62594bac1",
+      "id": "usr_1792512351096_pmgeqp",
+      "name": "SUNIL CHAITHANYA",
+      "email": "sunilchaithanya.exim@gmail.com",
+      "password": "$2a$10$OGIXN6JUHVgTDSuihkX6qedIWCpRuynui.0Qot6pEgbQ6W3Lvarfq",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "9900999923",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=SUNIL%20CHAITHANYA",
+      "data_scope": "own_only",
+      "company_id": "comp_1792512351096_pmzx4k",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-21T16:01:30.754Z",
+      "created_at": "2026-10-20T16:05:51.096Z",
+      "company_name": "AMBAVI",
+      "createdAt": "2026-10-20T16:05:51.192Z",
+      "updatedAt": "2026-10-26T13:43:44.294Z",
+      "__v": 0,
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6adc23a2928d7eca3d826c21",
+      "__v": 0,
+      "avatar_url": "https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80",
+      "company_id": "comp_1792512351096_pmzx4k",
+      "company_name": "AMBAVI",
+      "createdAt": "2026-10-24T03:18:58.347Z",
+      "created_at": "2026-10-24T03:18:58.338Z",
+      "created_by": "usr_1792512351096_pmgeqp",
+      "data_scope": "own_only",
+      "department": "Commodity Sales Executive",
+      "email": "xyz@gmail.com",
+      "id": "usr_1792811938338_lj9ypm",
+      "is_active": true,
+      "last_login": null,
+      "name": "xyz",
+      "password": "$2a$10$38MVsK50h5/cghbKjoyLaeymKb5sdx2HkuSpLtMshJCHtcAO6LK6W",
+      "permissions": {
+        "view_analytics": true,
+        "view_leads": true,
+        "view_tasks": true,
+        "view_followup": true,
+        "view_outreach": false,
+        "view_activity": true,
+        "view_mydays": true,
+        "can_read": true,
+        "can_create": true,
+        "can_update": false,
+        "can_delete": false,
+        "admin_access": false,
+        "tasks_assign": false,
+        "can_export": false
+      },
+      "persona": "staff",
+      "phone": "",
+      "role": "agent",
+      "staff_limit": 2,
+      "updatedAt": "2026-10-24T03:18:58.347Z"
+    },
+    {
+      "_id": "6adc2430fb3a3e5706b6f033",
+      "id": "usr_1792812080252_w95y4t",
+      "name": "adani",
+      "email": "adani@gmail.com",
+      "password": "$2a$10$TpkKphL24Bo5Q0REJEJoLu3aBcIWAnKbRSri.FCKIPhlB6GfUfAqm",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "1234567892",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=adani",
+      "data_scope": "own_only",
+      "company_id": "comp_1792812080252_dfq522",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-24T03:21:20.252Z",
+      "created_at": "2026-10-24T03:21:20.253Z",
+      "company_name": "adani",
+      "plan": "enterprise",
+      "createdAt": "2026-10-24T03:21:20.337Z",
+      "updatedAt": "2026-10-26T13:43:44.300Z",
+      "__v": 0,
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6adeb3da48ffd806e2d51ddc",
+      "id": "usr_1792979930564_a79p1x",
+      "name": "Han",
+      "email": "han@gmail.com",
+      "password": "$2a$10$DXtvhrL9fupdgMyJVuSopu0apypAlrqj9WyTgCbWuzp2tQM/98ZIW",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Han",
+      "data_scope": "own_only",
+      "company_id": "comp_1792979930565_gcb5qc",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-26T02:04:23.165Z",
+      "created_at": "2026-10-26T01:58:50.565Z",
+      "company_name": "Han",
+      "plan": "enterprise",
+      "createdAt": "2026-10-26T01:58:50.572Z",
+      "updatedAt": "2026-10-26T13:43:44.393Z",
+      "__v": 0,
+      "last_daily_report_on": "2026-10-26"
+    },
+    {
+      "_id": "6adeec9a657f8d3347d841da",
+      "id": "usr_1792994458564_yjh2z7",
+      "name": "Rajesh Patel",
+      "email": "varlaxmiagrop@gmail.com",
+      "password": "$2a$10$PGl2N/wiJUg9dPLOjgFJYe7URpw5J4yEKI3cXiFc3eniVFw4JS0u2",
+      "role": "admin",
+      "persona": "owner",
+      "department": "Executive Management",
+      "phone": "9845810044",
+      "is_active": true,
+      "avatar_url": "https://api.dicebear.com/7.x/initials/svg?seed=Rajesh%20Patel",
+      "data_scope": "own_only",
+      "company_id": "comp_1792994458564_371972",
+      "created_by": "",
+      "staff_limit": 2,
+      "last_login": "2026-10-26T06:00:58.564Z",
+      "created_at": "2026-10-26T06:00:58.564Z",
+      "company_name": "Varlaxmi Agro Products",
+      "plan": "enterprise",
+      "createdAt": "2026-10-26T06:00:58.658Z",
+      "updatedAt": "2026-10-26T13:43:44.398Z",
+      "__v": 0,
+      "last_daily_report_on": "2026-10-26"
     }
   ],
-  "deletedUserIds": [
-    "usr_1792684210581_ia7xsd",
-    "usr_1792684210031_5cf6og",
-    "usr_1792684209828_fkvcfz",
-    "ci_delete_staff_1792684213219",
-    "usr_1792684405120_q9x8zk",
-    "usr_1792684404658_fcbaxc",
-    "usr_1792684404405_7rgxra",
-    "ci_delete_staff_1792684405885",
-    "usr_1792684528977_5ilxug",
-    "usr_1792684528499_6yic0m",
-    "usr_1792684528231_4awdyw",
-    "ci_delete_staff_1792684530066",
-    "usr_1792684614582_1t9v0e",
-    "usr_1792684613982_bg4jgz",
-    "usr_1792684613738_71el9z",
-    "ci_delete_staff_1792684615502",
-    "usr_1792687208654_beepct",
-    "usr_1792687208261_7f13z5",
-    "usr_1792687208080_ygbg45",
-    "ci_delete_staff_1792687209464",
-    "usr_1792687680918_0z5aak",
-    "usr_1792687680433_1qsj4x",
-    "usr_1792687680031_x1n00v",
-    "ci_delete_staff_1792687683798",
-    "usr_1792688045853_rdr1ko",
-    "usr_1792688045380_7n33a0",
-    "usr_1792688045151_7a18ol",
-    "ci_delete_staff_1792688046973",
-    "usr_1789924957033_xthwzi",
-    "6ab0165d48b291848c61fb51",
-    "usr_1790497494307_dcds9e",
-    "6ab8d2d616f4fcd01678ec3d",
-    "usr_1791306043083_9p353t",
-    "6ac5293bce3860acc32ee587",
-    "usr_1791306183682_rh51dw",
-    "6ac529c7542c8e21972cf754",
-    "usr_1790485912422_52s5fh",
-    "6ab8a598c126a0c55f6a2179",
-    "usr_1791459430052_bmpz72",
-    "6ac780660c69b3b6f1580c6a",
-    "usr_1791988353309_kln9hb",
-    "6acf9281c8e54b290300574a",
-    "usr_1791993470575_8mv3oh",
-    "6acfa6740c69b3b6f1712543",
-    "usr_1791995214954_dldsfy",
-    "6acfad450c69b3b6f1713b9a",
-    "usr_1791906296111_uweyz8",
-    "6ace51f8f02c6edd77867ad6",
-    "usr_1791460149959_h6fqui",
-    "6ac783351c03af4e273e0877",
-    "usr_1791460244556_5226eo",
-    "6ac783940c69b3b6f1581630"
-  ],
-  "deletedUserEmails": [
-    "ci_observer_1792684210349@travel-trade.com",
-    "ci_staff_1792684209837@travel-trade.com",
-    "ci_owner_1792684209545@travel-trade.com",
-    "ci_delete_staff_1792684213219@travel-trade.com",
-    "ci_observer_1792684404913@travel-trade.com",
-    "ci_staff_1792684404414@travel-trade.com",
-    "ci_owner_1792684404177@travel-trade.com",
-    "ci_delete_staff_1792684405885@travel-trade.com",
-    "ci_observer_1792684528785@travel-trade.com",
-    "ci_staff_1792684528240@travel-trade.com",
-    "ci_owner_1792684527988@travel-trade.com",
-    "ci_delete_staff_1792684530066@travel-trade.com",
-    "ci_observer_1792684614314@travel-trade.com",
-    "ci_staff_1792684613749@travel-trade.com",
-    "ci_owner_1792684613538@travel-trade.com",
-    "ci_delete_staff_1792684615502@travel-trade.com",
-    "ci_observer_1792687208480@travel-trade.com",
-    "ci_staff_1792687208089@travel-trade.com",
-    "ci_owner_1792687207870@travel-trade.com",
-    "ci_delete_staff_1792687209464@travel-trade.com",
-    "ci_observer_1792687680713@travel-trade.com",
-    "ci_staff_1792687680082@travel-trade.com",
-    "ci_owner_1792687679579@travel-trade.com",
-    "ci_delete_staff_1792687683798@travel-trade.com",
-    "ci_observer_1792688045648@travel-trade.com",
-    "ci_staff_1792688045160@travel-trade.com",
-    "ci_owner_1792688044920@travel-trade.com",
-    "ci_delete_staff_1792688046973@travel-trade.com",
-    "reamercoded@gmail.com",
-    "owner@travel-trade.com",
-    "reamercode@gmail.com",
-    "papu@gmail.com",
-    "sagar@gmail.com",
-    "sagarpunia@gmail.com",
-    "soch@gmail.com",
-    "deepak@gmail.com",
-    "vasu@gmail.com",
-    "binti@gmail.com",
-    "athishravikanth@gmail.com",
-    "sagarpunia789@gmail.com"
-  ],
   "leads": [
+    {
+      "_id": "6ab01a661262f2bde2f77c95",
+      "id": "lead_1789925990225_t8mmkd",
+      "__v": 0,
+      "assigned_to": "usr_1789924957033_xthwzi",
+      "contact_person": "sagar punia",
+      "country": "United Arab Emirates 🇦🇪",
+      "created_at": "2026-09-20T17:39:50.334Z",
+      "email": "reamercoded@gmail.com",
+      "name": "cxcs",
+      "notes": "",
+      "phone": "+918307967782",
+      "priority": "Medium",
+      "source": "Direct Inquiry",
+      "stage": "Requirement Understood",
+      "tags": [],
+      "updated_at": "2026-10-07T10:00:37.047Z",
+      "value": 0
+    },
     {
       "_id": "6ac48ffe542c8e21972b223b",
       "id": "lead_1791266813739_7qteoc",
@@ -261,6 +678,40 @@
       "value": 0
     },
     {
+      "_id": "6ac52ea3542c8e21972d0613",
+      "id": "lead_1791307426791_e7g16t",
+      "__v": 0,
+      "assigned_to": "usr_1791306183682_rh51dw",
+      "contact_person": "sagar",
+      "country": "Australia 🇦🇺",
+      "created_at": "2026-10-06T17:23:46.905Z",
+      "email": "xyz@gmail.com",
+      "name": "payal enterprices",
+      "notes": "[Today's Interaction - 07 Oct 2026, 03:15 pm]: aaj hua bat\n\n[Planned Action on 2026-10-09]: 9 tarik ko krenge ab baat",
+      "phone": "8307845612",
+      "priority": "Medium",
+      "source": "Direct Inquiry",
+      "stage": "Contact Established",
+      "tags": [],
+      "updated_at": "2026-10-07T10:00:37.217Z",
+      "value": 49990,
+      "created_by_id": "usr_1791306183682_rh51dw",
+      "created_by_name": "Deepak",
+      "follow_up_date": "2026-10-09",
+      "next_follow_up_action": "9 tarik ko krenge ab baat",
+      "previous_remarks": [
+        {
+          "today_remark": "aaj hua bat",
+          "planned_action": "9 tarik ko krenge ab baat",
+          "remark": "Interaction: aaj hua bat | Planned for 2026-10-09: 9 tarik ko krenge ab baat",
+          "follow_up_date": "2026-10-09",
+          "date": "07 Oct 2026, 03:15 pm",
+          "author": "papu"
+        }
+      ],
+      "today_remarks": "aaj hua bat"
+    },
+    {
       "_id": "6ac535f1542c8e21972d1c44",
       "id": "lead_1791309297462_yifamv",
       "__v": 0,
@@ -278,6 +729,74 @@
       "tags": [],
       "updated_at": "2026-10-07T10:00:37.292Z",
       "value": 500
+    },
+    {
+      "_id": "6ac784c40c69b3b6f15819c7",
+      "id": "lead_1791460548612_vc9dr6",
+      "__v": 0,
+      "address": "",
+      "assigned_to": "usr_1791460244556_5226eo",
+      "company_name": "Amir",
+      "contact_person": "",
+      "contacts": [
+        {
+          "name": "",
+          "phone": "",
+          "extra_phones": [],
+          "email": "",
+          "designation": "",
+          "linkedin": ""
+        }
+      ],
+      "country": "Australia 🇦🇺",
+      "created_at": "2026-10-08T11:55:48.680Z",
+      "created_by_id": "usr_1791460244556_5226eo",
+      "created_by_name": "Sagar",
+      "credit_rating": "AA",
+      "email": "",
+      "export_requirements": {
+        "industry_type": "Food & Spice Processing",
+        "incoterm": "CIF",
+        "port_delivery": "",
+        "payment_days": "LC at Sight (Letter of Credit)",
+        "product_notes": "",
+        "quantity_unit": "MT"
+      },
+      "follow_up_date": "2026-10-10",
+      "follow_up_time": "10:00",
+      "legacy_industry_type": "Food & Spice Processing",
+      "name": "Amir",
+      "next_follow_up_action": "hhhhhhhhh",
+      "notes": "[Today's Notes]: Gggggggg\n[Planned Action on 2026-10-10]: hhhhhhhhh",
+      "phone": "",
+      "previous_remarks": [
+        {
+          "today_remark": "Gggggggg",
+          "planned_action": "hhhhhhhhh",
+          "remark": "Interaction: Gggggggg | Planned for 2026-10-10 at 10:00: hhhhhhhhh",
+          "follow_up_date": "2026-10-10",
+          "follow_up_time": "10:00",
+          "date": "08 Oct 2026 at 05:25 PM",
+          "author": "Sagar"
+        }
+      ],
+      "price": 0,
+      "priority": "Medium",
+      "product": "Turmeric",
+      "products": [],
+      "quantity": 0,
+      "quantity_unit": "MT",
+      "source": "Direct Inquiry",
+      "sourcing_region": "",
+      "stage": "Requirement Understood",
+      "tags": [],
+      "today_remarks": "Gggggggg",
+      "turnover": "",
+      "type": "International",
+      "updated_at": "2026-10-08T11:55:48.680Z",
+      "value": 0,
+      "website": "",
+      "whatsapp": ""
     },
     {
       "_id": "6accf43d0c69b3b6f168bd7d",
@@ -424,17 +943,18 @@
       "id": "lead_1791883204874_a924cd",
       "__v": 0,
       "address": "D-27/3, Olana, Hemmathagama, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Hybro Traders Pvt Limited",
       "contact_person": "Abdul Hafeel",
       "contacts": [
         {
           "name": "Abdul Hafeel",
-          "phone": "+94 775 136 503",
+          "phone": "+94 775 136 503, +94 777 382 955, +94 357 777 770",
           "extra_phones": [],
           "email": "mlahafeel@hybrotraders.com",
           "designation": "Founder & CEO, Executive Head",
-          "linkedin": "https://www.linkedin.com/in/abdul-hafeel-66ab8938/ "
+          "linkedin": "https://www.linkedin.com/in/abdul-hafeel-66ab8938/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -456,9 +976,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Hybro Traders Pvt Limited",
       "next_follow_up_action": "Follow up tomorrow to check for a response and update the status.",
-      "notes": "[Today's Notes]: I has interacted with the Executive person\n[Planned Action on 2026-10-15]: Follow up tomorrow to check for a response and update the status.\n[Today's Notes]: I has interacted with the Executive person\n[Planned Action on 2026-10-15]: Follow up tomorrow to check for a response and update the status.",
-      "phone": "+94 775 136 503",
+      "notes": "[Today's Notes]: I has interacted with the Executive person\n[Planned Action on 2026-10-15]: Follow up tomorrow to check for a response and update the status.\n[Today's Notes]: I has interacted with the Executive person\n[Planned Action on 2026-10-15]: Follow up tomorrow to check for a response and update the status.\n[Today's Notes]: I has interacted with the Executive person\n[Planned Action on 2026-10-15]: Follow up tomorrow to check for a response and update the status.",
+      "phone": "+94 775 136 503, +94 777 382 955, +94 357 777 770",
       "previous_remarks": [
+        {
+          "today_remark": "I has interacted with the Executive person",
+          "planned_action": "Follow up tomorrow to check for a response and update the status.",
+          "remark": "Interaction: I has interacted with the Executive person | Planned for 2026-10-15 at 11:30: Follow up tomorrow to check for a response and update the status.",
+          "follow_up_date": "2026-10-15",
+          "follow_up_time": "11:30",
+          "date": "23 Oct 2026, 11:56 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has interacted with the Executive person",
           "planned_action": "Follow up tomorrow to check for a response and update the status.",
@@ -493,17 +1022,17 @@
       "today_remarks": "I has interacted with the Executive person",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:13:48.586Z",
+      "updated_at": "2026-10-23T06:26:06.655Z",
       "value": 10360,
       "website": "https://www.hybrotraders.com/ ",
       "whatsapp": "+94 775 136 503",
-      "agent_name": "Athish",
+      "agent_name": "Keerthana Ponni K",
       "industry_type": "Animal Feed & Poultry",
       "lead_stage": "Requirement Understood",
       "social_links": [
         {
           "platform": "LinkedIn",
-          "url": "https://www.linkedin.com/in/abdul-hafeel-66ab8938/ "
+          "url": ""
         }
       ],
       "social_media": "https://www.linkedin.com/in/abdul-hafeel-66ab8938/ ",
@@ -514,17 +1043,18 @@
       "id": "lead_1791951914044_tu2wdt",
       "__v": 0,
       "address": "40, Navam Mawatha, Colombo 02\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "National Development Bank PLC",
       "contact_person": "Gayan Abeysekara",
       "contacts": [
         {
           "name": "Gayan Abeysekara",
-          "phone": "94 11 479 6292",
+          "phone": "+94 11 479 6292, +94 11 244 8448 Ext 31151 or 31152",
           "extra_phones": [],
-          "email": "contact@ndbbank.com",
+          "email": "gayan.abeysekara@ndbbank.com",
           "designation": "Manager - Procurement & Logistics",
-          "linkedin": "https://www.linkedin.com/in/gayan-abeysekara-74842283/ "
+          "linkedin": "https://www.linkedin.com/in/gayan-abeysekara-74842283/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -532,7 +1062,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "contact@ndbbank.com",
+      "email": "gayan.abeysekara@ndbbank.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -546,9 +1076,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "National Development Bank PLC",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "94 11 479 6292",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+94 11 479 6292, +94 11 244 8448 Ext 31151 or 31152",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 10:00: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:00",
+          "date": "23 Oct 2026, 11:50 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update",
@@ -574,87 +1113,28 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:25:14.180Z",
+      "updated_at": "2026-10-23T06:20:03.790Z",
       "value": 10360,
       "website": "https://www.ndbbank.com/contact-us ",
-      "whatsapp": ""
-    },
-    {
-      "_id": "6acf072e0c69b3b6f16f2617",
-      "id": "lead_1791952686706_6nyv6j",
-      "__v": 0,
-      "address": "610/611/710, Mayuresh Cosmos, Plot No.37, Sector 11, CBD Belapur, Navi Mumbai - 400 614\n",
-      "assigned_to": "usr_athish",
-      "company_name": "Sunrise Logistics Pvt Ltd",
-      "contact_person": "Anil Nair",
-      "contacts": [
+      "whatsapp": "94 11 479 6292",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
         {
-          "name": "Anil Nair",
-          "phone": "+91 22 49094909",
-          "extra_phones": [],
-          "email": "sunriselogistics@slpl.in",
-          "designation": "Managing Director & Core Promoter",
-          "linkedin": "https://www.linkedin.com/in/anil-nair-b01a8540/ "
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/gayan-abeysekara-74842283/ "
         }
       ],
-      "country": "Sri Lanka 🇱🇰",
-      "created_at": "2026-10-14T04:38:06.710Z",
-      "created_by_id": "usr_1791814468302_hoa08z",
-      "created_by_name": "Keerthana Ponni K",
-      "credit_rating": "AA",
-      "email": "sunriselogistics@slpl.in",
-      "export_requirements": {
-        "industry_type": "Animal Feed & Poultry",
-        "incoterm": "CFR",
-        "port_delivery": "Colombo",
-        "payment_days": "DP (Documents against Payment)",
-        "product_notes": "",
-        "quantity_unit": "MT"
-      },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "10:00",
-      "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "Sunrise Logistics Pvt Ltd",
-      "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: I has communicated with the person\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
-      "phone": "+91 22 49094909",
-      "previous_remarks": [
-        {
-          "today_remark": "I has communicated with the person\n",
-          "planned_action": "Tomorrow will update the status",
-          "remark": "Interaction: I has communicated with the person\n | Planned for 2026-10-16 at 10:00: Tomorrow will update the status",
-          "follow_up_date": "2026-10-16",
-          "follow_up_time": "10:00",
-          "date": "14 Oct 2026, 10:08 am",
-          "author": "Keerthana Ponni K"
-        }
-      ],
-      "price": 10300,
-      "priority": "Medium",
-      "product": "Rice DDGS",
-      "products": [
-        "Rice DDGS"
-      ],
-      "quantity": 28,
-      "quantity_unit": "MT",
-      "source": "Direct Inquiry",
-      "sourcing_region": "",
-      "stage": "Lead Generation",
-      "tags": [],
-      "today_remarks": "I has communicated with the person\n",
-      "turnover": "",
-      "type": "International",
-      "updated_at": "2026-10-14T04:38:06.710Z",
-      "value": 10300,
-      "website": "https://www.slpl.in/ ",
-      "whatsapp": ""
+      "social_media": "https://www.linkedin.com/in/gayan-abeysekara-74842283/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf07c90c69b3b6f16f2800",
       "id": "lead_1791952841787_2zheq0",
       "__v": 0,
       "address": "#222 Bandaranayake Mawatha, Hunupitiya, Wattala, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Thathsara Enterprises",
       "contact_person": "Sumith Wijesiri",
       "contacts": [
@@ -664,7 +1144,8 @@
           "extra_phones": [],
           "email": "tathsaraenterpris@yahoo.com",
           "designation": "Medical Director",
-          "linkedin": "https://www.linkedin.com/in/sumith-wijesiri-344637148/ "
+          "linkedin": "https://www.linkedin.com/in/sumith-wijesiri-344637148/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -686,9 +1167,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Thathsara Enterprises",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
       "phone": "+94 77 980 0011",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 11:30: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "11:30",
+          "date": "23 Oct 2026, 10:13 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update",
@@ -714,27 +1204,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:40:41.788Z",
+      "updated_at": "2026-10-23T04:43:38.643Z",
       "value": 10350,
       "website": "",
-      "whatsapp": ""
+      "whatsapp": "+94 77 980 0011",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/sumith-wijesiri-344637148/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/sumith-wijesiri-344637148/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf08cf0c69b3b6f16f2b35",
       "id": "lead_1791953103297_h5iciq",
       "__v": 0,
       "address": "67 1/1, First Floor, New Chetty Street, Colombo 13. Srilanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Winkem Agricare (Pvt) Ltd",
       "contact_person": "Pillai K. Krishnamoorthy",
       "contacts": [
         {
           "name": "Pillai K. Krishnamoorthy",
-          "phone": "Managing Director ",
+          "phone": "+94 11 2434105, 11 2436853, 11 2386788",
           "extra_phones": [],
           "email": "easterntraders38@yahoo.com",
           "designation": "Managing Director ",
-          "linkedin": "https://www.linkedin.com/in/pillai-k-krishnamoorthy-k-p-3294b962/ "
+          "linkedin": "https://www.linkedin.com/in/pillai-k-krishnamoorthy-k-p-3294b962/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -756,9 +1258,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Winkem Agricare (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow will update the status\n",
-      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
-      "phone": "Managing Director ",
+      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
+      "phone": "+94 11 2434105, 11 2436853, 11 2386788",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Tomorrow will update the status\n",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 10:00: Tomorrow will update the status\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:00",
+          "date": "23 Oct 2026, 10:08 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the person",
           "planned_action": "Tomorrow will update the status\n",
@@ -784,30 +1295,42 @@
       "today_remarks": "I has communicated with the person",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:45:03.298Z",
+      "updated_at": "2026-10-23T04:38:44.693Z",
       "value": 10350,
       "website": "https://www.winkemagri.com/ ",
-      "whatsapp": ""
+      "whatsapp": "",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/pillai-k-krishnamoorthy-k-p-3294b962/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/pillai-k-krishnamoorthy-k-p-3294b962/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0ac20c69b3b6f16f3160",
       "id": "lead_1791953602583_xau2lc",
       "__v": 0,
       "address": "Al Garhoud - Dubai, Airport Street: Al Fajer Business Center, 3rd floor, opposite the Cargo Village, PO Box -14415\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Al Khaleej Sugar Co LLC",
       "contact_person": "Mansoor Noorullah",
       "contacts": [
         {
           "name": "Mansoor Noorullah",
-          "phone": "+971 4 2957777",
+          "phone": "+971 4 2957777, +971 4 8817057",
           "extra_phones": [],
           "email": "info@aksugar.ae",
           "designation": "Procurement Lead",
-          "linkedin": "https://www.linkedin.com/in/mansoor-noorullah/ "
+          "linkedin": "https://www.linkedin.com/in/mansoor-noorullah/ ",
+          "country_code": "+971"
         }
       ],
-      "country": "Sri Lanka 🇱🇰",
+      "country": "United Arab Emirates 🇦🇪",
       "created_at": "2026-10-14T04:53:22.585Z",
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
@@ -826,9 +1349,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Al Khaleej Sugar Co LLC",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "+971 4 2957777",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+971 4 2957777, +971 4 8817057",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 10:31: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:31",
+          "date": "23 Oct 2026, 10:00 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update",
@@ -863,11 +1395,11 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:56:15.843Z",
+      "updated_at": "2026-10-23T04:30:39.860Z",
       "value": 10350,
       "website": "https://alkhaleejsugar.ae/en/contact-us ",
       "whatsapp": "",
-      "agent_name": "Athish",
+      "agent_name": "Keerthana Ponni K",
       "industry_type": "Animal Feed & Poultry",
       "lead_stage": "Lead Generation",
       "social_links": [
@@ -884,17 +1416,18 @@
       "id": "lead_1791953749309_jacql6",
       "__v": 0,
       "address": "Kosgama, CMB 70130, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Pussalla Meat Producers (Pvt) Ltd",
       "contact_person": "Nishani Rupasinghe",
       "contacts": [
         {
           "name": "Nishani Rupasinghe",
-          "phone": "+94 36 2255 062",
+          "phone": "+94 36 2255 062, 0704 966 966",
           "extra_phones": [],
           "email": "info@pussalla.com",
           "designation": "Manager - Purchasing",
-          "linkedin": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ "
+          "linkedin": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -916,9 +1449,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Pussalla Meat Producers (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: I has communicated with the Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
-      "phone": "+94 36 2255 062",
+      "notes": "[Today's Notes]: I has communicated with the Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with the Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with the Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "phone": "+94 36 2255 062, 0704 966 966",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with the Manager",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with the Manager | Planned for 2026-10-16 at 12:00: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "12:00",
+          "date": "23 Oct 2026, 10:05 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with the Manager",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with the Manager | Planned for 2026-10-16 at 12:00: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "12:00",
+          "date": "23 Oct 2026, 10:03 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the Manager",
           "planned_action": "Tomorrow will update the status",
@@ -944,17 +1495,28 @@
       "today_remarks": "I has communicated with the Manager",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:55:49.310Z",
+      "updated_at": "2026-10-23T04:35:12.205Z",
       "value": 10350,
       "website": "https://pussalla.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 704966966",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0bfb0c69b3b6f16f3549",
       "id": "lead_1791953914968_d91ckl",
       "__v": 0,
       "address": "324/1C Ekamuthu Mawatha, Talangama North, Battaramulla, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Ronasco (Pvt) Ltd",
       "contact_person": "Keerthi Gunasekara",
       "contacts": [
@@ -964,7 +1526,8 @@
           "extra_phones": [],
           "email": "drkeerthig@gmail.com",
           "designation": "Chairman",
-          "linkedin": "https://www.linkedin.com/in/dr-keerthi-gunasekara-1741125b/ "
+          "linkedin": "https://www.linkedin.com/in/dr-keerthi-gunasekara-1741125b/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -986,9 +1549,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Ronasco (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
       "phone": "+94 11 278 8462",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 12:30: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "12:30",
+          "date": "23 Oct 2026, 09:56 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -1014,27 +1586,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T04:58:34.969Z",
+      "updated_at": "2026-10-23T04:26:08.469Z",
       "value": 10348,
       "website": "",
-      "whatsapp": ""
+      "whatsapp": "+94 773829157",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Requirement Understood",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/dr-keerthi-gunasekara-1741125b/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/dr-keerthi-gunasekara-1741125b/ ",
+      "status": "Requirement Understood"
     },
     {
       "_id": "6acf0c800c69b3b6f16f3705",
       "id": "lead_1791954048716_eth9kw",
       "__v": 0,
       "address": "Samagi Uyana, Pinnagolla Watta, Udubaddawa, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": " CM Vet Pvt Ltd",
-      "contact_person": "",
+      "contact_person": "Chetna Makkar",
       "contacts": [
         {
-          "name": "",
-          "phone": "037 228 6926",
+          "name": "Chetna Makkar",
+          "phone": "+94 037 228 6926, 714560100",
           "extra_phones": [],
           "email": "cmvetline@yahoo.com",
-          "designation": "",
-          "linkedin": ""
+          "designation": "Purchase Manager",
+          "linkedin": "https://www.linkedin.com/in/chetna-makkar-3955a2232/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1056,9 +1640,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": " CM Vet Pvt Ltd",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: I has communicated with  CM Vet\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "037 228 6926",
+      "notes": "[Today's Notes]: I has communicated with  CM Vet\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: I has communicated with  CM Vet\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+94 037 228 6926, 714560100",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with  CM Vet",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: I has communicated with  CM Vet | Planned for 2026-10-16 at 10:00: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:00",
+          "date": "23 Oct 2026, 09:50 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with  CM Vet",
           "planned_action": "Follow up tomorrow for product status update",
@@ -1084,27 +1677,39 @@
       "today_remarks": "I has communicated with  CM Vet",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:00:48.717Z",
+      "updated_at": "2026-10-23T04:20:40.224Z",
       "value": 10300,
       "website": "https://cmvetline.com/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 773885652",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0d280c69b3b6f16f3920",
       "id": "lead_1791954216514_0n1p23",
       "__v": 0,
       "address": "No.83, Biyagama Road, Peliyagoda, Kelaniya, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Noorani Estates Pvt Ltd",
       "contact_person": "Noordeen Moiez Sethwala",
       "contacts": [
         {
           "name": "Noordeen Moiez Sethwala",
-          "phone": "94112448417",
+          "phone": "+94 112448417, +94 11 2439682",
           "extra_phones": [],
-          "email": "nooni@nelfarm.com",
+          "email": "info@nelfarms.com",
           "designation": "Managing Director / CEO, Executive Procurement Head",
-          "linkedin": "https://www.linkedin.com/in/noordeen-sethwala-399834aa/ "
+          "linkedin": "https://www.linkedin.com/in/noordeen-sethwala-399834aa/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1112,7 +1717,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "nooni@nelfarm.com",
+      "email": "info@nelfarms.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1126,9 +1731,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Noorani Estates Pvt Ltd",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
-      "phone": "94112448417",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "phone": "+94 112448417, +94 11 2439682",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 13:00: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:00",
+          "date": "23 Oct 2026, 09:42 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow will update the status",
@@ -1154,27 +1768,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:03:36.515Z",
+      "updated_at": "2026-10-23T04:12:54.198Z",
       "value": 10350,
       "website": "https://nelfarms.com/ ",
-      "whatsapp": ""
+      "whatsapp": "",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/noordeen-sethwala-399834aa/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/noordeen-sethwala-399834aa/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0dce0c69b3b6f16f3b33",
       "id": "lead_1791954382542_qks2m9",
       "__v": 0,
       "address": "No.193, Ihala Mahawewa, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Weehena Farm Pvt Ltd",
       "contact_person": "Nilakshi Jayathilaka",
       "contacts": [
         {
           "name": "Nilakshi Jayathilaka",
-          "phone": "94322253988",
+          "phone": "+94 322253988, +94 032 225 4637​",
           "extra_phones": [],
           "email": "info@weehenafarms.com",
           "designation": "Manager - Supply Chain",
-          "linkedin": "https://www.linkedin.com/in/nilakshi-jayathilaka-a2b524141/ "
+          "linkedin": "https://www.linkedin.com/in/nilakshi-jayathilaka-a2b524141/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1196,9 +1822,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Weehena Farm Pvt Ltd",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: Today I has communicated with Manager\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "94322253988",
+      "notes": "[Today's Notes]: Today I has communicated with Manager\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: Today I has communicated with Manager\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 322253988, +94 032 225 4637​",
       "previous_remarks": [
+        {
+          "today_remark": "Today I has communicated with Manager",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: Today I has communicated with Manager | Planned for 2026-10-16 at 13:30: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:30",
+          "date": "23 Oct 2026, 09:36 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "Today I has communicated with Manager",
           "planned_action": "Tomorrow we will know the update",
@@ -1224,27 +1859,39 @@
       "today_remarks": "Today I has communicated with Manager",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:06:22.542Z",
+      "updated_at": "2026-10-23T04:06:45.599Z",
       "value": 10350,
       "website": "https://weehenafarms.com/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 764553535",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "h",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0e510c69b3b6f16f3cf1",
       "id": "lead_1791954513418_m3b749",
       "__v": 0,
       "address": "Off Aluthnuwara Road, Edanduwawe, Mawanella, 71500, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Super Feed Pvt Ltd",
-      "contact_person": "",
+      "contact_person": "Rone Gin Mugar",
       "contacts": [
         {
-          "name": "",
-          "phone": "94352240764",
+          "name": "Rone Gin Mugar",
+          "phone": "+94 35 2240764, 352248195,  +94 77 349 0100",
           "extra_phones": [],
-          "email": "superfeed@superfeed.lk",
-          "designation": "",
-          "linkedin": ""
+          "email": "sales@superfeed.lk",
+          "designation": "Business Director ",
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1252,7 +1899,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "superfeed@superfeed.lk",
+      "email": "sales@superfeed.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1266,9 +1913,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Super Feed Pvt Ltd",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "94352240764",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 35 2240764, 352248195,  +94 77 349 0100",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 13:15: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:15",
+          "date": "23 Oct 2026, 09:26 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -1294,27 +1950,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:08:33.419Z",
+      "updated_at": "2026-10-23T03:56:25.536Z",
       "value": 10300,
       "website": "https://superfeed.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 75 5691600",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf0f180c69b3b6f16f3f87",
       "id": "lead_1791954712504_77ykoa",
       "__v": 0,
       "address": "No.33f, Henpita, Hanwella, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Newro Meat Products Pvt Ltd",
       "contact_person": "Wasantha",
       "contacts": [
         {
           "name": "Wasantha",
-          "phone": "94112408954",
+          "phone": "+94 112408954, 0112 537 367",
           "extra_phones": [],
-          "email": "info@newro.lk",
+          "email": "gm@newro.lk",
           "designation": "General Manager - Plant & Supply Operations",
-          "linkedin": ""
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1322,7 +1990,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@newro.lk",
+      "email": "gm@newro.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1336,9 +2004,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Newro Meat Products Pvt Ltd",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "94112408954",
+      "notes": "[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+94 112408954, 0112 537 367",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with General Manager",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: I has communicated with General Manager | Planned for 2026-10-16 at 14:00: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:00",
+          "date": "22 Oct 2026, 07:21 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with General Manager",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: I has communicated with General Manager | Planned for 2026-10-16 at 14:00: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:00",
+          "date": "22 Oct 2026, 07:20 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with General Manager",
           "planned_action": "Follow up tomorrow for product status update",
@@ -1364,27 +2050,39 @@
       "today_remarks": "I has communicated with General Manager",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:11:52.504Z",
+      "updated_at": "2026-10-22T13:51:00.417Z",
       "value": 10350,
       "website": "https://www.newro.lk/meat_products/index.php ",
-      "whatsapp": ""
+      "whatsapp": "+94 76 637 3233",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf10340c69b3b6f16f42f5",
       "id": "lead_1791954996135_j2yhdw",
       "__v": 0,
       "address": "No.24, Maithree Mawatha, Industrial Estate, Ekala, Ja-Ela, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Protean Lanka (Pvt) Ltd",
       "contact_person": "Avantha Wijebandara",
       "contacts": [
         {
           "name": "Avantha Wijebandara",
-          "phone": "94773527837",
+          "phone": "+94 114379670",
           "extra_phones": [],
           "email": "info@protean.com.lk",
           "designation": "Managing Director  ",
-          "linkedin": "https://www.linkedin.com/in/avantha-wijebandara-39767a218/ "
+          "linkedin": "https://www.linkedin.com/in/avantha-wijebandara-39767a218/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1406,9 +2104,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Protean Lanka (Pvt) Ltd",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "94773527837",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+94 114379670",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 13:45: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:45",
+          "date": "22 Oct 2026, 07:13 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 13:45: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:45",
+          "date": "22 Oct 2026, 07:12 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update",
@@ -1434,17 +2150,28 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:16:36.136Z",
+      "updated_at": "2026-10-22T13:43:13.839Z",
       "value": 10350,
       "website": "https://www.protean.com.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "94773527837",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/avantha-wijebandara-39767a218/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/avantha-wijebandara-39767a218/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf10be0c69b3b6f16f44c7",
       "id": "lead_1791955134592_uhc8h0",
       "__v": 0,
       "address": "No.120, Dharshana Mawatha, Liyanagemulla, Seeduwa, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": " CFL Agro Lanka (Pvt) Ltd",
       "contact_person": "Ajith Rajapakse",
       "contacts": [
@@ -1452,9 +2179,10 @@
           "name": "Ajith Rajapakse",
           "phone": "94312237669",
           "extra_phones": [],
-          "email": "info@cflagrolanka.lk",
+          "email": "cfl@cflagrolanka.lk",
           "designation": "General Manager/ Consultant ",
-          "linkedin": "https://www.linkedin.com/in/ajith-rajapakse-msc-lscm-uk-78036613a/ "
+          "linkedin": "https://www.linkedin.com/in/ajith-rajapakse-msc-lscm-uk-78036613a/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1462,7 +2190,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@cflagrolanka.lk",
+      "email": "cfl@cflagrolanka.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1476,9 +2204,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": " CFL Agro Lanka (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]:  has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "notes": "[Today's Notes]:  has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]:  has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
       "phone": "94312237669",
       "previous_remarks": [
+        {
+          "today_remark": " has communicated with the person",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction:  has communicated with the person | Planned for 2026-10-16 at 10:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:45",
+          "date": "22 Oct 2026, 07:08 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": " has communicated with the person",
           "planned_action": "Tomorrow will update the status",
@@ -1504,27 +2241,39 @@
       "today_remarks": " has communicated with the person",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:18:54.592Z",
+      "updated_at": "2026-10-22T13:38:50.878Z",
       "value": 10350,
       "website": "https://cflagrolanka.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 76135 6664",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/ajith-rajapakse-msc-lscm-uk-78036613a/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/ajith-rajapakse-msc-lscm-uk-78036613a/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf11360c69b3b6f16f4667",
       "id": "lead_1791955254770_33c8cs",
       "__v": 0,
-      "address": "140/5, Grandpass Road, Colombo 00140 ,Sri lanka\n",
-      "assigned_to": "usr_athish",
+      "address": "140/5, Grandpass Road, Colombo 00140, Sri lanka\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Adamjee Lukmanjee & Sons (Pvt) Limited",
       "contact_person": "Nimal Priyashantha",
       "contacts": [
         {
           "name": "Nimal Priyashantha",
-          "phone": "94 11 244 54 21",
+          "phone": "+94 11 244 54 21, +94 11 244 54 22",
           "extra_phones": [],
           "email": "adamjee@adamjeelukmanjee.com",
           "designation": "Procurement Executive",
-          "linkedin": "https://www.linkedin.com/in/nimal-priyashantha-87133a100/ "
+          "linkedin": "https://www.linkedin.com/in/nimal-priyashantha-87133a100/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1546,9 +2295,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Adamjee Lukmanjee & Sons (Pvt) Limited",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "94 11 244 54 21",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 11 244 54 21, +94 11 244 54 22",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 11:45: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "11:45",
+          "date": "22 Oct 2026, 07:02 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 11:45: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "11:45",
+          "date": "22 Oct 2026, 06:57 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -1574,27 +2341,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:20:54.770Z",
+      "updated_at": "2026-10-22T13:32:39.449Z",
       "value": 10298,
       "website": "https://adamjeelukmanjee.com/ ",
-      "whatsapp": ""
+      "whatsapp": "",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/nimal-priyashantha-87133a100/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/nimal-priyashantha-87133a100/ ",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf11ba0c69b3b6f16f4821",
       "id": "lead_1791955386393_9vs3hn",
       "__v": 0,
       "address": " 6, Arthurt' s Place, Angulana Station Road, Angulana, Moratuwa 10400, Sri Lanka\n",
-      "assigned_to": "usr_athish",
-      "company_name": "BIONUTRI INTERNATIONAL (PVT) LTD",
+      "assigned_to": "usr_1791814468302_hoa08z",
+      "company_name": "BioNutri International (Pvt) Ltd",
       "contact_person": "Nishantha Arsecularatna",
       "contacts": [
         {
           "name": "Nishantha Arsecularatna",
-          "phone": "+94 112 611 481",
+          "phone": "+94 112 611 481, +94112 611 482",
           "extra_phones": [],
-          "email": "info@bionutri.lk",
+          "email": "sales@bionutri.lk",
           "designation": "Founder / Managing Director",
-          "linkedin": "https://www.linkedin.com/in/nishantha-arsecularatna-23557b2b2/"
+          "linkedin": "https://www.linkedin.com/in/nishantha-arsecularatna-23557b2b2/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1602,7 +2381,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@bionutri.lk",
+      "email": "sales@bionutri.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1614,11 +2393,29 @@
       "follow_up_date": "2026-10-16",
       "follow_up_time": "12:45",
       "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "BIONUTRI INTERNATIONAL (PVT) LTD",
+      "name": "BioNutri International (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
-      "phone": "+94 112 611 481",
+      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "phone": "+94 112 611 481, +94112 611 482",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 12:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "12:45",
+          "date": "22 Oct 2026, 06:55 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 12:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "12:45",
+          "date": "22 Oct 2026, 06:53 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the person",
           "planned_action": "Tomorrow will update the status",
@@ -1644,17 +2441,28 @@
       "today_remarks": "I has communicated with the person",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:23:06.393Z",
+      "updated_at": "2026-10-22T13:25:35.747Z",
       "value": 10350,
       "website": "https://www.bionutri.lk/",
-      "whatsapp": ""
+      "whatsapp": "+94 717767892",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/nishantha-arsecularatna-23557b2b2/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/nishantha-arsecularatna-23557b2b2/",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf156f0c69b3b6f16f5468",
       "id": "lead_1791956335836_c33esw",
       "__v": 0,
       "address": " 28 Dr Lester James Peries Mawatha, Colombo 00400, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "PYRAMID WILMAR (PVT) LTD",
       "contact_person": "Sudesh Gomes",
       "contacts": [
@@ -1662,9 +2470,10 @@
           "name": "Sudesh Gomes",
           "phone": "+94 114 542 910",
           "extra_phones": [],
-          "email": "pwpl@pyramidwilmar.com",
+          "email": "sudeshgomes2003@gmail.com",
           "designation": "Supply Chain / Purchase Manager",
-          "linkedin": "https://www.linkedin.com/in/sudesh-gomes-48637411b/"
+          "linkedin": "https://www.linkedin.com/in/sudesh-gomes-48637411b/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1672,7 +2481,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "pwpl@pyramidwilmar.com",
+      "email": "sudeshgomes2003@gmail.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1686,9 +2495,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "PYRAMID WILMAR (PVT) LTD",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
       "phone": "+94 114 542 910",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 14:45: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 06:28 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 14:45: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 06:24 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -1714,97 +2541,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:38:55.836Z",
+      "updated_at": "2026-10-22T12:58:27.965Z",
       "value": 10350,
       "website": "https://pyramidwilmar.com/",
-      "whatsapp": ""
-    },
-    {
-      "_id": "6acf16a60c69b3b6f16f5869",
-      "id": "lead_1791956646755_7ag35v",
-      "__v": 0,
-      "address": "#78, Industrial Zone, Katuwana, Homagama\n",
-      "assigned_to": "usr_athish",
-      "company_name": "FARMCHEMIE MANUFACTURERS PVT LTD",
-      "contact_person": "Michael Wilson",
-      "contacts": [
+      "whatsapp": "+94 777235599",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
         {
-          "name": "Michael Wilson",
-          "phone": "+94 (0) 11 289 3922",
-          "extra_phones": [],
-          "email": "info@farmchemie.com",
-          "designation": "Head of Procurement",
-          "linkedin": "https://www.linkedin.com/in/sudesh-gomes-48637411b/"
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/company/pyramid-wilmar-pvt-ltd/home/"
         }
       ],
-      "country": "Sri Lanka 🇱🇰",
-      "created_at": "2026-10-14T05:44:06.756Z",
-      "created_by_id": "usr_1791814468302_hoa08z",
-      "created_by_name": "Keerthana Ponni K",
-      "credit_rating": "AA",
-      "email": "info@farmchemie.com",
-      "export_requirements": {
-        "industry_type": "Animal Feed & Poultry",
-        "incoterm": "CFR",
-        "port_delivery": "Colombo",
-        "payment_days": "DP (Documents against Payment)",
-        "product_notes": "",
-        "quantity_unit": "MT"
-      },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "15:00",
-      "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "FARMCHEMIE MANUFACTURERS PVT LTD",
-      "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: I has communicated with the Head\n\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "+94 (0) 11 289 3922",
-      "previous_remarks": [
-        {
-          "today_remark": "I has communicated with the Head\n",
-          "planned_action": "Tomorrow we will know the update",
-          "remark": "Interaction: I has communicated with the Head\n | Planned for 2026-10-16 at 15:00: Tomorrow we will know the update",
-          "follow_up_date": "2026-10-16",
-          "follow_up_time": "15:00",
-          "date": "14 Oct 2026, 11:14 am",
-          "author": "Keerthana Ponni K"
-        }
-      ],
-      "price": 10350,
-      "priority": "Medium",
-      "product": "Rice DDGS",
-      "products": [
-        "Rice DDGS"
-      ],
-      "quantity": 28,
-      "quantity_unit": "MT",
-      "source": "Direct Inquiry",
-      "sourcing_region": "",
-      "stage": "Lead Generation",
-      "tags": [],
-      "today_remarks": "I has communicated with the Head\n",
-      "turnover": "",
-      "type": "International",
-      "updated_at": "2026-10-14T05:44:06.756Z",
-      "value": 10350,
-      "website": "https://farmchemie.com/",
-      "whatsapp": ""
+      "social_media": "https://www.linkedin.com/company/pyramid-wilmar-pvt-ltd/home/",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf176f0c69b3b6f16f5b06",
       "id": "lead_1791956847218_i4zwiz",
       "__v": 0,
-      "address": "#78, Industrial Zone, Katuwana, Homagama\n",
-      "assigned_to": "usr_athish",
-      "company_name": "FARMCHEMIE MANUFACTURERS PVT LTD",
-      "contact_person": "Michael Wilson",
+      "address": "#110, Industrial Zone, Katuwana, Homagama, Sri Lanka\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
+      "company_name": "Farmchemie Manufacturers (Private) Limited",
+      "contact_person": "Sajani Warusavitharana",
       "contacts": [
         {
-          "name": "Michael Wilson",
+          "name": "Sajani Warusavitharana",
           "phone": "+94 (0) 11 289 3922",
           "extra_phones": [],
-          "email": "info@farmchemie.com",
-          "designation": "Head of Procurement",
-          "linkedin": ""
+          "email": "sales.export@farmchemie.com",
+          "designation": "Group Assistant General Manager (AGM) – Imports & Supply Chain",
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1812,7 +2581,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@farmchemie.com",
+      "email": "sales.export@farmchemie.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -1824,11 +2593,29 @@
       "follow_up_date": "2026-10-16",
       "follow_up_time": "15:15",
       "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "FARMCHEMIE MANUFACTURERS PVT LTD",
+      "name": "Farmchemie Manufacturers (Private) Limited",
       "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
       "phone": "+94 (0) 11 289 3922",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 15:15: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "15:15",
+          "date": "22 Oct 2026, 04:43 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 15:15: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "15:15",
+          "date": "22 Oct 2026, 04:36 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update",
@@ -1854,27 +2641,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:47:27.219Z",
+      "updated_at": "2026-10-22T11:13:16.759Z",
       "value": 10350,
       "website": "https://farmchemie.com/",
-      "whatsapp": ""
+      "whatsapp": "+94 77 383 3765",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf17ec0c69b3b6f16f5cac",
       "id": "lead_1791956971999_ot257f",
       "__v": 0,
       "address": "Attapitiya, Ussapitiya, Sri Lanka\n",
-      "assigned_to": "usr_athish",
-      "company_name": "WIJITHA FOOD HOUSE (PVT) LTD",
+      "assigned_to": "usr_1791814468302_hoa08z",
+      "company_name": "Wijitha Food House (Pvt) Ltd",
       "contact_person": "",
       "contacts": [
         {
           "name": "",
-          "phone": "+94 35 224 8338",
+          "phone": "+94 35 224 8338, +94 352 246 174,",
           "extra_phones": [],
           "email": "info@wijithagroup.com",
           "designation": "",
-          "linkedin": ""
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1894,11 +2693,29 @@
       "follow_up_date": "2026-10-16",
       "follow_up_time": "11:15",
       "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "WIJITHA FOOD HOUSE (PVT) LTD",
+      "name": "Wijitha Food House (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "+94 35 224 8338",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 35 224 8338, +94 352 246 174,",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 11:15: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "11:15",
+          "date": "22 Oct 2026, 06:45 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 11:15: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "11:15",
+          "date": "22 Oct 2026, 06:18 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -1924,27 +2741,39 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:49:32.000Z",
+      "updated_at": "2026-10-22T13:15:17.460Z",
       "value": 10350,
       "website": "https://www.wijithagroup.com/about.php ",
-      "whatsapp": ""
+      "whatsapp": "+94 766 916 079",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf188f0c69b3b6f16f5ea4",
       "id": "lead_1791957135442_jovz7f",
       "__v": 0,
       "address": "212/53, 2/10, Gas Work Street, Bodhiraja Mawatha, Colombo-11, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Wasanaa Commodities (Pvt) Ltd",
       "contact_person": "",
       "contacts": [
         {
           "name": "",
-          "phone": "",
+          "phone": "+94 11 243 1466, +94 11 234 8122",
           "extra_phones": [],
           "email": "",
           "designation": "",
-          "linkedin": ""
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -1966,9 +2795,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Wasanaa Commodities (Pvt) Ltd",
       "next_follow_up_action": "Tomorrow will check again",
-      "notes": "[Today's Notes]: Cannot able to connect with the team\n[Planned Action on 2026-10-16]: Tomorrow will check again",
-      "phone": "",
+      "notes": "[Today's Notes]: Cannot able to connect with the team\n[Planned Action on 2026-10-16]: Tomorrow will check again\n[Today's Notes]: Cannot able to connect with the team\n[Planned Action on 2026-10-16]: Tomorrow will check again",
+      "phone": "+94 11 243 1466, +94 11 234 8122",
       "previous_remarks": [
+        {
+          "today_remark": "Cannot able to connect with the team",
+          "planned_action": "Tomorrow will check again",
+          "remark": "Interaction: Cannot able to connect with the team | Planned for 2026-10-16 at 10:00: Tomorrow will check again",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "10:00",
+          "date": "22 Oct 2026, 06:10 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "Cannot able to connect with the team",
           "planned_action": "Tomorrow will check again",
@@ -1994,27 +2832,39 @@
       "today_remarks": "Cannot able to connect with the team",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:52:15.443Z",
+      "updated_at": "2026-10-22T12:40:55.833Z",
       "value": 10350,
       "website": "",
-      "whatsapp": ""
+      "whatsapp": "",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf19430c69b3b6f16f60e5",
       "id": "lead_1791957315121_67hcs7",
       "__v": 0,
       "address": "Stassen House, No. 833, Sirimavo Bandaranaike Mawatha, Colombo 14, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "STASSEN FOODS (PVT) LIMITED",
       "contact_person": "Shaminda de Silva",
       "contacts": [
         {
           "name": "Shaminda de Silva",
-          "phone": "+94 117 104 105",
+          "phone": "+94 117 104 105, +94 11 522 4200",
           "extra_phones": [],
           "email": "sales@stassenfoods.com",
           "designation": "Manager - Procurement",
-          "linkedin": "https://www.linkedin.com/in/shaminda-de-silva-85a806174/"
+          "linkedin": "https://www.linkedin.com/in/shaminda-de-silva-85a806174/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2036,9 +2886,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "STASSEN FOODS (PVT) LIMITED",
       "next_follow_up_action": "Tomorrow will update the status\n",
-      "notes": "[Today's Notes]: I has communicated with the Manager\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
-      "phone": "+94 117 104 105",
+      "notes": "[Today's Notes]: I has communicated with the Manager\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n\n[Today's Notes]: I has communicated with the Manager\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n\n[Today's Notes]: I has communicated with the Manager\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
+      "phone": "+94 117 104 105, +94 11 522 4200",
       "previous_remarks": [
+        {
+          "today_remark": "I has communicated with the Manager\n",
+          "planned_action": "Tomorrow will update the status\n",
+          "remark": "Interaction: I has communicated with the Manager\n | Planned for 2026-10-16 at 13:45: Tomorrow will update the status\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:45",
+          "date": "22 Oct 2026, 05:48 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with the Manager\n",
+          "planned_action": "Tomorrow will update the status\n",
+          "remark": "Interaction: I has communicated with the Manager\n | Planned for 2026-10-16 at 13:45: Tomorrow will update the status\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "13:45",
+          "date": "22 Oct 2026, 05:47 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the Manager\n",
           "planned_action": "Tomorrow will update the status\n",
@@ -2064,27 +2932,39 @@
       "today_remarks": "I has communicated with the Manager\n",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:55:15.122Z",
+      "updated_at": "2026-10-22T12:18:48.314Z",
       "value": 10350,
       "website": "https://www.stassenfoods.com/?srsltid=AU7gw4WiLBqtgd2Ulu7G1NEPdBHpavOxgrimSTagKPf1OPZozll0SGKd",
-      "whatsapp": ""
+      "whatsapp": "+94 117 104 105, +94 11 522 4200",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/shaminda-de-silva-85a806174/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/shaminda-de-silva-85a806174/",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf19ee0c69b3b6f16f6310",
       "id": "lead_1791957486678_snk979",
       "__v": 0,
       "address": "Nattandiya Road, Horagolla North, Marawila. Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Jaya Farm",
-      "contact_person": "Chamara Nishshanka",
+      "contact_person": "Manohari Gamage ",
       "contacts": [
         {
-          "name": "Chamara Nishshanka",
-          "phone": "(+94) 32 225 4811",
+          "name": "Manohari Gamage ",
+          "phone": "+94 322254811, 324980314",
           "extra_phones": [],
-          "email": "exports@jayafarm",
-          "designation": "General Manager - Operations & Poultry Supply Chain",
-          "linkedin": "https://www.linkedin.com/in/chamara-nishshanka-180524108/"
+          "email": "exports@jayafarm.lk",
+          "designation": "Export Marketing Head",
+          "linkedin": "https://www.linkedin.com/in/manohari-gamage-446904248/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2092,7 +2972,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "exports@jayafarm",
+      "email": "exports@jayafarm.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -2106,9 +2986,27 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Jaya Farm",
       "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "(+94) 32 225 4811",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 322254811, 324980314",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 14:46: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:46",
+          "date": "22 Oct 2026, 05:41 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 14:46: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "14:46",
+          "date": "22 Oct 2026, 05:36 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -2134,17 +3032,28 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T05:58:06.679Z",
+      "updated_at": "2026-10-22T12:11:03.019Z",
       "value": 10350,
       "website": "https://www.jayafarm.lk/home ",
-      "whatsapp": ""
+      "whatsapp": "+94 77 087 3715",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/manohari-gamage-446904248/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/manohari-gamage-446904248/",
+      "status": "Lead Generation"
     },
     {
       "_id": "6acf1a7e0c69b3b6f16f64d6",
       "id": "lead_1791957630220_mxpcqu",
       "__v": 0,
       "address": "No. 25, Foster Lane, Colombo 10, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "HAYLEYS AGRICULTURE HOLDINGS LTD",
       "contact_person": "Uditha Palliyaguru",
       "contacts": [
@@ -2152,7 +3061,7 @@
           "name": "Uditha Palliyaguru",
           "phone": "94 112688 960",
           "extra_phones": [],
-          "email": "info@agro.hayleys.com",
+          "email": "u.palliyaguru@hayleysagriculture.com",
           "designation": "General Manager / Head of Supply Chain",
           "linkedin": "https://www.linkedin.com/in/uditha-palliyaguru-78a276254/",
           "country_code": "+94"
@@ -2163,7 +3072,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@agro.hayleys.com",
+      "email": "u.palliyaguru@hayleysagriculture.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -2177,9 +3086,18 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "HAYLEYS AGRICULTURE HOLDINGS LTD",
       "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
       "phone": "94 112688 960",
       "previous_remarks": [
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 15:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "15:45",
+          "date": "22 Oct 2026, 05:33 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow will update the status",
@@ -2223,11 +3141,11 @@
       "today_remarks": "As Discussed regarding the product",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T18:18:07.753Z",
+      "updated_at": "2026-10-22T12:03:13.575Z",
       "value": 10350,
       "website": "https://www.hayleysagriculture.com/",
       "whatsapp": "94 112688 960",
-      "agent_name": "usr_athish",
+      "agent_name": "Keerthana Ponni K",
       "industry_type": "Animal Feed & Poultry",
       "lead_stage": "Lead Generation",
       "social_links": [
@@ -2240,161 +3158,22 @@
       "status": "Lead Generation"
     },
     {
-      "_id": "6acf1b0c0c69b3b6f16f669b",
-      "id": "lead_1791957772756_qkeu4z",
-      "__v": 0,
-      "address": "7/1B, Pathalawatta Road, Nedimala, Dehiwala, Sri Lanka.\n",
-      "assigned_to": "usr_athish",
-      "company_name": "CLINIVEX PVT LTD",
-      "contact_person": "Anandakrishnan Allagamuthu",
-      "contacts": [
-        {
-          "name": "Anandakrishnan Allagamuthu",
-          "phone": "+94 112 713 002",
-          "extra_phones": [],
-          "email": "service@theclinivex.com",
-          "designation": "Managing Director",
-          "linkedin": "https://www.linkedin.com/in/anandakrishnan-allagamuthu-48a28079/"
-        }
-      ],
-      "country": "Sri Lanka 🇱🇰",
-      "created_at": "2026-10-14T06:02:52.757Z",
-      "created_by_id": "usr_1791814468302_hoa08z",
-      "created_by_name": "Keerthana Ponni K",
-      "credit_rating": "AA",
-      "email": "service@theclinivex.com",
-      "export_requirements": {
-        "industry_type": "Animal Feed & Poultry",
-        "incoterm": "CFR",
-        "port_delivery": "Colombo",
-        "payment_days": "DP (Documents against Payment)",
-        "product_notes": "",
-        "quantity_unit": "MT"
-      },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "16:00",
-      "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "CLINIVEX PVT LTD",
-      "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "+94 112 713 002",
-      "previous_remarks": [
-        {
-          "today_remark": "I has communicated with the person",
-          "planned_action": "Follow up tomorrow for product status update",
-          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 16:00: Follow up tomorrow for product status update",
-          "follow_up_date": "2026-10-16",
-          "follow_up_time": "16:00",
-          "date": "14 Oct 2026, 11:32 am",
-          "author": "Keerthana Ponni K"
-        }
-      ],
-      "price": 10350,
-      "priority": "Medium",
-      "product": "Rice DDGS",
-      "products": [
-        "Rice DDGS"
-      ],
-      "quantity": 28,
-      "quantity_unit": "MT",
-      "source": "Direct Inquiry",
-      "sourcing_region": "",
-      "stage": "Lead Generation",
-      "tags": [],
-      "today_remarks": "I has communicated with the person",
-      "turnover": "",
-      "type": "International",
-      "updated_at": "2026-10-14T06:02:52.757Z",
-      "value": 10350,
-      "website": "",
-      "whatsapp": ""
-    },
-    {
-      "_id": "6acf1b8a0c69b3b6f16f682d",
-      "id": "lead_1791957898081_a5e93r",
-      "__v": 0,
-      "address": "295, Vincent Perera Mawatha, Colombo 01400, Sri Lanka\n",
-      "assigned_to": "usr_athish",
-      "company_name": "AgroPrime",
-      "contact_person": "Nazmi Najimudeen",
-      "contacts": [
-        {
-          "name": "Nazmi Najimudeen",
-          "phone": "",
-          "extra_phones": [],
-          "email": "info@agroprime.lk",
-          "designation": "Director and Procurement Decision Maker",
-          "linkedin": ""
-        }
-      ],
-      "country": "Sri Lanka 🇱🇰",
-      "created_at": "2026-10-14T06:04:58.082Z",
-      "created_by_id": "usr_1791814468302_hoa08z",
-      "created_by_name": "Keerthana Ponni K",
-      "credit_rating": "AA",
-      "email": "info@agroprime.lk",
-      "export_requirements": {
-        "industry_type": "Animal Feed & Poultry",
-        "incoterm": "CFR",
-        "port_delivery": "Colombo",
-        "payment_days": "DP (Documents against Payment)",
-        "product_notes": "",
-        "quantity_unit": "MT"
-      },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "16:15",
-      "legacy_industry_type": "Animal Feed & Poultry",
-      "name": "AgroPrime",
-      "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "",
-      "previous_remarks": [
-        {
-          "today_remark": "As Discussed regarding the product",
-          "planned_action": "Tomorrow we will know the update",
-          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 16:15: Tomorrow we will know the update",
-          "follow_up_date": "2026-10-16",
-          "follow_up_time": "16:15",
-          "date": "14 Oct 2026, 11:34 am",
-          "author": "Keerthana Ponni K"
-        }
-      ],
-      "price": 10350,
-      "priority": "Medium",
-      "product": "Rice DDGS",
-      "products": [
-        "Rice DDGS"
-      ],
-      "quantity": 28,
-      "quantity_unit": "MT",
-      "source": "Direct Inquiry",
-      "sourcing_region": "",
-      "stage": "Lead Generation",
-      "tags": [],
-      "today_remarks": "As Discussed regarding the product",
-      "turnover": "",
-      "type": "International",
-      "updated_at": "2026-10-14T06:04:58.082Z",
-      "value": 10350,
-      "website": "",
-      "whatsapp": ""
-    },
-    {
       "_id": "6acf1c0b0c69b3b6f16f69d9",
       "id": "lead_1791958027840_0grzrg",
       "__v": 0,
       "address": "255/A, Kurunduwatta Road, Ekala, Ja-Ela, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "New Hope Lanka Ltd",
       "contact_person": "Chathura Prakash",
       "contacts": [
         {
           "name": "Chathura Prakash",
-          "phone": "011 222 9696",
+          "phone": "+94 11 222 9696, 76 542 8580, 11 222 6464",
           "extra_phones": [],
           "email": "newhopelankasales1@gmail.com",
           "designation": "Purchasing Executive",
-          "linkedin": "https://www.linkedin.com/in/chathura-prakash-6b13ba218/ "
+          "linkedin": "https://www.linkedin.com/in/chathura-prakash-6b13ba218/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2412,13 +3191,51 @@
         "quantity_unit": "MT"
       },
       "follow_up_date": "2026-10-16",
-      "follow_up_time": "16:30",
+      "follow_up_time": "12:45",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "New Hope Lanka Ltd",
-      "next_follow_up_action": "Follow up tomorrow for product status update",
-      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
-      "phone": "011 222 9696",
+      "next_follow_up_action": "Again will call tomorrow",
+      "notes": "[Today's Notes]: The call is not going through. I can only hear a beeping sounds.\n[Planned Action on 2026-10-16]: Again will call tomorrow\n[Today's Notes]: The call is not going through. I can only hear a beeping sound.\n[Planned Action on 2026-10-16]: Again will call tomorrow\n[Today's Interaction - 26 Oct 2026, 05:26 pm]: The call is not going through. I can only hear a beeping sound.\n\n[Planned Action on 2026-10-16 at 12:45]: Again will call tomorrow\n\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update",
+      "phone": "+94 11 222 9696, 76 542 8580, 11 222 6464",
       "previous_remarks": [
+        {
+          "today_remark": "The call is not going through. I can only hear a beeping sounds.",
+          "planned_action": "",
+          "remark": "Interaction: The call is not going through. I can only hear a beeping sounds.",
+          "follow_up_date": "2026-10-16",
+          "previous_follow_up_date": null,
+          "date": "2026-10-26T12:12:17.323Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "The call is not going through. I can only hear a beeping sound.",
+          "planned_action": "Again will call tomorrow",
+          "remark": "Interaction: The call is not going through. I can only hear a beeping sound. | Planned for 2026-10-16: Again will call tomorrow",
+          "follow_up_date": "2026-10-16",
+          "previous_follow_up_date": null,
+          "date": "2026-10-26T11:56:55.265Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 16:30: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "16:30",
+          "date": "22 Oct 2026, 04:25 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Follow up tomorrow for product status update",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 16:30: Follow up tomorrow for product status update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "16:30",
+          "date": "22 Oct 2026, 04:23 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the person",
           "planned_action": "Follow up tomorrow for product status update",
@@ -2441,30 +3258,44 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "I has communicated with the person",
+      "today_remarks": "The call is not going through. I can only hear a beeping sounds.",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:07:07.841Z",
+      "updated_at": "2026-10-26T12:12:17.324Z",
       "value": 10350,
       "website": "http://www.newhopegroup.com/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 77 854 4102",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/chathura-prakash-6b13ba218/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/chathura-prakash-6b13ba218/ ",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T12:12:17.323Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf1c990c69b3b6f16f6baa",
       "id": "lead_1791958169428_p1blme",
       "__v": 0,
-      "address": "#252, Kurunduwatte Road, Ekala, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "address": "#252, Kurunduwatte Road, kala Ja-ela, Udammita Road, Sri Lanka\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "CIC Feeds (Pvt) Ltd",
-      "contact_person": "Sampath Ranathunga",
+      "contact_person": "Kelum Hettiarachchi ",
       "contacts": [
         {
-          "name": "Sampath Ranathunga",
+          "name": "Kelum Hettiarachchi ",
           "phone": "+94 115 389 800",
           "extra_phones": [],
           "email": "info@cic.lk",
-          "designation": "General Manager of Supply Chain & Procurement",
-          "linkedin": "https://www.linkedin.com/in/sampath-ranathunga-173b6575/ "
+          "designation": "General Manager (Operations) / DGM (Operations)",
+          "linkedin": "https://www.linkedin.com/in/kelum-hettiarachchi-9197885a/",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2481,14 +3312,42 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "16:45",
+      "follow_up_date": "2026-10-27",
+      "follow_up_time": "12:15",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "CIC Feeds (Pvt) Ltd",
-      "next_follow_up_action": "Tomorrow will update the status",
-      "notes": "[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
+      "next_follow_up_action": "Plan to call on tomorrow morning",
+      "notes": "[Today's Notes]: Call is not reaching the person\n[Planned Action on 2026-10-27]: Plan to call on tomorrow morning\n[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n[Today's Notes]: I has communicated with General Manager\n[Planned Action on 2026-10-16]: Tomorrow will update the status",
       "phone": "+94 115 389 800",
       "previous_remarks": [
+        {
+          "today_remark": "Call is not reaching the person",
+          "planned_action": "Plan to call on tomorrow morning",
+          "remark": "Interaction: Call is not reaching the person | Planned for 2026-10-27: Plan to call on tomorrow morning",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:43:25.967Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "I has communicated with General Manager",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with General Manager | Planned for 2026-10-16 at 16:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "16:45",
+          "date": "22 Oct 2026, 04:14 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "I has communicated with General Manager",
+          "planned_action": "Tomorrow will update the status",
+          "remark": "Interaction: I has communicated with General Manager | Planned for 2026-10-16 at 16:45: Tomorrow will update the status",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "16:45",
+          "date": "22 Oct 2026, 04:12 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with General Manager",
           "planned_action": "Tomorrow will update the status",
@@ -2511,30 +3370,44 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "I has communicated with General Manager",
+      "today_remarks": "Call is not reaching the person",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:09:29.428Z",
+      "updated_at": "2026-10-26T11:43:25.968Z",
       "value": 10350,
       "website": "https://www.cic.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 115 389 800",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/kelum-hettiarachchi-9197885a/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/kelum-hettiarachchi-9197885a/",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T11:43:25.967Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf1f190c69b3b6f16f7533",
       "id": "lead_1791958809597_eotd2q",
       "__v": 0,
-      "address": "15 Rock House Ln, Colombo, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "address": "15 Rock House Lane, Colombo, Sri Lanka\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Ceylon Grain Elevators PLC (CGE)",
       "contact_person": "Amanda Niwarthana",
       "contacts": [
         {
           "name": "Amanda Niwarthana",
-          "phone": "+94 112 497 000",
+          "phone": "+94 112 497 000, +94112522556",
           "extra_phones": [],
-          "email": "info.cge@prima.com.lk",
+          "email": "cge-sales@prima.com.lk",
           "designation": "Senior Executive – Purchasing",
-          "linkedin": "https://www.linkedin.com/in/amanda-niwarthana-681252334/ "
+          "linkedin": "https://www.linkedin.com/in/amanda-niwarthana-681252334/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2542,7 +3415,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info.cge@prima.com.lk",
+      "email": "cge-sales@prima.com.lk",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -2551,14 +3424,51 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "17:00",
+      "follow_up_date": "2026-10-27",
+      "follow_up_time": "11:30",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Ceylon Grain Elevators PLC (CGE)",
-      "next_follow_up_action": "Tomorrow we will know the update",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
-      "phone": "+94 112 497 000",
+      "next_follow_up_action": "Tomorrow will continue to call ",
+      "notes": "[Today's Notes]: Call is ringing but not responds\n[Planned Action on 2026-10-27]: Tomorrow will continue to call \n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "phone": "+94 112 497 000, +94112522556",
       "previous_remarks": [
+        {
+          "today_remark": "Call is ringing but not responds",
+          "planned_action": "Tomorrow will continue to call ",
+          "remark": "Interaction: Call is ringing but not responds | Planned for 2026-10-27: Tomorrow will continue to call ",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:41:26.706Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:00: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:00",
+          "date": "22 Oct 2026, 03:51 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:00: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:00",
+          "date": "22 Oct 2026, 03:49 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Tomorrow we will know the update",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:00: Tomorrow we will know the update",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:00",
+          "date": "22 Oct 2026, 03:47 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Tomorrow we will know the update",
@@ -2581,30 +3491,44 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "As Discussed regarding the product",
+      "today_remarks": "Call is ringing but not responds",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:20:09.598Z",
+      "updated_at": "2026-10-26T11:41:26.707Z",
       "value": 10350,
       "website": "https://prima.com.lk/businesses/ceylon-grain-elevators/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 77 513 5228",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/amanda-niwarthana-681252334/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/amanda-niwarthana-681252334/ ",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T11:41:26.706Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf1fde0c69b3b6f16f77a2",
       "id": "lead_1791959005906_ce2i7n",
       "__v": 0,
-      "address": "530 A lake way terrace Lake way road Wikramasinghe Pura Thalawathugoda\n",
-      "assigned_to": "usr_athish",
+      "address": "530 A Lake Way Terrace, Lake Way Road, Wikramasinghe Pura, Thalawathugoda, Sri Lanka",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Rayshell Agro",
       "contact_person": "Thushara Chaminda Lokukumara",
       "contacts": [
         {
           "name": "Thushara Chaminda Lokukumara",
-          "phone": "98 (77) - 800 0426",
+          "phone": "+94 (77) - 800 0426",
           "extra_phones": [],
           "email": "info@rayshellagro.com",
           "designation": "CEO",
-          "linkedin": ""
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2621,14 +3545,43 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "17:15",
+      "follow_up_date": "2026-10-27",
+      "follow_up_time": "11:15",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Rayshell Agro",
-      "next_follow_up_action": "Follow up tomorrow for product status update\n",
-      "notes": "[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
-      "phone": "98 (77) - 800 0426",
+      "next_follow_up_action": "Tomorrow will call again\n",
+      "notes": "[Today's Notes]: Mobile number is engaged \n[Planned Action on 2026-10-27]: Tomorrow will call again\n\n[Today's Notes]: Mobile number is engaged \n[Planned Action on 2026-10-16]: Tomorrow will call again\n\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: I has communicated with the person\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
+      "phone": "+94 (77) - 800 0426",
       "previous_remarks": [
+        {
+          "today_remark": "",
+          "planned_action": "",
+          "remark": "Follow-up moved from 2026-10-16 to 2026-10-27",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:39:09.247Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "Mobile number is engaged ",
+          "planned_action": "Tomorrow will call again\n",
+          "remark": "Interaction: Mobile number is engaged  | Planned for 2026-10-16: Tomorrow will call again\n",
+          "follow_up_date": "2026-10-16",
+          "previous_follow_up_date": null,
+          "date": "2026-10-26T11:38:46.075Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "I has communicated with the person",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: I has communicated with the person | Planned for 2026-10-16 at 17:15: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:15",
+          "date": "22 Oct 2026, 03:37 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "I has communicated with the person",
           "planned_action": "Follow up tomorrow for product status update\n",
@@ -2651,20 +3604,33 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "I has communicated with the person",
+      "today_remarks": "Mobile number is engaged ",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:23:25.907Z",
+      "updated_at": "2026-10-26T11:39:09.247Z",
       "value": 10300,
       "website": "https://rayshellagro.com/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 778000426",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T11:39:09.247Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf209b0c69b3b6f16f7a13",
       "id": "lead_1791959195527_eud1m2",
       "__v": 0,
       "address": "Kadawalagedara, Samsiya Estate, Uda Hipampola Thuththiripitigama, 60424, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Kosmo Feed Mills Pvt Ltd",
       "contact_person": "Nilakshi Thilakarathne",
       "contacts": [
@@ -2672,9 +3638,10 @@
           "name": "Nilakshi Thilakarathne",
           "phone": "+94 372 292 020",
           "extra_phones": [],
-          "email": "info@profeed.lk",
+          "email": "nilakshithilak94@gmail.com",
           "designation": "Supply Chain Manager",
-          "linkedin": "https://www.linkedin.com/in/nilakshi-thilakarathne-b7b5962a9/ "
+          "linkedin": "https://www.linkedin.com/in/nilakshi-thilakarathne-b7b5962a9/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2682,7 +3649,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "info@profeed.lk",
+      "email": "nilakshithilak94@gmail.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -2691,14 +3658,60 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "17:30",
+      "follow_up_date": "2026-10-27",
+      "follow_up_time": "10:46",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Kosmo Feed Mills Pvt Ltd",
-      "next_follow_up_action": "Follow up tomorrow for product status update\n",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
+      "next_follow_up_action": "Again tomorrow will call",
+      "notes": "[Today's Interaction - 26 Oct 2026, 05:03 pm]: I tried to connect the call but not responds\n\n[Planned Action on 2026-10-27 at 10:46]: Again tomorrow will call\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
       "phone": "+94 372 292 020",
       "previous_remarks": [
+        {
+          "today_remark": "I tried to connect the call but not responds",
+          "planned_action": "Again tomorrow will call",
+          "remark": "Interaction: I tried to connect the call but not responds | Planned for 2026-10-27: Again tomorrow will call",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:33:08.169Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:30: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:30",
+          "date": "22 Oct 2026, 03:24 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:30: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:30",
+          "date": "22 Oct 2026, 03:23 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:30: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:30",
+          "date": "22 Oct 2026, 03:18 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:30: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:30",
+          "date": "22 Oct 2026, 03:15 pm",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update\n",
@@ -2721,30 +3734,44 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "As Discussed regarding the product",
+      "today_remarks": "I tried to connect the call but not responds",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:26:35.527Z",
+      "updated_at": "2026-10-26T11:33:08.170Z",
       "value": 10350,
-      "website": "https://kosmofeed.com/ ",
-      "whatsapp": ""
+      "website": "https://kosmofeed.com/about-us/",
+      "whatsapp": "+94 77 384 6879",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/samoon-mohamed-arham-arham-4652a1197/"
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/samoon-mohamed-arham-arham-4652a1197/",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T11:33:08.169Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf21070c69b3b6f16f7b62",
       "id": "lead_1791959303559_3id7eb",
       "__v": 0,
-      "address": "Bingiriya Export Processing Zone (Phase 1, Lots 14 & 15), Horagasagara - Bingiriya Rd / Wathuwatta, Dummalasooriya, Sri Lanka [1, 2, 3]\n",
-      "assigned_to": "usr_athish",
+      "address": "Bingiriya Export Processing Zone (Phase 1, Lots 14 & 15), Horagasagara - Bingiriya Rd / Wathuwatta, Dummalasooriya, Sri Lanka\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Empire Feed Mills (Pvt) Ltd",
       "contact_person": "",
       "contacts": [
         {
           "name": "",
-          "phone": "+94 324 551 800",
+          "phone": "+94 324 551 800, 324551807, 768173339, 774150566",
           "extra_phones": [],
-          "email": "accounts@empirefeedmill.com",
+          "email": "sanjeewa@empirefeedmill.com",
           "designation": "",
-          "linkedin": ""
+          "linkedin": "",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2752,7 +3779,7 @@
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
       "credit_rating": "AA",
-      "email": "accounts@empirefeedmill.com",
+      "email": "sanjeewa@empirefeedmill.com",
       "export_requirements": {
         "industry_type": "Animal Feed & Poultry",
         "incoterm": "CFR",
@@ -2761,14 +3788,60 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
+      "follow_up_date": "2026-10-27",
       "follow_up_time": "17:45",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Empire Feed Mills (Pvt) Ltd",
-      "next_follow_up_action": "Follow up tomorrow for product status update\n",
-      "notes": "[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
-      "phone": "+94 324 551 800",
+      "next_follow_up_action": "Continue to call tomorrow morning\n",
+      "notes": "[Today's Notes]: I tried all numbers but not reaching \n[Planned Action on 2026-10-27]: Continue to call tomorrow morning\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Follow up tomorrow for product status update\n",
+      "phone": "+94 324 551 800, 324551807, 768173339, 774150566",
       "previous_remarks": [
+        {
+          "today_remark": "I tried all numbers but not reaching ",
+          "planned_action": "Continue to call tomorrow morning\n",
+          "remark": "Interaction: I tried all numbers but not reaching  | Planned for 2026-10-27: Continue to call tomorrow morning\n",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:29:47.496Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:45: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:45",
+          "date": "22 Oct 2026, 10:47 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:45: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:45",
+          "date": "22 Oct 2026, 10:45 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:45: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:45",
+          "date": "22 Oct 2026, 10:43 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "As Discussed regarding the product",
+          "planned_action": "Follow up tomorrow for product status update\n",
+          "remark": "Interaction: As Discussed regarding the product | Planned for 2026-10-16 at 17:45: Follow up tomorrow for product status update\n",
+          "follow_up_date": "2026-10-16",
+          "follow_up_time": "17:45",
+          "date": "22 Oct 2026, 10:43 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "As Discussed regarding the product",
           "planned_action": "Follow up tomorrow for product status update\n",
@@ -2791,13 +3864,26 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "As Discussed regarding the product",
+      "today_remarks": "I tried all numbers but not reaching ",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:28:23.559Z",
+      "updated_at": "2026-10-26T11:29:47.499Z",
       "value": 10350,
       "website": "",
-      "whatsapp": ""
+      "whatsapp": "+94 0715278015",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation",
+      "last_edited_at": "2026-10-26T11:29:47.496Z",
+      "last_edited_by": "usr_1791814468302_hoa08z"
     },
     {
       "_id": "6acf21880c69b3b6f16f7cf7",
@@ -2814,7 +3900,8 @@
           "extra_phones": [],
           "email": "pussalla@sltnet.lk",
           "designation": "Manager - Purchasing",
-          "linkedin": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ "
+          "linkedin": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ ",
+          "country_code": "+94"
         }
       ],
       "country": "Sri Lanka 🇱🇰",
@@ -2831,14 +3918,24 @@
         "product_notes": "",
         "quantity_unit": "MT"
       },
-      "follow_up_date": "2026-10-16",
-      "follow_up_time": "12:45",
+      "follow_up_date": "2026-10-27",
+      "follow_up_time": "10:00",
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Pussalla Feed Mill",
-      "next_follow_up_action": "Tomorrow will update the status\n",
-      "notes": "[Today's Notes]: I has communicated with the person\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
+      "next_follow_up_action": "Tomorrow will  again to call\n",
+      "notes": "[Today's Notes]: I’m unable to connect the call. It keeps making a beeping sound\n\n[Planned Action on 2026-10-27]: Tomorrow will  again to call\n\n[Today's Notes]: I has communicated with the person\n\n[Planned Action on 2026-10-16]: Tomorrow will update the status\n",
       "phone": "+94 112 453 302",
       "previous_remarks": [
+        {
+          "today_remark": "I’m unable to connect the call. It keeps making a beeping sound\n",
+          "planned_action": "Tomorrow will  again to call\n",
+          "remark": "Interaction: I’m unable to connect the call. It keeps making a beeping sound\n | Planned for 2026-10-27: Tomorrow will  again to call\n",
+          "follow_up_date": "2026-10-27",
+          "previous_follow_up_date": "2026-10-16",
+          "date": "2026-10-26T11:27:46.268Z",
+          "author": "Keerthana Ponni K",
+          "author_id": "usr_1791814468302_hoa08z"
+        },
         {
           "today_remark": "I has communicated with the person\n",
           "planned_action": "Tomorrow will update the status\n",
@@ -2861,33 +3958,58 @@
       "sourcing_region": "",
       "stage": "Lead Generation",
       "tags": [],
-      "today_remarks": "I has communicated with the person\n",
+      "today_remarks": "I’m unable to connect the call. It keeps making a beeping sound\n",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T06:30:32.256Z",
+      "updated_at": "2026-10-26T11:27:46.269Z",
       "value": 10350,
       "website": "https://pussalla.lk/ ",
-      "whatsapp": ""
+      "whatsapp": "+94 112 453 302",
+      "edit_history": [
+        {
+          "date": "2026-10-26T11:27:46.268Z",
+          "by": "Keerthana Ponni K",
+          "by_id": "usr_1791814468302_hoa08z",
+          "fields": [
+            "contacts",
+            "whatsapp",
+            "social_media",
+            "social_links",
+            "industry_type"
+          ]
+        }
+      ],
+      "industry_type": "Animal Feed & Poultry",
+      "last_edited_at": "2026-10-26T11:27:46.268Z",
+      "last_edited_by": "usr_1791814468302_hoa08z",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ "
+        }
+      ],
+      "social_media": "https://www.linkedin.com/in/nishani-rupasinghe-2679741a0/ "
     },
     {
       "_id": "6acf21f90c69b3b6f16f7e57",
       "id": "lead_1791959545168_e5gjf7",
       "__v": 0,
-      "address": "MAKADURA, KANDANNE GEDARA, MAHA UDAWELA, KULIYAPITIYA ROAD, Sri Lanka\n",
-      "assigned_to": "usr_athish",
+      "address": "Sharjah Industrial Area, UAE, Sharjah, United Arab Emirates, 116416,  Makadura, Kandanne Gedara, Maha Udawela, Kuliyapitiya Road, Sri Lanka\n\n",
+      "assigned_to": "usr_1791814468302_hoa08z",
       "company_name": "Health Pro Feed & Raw Materials Pvt Ltd",
-      "contact_person": "",
+      "contact_person": "Dipun Krishad",
       "contacts": [
         {
-          "name": "",
+          "name": "Dipun Krishad",
           "phone": "+94 77 627 4675",
           "extra_phones": [],
           "email": "healthpro.feed@gmail.com",
-          "designation": "",
-          "linkedin": ""
+          "designation": "Finance Manager",
+          "linkedin": "https://www.linkedin.com/in/dipun-krishad-139987227/details/experience/?isSelfProfile=false&vieweeProfileId=ACoAADjrU_0BYIiRyU8igJj-jdma-9w99twuS6E",
+          "country_code": "+94"
         }
       ],
-      "country": "Sri Lanka 🇱🇰",
+      "country": "United Arab Emirates 🇦🇪",
       "created_at": "2026-10-14T06:32:25.168Z",
       "created_by_id": "usr_1791814468302_hoa08z",
       "created_by_name": "Keerthana Ponni K",
@@ -2906,9 +4028,54 @@
       "legacy_industry_type": "Animal Feed & Poultry",
       "name": "Health Pro Feed & Raw Materials Pvt Ltd",
       "next_follow_up_action": "17 ko demo date",
-      "notes": "[Today's Interaction - 15 Oct 2026, 12:29 am]: demo testing\n\n[Planned Action on 2026-10-17 at 14:45]: 17 ko demo date\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
+      "notes": "[Today's Notes]: demo testing\n[Planned Action on 2026-10-17]: 17 ko demo date\n[Today's Notes]: demo testing\n[Planned Action on 2026-10-17]: 17 ko demo date\n[Today's Notes]: demo testing\n[Planned Action on 2026-10-17]: 17 ko demo date\n[Today's Notes]: demo testing\n[Planned Action on 2026-10-17]: 17 ko demo date\n[Today's Notes]: demo testing\n[Planned Action on 2026-10-17]: 17 ko demo date\n[Today's Interaction - 15 Oct 2026, 12:29 am]: demo testing\n\n[Planned Action on 2026-10-17 at 14:45]: 17 ko demo date\n\n[Today's Notes]: As Discussed regarding the product\n[Planned Action on 2026-10-16]: Tomorrow we will know the update",
       "phone": "+94 77 627 4675",
       "previous_remarks": [
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 03:11 pm",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 10:55 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 10:52 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 10:50 am",
+          "author": "Keerthana Ponni K"
+        },
+        {
+          "today_remark": "demo testing",
+          "planned_action": "17 ko demo date",
+          "remark": "Interaction: demo testing | Planned for 2026-10-17 at 14:45: 17 ko demo date",
+          "follow_up_date": "2026-10-17",
+          "follow_up_time": "14:45",
+          "date": "22 Oct 2026, 08:29 am",
+          "author": "Keerthana Ponni K"
+        },
         {
           "today_remark": "demo testing",
           "planned_action": "17 ko demo date",
@@ -2943,14 +4110,67 @@
       "today_remarks": "demo testing",
       "turnover": "",
       "type": "International",
-      "updated_at": "2026-10-14T18:59:03.780Z",
+      "updated_at": "2026-10-22T09:41:07.068Z",
       "value": 10350,
       "website": "https://www.healthprofeed.com/contact.html ",
-      "whatsapp": ""
+      "whatsapp": "+971 52 772 8523",
+      "agent_name": "Keerthana Ponni K",
+      "industry_type": "Animal Feed & Poultry",
+      "lead_stage": "Lead Generation",
+      "social_links": [
+        {
+          "platform": "LinkedIn",
+          "url": ""
+        }
+      ],
+      "social_media": "",
+      "status": "Lead Generation"
     }
   ],
-  "tasks": [],
+  "tasks": [
+    {
+      "_id": "6ac780b90c69b3b6f1580d67",
+      "id": "tsk_1791459513363_0ixswl",
+      "__v": 0,
+      "assigned_to": "usr_1791459430052_bmpz72",
+      "created_at": "2026-10-08T11:38:33.364Z",
+      "description": "complete data entry",
+      "due_date": "2026-10-09T00:00:00.000Z",
+      "lead_id": null,
+      "priority": "Medium",
+      "status": "Pending",
+      "title": "Complete data entry",
+      "updated_at": "2026-10-08T11:38:33.364Z"
+    },
+    {
+      "_id": "6ac9efde0c69b3b6f15f920c",
+      "id": "tsk_1791619037980_t73huj",
+      "__v": 0,
+      "assigned_to": "usr_1791460244556_5226eo",
+      "created_at": "2026-10-10T07:57:17.981Z",
+      "description": "folow leads",
+      "due_date": "2026-10-10T00:00:00.000Z",
+      "lead_id": null,
+      "priority": "Medium",
+      "status": "Pending",
+      "title": "Follow leads",
+      "updated_at": "2026-10-10T07:57:17.981Z"
+    }
+  ],
   "activities": [
+    {
+      "_id": "6ab01a661262f2bde2f77c96",
+      "id": "act_1789925990225_yet6q8",
+      "__v": 0,
+      "createdAt": "2026-09-20T17:39:50.335Z",
+      "description": "Created lead for cxcs (Products: Turmeric, Tender Coconut, Value: $0)",
+      "lead_id": "lead_1789925990225_t8mmkd",
+      "timestamp": "2026-09-20T17:39:50.332Z",
+      "title": "Export Lead Created",
+      "type": "note",
+      "updatedAt": "2026-10-07T10:00:37.433Z",
+      "user_id": "usr_1789924957033_xthwzi"
+    },
     {
       "_id": "6ac48ffe542c8e21972b223a",
       "id": "act_1791266813740_lvasiw",
@@ -2965,6 +4185,32 @@
       "user_id": "usr_1789929063747_allpa4"
     },
     {
+      "_id": "6ac52ea3542c8e21972d0614",
+      "id": "act_1791307426792_cj5cxk",
+      "__v": 0,
+      "createdAt": "2026-10-06T17:23:46.905Z",
+      "description": "Created lead for payal enterprices (Products: RSM, Value: $49,990) by papu",
+      "lead_id": "lead_1791307426791_e7g16t",
+      "timestamp": "2026-10-06T17:23:46.904Z",
+      "title": "Export Lead Created",
+      "type": "note",
+      "updatedAt": "2026-10-07T10:00:37.583Z",
+      "user_id": "usr_1791306183682_rh51dw"
+    },
+    {
+      "_id": "6ac52ea5542c8e21972d061b",
+      "id": "act_1791307428982_x3bwcs",
+      "__v": 0,
+      "createdAt": "2026-10-06T17:23:48.983Z",
+      "description": "Created lead for payal enterprices (Products: RSM, Value: $49,990) by papu",
+      "lead_id": "lead_1791307428982_gs0p65",
+      "timestamp": "2026-10-06T17:23:48.982Z",
+      "title": "Export Lead Created",
+      "type": "note",
+      "updatedAt": "2026-10-07T10:00:37.654Z",
+      "user_id": "usr_1791306183682_rh51dw"
+    },
+    {
       "_id": "6ac535f1542c8e21972d1c43",
       "id": "act_1791309297462_2pi3s8",
       "__v": 0,
@@ -2976,6 +4222,19 @@
       "type": "note",
       "updatedAt": "2026-10-07T10:00:37.726Z",
       "user_id": "usr_1791309008897_voir4i"
+    },
+    {
+      "_id": "6ac784c40c69b3b6f15819c8",
+      "id": "act_1791460548613_18541d",
+      "__v": 0,
+      "createdAt": "2026-10-08T11:55:48.681Z",
+      "description": "Created lead for Amir (Products: Turmeric, Value: $0) by Sagar",
+      "lead_id": "lead_1791460548612_vc9dr6",
+      "timestamp": "2026-10-08T11:55:48.679Z",
+      "title": "Export Lead Created",
+      "type": "note",
+      "updatedAt": "2026-10-08T11:55:48.681Z",
+      "user_id": "usr_1791460244556_5226eo"
     },
     {
       "_id": "6accf43d0c69b3b6f168bd7e",
@@ -3566,324 +4825,49 @@
       "category": "Follow-up",
       "date": "2026-10-25",
       "created_at": "2026-10-22T16:54:06.622Z"
+    },
+    {
+      "id": "day_1793037845383_26hw2a",
+      "kind": "item",
+      "user_id": "usr_1793037842059_xavo6q",
+      "task": "Review buyer replies and prepare tomorrow’s calls.",
+      "text": "Review buyer replies and prepare tomorrow’s calls.",
+      "priority": "medium",
+      "completed": true,
+      "time_slot": "Today",
+      "category": "Follow-up",
+      "date": "2026-10-29",
+      "created_at": "2026-10-26T18:04:05.383Z",
+      "completed_at": "2026-10-26T18:04:05.461Z"
     }
   ],
   "outreach": [],
   "auditLogs": [
     {
-      "id": "audit_1792954830668_236xrk",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "athishravikanth@gmail.com",
-      "details": "Deleted owner account and tenant data for athishravikanth@gmail.com",
-      "timestamp": "2026-10-25T19:00:30.668Z"
-    },
-    {
-      "id": "audit_1792954810989_0kxk87",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "binti@gmail.com",
-      "details": "Deleted owner account and tenant data for binti@gmail.com",
-      "timestamp": "2026-10-25T19:00:10.989Z"
-    },
-    {
-      "id": "audit_1792954800538_b4g7q5",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "soch@gmail.com",
-      "details": "Deleted owner account and tenant data for soch@gmail.com",
-      "timestamp": "2026-10-25T19:00:00.538Z"
-    },
-    {
-      "id": "audit_1792954777263_ffy2yx",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "sagar@gmail.com",
-      "details": "Deleted owner account and tenant data for sagar@gmail.com",
-      "timestamp": "2026-10-25T18:59:37.263Z"
-    },
-    {
-      "id": "audit_1792954760528_r3omto",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "reamercode@gmail.com",
-      "details": "Deleted owner account and tenant data for reamercode@gmail.com",
-      "timestamp": "2026-10-25T18:59:20.528Z"
-    },
-    {
-      "id": "audit_1792954743489_20w8v8",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "owner@travel-trade.com",
-      "details": "Deleted owner account and tenant data for owner@travel-trade.com",
-      "timestamp": "2026-10-25T18:59:03.489Z"
-    },
-    {
-      "id": "audit_1792954725082_zkknfr",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "reamercoded@gmail.com",
-      "details": "Deleted owner account and tenant data for reamercoded@gmail.com",
-      "timestamp": "2026-10-25T18:58:45.082Z"
-    },
-    {
-      "id": "audit_1792688046993_uovrkx",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792688044920@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792688044920@travel-trade.com",
-      "timestamp": "2026-10-22T16:54:06.993Z"
-    },
-    {
-      "id": "log_1792688046775_4xsukj",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792688044920@travel-trade.com)",
+      "_id": "6ab02667a4bad8c45828dd4f",
+      "id": "log_1789929063747_5pgbkq",
+      "actor_name": "punia",
+      "actor_id": "usr_1789924957033_xthwzi",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Sagar Punia (sagarpunia163@gmail.com) with role 'agent', scope: 'own_only'",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T16:54:06.775Z"
+      "timestamp": "2026-09-20T18:31:03.747Z",
+      "createdAt": "2026-09-20T18:31:03.843Z",
+      "updatedAt": "2026-10-07T10:00:37.800Z",
+      "__v": 0
     },
     {
-      "id": "audit_1792688046708_obndf1",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792688044920@travel-trade.com",
-      "target": "ci_staff_1792688045160@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792688045160@travel-trade.com)",
-      "timestamp": "2026-10-22T16:54:06.708Z"
-    },
-    {
-      "id": "audit_1792688046696_tlvd23",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792688044920@travel-trade.com",
-      "target": "ci_observer_1792688045648@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792688045648@travel-trade.com)",
-      "timestamp": "2026-10-22T16:54:06.696Z"
-    },
-    {
-      "id": "audit_1792687683828_rqn5sk",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792687679579@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792687679579@travel-trade.com",
-      "timestamp": "2026-10-22T16:48:03.828Z"
-    },
-    {
-      "id": "log_1792687683527_tcrhxt",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792687679579@travel-trade.com)",
+      "_id": "6ac529c7ce3860acc32ee588",
+      "id": "log_1791306183682_czjyt5",
+      "actor_name": "sagarpunia",
+      "actor_id": "usr_1791306043083_9p353t",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member papu (papu@gmail.com) with role 'agent', scope: 'own_only'",
       "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T16:48:03.528Z"
-    },
-    {
-      "id": "audit_1792687683318_l2444e",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792687679579@travel-trade.com",
-      "target": "ci_staff_1792687680082@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792687680082@travel-trade.com)",
-      "timestamp": "2026-10-22T16:48:03.318Z"
-    },
-    {
-      "id": "audit_1792687683291_ggw3ku",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792687679579@travel-trade.com",
-      "target": "ci_observer_1792687680713@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792687680713@travel-trade.com)",
-      "timestamp": "2026-10-22T16:48:03.291Z"
-    },
-    {
-      "id": "audit_1792687209475_xcf1qu",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792687207870@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792687207870@travel-trade.com",
-      "timestamp": "2026-10-22T16:40:09.475Z"
-    },
-    {
-      "id": "log_1792687209382_pkfa36",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792687207870@travel-trade.com)",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T16:40:09.382Z"
-    },
-    {
-      "id": "audit_1792687209337_mf0p8b",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792687207870@travel-trade.com",
-      "target": "ci_staff_1792687208089@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792687208089@travel-trade.com)",
-      "timestamp": "2026-10-22T16:40:09.337Z"
-    },
-    {
-      "id": "audit_1792687209319_ae3bzy",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792687207870@travel-trade.com",
-      "target": "ci_observer_1792687208480@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792687208480@travel-trade.com)",
-      "timestamp": "2026-10-22T16:40:09.319Z"
-    },
-    {
-      "id": "audit_1792684615520_lvofki",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792684613538@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792684613538@travel-trade.com",
-      "timestamp": "2026-10-22T15:56:55.520Z"
-    },
-    {
-      "id": "log_1792684615388_ldxax9",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684613538@travel-trade.com)",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T15:56:55.388Z"
-    },
-    {
-      "id": "audit_1792684615333_h0t7gj",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684613538@travel-trade.com",
-      "target": "ci_staff_1792684613749@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684613749@travel-trade.com)",
-      "timestamp": "2026-10-22T15:56:55.333Z"
-    },
-    {
-      "id": "audit_1792684615322_dv26be",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684613538@travel-trade.com",
-      "target": "ci_observer_1792684614314@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684614314@travel-trade.com)",
-      "timestamp": "2026-10-22T15:56:55.322Z"
-    },
-    {
-      "id": "audit_1792684530083_tcxwtm",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792684527988@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792684527988@travel-trade.com",
-      "timestamp": "2026-10-22T15:55:30.083Z"
-    },
-    {
-      "id": "log_1792684529942_q81ees",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684527988@travel-trade.com)",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T15:55:29.942Z"
-    },
-    {
-      "id": "audit_1792684529890_153kc4",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684527988@travel-trade.com",
-      "target": "ci_staff_1792684528240@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684528240@travel-trade.com)",
-      "timestamp": "2026-10-22T15:55:29.890Z"
-    },
-    {
-      "id": "audit_1792684529878_uvayyc",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684527988@travel-trade.com",
-      "target": "ci_observer_1792684528785@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684528785@travel-trade.com)",
-      "timestamp": "2026-10-22T15:55:29.878Z"
-    },
-    {
-      "id": "audit_1792684405900_uhz237",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792684404177@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792684404177@travel-trade.com",
-      "timestamp": "2026-10-22T15:53:25.900Z"
-    },
-    {
-      "id": "log_1792684405792_ud3c9x",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684404177@travel-trade.com)",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T15:53:25.792Z"
-    },
-    {
-      "id": "audit_1792684405741_aemx2k",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684404177@travel-trade.com",
-      "target": "ci_staff_1792684404414@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684404414@travel-trade.com)",
-      "timestamp": "2026-10-22T15:53:25.741Z"
-    },
-    {
-      "id": "audit_1792684405731_rxsl8l",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684404177@travel-trade.com",
-      "target": "ci_observer_1792684404913@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684404913@travel-trade.com)",
-      "timestamp": "2026-10-22T15:53:25.731Z"
-    },
-    {
-      "id": "audit_1792684213273_ch0oh3",
-      "action": "DELETE_OWNER",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "performed_by": "admin@travel-trade.com",
-      "target": "ci_owner_1792684209545@travel-trade.com",
-      "details": "Deleted owner account and tenant data for ci_owner_1792684209545@travel-trade.com",
-      "timestamp": "2026-10-22T15:50:13.273Z"
-    },
-    {
-      "id": "log_1792684212896_its4xy",
-      "actor_name": "Super Administrator",
-      "actor_id": "usr_super_admin",
-      "action": "FEATURES_UPDATED",
-      "details": "email_marketing=ON for CI Test Owner (ci_owner_1792684209545@travel-trade.com)",
-      "ip_address": "127.0.0.1",
-      "timestamp": "2026-10-22T15:50:12.897Z"
-    },
-    {
-      "id": "audit_1792684212280_1vu4aj",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684209545@travel-trade.com",
-      "target": "ci_staff_1792684209837@travel-trade.com",
-      "details": "Owner removed staff member CI Test Staff (ci_staff_1792684209837@travel-trade.com)",
-      "timestamp": "2026-10-22T15:50:12.280Z"
-    },
-    {
-      "id": "audit_1792684212204_isvw7h",
-      "action": "DELETE_STAFF",
-      "performed_by": "ci_owner_1792684209545@travel-trade.com",
-      "target": "ci_observer_1792684210349@travel-trade.com",
-      "details": "Owner removed staff member CI Read-Only Staff (ci_observer_1792684210349@travel-trade.com)",
-      "timestamp": "2026-10-22T15:50:12.204Z"
+      "timestamp": "2026-10-06T17:03:03.682Z",
+      "createdAt": "2026-10-06T17:03:03.686Z",
+      "updatedAt": "2026-10-07T10:00:37.871Z",
+      "__v": 0
     },
     {
       "_id": "6ac534d0ce3860acc32ee58a",
@@ -3899,6 +4883,32 @@
       "__v": 0
     },
     {
+      "_id": "6ac540d7d9b922a27eb05459",
+      "id": "log_1791312087981_dxpjze",
+      "actor_name": "sagarpunia",
+      "actor_id": "usr_1791306043083_9p353t",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for papu (papu@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-06T18:41:27.981Z",
+      "createdAt": "2026-10-06T18:41:28.000Z",
+      "updatedAt": "2026-10-07T10:00:38.018Z",
+      "__v": 0
+    },
+    {
+      "_id": "6ac540d8d9b922a27eb0545a",
+      "id": "log_1791312088118_yxan9b",
+      "actor_name": "sagarpunia",
+      "actor_id": "usr_1791306043083_9p353t",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for papu (papu@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-06T18:41:28.118Z",
+      "createdAt": "2026-10-06T18:41:28.122Z",
+      "updatedAt": "2026-10-07T10:00:38.084Z",
+      "__v": 0
+    },
+    {
       "_id": "6ac62ea6b90e67f7a8273d99",
       "id": "log_1791372966149_8vg0g8",
       "actor_name": "ambani",
@@ -3909,6 +4919,45 @@
       "timestamp": "2026-10-07T11:36:06.149Z",
       "createdAt": "2026-10-07T11:36:06.154Z",
       "updatedAt": "2026-10-07T11:36:06.154Z",
+      "__v": 0
+    },
+    {
+      "_id": "6ac780661c03af4e273e0875",
+      "id": "log_1791459430053_aj7rc8",
+      "actor_name": "sagar",
+      "actor_id": "usr_1790485912422_52s5fh",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Ramesh (sagarpunia@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-08T11:37:10.053Z",
+      "createdAt": "2026-10-08T11:37:10.154Z",
+      "updatedAt": "2026-10-08T11:37:10.154Z",
+      "__v": 0
+    },
+    {
+      "_id": "6ac7826e1c03af4e273e0876",
+      "id": "log_1791459950948_7gozgd",
+      "actor_name": "sagar",
+      "actor_id": "usr_1790485912422_52s5fh",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for Sagar Punia (sagarpunia163@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-08T11:45:50.948Z",
+      "createdAt": "2026-10-08T11:45:50.951Z",
+      "updatedAt": "2026-10-08T11:45:50.951Z",
+      "__v": 0
+    },
+    {
+      "_id": "6ac783941c03af4e273e0878",
+      "id": "log_1791460244557_9l3hnt",
+      "actor_name": "Athish Ravikanth",
+      "actor_id": "usr_1791460149959_h6fqui",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Sagar (sagarpunia789@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-08T11:50:44.557Z",
+      "createdAt": "2026-10-08T11:50:44.644Z",
+      "updatedAt": "2026-10-08T11:50:44.644Z",
       "__v": 0
     },
     {
@@ -3938,6 +4987,19 @@
       "__v": 0
     },
     {
+      "_id": "6accec719aa6b5965e596f9d",
+      "id": "log_1791814769596_3qsau5",
+      "actor_name": "Athish Ravikanth",
+      "actor_id": "usr_1791460149959_h6fqui",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for Sagar (sagarpunia789@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-12T14:19:29.682Z",
+      "createdAt": "2026-10-12T14:19:29.683Z",
+      "updatedAt": "2026-10-12T14:19:29.683Z",
+      "__v": 0
+    },
+    {
       "_id": "6accf8d89aa6b5965e596f9e",
       "id": "log_1791817944390_ypqy50",
       "actor_name": "Pratheban TM",
@@ -3948,6 +5010,32 @@
       "timestamp": "2026-10-12T15:12:24.390Z",
       "createdAt": "2026-10-12T15:12:24.393Z",
       "updatedAt": "2026-10-12T15:12:24.393Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfa67e40446bfc8ea5d404",
+      "id": "log_1791993470580_qxt00t",
+      "actor_name": "soch",
+      "actor_id": "usr_1791988353309_kln9hb",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member deepak (deepak@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T15:57:50.581Z",
+      "createdAt": "2026-10-14T15:57:50.633Z",
+      "updatedAt": "2026-10-14T15:57:50.633Z",
+      "__v": 0
+    },
+    {
+      "_id": "6acfad4e7741b5837abb2c5c",
+      "id": "log_1791995214959_lhhc9t",
+      "actor_name": "soch",
+      "actor_id": "usr_1791988353309_kln9hb",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member vasu (vasu@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-14T16:26:54.959Z",
+      "createdAt": "2026-10-14T16:26:55.011Z",
+      "updatedAt": "2026-10-14T16:26:55.011Z",
       "__v": 0
     },
     {
@@ -4014,12 +5102,77 @@
       "createdAt": "2026-10-14T18:11:06.424Z",
       "updatedAt": "2026-10-14T18:11:06.424Z",
       "__v": 0
+    },
+    {
+      "_id": "6ad8e3171c6e2906a9cf25a9",
+      "id": "log_1792598807096_ulxl85",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "USER_DEACTIVATED",
+      "details": "Deactivated account for vasu (vasu@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-21T16:06:47.096Z",
+      "createdAt": "2026-10-21T16:06:47.103Z",
+      "updatedAt": "2026-10-21T16:06:47.103Z",
+      "__v": 0
+    },
+    {
+      "_id": "6ad8e3191c6e2906a9cf25aa",
+      "id": "log_1792598809782_ahyzfs",
+      "actor_name": "Super Administrator",
+      "actor_id": "usr_super_admin",
+      "action": "USER_ACTIVATED",
+      "details": "Activated account for vasu (vasu@gmail.com)",
+      "ip_address": "127.0.0.1",
+      "timestamp": "2026-10-21T16:06:49.782Z",
+      "createdAt": "2026-10-21T16:06:49.784Z",
+      "updatedAt": "2026-10-21T16:06:49.784Z",
+      "__v": 0
+    },
+    {
+      "_id": "6adc23a2fb3a3e5706b6f032",
+      "id": "log_1792811938341_d58uuh",
+      "actor_name": "SUNIL CHAITHANYA",
+      "actor_id": "usr_1792512351096_pmgeqp",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member xyz (xyz@gmail.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "10.198.101.12",
+      "timestamp": "2026-10-24T03:18:58.341Z",
+      "createdAt": "2026-10-24T03:18:58.440Z",
+      "updatedAt": "2026-10-24T03:18:58.440Z",
+      "__v": 0
+    },
+    {
+      "_id": "6adeb46f48ffd806e2d51ddd",
+      "id": "log_1792980079762_dx55to",
+      "actor_name": "Han",
+      "actor_id": "usr_1792979930564_a79p1x",
+      "action": "STAFF_CREATED",
+      "details": "Owner added staff member Athish (athish@han.com) with role 'agent', scope: 'own_only'",
+      "ip_address": "10.192.59.190",
+      "timestamp": "2026-10-26T02:01:19.763Z",
+      "createdAt": "2026-10-26T02:01:19.768Z",
+      "updatedAt": "2026-10-26T02:01:19.768Z",
+      "__v": 0
+    },
+    {
+      "_id": "6adeb4ef48ffd806e2d51dde",
+      "id": "log_1792980207273_j40yly",
+      "actor_name": "Han",
+      "actor_id": "usr_1792979930564_a79p1x",
+      "action": "STAFF_PERMISSIONS_UPDATED",
+      "details": "Updated permissions & data scope for Athish (athish@han.com)",
+      "ip_address": "10.198.101.12",
+      "timestamp": "2026-10-26T02:03:27.273Z",
+      "createdAt": "2026-10-26T02:03:27.362Z",
+      "updatedAt": "2026-10-26T02:03:27.362Z",
+      "__v": 0
     }
   ],
   "company": {
     "_id": "6aafbb27aecb8143782f84f7",
     "id": "comp_stellarsync_1",
-    "name": "CI Agro Global Corp",
+    "name": "AMBAVI",
     "domain": "",
     "owner_name": "",
     "owner_email": "",
@@ -4027,15 +5180,16 @@
     "currency": "USD",
     "timezone": "UTC+05:30",
     "revenueTargetMonthly": 150000,
-    "plan": "growth",
-    "maxStaff": 15,
+    "plan": "enterprise",
+    "maxStaff": 999999,
     "currentStaff": 4,
     "status": "active",
     "monthlyRevenue": 79,
     "subscriptionStatus": "active",
     "created_at": "2026-01-01T00:00:00.000Z",
     "createdAt": "2026-09-20T10:53:27.953Z",
-    "updatedAt": "2026-10-14T14:32:33.656Z",
+    "updatedAt": "2026-10-20T16:05:51.445Z",
     "__v": 0
-  }
+  },
+  "timestamp": "2026-10-26T18:42:02.222Z"
 }

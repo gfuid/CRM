@@ -10,6 +10,8 @@ const AuditLog = require('./AuditLog');
 const Notification = require('./Notification');
 const EmailSetting = require('./EmailSetting');
 const EmailCampaign = require('./EmailCampaign');
+const Ticket = require('./Ticket');
+const AppSetting = require('./AppSetting');
 
 module.exports = {
   User,
@@ -24,4 +26,6 @@ module.exports = {
   Notification,
   EmailSetting,
   EmailCampaign,
+  Ticket,
+  AppSetting,
 };

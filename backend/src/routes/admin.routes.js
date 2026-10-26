@@ -24,6 +24,18 @@ router.use(requireSuperAdmin);
 
 router.patch('/users/:id/staff-limit', asyncHandler(adminController.updateStaffLimit));
 router.patch('/users/:id/storage-limit', asyncHandler(adminController.updateStorageLimit));
+
+// AI assistant settings (key is stored encrypted and never sent back)
+const support = require('../controllers/support.controller');
+router.get('/ai-settings', asyncHandler(support.getAiSettings));
+router.put('/ai-settings', asyncHandler(support.saveAiSettings));
+router.post('/ai-settings/test', asyncHandler(support.testAi));
+
+// Support tickets inbox for the platform team
+router.get('/support/tickets', asyncHandler(support.listTickets));
+router.get('/support/tickets/:id', asyncHandler(support.getTicket));
+router.post('/support/tickets/:id/messages', asyncHandler(support.addMessage));
+router.patch('/support/tickets/:id', asyncHandler(support.updateTicket));
 router.patch('/users/:id/features', asyncHandler(adminController.updateUserFeatures));
 
 router.get('/overview-summary', asyncHandler(adminController.getOverviewSummary));

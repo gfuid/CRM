@@ -80,6 +80,8 @@ const dataStore = {
   notifications: [],
   emailSettings: [],
   emailCampaigns: [],
+  tickets: [],
+  appSettings: [],
   outreach: [],
 
   // No demo data: every company starts empty and only sees what its own people create.
@@ -122,6 +124,8 @@ const saveSnapshot = () => {
       myDays: dataStore.myDays,
       outreach: dataStore.outreach,
       auditLogs: dataStore.auditLogs,
+      tickets: dataStore.tickets,
+      appSettings: dataStore.appSettings,
       company: dataStore.company,
     };
     fs.writeFileSync(snapshotPath, JSON.stringify(payload, null, 2), 'utf-8');
@@ -262,6 +266,7 @@ const dbSync = {
             Notification: recordFilter(['target_user_id', 'owner_id']),
             EmailSetting: recordFilter(['owner_id', 'created_by']),
             EmailCampaign: recordFilter(['owner_id', 'created_by', 'created_by_id']),
+            Ticket: recordFilter(['owner_id', 'created_by_id']),
           };
 
           if (companyIds.length) {
@@ -412,6 +417,32 @@ const dbSync = {
         await models.EmailSetting.findOneAndUpdate({ owner_id: setting.owner_id }, toSave, { upsert: true, new: true });
       } catch (e) {
         console.warn('[DB EmailSetting Sync]:', e.message);
+      }
+    }
+  },
+  saveTicket: async (ticket) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.Ticket) {
+      try {
+        const toSave = { ...ticket };
+        delete toSave._id;
+        await models.Ticket.findOneAndUpdate({ id: ticket.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB Ticket Sync]:', e.message);
+      }
+    }
+  },
+  saveAppSetting: async (setting) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.AppSetting) {
+      try {
+        const toSave = { ...setting };
+        delete toSave._id;
+        await models.AppSetting.findOneAndUpdate({ id: setting.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB AppSetting Sync]:', e.message);
       }
     }
   },

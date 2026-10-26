@@ -508,7 +508,7 @@ const deleteUser = async (req, res) => {
     dataStore.notifications = dataStore.notifications.filter((record) =>
       !belongsToTenant(record, ['target_user_id', 'owner_id'])
     );
-    for (const collectionName of ['emailSettings', 'emailCampaigns', 'tenants']) {
+    for (const collectionName of ['emailSettings', 'emailCampaigns', 'tenants', 'tickets']) {
       if (Array.isArray(dataStore[collectionName])) {
         dataStore[collectionName] = dataStore[collectionName].filter((record) =>
           !belongsToTenant(record, ['owner_id', 'created_by', 'created_by_id', 'id'])

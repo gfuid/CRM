@@ -1,0 +1,626 @@
+[
+  {
+    "id": "ESC-01",
+    "who": "Staff",
+    "scenario": "Staff edits own profile to become owner/admin, scope all, other company",
+    "expected": "all ignored",
+    "actual": "agent/staff/own_only",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-02",
+    "who": "Staff",
+    "scenario": "Staff calls staff-management API on himself",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-03",
+    "who": "Owner",
+    "scenario": "Owner sets his own role to super_admin",
+    "expected": "refused / unchanged",
+    "actual": "403 admin",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-04",
+    "who": "Owner",
+    "scenario": "Owner gives staff the super_admin role",
+    "expected": "400/403",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-05",
+    "who": "Owner",
+    "scenario": "Owner moves his staff into another company (company_id/created_by)",
+    "expected": "ignored",
+    "actual": "true",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-06",
+    "who": "Public",
+    "scenario": "Register with role=super_admin and staff_limit=1000",
+    "expected": "refused, or normal owner with limit 2",
+    "actual": "403 no account",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-07",
+    "who": "Public",
+    "scenario": "Register as owner but ask for 1000 staff / huge storage",
+    "expected": "limit 2, default storage",
+    "actual": "201 2/undefined",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-08",
+    "who": "Owner",
+    "scenario": "Owner raises his own storage limit",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "ESC-09",
+    "who": "Owner",
+    "scenario": "Owner opens the developer tab",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "JWT-01",
+    "who": "Attacker",
+    "scenario": "Token with alg=none claiming Super Admin",
+    "expected": "401",
+    "actual": "401",
+    "result": "PASS"
+  },
+  {
+    "id": "JWT-02",
+    "who": "Attacker",
+    "scenario": "Token signed with a guessed secret",
+    "expected": "401",
+    "actual": "401",
+    "result": "PASS"
+  },
+  {
+    "id": "JWT-03",
+    "who": "Attacker",
+    "scenario": "Valid signature but role claim changed (server must trust DB, not token)",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "JWT-04",
+    "who": "Anyone",
+    "scenario": "Expired token",
+    "expected": "401",
+    "actual": "401",
+    "result": "PASS"
+  },
+  {
+    "id": "JWT-05",
+    "who": "Attacker",
+    "scenario": "Token for a user id that does not exist",
+    "expected": "401",
+    "actual": "401",
+    "result": "PASS"
+  },
+  {
+    "id": "INJ-01",
+    "who": "Attacker",
+    "scenario": "Login with {$ne:null} instead of email/password",
+    "expected": "400/401",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "INJ-02",
+    "who": "Attacker",
+    "scenario": "Login with password sent as an array",
+    "expected": "400/401",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "INJ-03",
+    "who": "Anyone",
+    "scenario": "Broken JSON body does not crash the server",
+    "expected": "400",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "INJ-04",
+    "who": "Attacker",
+    "scenario": "Prototype pollution through __proto__ in a lead",
+    "expected": "no pollution",
+    "actual": "true",
+    "result": "PASS"
+  },
+  {
+    "id": "X-01",
+    "who": "Other company",
+    "scenario": "Owner B reads A lead by id",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-02",
+    "who": "Other company",
+    "scenario": "Owner B edits A lead",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-03",
+    "who": "Other company",
+    "scenario": "B staff deletes A lead",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "X-04",
+    "who": "Other company",
+    "scenario": "Owner B edits A task",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-05",
+    "who": "Other company",
+    "scenario": "Owner B deletes A task",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-06",
+    "who": "Other company",
+    "scenario": "Owner B edits A follow-up",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-07",
+    "who": "Other company",
+    "scenario": "Owner B deletes A follow-up",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-08",
+    "who": "Other company",
+    "scenario": "Owner B ticks A staff to-do",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "X-09",
+    "who": "Other company",
+    "scenario": "Owner B deletes A staff to-do",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "X-10",
+    "who": "Other company",
+    "scenario": "Owner B opens A staff performance",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-11",
+    "who": "Other company",
+    "scenario": "Owner B resets A staff password",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "X-12",
+    "who": "Other company",
+    "scenario": "Owner B deactivates A staff",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "X-13",
+    "who": "Other company",
+    "scenario": "A lead still intact after all attacks",
+    "expected": "intact",
+    "actual": "A lead for S1",
+    "result": "PASS"
+  },
+  {
+    "id": "X-14",
+    "who": "Other company",
+    "scenario": "Owner B plants a lead into company A (sends A owner_id/company_id)",
+    "expected": "A does not see it",
+    "actual": "false",
+    "result": "PASS"
+  },
+  {
+    "id": "X-15",
+    "who": "Other company",
+    "scenario": "Owner B creates task linked to A lead",
+    "expected": "404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-16",
+    "who": "Other company",
+    "scenario": "Owner B creates follow-up on A lead",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-17",
+    "who": "Other company",
+    "scenario": "Owner B logs activity on A lead",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "X-18",
+    "who": "Other company",
+    "scenario": "Owner B filters leads by A staff id (?assigned_to=)",
+    "expected": "0 leads",
+    "actual": "0",
+    "result": "PASS"
+  },
+  {
+    "id": "X-19",
+    "who": "Other company",
+    "scenario": "Owner B filters tasks by A staff id",
+    "expected": "0 tasks",
+    "actual": "0",
+    "result": "PASS"
+  },
+  {
+    "id": "X-20",
+    "who": "Other company",
+    "scenario": "Owner B searches for A lead names",
+    "expected": "0 leads",
+    "actual": "0",
+    "result": "PASS"
+  },
+  {
+    "id": "X-21",
+    "who": "Other company",
+    "scenario": "Owner B notifications contain nothing from A",
+    "expected": "none",
+    "actual": "0",
+    "result": "PASS"
+  },
+  {
+    "id": "X-22",
+    "who": "Other company",
+    "scenario": "Owner B reminders contain nothing from A",
+    "expected": "none",
+    "actual": "false",
+    "result": "PASS"
+  },
+  {
+    "id": "X-23",
+    "who": "Other company",
+    "scenario": "Owner B analytics totals exclude A deal value",
+    "expected": "no 5000",
+    "actual": "false",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-01",
+    "who": "Staff (own)",
+    "scenario": "Staff reads colleague lead by id",
+    "expected": "404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-02",
+    "who": "Staff (all)",
+    "scenario": "Staff with full view writes a remark on colleague lead",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-03",
+    "who": "Staff",
+    "scenario": "Staff sends remark + tries to wipe history and take ownership",
+    "expected": "history kept, owner kept",
+    "actual": "403 hist=2 creator=true",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-04",
+    "who": "Staff",
+    "scenario": "Staff changes deal value",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-05",
+    "who": "Staff",
+    "scenario": "Staff overwrites lead documents",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-06",
+    "who": "Staff",
+    "scenario": "Staff completes colleague task",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-07",
+    "who": "Staff (all)",
+    "scenario": "Staff with full view completes colleague task",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-08",
+    "who": "Staff",
+    "scenario": "Staff pushes his own task deadline",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-09",
+    "who": "Staff",
+    "scenario": "Staff passes his task to a colleague",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-10",
+    "who": "Staff",
+    "scenario": "Staff ticks colleague to-do",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-11",
+    "who": "Staff",
+    "scenario": "Staff deletes colleague to-do",
+    "expected": "403/404",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-12",
+    "who": "Staff (all)",
+    "scenario": "Staff completes colleague follow-up",
+    "expected": "403/404",
+    "actual": "404",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-13",
+    "who": "Staff",
+    "scenario": "Staff lists all staff (emails, roles)",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-14",
+    "who": "Staff",
+    "scenario": "Staff opens team performance",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-15",
+    "who": "Staff",
+    "scenario": "Staff opens email campaigns",
+    "expected": "403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-16",
+    "who": "Staff",
+    "scenario": "Staff task list has only his tasks",
+    "expected": "only own",
+    "actual": "A task for S1",
+    "result": "PASS"
+  },
+  {
+    "id": "IN-17",
+    "who": "Staff",
+    "scenario": "Staff outreach shows only his numbers",
+    "expected": "only own",
+    "actual": "0",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-01",
+    "who": "Staff",
+    "scenario": "New remark saved with author, time and planned action",
+    "expected": "author=Sone",
+    "actual": "Sone | Send CIF quote",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-02",
+    "who": "Staff",
+    "scenario": "Blank remark does not create an empty history entry",
+    "expected": "no new entry",
+    "actual": "200 3",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-03",
+    "who": "Staff",
+    "scenario": "Staff writes a remark pretending to be the owner",
+    "expected": "author stays Sone",
+    "actual": "Sone",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-04",
+    "who": "Staff",
+    "scenario": "Staff moves follow-up far ahead without reason",
+    "expected": "400",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-05",
+    "who": "Staff",
+    "scenario": "Staff closes follow-up without writing outcome",
+    "expected": "400",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "RM-06",
+    "who": "Staff",
+    "scenario": "Staff creates a follow-up dated in the past (to fake it as already done)",
+    "expected": "refused or shows Missed",
+    "actual": "201 Missed",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-01",
+    "who": "Staff",
+    "scenario": "Staff saves a 9 MB remark in one lead",
+    "expected": "413 too large",
+    "actual": "413",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-02",
+    "who": "Staff",
+    "scenario": "Staff saves a 25,000-character remark",
+    "expected": "413",
+    "actual": "413",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-03",
+    "who": "Staff",
+    "scenario": "Staff saves a 5,000-character profile picture link",
+    "expected": "400/413",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-04",
+    "who": "Owner",
+    "scenario": "Save a website link that runs a script (javascript:)",
+    "expected": "400",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-05",
+    "who": "Super Admin",
+    "scenario": "Super Admin sets company A storage limit to 1 MB",
+    "expected": "200",
+    "actual": "200",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-06",
+    "who": "Super Admin",
+    "scenario": "Storage limit on a staff (not a company)",
+    "expected": "400",
+    "actual": "400",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-07",
+    "who": "Staff",
+    "scenario": "Company keeps adding data after its 1 MB limit",
+    "expected": "refused with 413 once full",
+    "actual": "35",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-08",
+    "who": "Staff",
+    "scenario": "Reading still works when storage is full",
+    "expected": "200",
+    "actual": "200",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-09",
+    "who": "Other company",
+    "scenario": "Company B is not affected by A being full",
+    "expected": "201",
+    "actual": "201",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-10",
+    "who": "Staff",
+    "scenario": "Deleting own to-do still works when storage is full",
+    "expected": "not 413",
+    "actual": "200",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-11",
+    "who": "Super Admin",
+    "scenario": "Developer tab shows company A used/limit and each member usage",
+    "expected": "members listed",
+    "actual": "Sone:1006.8KB,Owner A:7.4KB,Stwo:1.0KB",
+    "result": "PASS"
+  },
+  {
+    "id": "ST-12",
+    "who": "Staff",
+    "scenario": "Saving works again after Super Admin raises the limit",
+    "expected": "201",
+    "actual": "201",
+    "result": "PASS"
+  },
+  {
+    "id": "AL-01",
+    "who": "Staff",
+    "scenario": "Deactivated staff uses old token",
+    "expected": "401/403",
+    "actual": "403",
+    "result": "PASS"
+  },
+  {
+    "id": "AL-02",
+    "who": "Staff",
+    "scenario": "Deleted staff uses old token",
+    "expected": "401",
+    "actual": "401",
+    "result": "PASS"
+  }
+]

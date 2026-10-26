@@ -25,6 +25,8 @@ const hydrateFromSnapshot = () => {
       if (snapshot.auditLogs && snapshot.auditLogs.length > 0) dataStore.auditLogs = snapshot.auditLogs;
       if (snapshot.emailSettings && snapshot.emailSettings.length > 0) dataStore.emailSettings = snapshot.emailSettings;
       if (snapshot.emailCampaigns && snapshot.emailCampaigns.length > 0) dataStore.emailCampaigns = snapshot.emailCampaigns;
+      if (Array.isArray(snapshot.tickets)) dataStore.tickets = snapshot.tickets;
+      if (Array.isArray(snapshot.appSettings)) dataStore.appSettings = snapshot.appSettings;
       console.log(`⚡ Instant local snapshot hydrated (${(snapshot.leads || []).length} leads, ${(snapshot.users || []).length} users)`);
       return true;
     }
@@ -39,7 +41,7 @@ const hydrateFromSnapshot = () => {
  */
 const syncFromDB = async () => {
   try {
-    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications] =
+    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications, tickets, appSettings] =
       await Promise.all([
         models.User.find().lean(),
         models.Company.findOne().lean(),
@@ -53,6 +55,8 @@ const syncFromDB = async () => {
         models.EmailSetting.find().lean(),
         models.EmailCampaign.find().lean(),
         models.Notification ? models.Notification.find().lean() : Promise.resolve([]),
+        models.Ticket ? models.Ticket.find().lean() : Promise.resolve([]),
+        models.AppSetting ? models.AppSetting.find().lean() : Promise.resolve([]),
       ]);
 
     if (users && users.length > 0) {
@@ -80,6 +84,8 @@ const syncFromDB = async () => {
     });
     if (emailSettings && emailSettings.length > 0) dataStore.emailSettings = emailSettings;
     if (emailCampaigns && emailCampaigns.length > 0) dataStore.emailCampaigns = emailCampaigns;
+    if (Array.isArray(tickets)) dataStore.tickets = tickets;
+    if (Array.isArray(appSettings)) dataStore.appSettings = appSettings;
 
     console.log(
       `🔄 In-memory cache successfully synchronized with MongoDB Atlas (${leads.length} leads, ${users.length} users, ${tasks.length} tasks).`
