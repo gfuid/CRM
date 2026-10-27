@@ -12,6 +12,7 @@ import {
   ShieldAlert
 } from 'lucide-react';
 import { api } from '../services/api';
+import { openTicket } from './support/SupportParts';
 
 // No sample notifications: everything shown here comes from the server
 const DEFAULT_TRADE_NOTIFICATIONS = [];
@@ -99,6 +100,7 @@ export default function NotificationsPopover({ isOpen, onClose }) {
               time: formatTimeAgo(item.created_at),
               read: !!item.is_read,
               isServer: true,
+              ticketId: item.ticket_id || null,
               priority: item.priority,
               icon: Icon,
               iconColor,
@@ -196,7 +198,13 @@ export default function NotificationsPopover({ isOpen, onClose }) {
             return (
               <div
                 key={item.id}
-                onClick={() => markSingleRead(item.id, item.isServer)}
+                onClick={() => {
+                  markSingleRead(item.id, item.isServer);
+                  if (item.ticketId) {
+                    openTicket(item.ticketId);
+                    onClose && onClose();
+                  }
+                }}
                 className={`p-3.5 flex items-start gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors cursor-pointer ${
                   !item.read
                     ? isSubscriptionNotice

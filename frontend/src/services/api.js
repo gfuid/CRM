@@ -302,6 +302,35 @@ class ApiClient {
   }
 
   // Admin
+  // AI assistant & support tickets
+  assistantStatus() {
+    return this.request('/support/assistant/status');
+  }
+
+  assistantChat(messages) {
+    return this.request('/support/assistant/chat', { method: 'POST', body: JSON.stringify({ messages }) });
+  }
+
+  listTickets(status = 'all') {
+    return this.request(`/support/tickets?status=${encodeURIComponent(status)}`);
+  }
+
+  getTicket(id) {
+    return this.request(`/support/tickets/${id}`);
+  }
+
+  createTicket(data) {
+    return this.request('/support/tickets', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  replyTicket(id, body) {
+    return this.request(`/support/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ body }) });
+  }
+
+  updateTicket(id, data) {
+    return this.request(`/support/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
+  }
+
   getMyUsage() {
     return this.request('/admin/my-usage');
   }

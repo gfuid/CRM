@@ -5,6 +5,7 @@ import { api } from './services/api';
 import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import MobileTopHeader from './components/MobileTopHeader';
+import AssistantWidget from './components/support/AssistantWidget';
 import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
@@ -46,6 +47,7 @@ const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
 const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
+const Support = lazyWithRetry(() => import('./pages/Support'));
 
 const tabNames = {
   analytics: 'Analytics',
@@ -57,6 +59,7 @@ const tabNames = {
   followup: 'Follow up',
   email: 'Email Marketing',
   review: 'Team Review',
+  support: 'Help & Support',
 };
 
 function AppContent() {
@@ -67,6 +70,13 @@ function AppContent() {
     localStorage.setItem('crm_active_tab', tab);
     setActiveTabState(tab);
   };
+
+  // Other parts of the app (e.g. a notification) can ask to open a page
+  useEffect(() => {
+    const go = (e) => { if (e.detail && e.detail.tab) { localStorage.setItem('crm_active_tab', e.detail.tab); setActiveTabState(e.detail.tab); } };
+    window.addEventListener('crm_navigate', go);
+    return () => window.removeEventListener('crm_navigate', go);
+  }, []);
 
   // Dedicated Route Detection (/login, /signup, /register)
   const getInitialAuthMode = () => {
@@ -296,6 +306,8 @@ function AppContent() {
         return isOwner ? <EmailMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
       case 'review':
         return <TeamReview />;
+      case 'support':
+        return <Support />;
       default:
         return <Analytics />;
     }
@@ -350,6 +362,9 @@ function AppContent() {
           onOpenStaffModal={handleOpenStaffModal}
         />
       </div>
+
+      {/* Floating AI help assistant (every page) */}
+      <AssistantWidget activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Owner Staff Management Modal */}
       {isOwner && (

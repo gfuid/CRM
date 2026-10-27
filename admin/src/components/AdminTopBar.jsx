@@ -4,6 +4,8 @@ import { RefreshCw, Bell, ChevronDown, ExternalLink, LogOut, Menu, Settings } fr
 const SECTION_TITLES = {
   overview: { title: 'Overview', subtitle: 'Platform summary' },
   users: { title: 'Owners & Staff', subtitle: 'Accounts, seat quotas and premium features' },
+  support: { title: 'Support Tickets', subtitle: 'Questions and problems raised by owners and staff' },
+  ai: { title: 'AI Assistant', subtitle: 'Grok API key, model, limits and usage' },
   developer: { title: 'Developer & Servers', subtitle: 'Atlas storage, API performance, memory profiler & server health' },
   settings: { title: 'Settings', subtitle: 'Platform configuration' },
 };

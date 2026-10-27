@@ -14,6 +14,7 @@ import {
   ExternalLink,
   Mail,
   ClipboardCheck,
+  LifeBuoy,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -46,6 +47,7 @@ export default function MobileTabBar({
     { id: 'mydays', label: 'My Days Worklog', icon: Calendar, desc: 'Daily work timeline' },
     { id: 'review', label: isOwner ? 'Team Review' : 'My Performance', icon: ClipboardCheck, desc: 'Tasks, follow-ups and remarks per person' },
     { id: 'email', label: 'Email Marketing', icon: Mail, desc: 'Premium: campaigns to tagged leads', visible: isOwner },
+    { id: 'support', label: 'Help & Support', icon: LifeBuoy, desc: 'Ask the AI assistant or raise a ticket' },
   ].filter((t) => t.visible !== false);
 
   const isMoreActive = ['activity', 'outreach', 'mydays', 'email'].includes(activeTab);

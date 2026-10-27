@@ -7,12 +7,16 @@ import {
   ExternalLink,
   X,
   LogOut,
+  LifeBuoy,
+  Bot,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
 const adminNavItems = [
   { id: 'overview', label: 'Overview', icon: LayoutDashboard },
   { id: 'users', label: 'Owners & Staff', icon: Users2 },
+  { id: 'support', label: 'Support Tickets', icon: LifeBuoy },
+  { id: 'ai', label: 'AI Assistant', icon: Bot },
   { id: 'developer', label: 'Developer & Servers', icon: Terminal, badge: 'Live' },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];

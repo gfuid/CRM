@@ -13,6 +13,7 @@ import {
   Shield,
   Mail,
   ClipboardCheck,
+  LifeBuoy,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import StorageMeter from './StorageMeter';
@@ -72,6 +73,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
     { id: 'review', label: isStaff ? 'My Performance' : 'Team Review', icon: ClipboardCheck },
     { id: 'email', label: 'Email Marketing', icon: Mail, visible: isOwner, pro: true },
+    { id: 'support', label: 'Help & Support', icon: LifeBuoy },
   ];
 
   const navItems = rawNavItems.filter((item) => item.visible !== false);
