@@ -24,6 +24,7 @@ router.use(requireSuperAdmin);
 
 router.patch('/users/:id/staff-limit', asyncHandler(adminController.updateStaffLimit));
 router.patch('/users/:id/storage-limit', asyncHandler(adminController.updateStorageLimit));
+router.post('/users/:id/move-to-owner', asyncHandler(adminController.moveOwnerToOwner));
 
 // AI assistant settings (key is stored encrypted and never sent back)
 const support = require('../controllers/support.controller');

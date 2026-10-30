@@ -17,6 +17,9 @@ import {
   UserPlus,
   Lock,
   Trash2,
+  HardDrive,
+  ArrowRightLeft,
+  AtSign,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -28,7 +31,56 @@ export default function OwnerStaffHierarchyView({
   onResetPassword = null,
   onToggleFeature = null,
   onDeleteOwner = null,
+  onSetStorageLimit = null,
+  onDeleteStaff = null,
+  onChangeEmail = null,
+  onMoveOwner = null,
+  allOwners = [],
 }) {
+  const [moving, setMoving] = useState(null); // owner being moved
+  const [moveTarget, setMoveTarget] = useState('');
+  const [freeEmail, setFreeEmail] = useState(true);
+  const [busy, setBusy] = useState(false);
+
+  const STORAGE_STEPS = [10, 25, 50, 100, 200, 300, 500, 1000, 2000];
+  const changeStorage = async (owner, dir) => {
+    const cur = Number(owner.storage?.limit_mb || owner.storage_limit_mb || 50);
+    const next = dir > 0 ? (STORAGE_STEPS.find((v) => v > cur) || cur + 500) : ([...STORAGE_STEPS].reverse().find((v) => v < cur) || cur);
+    if (next === cur || !onSetStorageLimit) return;
+    setBusy(true);
+    try { await onSetStorageLimit(owner.id, next); } finally { setBusy(false); }
+  };
+  const typeStorage = async (owner) => {
+    const cur = Number(owner.storage?.limit_mb || owner.storage_limit_mb || 50);
+    const v = window.prompt(`Storage limit for ${owner.company_name || owner.name} in MB (1 – 10240):`, String(cur));
+    if (v === null) return;
+    const mb = Number(v);
+    if (!Number.isFinite(mb) || mb < 1 || mb > 10240) { window.alert('Enter a number between 1 and 10240'); return; }
+    setBusy(true);
+    try { await onSetStorageLimit(owner.id, mb); } finally { setBusy(false); }
+  };
+  const changeEmail = async (u) => {
+    if (!onChangeEmail) return;
+    const v = window.prompt(`New login email for ${u.name} (current: ${u.email}):`, u.email);
+    if (v === null || !v.trim() || v.trim().toLowerCase() === String(u.email).toLowerCase()) return;
+    setBusy(true);
+    try { await onChangeEmail(u.id, v.trim()); } finally { setBusy(false); }
+  };
+  const deleteStaff = async (emp, owner) => {
+    if (!onDeleteStaff) return;
+    if (!window.confirm(`Delete staff ${emp.name} (${emp.email}) from ${owner.company_name || owner.name}?\n\nTheir leads stay with the owner. This cannot be undone.`)) return;
+    setBusy(true);
+    try { await onDeleteStaff(emp.id); } finally { setBusy(false); }
+  };
+  const doMove = async () => {
+    if (!moving || !moveTarget || !onMoveOwner) return;
+    setBusy(true);
+    try {
+      const r = await onMoveOwner(moving.id, moveTarget, freeEmail);
+      if (r) { setMoving(null); setMoveTarget(''); }
+    } finally { setBusy(false); }
+  };
+
   // Store expanded owner IDs. Default to having all owners expanded so staff are immediately visible!
   const [expandedOwners, setExpandedOwners] = useState({});
   const [updatingQuotaId, setUpdatingQuotaId] = useState(null);
@@ -151,7 +203,7 @@ export default function OwnerStaffHierarchyView({
             {/* 1. PRIMARY OWNER ROW (Always Visible) */}
             <div
               onClick={() => toggleExpand(owner.id)}
-              className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors bg-gradient-to-r from-amber-50/20 via-white to-white"
+              className="p-4 sm:p-5 flex flex-col lg:flex-row lg:items-center justify-between gap-4 cursor-pointer hover:bg-slate-50/70 transition-colors"
             >
               {/* Owner Identity */}
               <div className="flex items-center gap-3.5 min-w-0">
@@ -242,9 +294,9 @@ export default function OwnerStaffHierarchyView({
                 </div>
 
                 {/* Quota Counter with Direct [+] and [-] buttons! */}
-                <div className="flex items-center gap-1 bg-amber-50/80 border border-amber-300/80 rounded-2xl p-1 shadow-2xs">
-                  <span className="text-[11px] font-black text-amber-900 px-2 flex items-center gap-1">
-                    <Crown size={12} className="text-amber-700" />
+                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-1">
+                  <span className="text-[11px] font-semibold text-slate-700 px-2 flex items-center gap-1">
+                    <Crown size={12} className="text-slate-400" />
                     <span>Quota:</span>
                   </span>
 
@@ -253,7 +305,7 @@ export default function OwnerStaffHierarchyView({
                     type="button"
                     disabled={updatingQuotaId === owner.id || staffLimit <= 1}
                     onClick={(e) => handleDecreaseQuota(owner, e)}
-                    className="w-7 h-7 rounded-xl bg-white hover:bg-amber-100 text-amber-900 border border-amber-200 flex items-center justify-center font-black transition-all disabled:opacity-40 cursor-pointer shadow-xs active:scale-95"
+                    className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center font-black transition-all disabled:opacity-40 cursor-pointer shadow-xs active:scale-95"
                     title="Staff Quota Ghatao (-1)"
                   >
                     <Minus size={12} />
@@ -269,13 +321,13 @@ export default function OwnerStaffHierarchyView({
                     type="button"
                     disabled={updatingQuotaId === owner.id}
                     onClick={(e) => handleIncreaseQuota(owner, e)}
-                    className="w-7 h-7 rounded-xl bg-amber-600 hover:bg-amber-700 text-white flex items-center justify-center font-black transition-all cursor-pointer shadow-xs active:scale-95 hover:scale-105"
+                    className="w-7 h-7 rounded-md bg-slate-900 hover:bg-slate-700 text-white flex items-center justify-center font-black transition-all cursor-pointer shadow-xs active:scale-95 hover:scale-105"
                     title="Staff Quota Badhao (+1 Seat)"
                   >
                     <Plus size={14} />
                   </button>
 
-                  <span className="text-[10px] font-extrabold text-amber-800 pr-2">Seats</span>
+                  <span className="text-[10px] font-semibold text-slate-500 pr-2">Seats</span>
                 </div>
 
                 {/* Quota Usage Pill */}
@@ -288,6 +340,24 @@ export default function OwnerStaffHierarchyView({
                 >
                   {staff.length} / {staffLimit} Used {isQuotaFull ? '(Full)' : ''}
                 </span>
+
+                {/* Storage limit: [-] used / limit [+] (click the number to type any value) */}
+                {onSetStorageLimit && (
+                  <div className={`flex items-center gap-1 rounded-lg p-1 border ${Number(owner.storage?.percent) >= 90 ? 'bg-rose-50 border-rose-300' : 'bg-white border-slate-200'}`}>
+                    <span className="text-[11px] font-semibold text-slate-700 px-1.5 flex items-center gap-1">
+                      <HardDrive size={12} /> Storage
+                    </span>
+                    <button type="button" disabled={busy} onClick={() => changeStorage(owner, -1)} className="w-7 h-7 rounded-md bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 flex items-center justify-center cursor-pointer disabled:opacity-40" title="Lower storage limit">
+                      <Minus size={12} />
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => typeStorage(owner)} className="px-2 py-1 text-[11px] font-black text-slate-900 cursor-pointer hover:underline" title="Click to type a limit">
+                      {owner.storage ? `${owner.storage.used_mb} / ${owner.storage.limit_mb} MB` : `${owner.storage_limit_mb || 50} MB`}
+                    </button>
+                    <button type="button" disabled={busy} onClick={() => changeStorage(owner, 1)} className="w-7 h-7 rounded-md bg-slate-900 hover:bg-slate-700 text-white flex items-center justify-center cursor-pointer disabled:opacity-40" title="Raise storage limit">
+                      <Plus size={13} />
+                    </button>
+                  </div>
+                )}
                 {onDeleteOwner && (
                   <button
                     type="button"
@@ -352,6 +422,28 @@ export default function OwnerStaffHierarchyView({
                       >
                         <Lock size={12} />
                         <span>Password</span>
+                      </button>
+                    )}
+                    {onChangeEmail && (
+                      <button
+                        type="button"
+                        onClick={() => changeEmail(owner)}
+                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Change this owner's login email"
+                      >
+                        <AtSign size={12} />
+                        <span>Email</span>
+                      </button>
+                    )}
+                    {onMoveOwner && (
+                      <button
+                        type="button"
+                        onClick={() => { setMoving(owner); setMoveTarget(''); setFreeEmail(true); }}
+                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                        title="Move this whole account (leads, staff, tasks) under another owner"
+                      >
+                        <ArrowRightLeft size={12} />
+                        <span>Move under…</span>
                       </button>
                     )}
                     <button
@@ -468,6 +560,28 @@ export default function OwnerStaffHierarchyView({
                                   <span>Password</span>
                                 </button>
                               )}
+                              {onChangeEmail && (
+                                <button
+                                  type="button"
+                                  onClick={() => changeEmail(emp)}
+                                  className="ml-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-slate-200 text-slate-600 hover:bg-slate-100 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                  title="Change this staff member's login email"
+                                >
+                                  <AtSign size={10} />
+                                  <span>Email</span>
+                                </button>
+                              )}
+                              {onDeleteStaff && (
+                                <button
+                                  type="button"
+                                  onClick={() => deleteStaff(emp, owner)}
+                                  className="ml-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold border border-rose-200 text-rose-700 bg-rose-50 hover:bg-rose-100 transition-colors cursor-pointer inline-flex items-center gap-1"
+                                  title="Delete this staff member"
+                                >
+                                  <Trash2 size={10} />
+                                  <span>Delete</span>
+                                </button>
+                              )}
                             </td>
                           </tr>
                         ))}
@@ -480,6 +594,38 @@ export default function OwnerStaffHierarchyView({
           </div>
         );
       })}
+
+      {moving && (
+        <div className="fixed inset-0 z-50 bg-slate-900/40 flex items-center justify-center p-4" onClick={() => !busy && setMoving(null)}>
+          <div className="bg-white rounded-3xl p-6 w-full max-w-lg space-y-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-base font-black text-slate-900 flex items-center gap-2"><ArrowRightLeft size={18} /> Move {moving.company_name || moving.name} under another owner</h3>
+            <p className="text-xs text-slate-600 leading-relaxed">
+              Use this when one customer has two accounts (for example an old login <b>{moving.email}</b> and a new one).
+              All leads, tasks, follow-ups, remarks, tickets and staff of <b>{moving.name}</b> move into the owner you choose.
+              The old owner login is switched off.
+            </p>
+            <label className="block text-[11px] font-bold text-slate-700">
+              Move under
+              <select value={moveTarget} onChange={(e) => setMoveTarget(e.target.value)} className="mt-1 w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-slate-50">
+                <option value="">Choose the owner…</option>
+                {allOwners.filter((o) => o.id !== moving.id && o.is_active !== false && !o.merged_into).map((o) => (
+                  <option key={o.id} value={o.id}>{o.name} · {o.email}{o.company_name ? ` · ${o.company_name}` : ''}</option>
+                ))}
+              </select>
+            </label>
+            <label className="flex items-start gap-2 text-xs text-slate-700 cursor-pointer">
+              <input type="checkbox" checked={freeEmail} onChange={(e) => setFreeEmail(e.target.checked)} className="mt-0.5" />
+              <span>Release the email <b>{moving.email}</b> so it can be used again (e.g. for a new staff member)</span>
+            </label>
+            <div className="flex items-center justify-end gap-2 pt-1">
+              <button type="button" onClick={() => setMoving(null)} disabled={busy} className="px-4 py-2 rounded-full text-xs font-bold text-slate-600 hover:bg-slate-100 cursor-pointer">Cancel</button>
+              <button type="button" onClick={doMove} disabled={busy || !moveTarget} className="px-4 py-2 rounded-full bg-slate-900 text-white text-xs font-bold cursor-pointer disabled:opacity-40">
+                {busy ? 'Moving…' : 'Move account'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

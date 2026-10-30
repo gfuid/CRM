@@ -107,7 +107,7 @@ const getDb = () => {
 // Tests must never read or overwrite the real local snapshot file
 const SNAPSHOT_DISABLED = process.env.NODE_ENV === 'test' || process.env.DISABLE_SNAPSHOT === '1';
 
-const saveSnapshot = () => {
+const writeSnapshotNow = () => {
   if (SNAPSHOT_DISABLED) return;
   try {
     const fs = require('fs');
@@ -128,11 +128,30 @@ const saveSnapshot = () => {
       appSettings: dataStore.appSettings,
       company: dataStore.company,
     };
-    fs.writeFileSync(snapshotPath, JSON.stringify(payload, null, 2), 'utf-8');
+    // Compact JSON (no pretty spaces) is smaller and much faster to write
+    fs.writeFileSync(snapshotPath, JSON.stringify(payload), 'utf-8');
   } catch (err) {
     console.warn('[Snapshot Persistence Warning]:', err.message);
   }
 };
+
+// Many saves in a row (e.g. a bulk import) write the snapshot only once, shortly after the last one,
+// instead of re-writing the whole file on every single save (which blocked the server).
+let snapshotTimer = null;
+const saveSnapshot = () => {
+  if (SNAPSHOT_DISABLED) return;
+  if (snapshotTimer) clearTimeout(snapshotTimer);
+  snapshotTimer = setTimeout(() => {
+    snapshotTimer = null;
+    writeSnapshotNow();
+  }, 1500);
+  if (snapshotTimer.unref) snapshotTimer.unref();
+};
+saveSnapshot.flush = () => {
+  if (snapshotTimer) { clearTimeout(snapshotTimer); snapshotTimer = null; }
+  writeSnapshotNow();
+};
+process.once('beforeExit', () => { if (snapshotTimer) saveSnapshot.flush(); });
 
 // Persistence helpers that sync updates directly to MongoDB Atlas
 const dbSync = {
@@ -491,9 +510,10 @@ try {
     const isUserDeleted = (email, id) => {
       const deletedIds = dataStore.deletedUserIds || [];
       const deletedEmails = dataStore.deletedUserEmails || [];
+      // Match by id; an email alone only counts for old records without an id (a deleted email may be reused)
       return (
         (id && deletedIds.includes(String(id))) ||
-        (email && deletedEmails.includes(String(email).toLowerCase()))
+        (!id && email && deletedEmails.includes(String(email).toLowerCase()))
       );
     };
 
@@ -508,7 +528,7 @@ try {
         u.email === 'bioniversiobiologics@arggroups.com'
     );
     if (keerthana) {
-      keerthana.staff_limit = 10;
+      if (keerthana.staff_limit === undefined || keerthana.staff_limit === null) keerthana.staff_limit = 10;
       keerthana.company_id = 'comp_bioniversio_1';
       keerthana.company_name = 'Bioniversio Biologics';
     }

@@ -35,7 +35,30 @@ class ApiClient {
     return false;
   }
 
-  async request(endpoint, options = {}) {
+  /**
+   * Several parts of a page often ask for the same data at the same moment (e.g. leads, notifications).
+   * Identical reads share one network call, and a read is reused for 2 seconds. Any save clears this.
+   */
+  request(endpoint, options = {}) {
+    const method = String(options.method || 'GET').toUpperCase();
+    if (method !== 'GET') {
+      this._getCache = new Map();
+      return this._send(endpoint, options);
+    }
+    if (!this._getCache) this._getCache = new Map();
+    const key = `${localStorage.getItem('crm_token') || ''}|${endpoint}`;
+    const hit = this._getCache.get(key);
+    if (hit && (hit.pending || Date.now() - hit.at < 2000)) return hit.promise;
+    const entry = { at: Date.now(), pending: true };
+    entry.promise = this._send(endpoint, options)
+      .then((data) => { entry.pending = false; entry.at = Date.now(); return data; })
+      .catch((err) => { this._getCache.delete(key); throw err; });
+    this._getCache.set(key, entry);
+    if (this._getCache.size > 100) this._getCache.delete(this._getCache.keys().next().value);
+    return entry.promise;
+  }
+
+  async _send(endpoint, options = {}) {
     const url = `${this.baseUrl}${endpoint}`;
     const config = {
       ...options,
@@ -85,12 +108,17 @@ class ApiClient {
       }
 
       if (!response.ok) {
+        // A switched-off account must leave the app cleanly (not keep showing errors)
+        if (response.status === 403 && /deactivated/i.test(String(data?.message || ''))) {
+          window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: data.message } }));
+        }
         if (response.status === 401) {
           const errMsg = data?.message || '';
           if (
             errMsg.toLowerCase().includes('expired') ||
             errMsg.toLowerCase().includes('invalid') ||
-            errMsg.toLowerCase().includes('authentication required')
+            errMsg.toLowerCase().includes('authentication required') ||
+            errMsg.toLowerCase().includes('log in again')
           ) {
             window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: errMsg } }));
           }

@@ -65,20 +65,20 @@ export default function TopBar({
 
   return (
     <>
-      <header className="sticky top-0 z-20 h-16 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200/80 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors">
+      <header className="sticky top-0 z-20 h-16 bg-white/80 dark:bg-slate-900/90 backdrop-blur-xl border-b border-slate-200/70 dark:border-slate-800 px-4 sm:px-6 lg:px-8 flex items-center justify-between transition-colors">
         {/* Left: Breadcrumbs & Navigation Controls */}
         <div className="flex items-center gap-3 min-w-0">
           <div className="flex items-center gap-1 shrink-0">
             <button
               onClick={() => window.history.back()}
-              className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               aria-label="Go back"
             >
               <ChevronLeft size={14} />
             </button>
             <button
               onClick={() => window.history.forward()}
-              className="w-7 h-7 rounded-lg flex items-center justify-center border border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+              className="w-7 h-7 rounded-md flex items-center justify-center text-slate-400 dark:text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
               aria-label="Go forward"
             >
               <ChevronRight size={14} />
@@ -88,7 +88,7 @@ export default function TopBar({
           <div className="flex items-center gap-1.5 text-xs md:text-sm min-w-0 truncate">
             <span className="hidden lg:inline text-slate-400 dark:text-slate-500 font-medium">{rootName}</span>
             <span className="hidden lg:inline text-slate-300 dark:text-slate-600">/</span>
-            <span className="font-bold text-slate-900 dark:text-white">{currentName}</span>
+            <span className="font-semibold text-slate-900 dark:text-white">{currentName}</span>
           </div>
         </div>
 
@@ -97,11 +97,11 @@ export default function TopBar({
           {/* Interactive Crown Premium Access Pill */}
           <button
             onClick={() => setPremiumOpen(true)}
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-300 hover:bg-amber-100/80 dark:hover:bg-amber-900/60 shadow-xs transition-all cursor-pointer group"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-amber-50 dark:hover:bg-amber-950/40 hover:text-amber-800 transition-colors cursor-pointer group"
             title="Click to view Premium Trade License & Unlocked Features"
           >
-            <Crown size={14} className="text-amber-600 dark:text-amber-400 group-hover:scale-110 transition-transform" />
-            <span>Premium Access</span>
+            <Crown size={14} className="text-amber-500 dark:text-amber-400" />
+            <span>Premium</span>
           </button>
 
           {/* Action Buttons: Notes, Notifications, Dark Mode Toggle */}
@@ -152,7 +152,7 @@ export default function TopBar({
 
           {/* Customize Widget Button */}
           <button
-            className="hidden xl:flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-750 shadow-xs transition-colors cursor-pointer"
+            className="hidden xl:flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer"
             onClick={() => {
               if (customOnCustomize) customOnCustomize();
               setCustomizerOpen(true);
@@ -160,7 +160,7 @@ export default function TopBar({
             title="Configure Dashboard Widgets & Preferences"
           >
             <SlidersHorizontal size={14} />
-            <span>Customize Widget</span>
+            <span>Customize</span>
           </button>
 
 
@@ -170,10 +170,10 @@ export default function TopBar({
             {/* Interactive User Avatar / Details Trigger */}
             <button
               onClick={() => setProfileOpen(true)}
-              className="flex items-center gap-2 p-1 sm:px-2 sm:py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group text-left"
+              className="flex items-center gap-2 p-1 sm:px-1.5 sm:py-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors cursor-pointer group text-left"
               title={`View Profile & Activity: ${displayName} (${displayRole})`}
             >
-              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-600 to-rose-500 text-white flex items-center justify-center font-bold text-xs ring-2 ring-slate-100 dark:ring-slate-700 shadow-xs overflow-hidden">
+              <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-semibold text-xs ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden">
                 {avatarUrl ? (
                   <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
@@ -181,7 +181,7 @@ export default function TopBar({
                 )}
               </div>
               <div className="hidden lg:block text-left">
-                <div className="text-xs font-bold text-slate-800 dark:text-slate-200 leading-tight group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
+                <div className="text-xs font-semibold text-slate-800 dark:text-slate-200 leading-tight">
                   {displayName}
                 </div>
                 <div className="text-[10px] text-slate-400 capitalize">
@@ -193,7 +193,7 @@ export default function TopBar({
             {/* Quick Prominent Sign Out */}
             <button
               onClick={signOut}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/40 border border-rose-200/80 dark:border-rose-900/60 shadow-xs transition-all cursor-pointer"
+              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:text-rose-600 hover:border-rose-200 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer"
               title="Sign Out of Travel-Trade CRM"
             >
               <LogOut size={14} />

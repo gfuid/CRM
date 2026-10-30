@@ -349,7 +349,9 @@ function AppContent() {
         <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
-              {renderPage()}
+              <div key={activeTab} className="page-enter">
+                {renderPage()}
+              </div>
             </Suspense>
           </ErrorBoundary>
         </main>

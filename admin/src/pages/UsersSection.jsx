@@ -35,6 +35,10 @@ export default function UsersSection({
   onToggleFeature,
   onResetPassword,
   onDeleteOwner,
+  onSetStorageLimit,
+  onDeleteStaff,
+  onChangeEmail,
+  onMoveOwner,
 }) {
   const [viewMode, setViewMode] = useState('hierarchy'); // 'hierarchy' | 'flat'
   const [search, setSearch] = useState('');
@@ -312,6 +316,11 @@ export default function UsersSection({
             onResetPassword={openReset}
             onToggleFeature={onToggleFeature}
             onDeleteOwner={openDeleteOwner}
+            onSetStorageLimit={onSetStorageLimit}
+            onDeleteStaff={onDeleteStaff}
+            onChangeEmail={onChangeEmail}
+            onMoveOwner={onMoveOwner}
+            allOwners={users.filter((x) => x.persona === 'owner' || x.role === 'admin' || x.is_owner)}
             onAddStaffForOwner={(owner) => {
               setNewUser((prev) => ({
                 ...prev,

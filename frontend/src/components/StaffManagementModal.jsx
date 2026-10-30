@@ -461,12 +461,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
       console.warn('API createUser error, checking fallback:', err.message);
       const errMsg = (err.message || '').toLowerCase();
 
-      if (errMsg.includes('already exists')) {
-        setError('A staff member with this email already exists.');
-        return;
-      }
-
-      if (errMsg.includes('staff seat limit') || errMsg.includes('seat limit') || errMsg.includes('staff limit')) {
+      // Show the server's own reason (e.g. which kind of account already uses the email, seat limit, weak password)
+      if (err.status || (!err.isNetworkError && err.message && !errMsg.includes('could not be saved'))) {
         setError(err.message);
         return;
       }
@@ -632,7 +628,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
     >
       <div className="space-y-4 max-h-[82vh] overflow-y-auto pr-1 text-xs">
         {/* Top Info Banner with Quota Indicator */}
-        <div className="p-3.5 bg-gradient-to-r from-emerald-50 to-teal-50/80 border border-emerald-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+        <div className="p-3.5 bg-slate-50 border border-slate-200 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
           <div>
             <div className="font-extrabold text-emerald-950 text-xs flex flex-wrap items-center gap-1.5">
               <ShieldCheck size={16} className="text-emerald-700" />

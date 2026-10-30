@@ -181,6 +181,9 @@ const register = async (req, res) => {
   if (existing) {
     return ApiResponse.error(res, 'User with this email already exists', 409);
   }
+  if (Array.isArray(dataStore.deletedUserEmails)) {
+    dataStore.deletedUserEmails = dataStore.deletedUserEmails.filter((e) => e !== String(email).toLowerCase().trim());
+  }
 
   const isOwner = true;
   const chosenPlan = plan && dataStore.plans[plan] ? plan : 'growth';

@@ -25,6 +25,11 @@ const startServer = async () => {
     console.log(`====================================================`);
   });
 
+  // Never sleep (self ping) + keep the free MongoDB cluster active (heartbeat write)
+  if (process.env.KEEPALIVE_DISABLED !== 'true') {
+    require('./src/services/keepAlive.service').startKeepAlive();
+  }
+
   // Owner's evening team report (in-app notification + email when SMTP is set)
   if (process.env.DAILY_REPORT_DISABLED !== 'true') {
     require('./src/services/dailyReport.service').startDailyReportScheduler();
@@ -33,6 +38,7 @@ const startServer = async () => {
 
 // Graceful shutdown handling
 const handleGracefulShutdown = async (signal) => {
+  try { require('./src/repositories/dataStore').saveSnapshot.flush(); } catch {}
   console.log(`\nReceived ${signal}. Shutting down gracefully...`);
   await disconnectDB();
   server.close(() => {

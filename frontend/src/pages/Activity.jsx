@@ -473,7 +473,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
         <div>
           <button
             onClick={onNavigateToLeads}
-            className="flex items-center gap-2 px-5 py-2.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white text-xs font-bold transition-all shadow-md shadow-purple-600/25 cursor-pointer"
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold transition-colors shadow-sm cursor-pointer"
           >
             <Plus size={16} strokeWidth={2.5} />
             <span>Create Lead</span>
@@ -493,7 +493,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
           </div>
           <button
             onClick={onNavigateToMyDays}
-            className="flex items-center gap-2 px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold transition-all shadow-sm cursor-pointer"
+            className="flex items-center gap-2 px-3.5 py-2 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
           >
             <CalendarDays size={15} />
             <span>My day</span>
@@ -509,18 +509,18 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             {/* Missed Follow: Alert Crimson Red with Live Blinking Ping Dot */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'missed' ? 'All' : 'missed')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
                 filterFollowUp === 'missed'
-                  ? 'bg-red-700 text-white ring-2 ring-red-400 ring-offset-2 shadow-sm'
-                  : 'bg-red-600 hover:bg-red-700 text-white shadow-sm shadow-red-600/20'
+                  ? 'bg-red-50 border-red-300 text-red-800 ring-2 ring-red-100'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-red-200 hover:bg-red-50/50'
               }`}
             >
               <span className="relative flex h-2 w-2">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-200 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-2 w-2 bg-white"></span>
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-300 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
               </span>
               <span>Missed Follow</span>
-              <span className="bg-white text-red-700 text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-slate-100 text-slate-700 text-[11px] px-1.5 rounded-full font-semibold tabular-nums">
                 {missedCount}
               </span>
             </button>
@@ -528,15 +528,15 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             {/* Idle Critical: High-Visibility Warning Tangerine / Amber */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'idle_critical' ? 'All' : 'idle_critical')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
                 filterFollowUp === 'idle_critical'
-                  ? 'bg-amber-600 text-white ring-2 ring-amber-300 ring-offset-2 shadow-sm'
-                  : 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-500/20'
+                  ? 'bg-amber-50 border-amber-300 text-amber-800 ring-2 ring-amber-100'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-amber-200 hover:bg-amber-50/50'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-200" />
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
               <span>Idle Critical</span>
-              <span className="bg-white text-amber-800 text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-slate-100 text-slate-700 text-[11px] px-1.5 rounded-full font-semibold tabular-nums">
                 {idleCount}
               </span>
             </button>
@@ -544,15 +544,15 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             {/* Risk: Deep Ruby / Rose for Accounts at Risk */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'risk' ? 'All' : 'risk')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
                 filterFollowUp === 'risk'
-                  ? 'bg-rose-700 text-white ring-2 ring-rose-400 ring-offset-2 shadow-sm'
-                  : 'bg-rose-600 hover:bg-rose-700 text-white shadow-sm shadow-rose-600/20'
+                  ? 'bg-rose-50 border-rose-300 text-rose-800 ring-2 ring-rose-100'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-rose-200 hover:bg-rose-50/50'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-rose-200" />
+              <span className="w-2 h-2 rounded-full bg-rose-500" />
               <span>Risk</span>
-              <span className="bg-white text-rose-800 text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-slate-100 text-slate-700 text-[11px] px-1.5 rounded-full font-semibold tabular-nums">
                 {riskCount}
               </span>
             </button>
@@ -560,15 +560,15 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             {/* Active: Vibrant Emerald Green representing healthy pipeline growth */}
             <button
               onClick={() => setFilterFollowUp(filterFollowUp === 'active' ? 'All' : 'active')}
-              className={`flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer shadow-xs ${
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium border transition-colors cursor-pointer ${
                 filterFollowUp === 'active'
-                  ? 'bg-emerald-700 text-white ring-2 ring-emerald-400 ring-offset-2 shadow-sm'
-                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-600/20'
+                  ? 'bg-emerald-50 border-emerald-300 text-emerald-800 ring-2 ring-emerald-100'
+                  : 'bg-white border-slate-200 text-slate-700 hover:border-emerald-200 hover:bg-emerald-50/50'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-200" />
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
               <span>Active</span>
-              <span className="bg-white text-emerald-800 text-[11px] px-2 py-0.2 rounded-full font-black">
+              <span className="bg-slate-100 text-slate-700 text-[11px] px-1.5 rounded-full font-semibold tabular-nums">
                 {activeCount}
               </span>
             </button>
@@ -593,7 +593,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                   onClick={() => setFilterMarket(m.id)}
                   className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                     isSelected
-                      ? 'bg-purple-600 text-white shadow-sm'
+                      ? 'bg-slate-900 text-white'
                       : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                   }`}
                 >
@@ -670,7 +670,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                 onClick={() => setFilterResponsible('All')}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all cursor-pointer ${
                   filterResponsible === 'All'
-                    ? 'bg-[#047857] text-white shadow-sm'
+                    ? 'bg-slate-900 text-white'
                     : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                 }`}
               >
@@ -688,7 +688,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
                     onClick={() => setFilterResponsible(isSelected ? 'All' : person)}
                     className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all cursor-pointer ${
                       isSelected
-                        ? 'bg-[#047857] text-white shadow-sm font-bold'
+                        ? 'bg-slate-900 text-white'
                         : 'bg-slate-100 hover:bg-slate-200 text-slate-700'
                     }`}
                   >

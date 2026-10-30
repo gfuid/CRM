@@ -44,14 +44,14 @@ export default function AdminSidebar({
       )}
 
       <aside
-        className={`w-64 min-w-[256px] bg-white/95 backdrop-blur-md border-r border-slate-200/80 h-screen fixed md:sticky top-0 left-0 flex flex-col select-none z-50 transition-transform duration-300 ease-in-out ${
+        className={`w-64 min-w-[256px] bg-white border-r border-slate-200 h-screen fixed md:sticky top-0 left-0 flex flex-col select-none z-50 transition-transform duration-300 ease-in-out ${
           isOpen ? 'translate-x-0 shadow-float' : '-translate-x-full md:translate-x-0'
         }`}
       >
         {/* Brand Header */}
-        <div className="p-5 border-b border-slate-100 flex items-center justify-between">
+        <div className="h-16 px-5 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <BrandLogo size={34} />
+            <BrandLogo size={30} />
             <div>
               <div className="font-extrabold text-slate-900 text-sm tracking-tight flex items-center gap-1.5">
                 <span>Travel-Trade</span>
@@ -73,8 +73,8 @@ export default function AdminSidebar({
         </div>
 
         {/* Navigation Sections (Zentra & Pill Style) */}
-        <div className="flex-1 overflow-y-auto p-3.5 space-y-1.5">
-          <div className="px-3 pt-2 pb-1 text-[10px] font-black text-slate-400 uppercase tracking-wider">
+        <div className="flex-1 overflow-y-auto p-3 space-y-0.5">
+          <div className="px-3 pt-2 pb-1 text-[10px] font-semibold text-slate-400 uppercase tracking-wider">
             Menu
           </div>
 
@@ -85,21 +85,21 @@ export default function AdminSidebar({
               <button
                 key={item.id}
                 onClick={() => handleSelect(item.id)}
-                className={`w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+                className={`relative w-full flex items-center justify-between px-3 py-2 rounded-lg text-[13px] font-medium transition-colors cursor-pointer ${
                   isActive
-                    ? 'bg-slate-900 text-white shadow-sm'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    ? 'bg-slate-100 text-slate-900 font-semibold before:absolute before:left-0 before:top-1.5 before:bottom-1.5 before:w-[3px] before:rounded-r before:bg-emerald-500'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <Icon size={16} className={isActive ? 'text-white' : 'text-slate-400'} />
+                  <Icon size={16} className={isActive ? 'text-slate-900' : 'text-slate-400'} />
                   <span>{item.label}</span>
                 </div>
                 {item.badge && (
                   <span
                     className={`text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase tracking-wider ${
                       isActive
-                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         : 'bg-emerald-50 text-emerald-700 border border-emerald-200'
                     }`}
                   >
@@ -118,7 +118,7 @@ export default function AdminSidebar({
             href="https://crm-amber-nine.vercel.app"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center justify-between p-2.5 rounded-2xl bg-slate-50 hover:bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200/80 transition-colors shadow-2xs"
+            className="flex items-center justify-between p-2.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold border border-slate-200 transition-colors"
           >
             <div className="flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -130,7 +130,7 @@ export default function AdminSidebar({
           {onSignOut && (
             <button
               onClick={onSignOut}
-              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-2xl bg-rose-50 hover:bg-rose-100 text-rose-700 text-xs font-bold border border-rose-200/70 transition-colors cursor-pointer"
+              className="w-full flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-white hover:bg-slate-50 text-slate-700 hover:text-rose-600 text-xs font-semibold border border-slate-200 transition-colors cursor-pointer"
             >
               <LogOut size={13} />
               <span>Sign Out</span>

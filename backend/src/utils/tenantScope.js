@@ -1,7 +1,27 @@
 /**
  * Returns tenant isolation context for an authenticated user.
  */
+// The same request asks for the tenant context once per lead (thousands of times on a big list).
+// Remember it briefly per user object so the staff list is not rebuilt every time.
+const ctxCache = new WeakMap();
+const CTX_TTL_MS = 2000;
+
 function getTenantContext(user) {
+  if (user && typeof user === 'object') {
+    const { dataStore } = require('../repositories/dataStore');
+    const usersRef = dataStore && dataStore.users;
+    const hit = ctxCache.get(user);
+    if (hit && hit.usersRef === usersRef && hit.usersLen === (usersRef ? usersRef.length : 0) && Date.now() - hit.at < CTX_TTL_MS) {
+      return hit.ctx;
+    }
+    const ctx = computeTenantContext(user);
+    ctxCache.set(user, { ctx, at: Date.now(), usersRef, usersLen: usersRef ? usersRef.length : 0 });
+    return ctx;
+  }
+  return computeTenantContext(user);
+}
+
+function computeTenantContext(user) {
   if (!user) {
     return {
       isSuperAdmin: false,

@@ -247,6 +247,33 @@ export default function App() {
     }
   };
 
+  // Generic admin call used by the owner / staff tools below
+  const adminCall = async (path, method, body, okMsg) => {
+    try {
+      const res = await fetch(`${API_BASE}${path}`, { method, headers: getHeaders(), body: body ? JSON.stringify(body) : undefined });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.success) {
+        showToast(data.message || 'Action failed', 'error');
+        return null;
+      }
+      showToast(okMsg || data.message || 'Done');
+      fetchAllData();
+      return data.data || true;
+    } catch (err) {
+      showToast(`Network error: ${err.message}`, 'error');
+      return null;
+    }
+  };
+
+  const handleSetStorageLimit = (id, mb) => adminCall(`/users/${id}/storage-limit`, 'PATCH', { storage_limit_mb: Number(mb) }, `Storage limit set to ${mb} MB`);
+  const handleDeleteStaff = (id) => adminCall(`/users/${encodeURIComponent(id)}`, 'DELETE', null, 'Staff member deleted. Their leads stay with the owner.');
+  const handleChangeEmail = (id, email) => adminCall(`/users/${id}`, 'PATCH', { email }, `Login email changed to ${email}`);
+  const handleMoveOwner = async (sourceId, targetId, freeEmail) => {
+    const r = await adminCall(`/users/${sourceId}/move-to-owner`, 'POST', { target_owner_id: targetId, free_email: freeEmail });
+    if (r && r.warning) setTimeout(() => showToast(r.warning, 'error'), 3600);
+    return r;
+  };
+
   const handleUpdateSettings = async (settingsData) => {
     try {
       const res = await fetch(`${API_BASE}/settings`, {
@@ -279,7 +306,7 @@ export default function App() {
   }
 
   return (
-    <div className="flex min-h-screen bg-[#eef1f6] text-slate-900 font-sans antialiased">
+    <div className="flex min-h-screen bg-[#fafafa] text-slate-900 font-sans antialiased">
       {/* Responsive Sidebar */}
       <AdminSidebar
         activeSection={activeSection}
@@ -333,6 +360,10 @@ export default function App() {
                   onToggleFeature={handleToggleFeature}
                   onResetPassword={handleResetPassword}
                   onDeleteOwner={handleDeleteOwner}
+                  onSetStorageLimit={handleSetStorageLimit}
+                  onDeleteStaff={handleDeleteStaff}
+                  onChangeEmail={handleChangeEmail}
+                  onMoveOwner={handleMoveOwner}
                 />
               )}
 

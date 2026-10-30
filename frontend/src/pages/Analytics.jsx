@@ -800,7 +800,7 @@ export default function Analytics() {
                         }}
                         className={`px-2.5 py-1.5 rounded-xl text-left font-bold transition-all ${
                           datePreset === key
-                            ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white shadow-xs'
+                            ? 'bg-slate-900 text-white'
                             : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
                         }`}
                       >
@@ -886,7 +886,7 @@ export default function Analytics() {
 
       {/* ACTIVE DATE FILTER BANNER */}
       {datePreset !== 'all' && (
-        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-gradient-to-r from-rose-50/90 via-pink-50/60 to-indigo-50/90 dark:from-rose-950/40 dark:via-pink-950/30 dark:to-indigo-950/40 border border-rose-200/80 dark:border-rose-800/60 rounded-2xl animate-fadeIn">
+        <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 bg-slate-50 dark:bg-slate-900/60 dark:to-indigo-950/40 border border-rose-200/80 dark:border-rose-800/60 rounded-2xl animate-fadeIn">
           <div className="flex items-center gap-2.5">
             <div className="w-7 h-7 rounded-xl bg-rose-100 dark:bg-rose-900 text-rose-700 dark:text-rose-300 flex items-center justify-center">
               <Calendar size={14} />
@@ -1016,7 +1016,7 @@ export default function Analytics() {
                       <div className="mt-1 space-y-1">
                         <span className={`inline-block px-1.5 py-0.5 rounded-md font-extrabold text-[10px] ${
                           isSelected
-                            ? 'bg-gradient-to-r from-rose-500 to-pink-600 text-white'
+                            ? 'bg-slate-900 text-white'
                             : 'bg-rose-100 dark:bg-rose-900/60 text-rose-800 dark:text-rose-300'
                         }`}>
                           +{dayLeads.length} leads
@@ -1058,7 +1058,7 @@ export default function Analytics() {
                       setDatePreset('single_date');
                       setViewMode('insights');
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-gradient-to-r from-rose-500 to-pink-600 text-white text-xs font-bold hover:from-rose-600 hover:to-pink-700 transition-colors shadow-xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 text-white text-xs font-semibold hover:bg-emerald-700 transition-colors shadow-xs"
                   >
                     <BarChart3 size={13} />
                     <span>Filter All Insights to this Date</span>
@@ -1150,7 +1150,7 @@ export default function Analytics() {
             </div>
 
             {/* 3. Closed Won Contracts */}
-            <div className="bg-gradient-to-br from-emerald-50/50 via-white to-teal-50/40 dark:from-slate-900 dark:via-slate-900 dark:to-emerald-950/20 p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/50 shadow-sm transition-colors">
+            <div className="bg-white dark:bg-slate-900 p-5 rounded-2xl border border-emerald-200/80 dark:border-emerald-900/50 shadow-sm transition-colors">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold uppercase tracking-wider text-emerald-600/80 dark:text-emerald-400/80">
                   Closed won
@@ -1194,7 +1194,7 @@ export default function Analytics() {
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 pb-4 border-b border-slate-100 dark:border-slate-800">
               <div>
                 <div className="flex items-center gap-2">
-                  <div className="w-7 h-7 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 text-white flex items-center justify-center font-bold shadow-xs">
+                  <div className="w-7 h-7 rounded-lg bg-slate-900 text-white flex items-center justify-center font-bold shadow-xs">
                     <Activity size={16} />
                   </div>
                   <h2 className="text-base sm:text-lg font-black text-slate-900 dark:text-white">
@@ -1845,16 +1845,16 @@ export default function Analytics() {
                       <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                         Total Deals
                       </span>
-                      <span className="text-[10px] font-black px-2 py-0.5 mt-1 rounded-full bg-gradient-to-r from-rose-50 to-indigo-50 dark:from-rose-950/70 dark:to-indigo-950/70 text-rose-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80 shadow-2xs">
+                      <span className="text-[10px] font-black px-2 py-0.5 mt-1 rounded-full bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-rose-300 border border-rose-200/80 dark:border-rose-800/80 shadow-2xs">
                         {metrics.totalLeads > 0 ? `${Math.round((metrics.exportCount / metrics.totalLeads) * 100)}% Export` : 'Export Desk'}
                       </span>
                     </div>
                   </div>
 
                   <div className="w-full space-y-2 mt-4">
-                    <div className="p-3 rounded-xl bg-gradient-to-r from-rose-50/90 via-fuchsia-50/60 to-indigo-50/90 dark:from-rose-950/40 dark:via-fuchsia-950/20 dark:to-indigo-950/40 border border-rose-200/80 dark:border-rose-900/60 flex items-center justify-between shadow-2xs">
+                    <div className="p-3 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-rose-200/80 dark:border-rose-900/60 flex items-center justify-between shadow-2xs">
                       <div className="flex items-center gap-2.5">
-                        <span className="w-3.5 h-3.5 rounded-full bg-gradient-to-tr from-rose-500 via-pink-500 to-indigo-600 shadow-xs shrink-0" />
+                        <span className="w-3.5 h-3.5 rounded-full bg-emerald-500 shadow-xs shrink-0" />
                         <div>
                           <span className="text-xs font-black text-rose-950 dark:text-rose-200 block">
                             🌐 International Export
@@ -2139,7 +2139,7 @@ export default function Analytics() {
                         onClick={() => setCountryChartMode('donut')}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                           countryChartMode === 'donut'
-                            ? 'bg-gradient-to-r from-rose-500 to-indigo-600 text-white shadow-2xs'
+                            ? 'bg-slate-900 text-white'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -2151,7 +2151,7 @@ export default function Analytics() {
                         onClick={() => setCountryChartMode('bars')}
                         className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all flex items-center gap-1 cursor-pointer ${
                           countryChartMode === 'bars'
-                            ? 'bg-gradient-to-r from-rose-500 to-indigo-600 text-white shadow-2xs'
+                            ? 'bg-slate-900 text-white'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
                         }`}
                       >
@@ -2159,7 +2159,7 @@ export default function Analytics() {
                         <span>Bars</span>
                       </button>
                     </div>
-                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-gradient-to-r from-rose-50 to-indigo-50 dark:from-rose-950/60 dark:to-indigo-950/60 text-rose-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
+                    <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-rose-300 border border-rose-200/60 dark:border-rose-800/60">
                       {displayCountries.length} Countries
                     </span>
                   </div>
@@ -2263,7 +2263,7 @@ export default function Analytics() {
                                     <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">
                                       Export Markets
                                     </span>
-                                    <span className="text-[10px] font-black bg-gradient-to-r from-rose-500 via-pink-500 to-indigo-500 bg-clip-text text-transparent mt-0.5">
+                                    <span className="text-[10px] font-black text-emerald-700 mt-0.5">
                                       100% Export Desk
                                     </span>
                                   </>

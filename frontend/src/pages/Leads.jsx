@@ -1958,10 +1958,10 @@ export default function Leads() {
           {/* Manual Add Lead */}
           <button
             onClick={openCreate}
-            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-bold rounded-xl bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white shadow-md shadow-emerald-500/20 transition-all cursor-pointer"
+            className="inline-flex items-center gap-1.5 px-3.5 sm:px-4 py-2 text-xs font-bold rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-500/20 transition-all cursor-pointer"
           >
             <Plus size={16} />
-            <span>+ Add Lead</span>
+            <span>Add Lead</span>
           </button>
         </div>
       </div>
@@ -2244,12 +2244,12 @@ export default function Leads() {
       )}
 
       {/* Leads Table & Mobile View Cards */}
-      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-sm overflow-hidden">
+      <div className="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
         {/* Desktop View Table */}
         <div className="hidden md:block overflow-x-auto w-full">
           <table className="w-full text-left border-collapse text-xs">
             <thead>
-              <tr className="border-b border-slate-100 bg-slate-50/80 text-[11px] font-bold uppercase tracking-wider text-slate-500">
+              <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">
                 <th className="py-3.5 px-4">Company & Country</th>
                 <th className="py-3.5 px-4">Contact Person</th>
                 <th className="py-3.5 px-4">Products</th>
@@ -2257,7 +2257,7 @@ export default function Leads() {
                 <th className="py-3.5 px-4">Created By & Date</th>
                 <th className="py-3.5 px-4">Follow-Up</th>
                 <th className="py-3.5 px-4 text-center">Stage</th>
-                <th className="py-3.5 px-4 text-right">Actions</th>
+                <th className="py-3 px-4 text-right sticky right-0 bg-slate-50 z-[1] shadow-[-8px_0_12px_-10px_rgba(16,24,40,0.15)]">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
@@ -2278,7 +2278,7 @@ export default function Leads() {
                     <tr
                       key={lead.id}
                       onClick={() => openDetails(lead)}
-                      className="hover:bg-emerald-50/40 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group"
+                      className="hover:bg-slate-50 dark:hover:bg-slate-800/60 transition-colors cursor-pointer group border-b border-slate-100 last:border-0"
                       title="Click anywhere to view full lead specifications & dossier"
                     >
                       {/* Company & Country */}
@@ -2447,12 +2447,12 @@ export default function Leads() {
                       </td>
 
                       {/* Actions: View (Requirement 8) & Edit & Delete */}
-                      <td className="py-3.5 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
+                      <td className="py-3.5 px-4 text-right sticky right-0 bg-white dark:bg-slate-900 group-hover:bg-slate-50 z-[1] shadow-[-8px_0_12px_-10px_rgba(16,24,40,0.15)]">
+                        <div className="flex items-center justify-end gap-1" onClick={(e) => e.stopPropagation()}>
                           <button
                             type="button"
                             onClick={() => openDetails(lead)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/40 hover:bg-emerald-100 border border-emerald-200 dark:border-emerald-800 transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                             title="View Full Lead Specifications & Dossier"
                           >
                             <Eye size={12} /> View
@@ -2460,7 +2460,7 @@ export default function Leads() {
                           <button
                             type="button"
                             onClick={() => openEdit(lead)}
-                            className="px-2.5 py-1.5 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 shadow-xs transition-all flex items-center gap-1 cursor-pointer"
+                            className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white bg-slate-900 hover:bg-slate-700 dark:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                             title="Edit Lead Details"
                           >
                             <Edit3 size={12} /> Edit

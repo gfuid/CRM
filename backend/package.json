@@ -7,7 +7,7 @@
     "start": "node server.js",
     "dev": "node --watch server.js",
     "seed": "node src/scripts/seed.js",
-    "test": "node src/scripts/ci-test.js && node src/scripts/role-scenarios-test.js && node src/scripts/security-audit-test.js && node src/scripts/daily-report-test.js && node src/scripts/support-test.js",
+    "test": "node src/scripts/ci-test.js && node src/scripts/role-scenarios-test.js && node src/scripts/security-audit-test.js && node src/scripts/daily-report-test.js && node src/scripts/support-test.js && node src/scripts/admin-tools-test.js",
     "test:features": "node src/scripts/test-100-features.js",
     "backup": "node src/scripts/backup-db.js",
     "restore": "node src/scripts/restore-db.js",

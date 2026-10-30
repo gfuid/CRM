@@ -113,7 +113,7 @@ export default function MobileTabBar({
                   setMoreDrawerOpen(false);
                   onOpenStaffModal();
                 }}
-                className="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 text-emerald-900 font-bold hover:bg-emerald-100 transition-colors"
+                className="w-full flex items-center gap-3 p-2.5 rounded-2xl text-left bg-white border border-slate-200 text-slate-800 font-semibold hover:bg-slate-50 transition-colors"
               >
                 <div className="w-8 h-8 rounded-xl bg-emerald-600 text-white flex items-center justify-center">
                   <UserPlus size={16} />

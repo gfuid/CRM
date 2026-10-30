@@ -915,7 +915,7 @@ export default function Outreach() {
                 </div>
               </div>
 
-              <div className="p-3.5 bg-gradient-to-br from-rose-50/80 via-pink-50/50 to-indigo-50/80 dark:bg-rose-950/30 border border-rose-200 dark:border-rose-900/60 rounded-2xl shadow-xs">
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-rose-900/60 rounded-2xl shadow-xs">
                 <div className="text-[10px] font-bold uppercase text-rose-800 dark:text-rose-400">Contract Value & Quantity</div>
                 {(() => {
                   const dealVal = Number(activePreviewLead.price) || Number(activePreviewLead.value) || 0;

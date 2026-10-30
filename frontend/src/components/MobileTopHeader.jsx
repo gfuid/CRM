@@ -67,7 +67,7 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
             {/* User Avatar with Profile Trigger */}
             <button
               onClick={() => setProfileOpen(true)}
-              className="w-8 h-8 rounded-full bg-gradient-to-tr from-pink-600 to-rose-500 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-white overflow-hidden cursor-pointer"
+              className="w-8 h-8 rounded-full bg-slate-900 border border-slate-200 dark:border-slate-700 flex items-center justify-center text-xs font-bold text-white overflow-hidden cursor-pointer"
               title="Open Profile Panel"
             >
               {profile?.avatar_url ? (
@@ -83,7 +83,7 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
 
             <button
               onClick={signOut}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl text-[11px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 border border-rose-200/80 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
               title="Sign Out"
             >
               <LogOut size={13} />

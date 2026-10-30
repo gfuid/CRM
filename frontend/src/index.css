@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=Inter+Tight:wght@400;500;600;700&display=swap');
+/* Inter font is loaded from index.html (preconnect + stylesheet) so it starts downloading earlier */
 
 @tailwind base;
 @tailwind components;
@@ -6,10 +6,88 @@
 
 @layer base {
   body {
-    @apply bg-slate-50 text-slate-900 font-sans antialiased transition-colors duration-150;
+    @apply bg-[#fafafa] text-slate-900 font-sans antialiased transition-colors duration-150;
   }
   .dark body {
     @apply bg-slate-950 text-slate-100;
+  }
+}
+
+
+/* ===== Design system: clean, minimal, professional ===== */
+@layer base {
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-rendering: optimizeLegibility;
+  }
+  body {
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    letter-spacing: -0.006em;
+  }
+  h1, h2, h3 {
+    letter-spacing: -0.018em;
+  }
+  ::selection {
+    background: rgba(16, 185, 129, 0.18);
+  }
+  /* Numbers line up in tables and stats */
+  table td, table th, .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+  /* One consistent, visible keyboard focus ring */
+  :where(button, a, input, select, textarea, [tabindex]):focus-visible {
+    outline: 2px solid rgba(16, 185, 129, 0.55);
+    outline-offset: 2px;
+  }
+  /* Smooth, quick feedback on everything clickable */
+  :where(button, a, [role='button'], select, input, textarea) {
+    transition-property: color, background-color, border-color, box-shadow, opacity, transform;
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(.22, .61, .36, 1);
+  }
+  :where(button:not(:disabled), [role='button']):active {
+    transform: scale(0.98);
+  }
+  :where(input, select, textarea)::placeholder {
+    color: #9ca3af;
+  }
+  /* Calm table rows */
+  :where(table) tbody tr {
+    transition: background-color 120ms ease;
+  }
+  img {
+    image-rendering: auto;
+  }
+}
+
+@layer components {
+  /* Page enters softly when you switch tabs */
+  .page-enter {
+    /* "backwards": no transform is left on the page afterwards, so fixed pop-ups inside still cover the whole screen */
+    animation: fade-in-up 220ms cubic-bezier(.22, .61, .36, 1) backwards;
+  }
+  /* Cards that lift slightly on hover */
+  .card-hover {
+    transition: box-shadow 160ms ease, transform 160ms ease, border-color 160ms ease;
+  }
+  .card-hover:hover {
+    box-shadow: 0 6px 16px -6px rgba(16, 24, 40, 0.10);
+    transform: translateY(-1px);
+  }
+}
+
+@keyframes fade-in-up {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* People who prefer less motion get none */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
   }
 }
 

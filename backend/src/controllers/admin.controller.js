@@ -137,6 +137,7 @@ const getAllUsers = async (req, res) => {
         staff_limit: staffLimit,
         staff_count: staffList.length,
         staff_list: staffList,
+        storage: isSuperAdmin(req.user) ? usageSummary(u) : undefined,
         plan: dataStore.company.plan || 'growth',
       };
     } else {
@@ -193,7 +194,21 @@ const createUser = async (req, res) => {
   }
   const existing = dataStore.users.find((u) => String(u.email || '').toLowerCase() === email.toLowerCase().trim());
   if (existing) {
-    return ApiResponse.error(res, 'A staff member with this email already exists', 409);
+    const isOwnerAccount = existing.persona === 'owner' || (existing.role === 'admin' && existing.persona !== 'staff');
+    const sameCompanyStaff = !isOwnerAccount && req.user && (existing.created_by === req.user.id);
+    return ApiResponse.error(
+      res,
+      sameCompanyStaff
+        ? 'This email already belongs to one of your staff members.'
+        : isOwnerAccount
+          ? 'This email is already used as the login of a company owner account, so it cannot be used for staff. Use a different email, or raise a support ticket and the platform team will free it or move that account under your company.'
+          : 'This email is already used by another CRM account. Use a different email, or raise a support ticket.',
+      409
+    );
+  }
+  // An email that belonged to a deleted account may be used again
+  if (Array.isArray(dataStore.deletedUserEmails)) {
+    dataStore.deletedUserEmails = dataStore.deletedUserEmails.filter((e) => e !== email.toLowerCase().trim());
   }
 
   // Resolve creating business owner
@@ -653,6 +668,99 @@ const toggleUserStatus = async (req, res) => {
 /**
  * Update staff seat limit for an owner / company (Super Admin only)
  */
+/**
+ * Super Admin: move a whole company account under another owner.
+ * Used when a customer opened a second account (e.g. old login export@x.com, new login x@gmail.com)
+ * and wants the old data + email inside the new company.
+ *
+ * POST /admin/users/:id/move-to-owner  { target_owner_id, free_email: true }
+ *  - every lead / task / follow-up / activity / My Day / outreach / ticket of the old company moves to the target company
+ *  - the old company's staff become staff of the target owner
+ *  - the old owner login is switched off; with free_email its email is released so it can be used for a new staff member
+ */
+const moveOwnerToOwner = async (req, res) => {
+  const isOwnerRec = (u) => u && (u.persona === 'owner' || (u.role === 'admin' && u.persona !== 'staff'));
+  const source = dataStore.users.find((u) => u.id === req.params.id);
+  const target = dataStore.users.find((u) => u.id === (req.body && req.body.target_owner_id));
+  if (!source || !isOwnerRec(source)) return ApiResponse.error(res, 'Choose the company owner account to move.', 400);
+  if (!target || !isOwnerRec(target)) return ApiResponse.error(res, 'Choose the company owner to move it under.', 400);
+  if (source.id === target.id) return ApiResponse.error(res, 'Source and target are the same account.', 400);
+  if (source.id === 'usr_super_admin' || target.id === 'usr_super_admin') return ApiResponse.error(res, 'Not allowed for the Super Admin account.', 400);
+
+  if (!target.company_id || GENERIC_COMPANY_IDS.includes(target.company_id)) {
+    target.company_id = 'comp_' + target.id;
+    dbSync.saveUser(target);
+  }
+  const fp = tenantFootprint(source);
+  const sourceCompany = fp.ownerCompanyId;
+  const moved = { leads: 0, tasks: 0, followUps: 0, activities: 0, myDays: 0, outreach: 0, tickets: 0, staff: 0 };
+  const now = new Date().toISOString();
+
+  const retarget = (r) => {
+    if (!r.company_id || r.company_id === sourceCompany || r.company_id === source.id) r.company_id = target.company_id;
+    if (r.owner_id === source.id || (sourceCompany && r.owner_id === sourceCompany) || r.owner_id === undefined) r.owner_id = target.id;
+    if (r.assigned_to === source.id) r.assigned_to = target.id;
+  };
+  fp.groups.leads.forEach((l) => {
+    retarget(l);
+    if (l.agent_name === source.name && l.assigned_to === target.id) l.agent_name = target.name;
+    l.moved_from_owner = source.id;
+    l.updated_at = now;
+    dbSync.saveLead(l); moved.leads++;
+  });
+  fp.groups.tasks.forEach((t) => { retarget(t); dbSync.saveTask(t); moved.tasks++; });
+  fp.groups.followUps.forEach((f) => { retarget(f); dbSync.saveFollowUp(f); moved.followUps++; });
+  fp.groups.activities.forEach((a) => { if (a.company_id === sourceCompany) a.company_id = target.company_id; dbSync.saveActivity(a); moved.activities++; });
+  fp.groups.myDays.forEach((m) => { if (m.user_id === source.id) m.user_id = target.id; if (m.company_id === sourceCompany) m.company_id = target.company_id; dbSync.saveMyDay(m); moved.myDays++; });
+  fp.groups.outreach.forEach((o) => { if (o.employee_id === source.id) o.employee_id = target.id; if (o.company_id === sourceCompany) o.company_id = target.company_id; dbSync.saveOutreach(o); moved.outreach++; });
+  (fp.groups.tickets || []).forEach((t) => {
+    t.owner_id = target.id;
+    t.company_id = target.company_id;
+    t.company_name = target.company_name || t.company_name;
+    dbSync.saveTicket(t); moved.tickets++;
+  });
+  fp.staffList.forEach((st) => {
+    st.created_by = target.id;
+    st.company_id = target.company_id;
+    st.company_name = target.company_name || st.company_name;
+    dbSync.saveUser(st); moved.staff++;
+  });
+
+  const oldEmail = source.email;
+  source.is_active = false;
+  source.staff_limit = 0;
+  source.merged_into = target.id;
+  source.merged_at = now;
+  source.password_changed_at = now; // ends any open session
+  if (req.body.free_email !== false) {
+    const [local, domain] = String(oldEmail).split('@');
+    source.email = `${local}+moved-${source.id.slice(-6)}@${domain || 'archived.invalid'}`.toLowerCase();
+  }
+  dbSync.saveUser(source);
+  try { require('../utils/usage').clearUsageCache(); } catch {}
+
+  const staffLimit = target.staff_limit !== undefined ? Number(target.staff_limit) : 2;
+  const staffNow = dataStore.users.filter((u) => u.created_by === target.id && !isOwnerRec(u)).length;
+  const log = {
+    id: generateId('log'),
+    actor_name: req.user.name || 'Super Admin',
+    actor_id: req.user.id,
+    action: 'COMPANY_MOVED',
+    details: `Moved ${source.name} (${oldEmail}) under ${target.name} (${target.email}): ${moved.leads} leads, ${moved.tasks} tasks, ${moved.followUps} follow-ups, ${moved.staff} staff.${req.body.free_email !== false ? ` Email ${oldEmail} released.` : ''}`,
+    ip_address: req.ip || '',
+    timestamp: now,
+  };
+  dataStore.auditLogs.unshift(log);
+  dbSync.saveAuditLog(log);
+
+  return ApiResponse.success(res, {
+    moved,
+    released_email: req.body.free_email !== false ? oldEmail : null,
+    target: { id: target.id, name: target.name, staff_now: staffNow, staff_limit: staffLimit },
+    warning: staffNow > staffLimit ? `${target.name} now has ${staffNow} staff but a limit of ${staffLimit}. Raise the limit if needed.` : null,
+  }, `${source.name}'s data is now under ${target.name}.`);
+};
+
 /**
  * The signed-in owner's own company storage (used / limit). Owner only.
  */
@@ -1441,7 +1549,7 @@ const getDeveloperMetrics = async (req, res) => {
  */
 const triggerDbSync = async (req, res) => {
   try {
-    saveSnapshot();
+    saveSnapshot.flush();
     let atlasSynced = false;
     if (isDbConnected()) {
       try {
@@ -1484,6 +1592,7 @@ const clearMetrics = async (req, res) => {
 };
 
 module.exports = {
+  moveOwnerToOwner,
   updateStorageLimit,
   getMyUsage,
   getOverviewSummary,
