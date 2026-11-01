@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Sparkles, Eye, EyeOff, Users, ArrowRight, AlertCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, Building2, User, Mail, Phone, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
 
 export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
@@ -89,36 +89,9 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
             </h1>
           </div>
         </div>
-        <p className="text-sm text-slate-500 mb-4">
-          Setup your company account and start closing commodity trade deals with precision.
+        <p className="text-sm text-slate-500 mb-6">
+          Set up your company account and start closing commodity trade deals with precision.
         </p>
-
-        {/* Staff/Employee Callout: Directly solve confusion for employees landing here */}
-        <div className="p-3 mb-3 bg-indigo-50/90 border border-indigo-200 rounded-xl flex items-center justify-between text-xs gap-2">
-          <div className="flex items-center gap-2 text-indigo-900 font-medium">
-            <Users size={16} className="text-indigo-600 shrink-0" />
-            <span>Are you a <strong>Staff member / Employee</strong>?</span>
-          </div>
-          <button
-            type="button"
-            onClick={() => onSwitchToLogin && onSwitchToLogin('staff')}
-            className="font-bold text-indigo-700 bg-white px-2.5 py-1 rounded-lg border border-indigo-200 shadow-2xs hover:bg-indigo-50 transition-colors flex items-center gap-1 cursor-pointer shrink-0"
-          >
-            <span>Sign In as Staff</span>
-            <ArrowRight size={12} />
-          </button>
-        </div>
-
-        {/* Free Forever Banner */}
-        <div className="p-3 mb-5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-center justify-between text-xs">
-          <div className="flex items-center gap-2 text-emerald-900 font-semibold">
-            <Sparkles size={16} className="text-emerald-600 shrink-0" />
-            <span>100% Free Lifetime Access &bull; No Credit Card Required</span>
-          </div>
-          <span className="font-bold text-emerald-700 bg-white px-2 py-0.5 rounded-md border border-emerald-200 shadow-xs">
-            Free
-          </span>
-        </div>
 
         {error && (
           <div className="p-3.5 mb-5 bg-rose-50 border border-rose-200 text-rose-800 rounded-xl text-xs space-y-2.5">
@@ -141,26 +114,16 @@ export default function RegisterPage({ onSwitchToLogin, onBackToLanding }) {
             {error.toLowerCase().includes('already exists') && onSwitchToLogin && (
               <div className="pt-2 border-t border-rose-200/80 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <span className="text-[11px] text-rose-600 font-medium">
-                  Direct Sign In:
+                  Already have an account?
                 </span>
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => onSwitchToLogin('owner', form.email)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-                  >
-                    <span>Sign In as Owner</span>
-                    <ArrowRight size={13} />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onSwitchToLogin('staff', form.email)}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
-                  >
-                    <span>Sign In as Staff</span>
-                    <ArrowRight size={13} />
-                  </button>
-                </div>
+                <button
+                  type="button"
+                  onClick={() => onSwitchToLogin('owner', form.email)}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-xs transition-colors cursor-pointer"
+                >
+                  <span>Sign in instead</span>
+                  <ArrowRight size={13} />
+                </button>
               </div>
             )}
           </div>
