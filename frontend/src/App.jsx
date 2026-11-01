@@ -1,4 +1,4 @@
-import React, { useState, useEffect, Suspense, lazy } from 'react';
+import React, { useState, useEffect, useCallback, Suspense, lazy } from 'react';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { api } from './services/api';
@@ -6,6 +6,8 @@ import Sidebar from './components/Sidebar';
 import TopBar from './components/TopBar';
 import MobileTopHeader from './components/MobileTopHeader';
 import AssistantWidget from './components/support/AssistantWidget';
+import OnboardingTour from './components/help/OnboardingTour';
+import { canSeeTab } from './data/helpGuide';
 import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
@@ -66,10 +68,14 @@ function AppContent() {
   const { user, profile, company, loading, isOwner, isStaff } = useAuth();
   const [activeTab, setActiveTabState] = useState(() => localStorage.getItem('crm_active_tab') || 'analytics');
 
-  const setActiveTab = (tab) => {
-    localStorage.setItem('crm_active_tab', tab);
+  const setActiveTab = useCallback((tab) => {
+    try { localStorage.setItem('crm_active_tab', tab); } catch { /* ignore */ }
     setActiveTabState(tab);
-  };
+  }, []);
+
+  // Which sections this user may open (owner: all; staff: what the owner switched on)
+  const perms = profile?.permissions;
+  const canSee = useCallback((tab) => canSeeTab(isStaff, perms, tab), [isStaff, perms]);
 
   // Other parts of the app (e.g. a notification) can ask to open a page
   useEffect(() => {
@@ -364,6 +370,9 @@ function AppContent() {
           onOpenStaffModal={handleOpenStaffModal}
         />
       </div>
+
+      {/* First-login guided tour (skippable, replay from Help & Support) */}
+      <OnboardingTour userId={profile?.id || user?.id} isOwner={isOwner} canSee={canSee} activeTab={activeTab} setActiveTab={setActiveTab} />
 
       {/* Floating AI help assistant (every page) */}
       <AssistantWidget activeTab={activeTab} setActiveTab={setActiveTab} />

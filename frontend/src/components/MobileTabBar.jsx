@@ -140,6 +140,7 @@ export default function MobileTabBar({
           return (
             <button
               key={item.id}
+              data-tour={`nav-${item.id}`}
               onClick={() => {
                 setActiveTab(item.id);
                 setMoreDrawerOpen(false);

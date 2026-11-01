@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { PRESET_AVATARS, avatarSrc, avatarFallback } from '../data/avatars';
 import {
   BarChart2,
   Users,
@@ -116,6 +117,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             <button
               key={item.id}
               onClick={() => setActiveTab(item.id)}
+              data-tour={`nav-${item.id}`}
               aria-current={isActive ? 'page' : undefined}
               className={`group relative flex items-center justify-between w-full px-2.5 py-2 rounded-lg text-[13px] transition-colors duration-150 cursor-pointer ${isActive
                   ? 'bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white font-semibold'
@@ -153,6 +155,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
             </div>
 
             <button
+              data-tour="create-staff"
               onClick={() => onOpenStaffModal && onOpenStaffModal()}
               className="flex items-center gap-2 w-full px-2.5 py-2 rounded-lg text-[13px] font-medium text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-700 hover:border-emerald-300 hover:bg-emerald-50/60 dark:hover:bg-emerald-950/30 transition-colors cursor-pointer"
             >
@@ -185,7 +188,8 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <img
-                          src={st.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=60&auto=format&fit=crop&q=80'}
+                          src={avatarSrc(st.avatar_url, st.id) || PRESET_AVATARS[0]}
+                          onError={avatarFallback}
                           alt={st.name}
                           className="w-6 h-6 rounded-full object-cover shrink-0 ring-1 ring-slate-200 dark:ring-slate-700"
                         />
@@ -216,7 +220,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
               )}
             </div>
 
-            <StorageMeter />
+            <div data-tour="storage"><StorageMeter /></div>
           </div>
         )}
       </nav>

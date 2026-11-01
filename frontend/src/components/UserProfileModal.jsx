@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import AvatarPicker from './AvatarPicker';
+import { avatarSrc, avatarFallback } from '../data/avatars';
 import {
   User,
   Mail,
@@ -194,7 +196,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
             <div className="relative">
               <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-md border-2 border-white/40 flex items-center justify-center text-2xl font-black text-white shadow-lg overflow-hidden">
                 {formData.avatar_url ? (
-                  <img src={formData.avatar_url} alt={displayName} className="w-full h-full object-cover" />
+                  <img src={avatarSrc(formData.avatar_url, profile?.id)} onError={avatarFallback} alt={displayName} className="w-full h-full object-cover bg-white" />
                 ) : (
                   <span>{displayName.slice(0, 2).toUpperCase()}</span>
                 )}
@@ -399,18 +401,12 @@ export default function UserProfileModal({ isOpen, onClose }) {
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Custom Avatar URL (optional)
-                    </label>
-                    <input
-                      type="url"
-                      value={formData.avatar_url}
-                      onChange={(e) => setFormData({ ...formData, avatar_url: e.target.value })}
-                      className="w-full px-3.5 py-2 text-sm rounded-xl border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-100 focus:ring-2 focus:ring-emerald-500 outline-none"
-                      placeholder="https://images.unsplash.com/... or Dicebear URL"
-                    />
-                  </div>
+                  <AvatarPicker
+                    size="sm"
+                    label="Profile photo"
+                    value={formData.avatar_url}
+                    onChange={(url) => setFormData((f) => ({ ...f, avatar_url: url }))}
+                  />
 
                   <div className="flex items-center justify-end gap-2 pt-2">
                     <button

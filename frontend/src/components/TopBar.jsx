@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { avatarSrc, avatarFallback } from '../data/avatars';
 import { api } from '../services/api';
 import {
   ChevronLeft,
@@ -118,6 +119,7 @@ export default function TopBar({
             {/* Notifications with relative popover */}
             <div className="relative">
               <button
+                data-tour="notifications"
                 onClick={() => setNotifOpen(!notifOpen)}
                 className={`relative w-8 h-8 rounded-lg flex items-center justify-center transition-colors cursor-pointer ${
                   notifOpen
@@ -175,7 +177,7 @@ export default function TopBar({
             >
               <div className="w-8 h-8 rounded-full bg-slate-900 dark:bg-slate-700 text-white flex items-center justify-center font-semibold text-xs ring-1 ring-slate-200 dark:ring-slate-700 overflow-hidden">
                 {avatarUrl ? (
-                  <img src={avatarUrl} alt={displayName} className="w-full h-full object-cover" />
+                  <img src={avatarSrc(avatarUrl, profile?.id)} onError={avatarFallback} alt={displayName} className="w-full h-full object-cover" />
                 ) : (
                   <span>{initials}</span>
                 )}

@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { avatarSrc, avatarFallback } from '../data/avatars';
 import BrandLogo from './BrandLogo';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -72,7 +73,8 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
             >
               {profile?.avatar_url ? (
                 <img
-                  src={profile.avatar_url}
+                  src={avatarSrc(profile.avatar_url, profile.id)}
+                  onError={avatarFallback}
                   alt={profile.name}
                   className="w-full h-full object-cover"
                 />

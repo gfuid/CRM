@@ -34,15 +34,10 @@ import {
   Key,
   Loader2
 } from 'lucide-react';
+import AvatarPicker from './AvatarPicker';
+import { PRESET_AVATARS, avatarSrc, avatarFallback } from '../data/avatars';
 
-const PRESET_AVATARS = [
-  'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=120&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=120&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=120&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=120&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120&auto=format&fit=crop&q=80',
-  'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120&auto=format&fit=crop&q=80',
-];
+// Built-in 3D avatars + uploaded photos: see src/data/avatars.js
 
 const removeStaffPasswordFields = (staff) => {
   const safeStaff = { ...staff };
@@ -873,23 +868,11 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
             </div>
 
             {/* Profile Picture */}
-            <div>
-              <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-                Staff Avatar (Select Preset)
-              </label>
-              <div className="flex items-center gap-3">
-                {PRESET_AVATARS.map((av, idx) => (
-                  <img
-                    key={idx}
-                    src={av}
-                    alt="Preset"
-                    onClick={() => setForm({ ...form, avatar_url: av })}
-                    className={`w-8 h-8 rounded-full object-cover cursor-pointer ring-2 transition-all ${form.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
-                      }`}
-                  />
-                ))}
-              </div>
-            </div>
+            <AvatarPicker
+              label="Staff Avatar"
+              value={form.avatar_url}
+              onChange={(url) => setForm((f) => ({ ...f, avatar_url: url }))}
+            />
 
             {/* PERMISSIONS & DATA PRIVACY CONFIGURATION */}
             <div className="p-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
@@ -1374,22 +1357,13 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                 </select>
               </div>
 
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Staff Avatar
-                </label>
-                <div className="flex items-center gap-2">
-                  {PRESET_AVATARS.map((av, idx) => (
-                    <img
-                      key={idx}
-                      src={av}
-                      alt="Preset"
-                      onClick={() => setEditingStaff({ ...editingStaff, avatar_url: av })}
-                      className={`w-7 h-7 rounded-full object-cover cursor-pointer ring-2 transition-all ${editingStaff.avatar_url === av ? 'ring-emerald-500 scale-110' : 'ring-transparent opacity-60 hover:opacity-100'
-                        }`}
-                    />
-                  ))}
-                </div>
+              <div className="sm:col-span-2">
+                <AvatarPicker
+                  size="sm"
+                  label="Staff Avatar"
+                  value={editingStaff.avatar_url}
+                  onChange={(url) => setEditingStaff((s) => ({ ...s, avatar_url: url }))}
+                />
               </div>
             </div>
 
@@ -1701,7 +1675,8 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                           <td className="py-3 px-3.5">
                             <div className="flex items-center gap-2.5">
                               <img
-                                src={staff.avatar_url || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=80&auto=format&fit=crop&q=80'}
+                                src={avatarSrc(staff.avatar_url, staff.id) || PRESET_AVATARS[0]}
+                                onError={avatarFallback}
                                 alt={staff.name}
                                 className="w-8 h-8 rounded-full object-cover ring-1 ring-slate-200 dark:ring-slate-700 shrink-0"
                               />
