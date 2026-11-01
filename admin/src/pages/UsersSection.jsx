@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { avatarSrc, avatarFallback } from '../avatar';
 import {
   Users,
   Search,
@@ -349,7 +350,8 @@ export default function UsersSection({
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-3">
                       <img
-                        src={u.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`}
+                        src={avatarSrc(u.avatar_url, u.name)}
+                        onError={avatarFallback}
                         alt={u.name}
                         className="w-10 h-10 rounded-full object-cover border border-slate-200"
                       />
@@ -522,7 +524,8 @@ export default function UsersSection({
                       <td className="py-3.5 pl-3">
                         <div className="flex items-center gap-3">
                           <img
-                            src={u.avatar_url || `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(u.name)}`}
+                            src={avatarSrc(u.avatar_url, u.name)}
+                        onError={avatarFallback}
                             alt={u.name}
                             className="w-9 h-9 rounded-full object-cover border border-slate-200"
                           />

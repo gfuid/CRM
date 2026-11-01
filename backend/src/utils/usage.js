@@ -70,6 +70,9 @@ const tenantFootprint = (owner) => {
     auditLogs: dataStore.auditLogs.filter((r) => belongsToOwner(r, ['actor_id', 'user_id', 'created_by', 'owner_id'])),
     notifications: dataStore.notifications.filter((r) => belongsToOwner(r, ['target_user_id', 'owner_id'])),
     tickets: (dataStore.tickets || []).filter((r) => belongsToOwner(r, ['owner_id', 'created_by_id'])),
+    avatars: (dataStore.avatars || []).filter((r) => belongsToOwner(r, ['owner_id', 'user_id'])),
+    emailTemplates: (dataStore.emailTemplates || []).filter((r) => belongsToOwner(r, ['owner_id'])),
+    emailImages: (dataStore.emailImages || []).filter((r) => belongsToOwner(r, ['owner_id'])),
   };
 
   // Who "owns" each record: the person who created it (or the person it is for)
@@ -93,6 +96,8 @@ const tenantFootprint = (owner) => {
   groups.outreach.forEach((o) => credit(o, ['employee_id']));
   [...groups.emailSettings, ...groups.emailCampaigns, ...groups.auditLogs, ...groups.notifications].forEach((r) => credit(r, ['owner_id']));
   groups.tickets.forEach((t) => credit(t, ['created_by_id']));
+  groups.avatars.forEach((a) => credit(a, ['user_id']));
+  [...groups.emailTemplates, ...groups.emailImages].forEach((r) => credit(r, ['owner_id']));
   [owner, ...staffList].forEach((u) => credit(u, ['id']));
 
   const bytes = Object.values(perMember).reduce((t, m) => t + m.bytes, 0);

@@ -16,9 +16,75 @@ import {
   Mail,
   Calendar,
   Clock,
-  Check
+  Check,
+  PlayCircle
 } from 'lucide-react';
 import BrandLogo from '../components/BrandLogo';
+import { HELP_VIDEO_URL, HELP_VIDEO_POSTER } from '../data/helpGuide';
+
+const DEMO_CHAPTERS = [
+  ['0:05', 'Website & sign-up'],
+  ['0:33', 'Guided tour on first login'],
+  ['0:47', 'Add your team & permissions'],
+  ['1:04', 'Add buyers (leads)'],
+  ['1:46', 'Follow-ups & tasks'],
+  ['2:10', 'Activity, analytics & daily report'],
+  ['2:30', 'Built-in help & AI assistant'],
+  ['2:45', 'Staff login & phone view'],
+];
+
+function DemoVideo() {
+  const [playing, setPlaying] = useState(false);
+  const ref = React.useRef(null);
+  const seek = (t) => {
+    const [m, s] = t.split(':').map(Number);
+    setPlaying(true);
+    const go = (tries = 0) => {
+      const v = ref.current;
+      if (!v) { if (tries < 40) setTimeout(() => go(tries + 1), 50); return; }
+      const jump = () => { v.currentTime = m * 60 + s; v.play().catch(() => {}); };
+      if (v.readyState >= 1) jump(); else v.addEventListener('loadedmetadata', jump, { once: true });
+    };
+    go();
+  };
+  return (
+    <section id="demo" className="max-w-6xl mx-auto px-6 py-16 scroll-mt-20">
+      <div className="text-center max-w-2xl mx-auto mb-10">
+        <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">See it in action</div>
+        <h2 className="text-3xl font-extrabold text-slate-900">How the CRM works — in 3 minutes</h2>
+        <p className="mt-3 text-sm text-slate-500">From registering your company to your team’s daily routine: leads, follow-ups, tasks, the evening report and built-in help.</p>
+      </div>
+      <div className="grid lg:grid-cols-[1fr_260px] gap-6 items-start">
+        <div className="rounded-2xl overflow-hidden border border-slate-200 bg-slate-900 shadow-xl">
+          {playing ? (
+            <video ref={ref} src={HELP_VIDEO_URL} poster={HELP_VIDEO_POSTER} controls autoPlay playsInline preload="metadata" className="w-full aspect-video" />
+          ) : (
+            <button type="button" onClick={() => setPlaying(true)} className="group relative block w-full aspect-video cursor-pointer" aria-label="Play the product walkthrough video">
+              <img src={HELP_VIDEO_POSTER} alt="Travel-Trade CRM walkthrough" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
+              <span className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors" />
+              <span className="absolute left-1/2 bottom-3 sm:bottom-6 -translate-x-1/2 flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold whitespace-nowrap shadow-lg shadow-emerald-600/30 transition-colors">
+                <PlayCircle size={18} /> Watch the walkthrough · 3:20
+              </span>
+            </button>
+          )}
+        </div>
+        <div className="bg-white rounded-2xl border border-slate-200 p-4">
+          <div className="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2 px-1">Chapters</div>
+          <ul className="space-y-0.5">
+            {DEMO_CHAPTERS.map(([t, label]) => (
+              <li key={t}>
+                <button type="button" onClick={() => seek(t)} className="w-full flex items-center gap-3 px-2 py-2 rounded-lg text-left hover:bg-slate-50 cursor-pointer">
+                  <span className="text-[11px] font-mono font-semibold text-emerald-700 w-9 shrink-0">{t}</span>
+                  <span className="text-xs font-medium text-slate-700">{label}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 export default function LandingPage({ onLoginClick, onRegisterClick }) {
   const [activePreviewTab, setActivePreviewTab] = useState('analytics'); // 'analytics' | 'pipeline' | 'outreach' | 'followup'
@@ -44,6 +110,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
         </div>
 
         <nav className="hidden lg:flex items-center gap-8 text-xs font-semibold text-slate-600">
+          <a href="#demo" className="hover:text-slate-900 transition-colors">Watch Demo</a>
           <a href="#preview" className="hover:text-slate-900 transition-colors">Platform Tour</a>
           <a href="#features" className="hover:text-slate-900 transition-colors">Features</a>
           <a href="#pricing" className="hover:text-slate-900 transition-colors">Pricing & Plans</a>
@@ -97,6 +164,14 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
           >
             <span>Sign In to CRM</span>
           </button>
+
+          <a
+            href="#demo"
+            className="px-5 py-3.5 rounded-xl text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors flex items-center gap-2"
+          >
+            <PlayCircle size={18} className="text-emerald-600" />
+            <span>Watch 3-min demo</span>
+          </a>
         </div>
 
         {/* Trust Points */}
@@ -292,6 +367,9 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
           </div>
         </div>
       </section>
+
+      {/* Product walkthrough video */}
+      <DemoVideo />
 
       {/* Feature Pillars */}
       <section id="features" className="max-w-6xl mx-auto px-6 py-16">

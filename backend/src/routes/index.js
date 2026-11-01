@@ -29,6 +29,7 @@ router.use('/notifications', notificationsRoutes);
 router.use('/email', emailRoutes);
 router.use('/reminders', remindersRoutes);
 router.use('/support', require('./support.routes'));
+router.use('/avatars', require('./avatar.routes'));
 router.use('/docs', docsRoutes);
 
 module.exports = router;

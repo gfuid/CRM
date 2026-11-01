@@ -29,6 +29,15 @@ router.post('/campaigns', asyncHandler(emailController.createCampaign));
 router.post('/campaigns/test', asyncHandler(emailController.sendTestCampaign));
 router.get('/campaigns/:id', asyncHandler(emailController.getCampaign));
 router.post('/campaigns/:id/send', asyncHandler(emailController.sendCampaign));
+router.post('/campaigns/:id/schedule', asyncHandler(emailController.scheduleCampaign));
+router.post('/campaigns/:id/unschedule', asyncHandler(emailController.unscheduleCampaign));
+
+router.get('/templates', asyncHandler(emailController.listTemplates));
+router.post('/templates', asyncHandler(emailController.createTemplate));
+router.put('/templates/:id', asyncHandler(emailController.updateTemplate));
+router.delete('/templates/:id', asyncHandler(emailController.deleteTemplate));
+
+router.post('/images', asyncHandler(emailController.uploadImage));
 router.delete('/campaigns/:id', asyncHandler(emailController.deleteCampaign));
 
 module.exports = router;

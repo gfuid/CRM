@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const config = require('../config/env');
 const ApiResponse = require('../utils/apiResponse');
+const { isValidAvatarUrl, AVATAR_URL_MESSAGE } = require('../utils/avatar');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const { isDbConnected } = require('../config/db');
 const models = require('../models');
@@ -366,8 +367,8 @@ const updateProfile = async (req, res) => {
   if (department !== undefined && (typeof department !== 'string' || department.length > 100)) {
     return ApiResponse.error(res, 'Department is too long', 400);
   }
-  if (avatar_url !== undefined && avatar_url !== '' && (typeof avatar_url !== 'string' || avatar_url.length > 2048 || !/^https:\/\//i.test(avatar_url))) {
-    return ApiResponse.error(res, 'Profile photo must be an https:// link (max 2048 characters)', 400);
+  if (!isValidAvatarUrl(avatar_url)) {
+    return ApiResponse.error(res, AVATAR_URL_MESSAGE, 400);
   }
 
   if (name) user.name = name.trim();

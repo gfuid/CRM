@@ -27,6 +27,9 @@ const hydrateFromSnapshot = () => {
       if (snapshot.emailCampaigns && snapshot.emailCampaigns.length > 0) dataStore.emailCampaigns = snapshot.emailCampaigns;
       if (Array.isArray(snapshot.tickets)) dataStore.tickets = snapshot.tickets;
       if (Array.isArray(snapshot.appSettings)) dataStore.appSettings = snapshot.appSettings;
+      if (Array.isArray(snapshot.avatars)) dataStore.avatars = snapshot.avatars;
+      if (Array.isArray(snapshot.emailTemplates)) dataStore.emailTemplates = snapshot.emailTemplates;
+      if (Array.isArray(snapshot.emailImages)) dataStore.emailImages = snapshot.emailImages;
       console.log(`⚡ Instant local snapshot hydrated (${(snapshot.leads || []).length} leads, ${(snapshot.users || []).length} users)`);
       return true;
     }
@@ -41,7 +44,7 @@ const hydrateFromSnapshot = () => {
  */
 const syncFromDB = async () => {
   try {
-    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications, tickets, appSettings] =
+    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications, tickets, appSettings, avatars, emailTemplates, emailImages] =
       await Promise.all([
         models.User.find().lean(),
         models.Company.findOne().lean(),
@@ -57,6 +60,9 @@ const syncFromDB = async () => {
         models.Notification ? models.Notification.find().lean() : Promise.resolve([]),
         models.Ticket ? models.Ticket.find().lean() : Promise.resolve([]),
         models.AppSetting ? models.AppSetting.find().lean() : Promise.resolve([]),
+        models.Avatar ? models.Avatar.find().lean() : Promise.resolve([]),
+        models.EmailTemplate ? models.EmailTemplate.find().lean() : Promise.resolve([]),
+        models.EmailImage ? models.EmailImage.find().lean() : Promise.resolve([]),
       ]);
 
     if (users && users.length > 0) {
@@ -86,6 +92,9 @@ const syncFromDB = async () => {
     if (emailCampaigns && emailCampaigns.length > 0) dataStore.emailCampaigns = emailCampaigns;
     if (Array.isArray(tickets)) dataStore.tickets = tickets;
     if (Array.isArray(appSettings)) dataStore.appSettings = appSettings;
+    if (Array.isArray(avatars)) dataStore.avatars = avatars;
+    if (Array.isArray(emailTemplates)) dataStore.emailTemplates = emailTemplates;
+    if (Array.isArray(emailImages)) dataStore.emailImages = emailImages;
 
     console.log(
       `🔄 In-memory cache successfully synchronized with MongoDB Atlas (${leads.length} leads, ${users.length} users, ${tasks.length} tasks).`
@@ -104,6 +113,13 @@ const syncFromDB = async () => {
         myDays: dataStore.myDays,
         outreach: dataStore.outreach,
         auditLogs: dataStore.auditLogs,
+        tickets: dataStore.tickets,
+        appSettings: dataStore.appSettings,
+        avatars: dataStore.avatars,
+        emailSettings: dataStore.emailSettings,
+        emailCampaigns: dataStore.emailCampaigns,
+        emailTemplates: dataStore.emailTemplates,
+        emailImages: dataStore.emailImages,
         company: dataStore.company,
         timestamp: new Date().toISOString(),
       };

@@ -157,6 +157,7 @@ const PRODUCT_GUIDE = `
 ABOUT THIS CRM
 An export & commodity trade CRM for small sales teams (an owner + a few staff). Each company's data is completely separate.
 Tabs: Analytics, Leads, Task Management, Activity, Outreach, My Days, Follow up, Team Review, Email Marketing (premium).
+- Email Marketing (premium, owner only): Sender setup — type your email, press the "Open … App Passwords" button (Gmail: myaccount.google.com/apppasswords, needs 2-Step Verification; Yahoo; Zoho; Outlook may not work because Microsoft is switching off password sign-in), paste the app password, "Save & send test email". Templates tab — rich editor with pictures (auto-shrunk, count in storage), buttons, links and personal fields {{contact_name}} {{company_name}} {{country}} {{product}} {{sender_name}}; starter designs. New Campaign — start from a template, choose buyers by tags / all leads / pasted list, "Send now" or "Schedule for later" (server sends at that time, computer can be off). Campaigns tab — progress, change time, cancel schedule, retry failed. Every email has an unsubscribe link.
 
 ROLES
 - Owner: runs the company account. Creates staff, assigns leads and tasks, edits/deletes anything, marks deals Won/Lost, sees Team Review, Daily Report and storage.
@@ -201,6 +202,7 @@ OTHER
 - Session: if the session ends, the app shows "Your session ended. Please log in again." Logout is at the top right and in the sidebar.
 - Works on laptop, phone (bottom tab bar) and iPad.
 - Support: the "Support" page (or "Raise a ticket" in this chat) sends a ticket to the platform team; replies appear in the ticket and in notifications.
+- Help & Support → Guide: a searchable guide for every section (how it works + common problems and fixes), a 3-minute walkthrough video and "Replay tour" (the guided tour that opens on first login and can be skipped).
 `;
 
 const roleLabel = (user) => (isSuperAdmin(user) ? 'Platform admin' : isOwnerUser(user) ? 'Owner' : 'Staff');

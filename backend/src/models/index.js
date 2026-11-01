@@ -12,6 +12,9 @@ const EmailSetting = require('./EmailSetting');
 const EmailCampaign = require('./EmailCampaign');
 const Ticket = require('./Ticket');
 const AppSetting = require('./AppSetting');
+const Avatar = require('./Avatar');
+const EmailTemplate = require('./EmailTemplate');
+const EmailImage = require('./EmailImage');
 
 module.exports = {
   User,
@@ -28,4 +31,7 @@ module.exports = {
   EmailCampaign,
   Ticket,
   AppSetting,
+  Avatar,
+  EmailTemplate,
+  EmailImage,
 };

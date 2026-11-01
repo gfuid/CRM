@@ -6,6 +6,7 @@ const { systemMetrics } = require('../middlewares/responseTime.middleware');
 const { mongoose, isDbConnected } = require('../config/db');
 const config = require('../config/env');
 const { isSuperAdmin, isOwnerUser, staffBelongsToOwner } = require('../utils/access');
+const { isValidAvatarUrl, AVATAR_URL_MESSAGE } = require('../utils/avatar');
 const { tenantFootprint, storageLimitMb, usageSummary, clearUsageCache, DEFAULT_STORAGE_LIMIT_MB } = require('../utils/usage');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -187,6 +188,9 @@ const createUser = async (req, res) => {
   }
   if (typeof password !== 'string' || password.length < 6) {
     return ApiResponse.error(res, 'Staff password must be at least 6 characters long', 400);
+  }
+  if (!isValidAvatarUrl(avatar_url)) {
+    return ApiResponse.error(res, AVATAR_URL_MESSAGE, 400);
   }
 
   if (!EMAIL_RE.test(String(email).toLowerCase().trim())) {
@@ -387,6 +391,9 @@ const updateUser = async (req, res) => {
   if (data_scope !== undefined && !DATA_SCOPES.includes(data_scope)) {
     return ApiResponse.error(res, `Invalid data scope. Allowed: ${DATA_SCOPES.join(', ')}`, 400);
   }
+  if (!isValidAvatarUrl(req.body.avatar_url)) {
+    return ApiResponse.error(res, AVATAR_URL_MESSAGE, 400);
+  }
   if (email !== undefined) {
     const cleanEmail = String(email).toLowerCase().trim();
     if (!EMAIL_RE.test(cleanEmail)) {
@@ -523,7 +530,7 @@ const deleteUser = async (req, res) => {
     dataStore.notifications = dataStore.notifications.filter((record) =>
       !belongsToTenant(record, ['target_user_id', 'owner_id'])
     );
-    for (const collectionName of ['emailSettings', 'emailCampaigns', 'tenants', 'tickets']) {
+    for (const collectionName of ['emailSettings', 'emailCampaigns', 'emailTemplates', 'emailImages', 'avatars', 'tenants', 'tickets']) {
       if (Array.isArray(dataStore[collectionName])) {
         dataStore[collectionName] = dataStore[collectionName].filter((record) =>
           !belongsToTenant(record, ['owner_id', 'created_by', 'created_by_id', 'id'])
@@ -719,6 +726,10 @@ const moveOwnerToOwner = async (req, res) => {
     t.company_name = target.company_name || t.company_name;
     dbSync.saveTicket(t); moved.tickets++;
   });
+  // Email templates/pictures and uploaded photos go with the company (sent campaigns stay with the old account's log)
+  [...(fp.groups.emailTemplates || [])].forEach((t) => { t.owner_id = target.id; t.company_id = target.company_id; dbSync.saveEmailTemplate(t); });
+  [...(fp.groups.emailImages || [])].forEach((i) => { i.owner_id = target.id; dbSync.saveEmailImage(i); });
+  [...(fp.groups.avatars || [])].forEach((a) => { a.owner_id = target.id; dbSync.saveAvatar(a); });
   fp.staffList.forEach((st) => {
     st.created_by = target.id;
     st.company_id = target.company_id;

@@ -44,6 +44,7 @@ export default function AssistantWidget({ activeTab, setActiveTab }) {
         </div>
       )}
       <button
+        data-tour="assistant"
         type="button"
         onClick={() => setOpen((v) => !v)}
         className="fixed z-50 right-4 bottom-20 md:bottom-6 w-12 h-12 rounded-full bg-emerald-600 hover:bg-emerald-700 text-white shadow-lg shadow-emerald-600/30 flex items-center justify-center cursor-pointer"

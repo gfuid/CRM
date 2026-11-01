@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { avatarSrc, avatarFallback } from '../avatar';
 import {
   Users,
   Crown,
@@ -221,10 +222,8 @@ export default function OwnerStaffHierarchyView({
 
                 <div className="relative shrink-0">
                   <img
-                    src={
-                      owner.avatar_url ||
-                      `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(owner.name)}`
-                    }
+                    src={avatarSrc(owner.avatar_url, owner.name)}
+                    onError={avatarFallback}
                     alt={owner.name}
                     className="w-12 h-12 rounded-2xl object-cover border-2 border-amber-300 shadow-sm"
                   />

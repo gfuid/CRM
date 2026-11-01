@@ -1,4 +1,5 @@
 import React from 'react';
+import { avatarSrc, avatarFallback } from '../avatar';
 import {
   Users2,
   Crown,
@@ -191,7 +192,7 @@ export default function OverviewSection({
                 {recentUsers.map((u) => (
                   <div key={u.id || u.email} className="py-2.5 flex items-center gap-3">
                     <span className="w-8 h-8 rounded-full bg-slate-100 text-slate-700 text-[11px] font-black flex items-center justify-center shrink-0 overflow-hidden">
-                      {u.avatar_url ? <img src={u.avatar_url} alt={u.name} className="w-full h-full object-cover" /> : (u.name || '?').slice(0, 2).toUpperCase()}
+                      {u.avatar_url ? <img src={avatarSrc(u.avatar_url, u.name)} onError={avatarFallback} alt={u.name} className="w-full h-full object-cover" /> : (u.name || '?').slice(0, 2).toUpperCase()}
                     </span>
                     <div className="min-w-0 flex-1">
                       <div className="text-xs font-bold text-slate-800 truncate">{u.name}</div>

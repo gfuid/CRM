@@ -76,6 +76,12 @@ if (config.nodeEnv === 'development') {
   app.use(morgan('dev'));
 }
 
+// Uploaded profile photos: public, cached for a year, served before the rate limiter
+// (a page with many staff photos must not use up the API request budget).
+app.get('/api/v1/avatars/:id', require('./controllers/avatar.controller').getAvatar);
+// Pictures inside marketing emails: loaded by Gmail/Outlook image proxies, so also public and outside the limiter
+app.get('/api/v1/email/images/:id', require('./controllers/email.controller').getImage);
+
 // Global API rate limiting
 app.use('/api', apiIpLimiter, apiLimiter);
 

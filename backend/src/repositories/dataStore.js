@@ -82,6 +82,9 @@ const dataStore = {
   emailCampaigns: [],
   tickets: [],
   appSettings: [],
+  avatars: [],
+  emailTemplates: [],
+  emailImages: [],
   outreach: [],
 
   // No demo data: every company starts empty and only sees what its own people create.
@@ -126,6 +129,11 @@ const writeSnapshotNow = () => {
       auditLogs: dataStore.auditLogs,
       tickets: dataStore.tickets,
       appSettings: dataStore.appSettings,
+      avatars: dataStore.avatars,
+      emailSettings: dataStore.emailSettings,
+      emailCampaigns: dataStore.emailCampaigns,
+      emailTemplates: dataStore.emailTemplates,
+      emailImages: dataStore.emailImages,
       company: dataStore.company,
     };
     // Compact JSON (no pretty spaces) is smaller and much faster to write
@@ -286,6 +294,9 @@ const dbSync = {
             EmailSetting: recordFilter(['owner_id', 'created_by']),
             EmailCampaign: recordFilter(['owner_id', 'created_by', 'created_by_id']),
             Ticket: recordFilter(['owner_id', 'created_by_id']),
+            Avatar: recordFilter(['owner_id', 'user_id']),
+            EmailTemplate: recordFilter(['owner_id']),
+            EmailImage: recordFilter(['owner_id']),
           };
 
           if (companyIds.length) {
@@ -428,6 +439,7 @@ const dbSync = {
     }
   },
   saveEmailSetting: async (setting) => {
+    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.EmailSetting) {
       try {
@@ -452,6 +464,30 @@ const dbSync = {
       }
     }
   },
+  saveAvatar: async (avatar) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.Avatar) {
+      try {
+        const toSave = { ...avatar };
+        delete toSave._id;
+        await models.Avatar.findOneAndUpdate({ id: avatar.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB Avatar Sync]:', e.message);
+      }
+    }
+  },
+  deleteAvatars: async (ids) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (ids && ids.length && isConnected && models && models.Avatar) {
+      try {
+        await models.Avatar.deleteMany({ id: { $in: ids } });
+      } catch (e) {
+        console.warn('[DB Avatar Delete]:', e.message);
+      }
+    }
+  },
   saveAppSetting: async (setting) => {
     saveSnapshot();
     const { isConnected, models } = getDb();
@@ -466,6 +502,7 @@ const dbSync = {
     }
   },
   saveEmailCampaign: async (campaign) => {
+    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.EmailCampaign) {
       try {
@@ -478,10 +515,55 @@ const dbSync = {
     }
   },
   deleteEmailCampaign: async (id) => {
+    saveSnapshot();
     const { isConnected, models } = getDb();
     if (isConnected && models && models.EmailCampaign) {
       try {
         await models.EmailCampaign.findOneAndDelete({ id });
+      } catch (e) {}
+    }
+  },
+  saveEmailTemplate: async (tpl) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailTemplate) {
+      try {
+        const toSave = { ...tpl };
+        delete toSave._id;
+        await models.EmailTemplate.findOneAndUpdate({ id: tpl.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB EmailTemplate Sync]:', e.message);
+      }
+    }
+  },
+  deleteEmailTemplate: async (id) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailTemplate) {
+      try {
+        await models.EmailTemplate.deleteOne({ id });
+      } catch (e) {}
+    }
+  },
+  saveEmailImage: async (img) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.EmailImage) {
+      try {
+        const toSave = { ...img };
+        delete toSave._id;
+        await models.EmailImage.findOneAndUpdate({ id: img.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB EmailImage Sync]:', e.message);
+      }
+    }
+  },
+  deleteEmailImages: async (ids) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (ids && ids.length && isConnected && models && models.EmailImage) {
+      try {
+        await models.EmailImage.deleteMany({ id: { $in: ids } });
       } catch (e) {}
     }
   },

@@ -34,6 +34,11 @@ const startServer = async () => {
   if (process.env.DAILY_REPORT_DISABLED !== 'true') {
     require('./src/services/dailyReport.service').startDailyReportScheduler();
   }
+
+  // Sends email campaigns at the time the owner scheduled them
+  if (process.env.EMAIL_SCHEDULER_DISABLED !== 'true') {
+    require('./src/controllers/email.controller').startEmailScheduler();
+  }
 };
 
 // Graceful shutdown handling

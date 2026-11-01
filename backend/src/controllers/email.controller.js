@@ -9,6 +9,8 @@ const ApiResponse = require('../utils/apiResponse');
 const config = require('../config/env');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const mailer = require('../services/mailer.service');
+const crypto = require('crypto');
+const { sanitizeEmailHtml, htmlToText } = require('../utils/emailHtml');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -171,7 +173,9 @@ const saveSettings = async (req, res) => {
     port: Number(port) || 587,
     secure: secure !== undefined ? Boolean(secure) : Number(port) === 465,
     user: String(user).trim(),
-    pass_enc: pass ? mailer.encryptSecret(pass) : existing.pass_enc,
+    // Google / Yahoo show app passwords in groups ("abcd efgh ijkl mnop"); the spaces are not part of it
+    pass_enc: pass ? mailer.encryptSecret(/gmail|googlemail|yahoo/i.test(String(host)) ? String(pass).replace(/\s+/g, '') : String(pass)) : existing.pass_enc,
+    provider: req.body && req.body.provider ? String(req.body.provider).slice(0, 30) : (existing && existing.provider) || '',
     from_name: String(from_name || '').trim().slice(0, 80),
     from_email: String(from_email || '').trim().toLowerCase(),
     reply_to: String(reply_to || '').trim().toLowerCase(),
@@ -295,14 +299,34 @@ const buildMessage = ({ campaign, settings, ownerId, recipient }) => {
     bodyHtml: mailer.textToHtml(bodyText),
     footerHtml: `You are receiving this email from ${senderLabel}. <a href="${unsubUrl}" style="color:#64748b">Unsubscribe</a>`,
   });
-  const text = `${bodyText.replace(/<[^>]+>/g, '')}\n\n--\nUnsubscribe: ${unsubUrl}`;
+  const text = `${htmlToText(bodyText)}\n\n--\nUnsubscribe: ${unsubUrl}`;
   return { subject, html, text, unsubUrl };
 };
 
+const parseSchedule = (value) => {
+  if (value === undefined || value === null || value === '') return { at: null };
+  const t = Date.parse(value);
+  if (!Number.isFinite(t)) return { error: 'Scheduled time is not a valid date.' };
+  if (t < Date.now() + 60 * 1000) return { error: 'Pick a time at least 1 minute from now.' };
+  if (t > Date.now() + 366 * 24 * 3600 * 1000) return { error: 'You can schedule up to one year ahead.' };
+  return { at: new Date(t).toISOString() };
+};
+
+const senderReady = (ownerId) => {
+  const settings = getSettingsRecord(ownerId);
+  return Boolean(settings && settings.pass_enc && mailer.createOwnerTransport(settings));
+};
+
 const createCampaign = async (req, res) => {
-  const { name, subject, body, audience } = req.body || {};
+  const { name, subject, audience } = req.body || {};
+  const body = sanitizeEmailHtml(req.body && req.body.body);
   if (!subject || !String(subject).trim()) return ApiResponse.error(res, 'Subject is required', 400);
-  if (!body || !String(body).trim()) return ApiResponse.error(res, 'Email body is required', 400);
+  if (!body || !htmlToText(body).trim() && !/<img\b/i.test(body)) return ApiResponse.error(res, 'Email body is required', 400);
+  const schedule = parseSchedule(req.body && req.body.scheduled_at);
+  if (schedule.error) return ApiResponse.error(res, schedule.error, 400);
+  if (schedule.at && !senderReady(req.user.id)) {
+    return ApiResponse.error(res, 'Set up and test your sender email before scheduling a campaign.', 400);
+  }
 
   const built = buildRecipients(req.user, audience || {});
   if (built.recipients.length === 0) {
@@ -327,10 +351,16 @@ const createCampaign = async (req, res) => {
     created_at: new Date().toISOString(),
     started_at: null,
     finished_at: null,
+    scheduled_at: schedule.at,
+    template_id: req.body && req.body.template_id ? String(req.body.template_id).slice(0, 60) : null,
   };
+  if (schedule.at) campaign.status = 'scheduled';
   dataStore.emailCampaigns.unshift(campaign);
   dbSync.saveEmailCampaign(campaign);
 
+  if (schedule.at) {
+    return ApiResponse.created(res, summarize(campaign), `Campaign scheduled for ${schedule.at}`);
+  }
   if (req.body && req.body.send === true) {
     return startSending(req, res, campaign);
   }
@@ -378,15 +408,17 @@ const runCampaign = async (campaign, settings, ownerId) => {
   dbSync.saveEmailCampaign(campaign);
 };
 
-const startSending = async (req, res, campaign) => {
-  const settings = getSettingsRecord(req.user.id);
+/** Starts sending a campaign in the background. Returns { ok } or { status, message } on a problem. */
+const launchCampaign = (campaign, ownerUser) => {
+  const settings = getSettingsRecord(ownerUser.id);
   if (!settings || !settings.pass_enc) {
-    return ApiResponse.error(res, 'Configure and test your SMTP sender before sending a campaign', 400);
+    return { status: 400, message: 'Configure and test your SMTP sender before sending a campaign' };
   }
   if (!mailer.createOwnerTransport(settings)) {
-    return ApiResponse.error(res, 'Stored SMTP password could not be read. Please re-enter it in sender settings.', 400);
+    return { status: 400, message: 'Stored SMTP password could not be read. Please re-enter it in sender settings.' };
   }
-  if (campaign.status === 'sending') return ApiResponse.error(res, 'Campaign is already sending', 409);
+  if (campaign.status === 'sending') return { status: 409, message: 'Campaign is already sending' };
+  if (campaign.status === 'scheduled') campaign.status = 'draft';
 
   // A campaign interrupted by a restart continues with the recipients that were not sent yet
   if (campaign.status === 'draft_resume') {
@@ -394,25 +426,121 @@ const startSending = async (req, res, campaign) => {
     campaign.resumed = true;
   } else if (campaign.audience && campaign.audience.mode !== 'custom' && campaign.status === 'draft') {
     // Rebuild the audience at send time so new tags/unsubscribes are respected (custom lists stay as saved)
-    const built = buildRecipients(req.user, campaign.audience);
+    const built = buildRecipients(ownerUser, campaign.audience);
     campaign.recipients = built.recipients;
     campaign.total = built.recipients.length;
   }
-  if (campaign.total === 0) return ApiResponse.error(res, 'No recipients to send to', 400);
+  if (campaign.total === 0) return { status: 400, message: 'No recipients to send to' };
 
   campaign.status = 'sending';
   campaign.started_at = new Date().toISOString();
   campaign.error = '';
   dbSync.saveEmailCampaign(campaign);
 
-  runCampaign(campaign, settings, req.user.id).catch((err) => {
+  runCampaign(campaign, settings, ownerUser.id).catch((err) => {
     campaign.status = 'failed';
     campaign.error = String(err.message || err).slice(0, 200);
     campaign.finished_at = new Date().toISOString();
     dbSync.saveEmailCampaign(campaign);
   });
+  return { ok: true };
+};
 
+const startSending = async (req, res, campaign) => {
+  const r = launchCampaign(campaign, req.user);
+  if (!r.ok) return ApiResponse.error(res, r.message, r.status);
   return ApiResponse.success(res, summarize(campaign), `Sending to ${campaign.total} recipient${campaign.total === 1 ? '' : 's'}`);
+};
+
+/* ------------------------------------------------------------------ */
+/* Scheduling                                                          */
+/* ------------------------------------------------------------------ */
+
+const notifyOwner = (campaign, title, message) => {
+  const notif = {
+    id: generateId('notif'),
+    target: 'specific_user',
+    target_user_id: campaign.owner_id,
+    owner_id: campaign.owner_id,
+    title,
+    message,
+    type: 'info',
+    priority: 'normal',
+    kind: 'email_campaign',
+    campaign_id: campaign.id,
+    created_at: new Date().toISOString(),
+    created_by: 'Email Marketing',
+    read_by: [],
+  };
+  dataStore.notifications.unshift(notif);
+  dbSync.saveNotification(notif);
+};
+
+const scheduleCampaign = async (req, res) => {
+  const c = ownerCampaigns(req.user).find((x) => x.id === req.params.id);
+  if (!c) return ApiResponse.error(res, 'Campaign not found', 404);
+  if (!['draft', 'scheduled'].includes(c.status)) return ApiResponse.error(res, 'Only drafts and scheduled campaigns can be scheduled.', 409);
+  const schedule = parseSchedule(req.body && req.body.scheduled_at);
+  if (schedule.error || !schedule.at) return ApiResponse.error(res, schedule.error || 'Choose a date and time.', 400);
+  if (!senderReady(req.user.id)) return ApiResponse.error(res, 'Set up and test your sender email before scheduling a campaign.', 400);
+  c.status = 'scheduled';
+  c.scheduled_at = schedule.at;
+  c.error = '';
+  dbSync.saveEmailCampaign(c);
+  return ApiResponse.success(res, summarize(c), `Campaign scheduled for ${schedule.at}`);
+};
+
+const unscheduleCampaign = async (req, res) => {
+  const c = ownerCampaigns(req.user).find((x) => x.id === req.params.id);
+  if (!c) return ApiResponse.error(res, 'Campaign not found', 404);
+  if (c.status !== 'scheduled') return ApiResponse.error(res, 'This campaign is not scheduled.', 409);
+  c.status = 'draft';
+  c.scheduled_at = null;
+  dbSync.saveEmailCampaign(c);
+  return ApiResponse.success(res, summarize(c), 'Schedule cancelled. The campaign is a draft again.');
+};
+
+/** Called every 30 s (and at start-up): sends scheduled campaigns whose time has come. */
+let ticking = false;
+const runScheduledCampaigns = async (now = Date.now()) => {
+  if (ticking) return 0;
+  ticking = true;
+  let started = 0;
+  try {
+    const due = (dataStore.emailCampaigns || []).filter((c) => c.status === 'scheduled' && c.scheduled_at && Date.parse(c.scheduled_at) <= now);
+    for (const c of due) {
+      const owner = dataStore.users.find((u) => u.id === c.owner_id);
+      if (!owner || owner.is_active === false || !featureEnabledFor(owner)) {
+        c.status = 'failed';
+        c.error = 'Not sent: the owner account is inactive or Email Marketing is switched off.';
+        c.finished_at = new Date().toISOString();
+        dbSync.saveEmailCampaign(c);
+        continue;
+      }
+      const r = launchCampaign(c, owner);
+      if (r.ok) {
+        started += 1;
+        notifyOwner(c, 'Scheduled campaign started', `"${c.name || c.subject}" is now being sent to ${c.total} recipient${c.total === 1 ? '' : 's'}.`);
+      } else {
+        c.status = 'failed';
+        c.error = `Scheduled send failed: ${r.message}`;
+        c.finished_at = new Date().toISOString();
+        dbSync.saveEmailCampaign(c);
+        notifyOwner(c, 'Scheduled campaign was not sent', `"${c.name || c.subject}": ${r.message}`);
+      }
+    }
+  } finally {
+    ticking = false;
+  }
+  return started;
+};
+
+let schedulerTimer = null;
+const startEmailScheduler = () => {
+  if (schedulerTimer) return;
+  setTimeout(() => runScheduledCampaigns().catch(() => {}), 5000);
+  schedulerTimer = setInterval(() => runScheduledCampaigns().catch((e) => console.warn('[Email scheduler]', e.message)), 30000);
+  if (schedulerTimer.unref) schedulerTimer.unref();
 };
 
 const sendCampaign = async (req, res) => {
@@ -420,6 +548,10 @@ const sendCampaign = async (req, res) => {
   if (!c) return ApiResponse.error(res, 'Campaign not found', 404);
   if (c.status === 'paused') {
     c.status = 'draft_resume';
+  }
+  if (c.status === 'scheduled') {
+    c.status = 'draft';
+    c.scheduled_at = null;
   }
   if (c.status === 'sent' && !(req.body && req.body.retry_failed)) {
     return ApiResponse.error(res, 'Campaign already sent. Use retry_failed to resend failed recipients.', 409);
@@ -437,7 +569,8 @@ const sendCampaign = async (req, res) => {
 const sendTestCampaign = async (req, res) => {
   const settings = getSettingsRecord(req.user.id);
   if (!settings || !settings.pass_enc) return ApiResponse.error(res, 'Configure your SMTP sender first', 400);
-  const { subject, body } = req.body || {};
+  const subject = req.body && req.body.subject;
+  const body = sanitizeEmailHtml(req.body && req.body.body);
   const to = (req.body && req.body.to) || req.user.email;
   if (!subject || !body) return ApiResponse.error(res, 'Subject and body are required', 400);
   if (!EMAIL_RE.test(to || '')) return ApiResponse.error(res, 'A valid recipient email is required', 400);
@@ -469,6 +602,142 @@ const deleteCampaign = async (req, res) => {
   const [removed] = dataStore.emailCampaigns.splice(idx, 1);
   dbSync.deleteEmailCampaign(removed.id);
   return ApiResponse.success(res, { id: removed.id }, 'Campaign deleted');
+};
+
+/* ------------------------------------------------------------------ */
+/* Templates                                                           */
+/* ------------------------------------------------------------------ */
+
+const MAX_TEMPLATES = 100;
+const ownerTemplates = (user) => (dataStore.emailTemplates || []).filter((t) => t.owner_id === user.id);
+
+const listTemplates = async (req, res) => {
+  const list = ownerTemplates(req.user)
+    .slice()
+    .sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)));
+  return ApiResponse.success(res, list);
+};
+
+const readTemplateInput = (body = {}) => {
+  const name = String(body.name || '').trim().slice(0, 120);
+  const subject = String(body.subject || '').trim().slice(0, 200);
+  const html = sanitizeEmailHtml(body.body);
+  if (!name) return { error: 'Give the template a name.' };
+  if (!html || (!htmlToText(html).trim() && !/<img\b/i.test(html))) return { error: 'The template body is empty.' };
+  return { name, subject, body: html };
+};
+
+const createTemplate = async (req, res) => {
+  const input = readTemplateInput(req.body);
+  if (input.error) return ApiResponse.error(res, input.error, 400);
+  dataStore.emailTemplates = dataStore.emailTemplates || [];
+  if (ownerTemplates(req.user).length >= MAX_TEMPLATES) return ApiResponse.error(res, `You can keep up to ${MAX_TEMPLATES} templates. Delete old ones first.`, 400);
+  const now = new Date().toISOString();
+  const tpl = {
+    id: generateId('tpl'),
+    owner_id: req.user.id,
+    company_id: req.user.company_id || '',
+    ...input,
+    created_by: req.user.name || req.user.email || '',
+    created_at: now,
+    updated_at: now,
+  };
+  dataStore.emailTemplates.unshift(tpl);
+  dbSync.saveEmailTemplate(tpl);
+  return ApiResponse.created(res, tpl, 'Template saved');
+};
+
+const updateTemplate = async (req, res) => {
+  const tpl = ownerTemplates(req.user).find((t) => t.id === req.params.id);
+  if (!tpl) return ApiResponse.error(res, 'Template not found', 404);
+  const input = readTemplateInput({ ...tpl, ...req.body });
+  if (input.error) return ApiResponse.error(res, input.error, 400);
+  Object.assign(tpl, input, { updated_at: new Date().toISOString() });
+  dbSync.saveEmailTemplate(tpl);
+  return ApiResponse.success(res, tpl, 'Template updated');
+};
+
+const deleteTemplate = async (req, res) => {
+  const idx = (dataStore.emailTemplates || []).findIndex((t) => t.id === req.params.id && t.owner_id === req.user.id);
+  if (idx === -1) return ApiResponse.error(res, 'Template not found', 404);
+  const [removed] = dataStore.emailTemplates.splice(idx, 1);
+  dbSync.deleteEmailTemplate(removed.id);
+  return ApiResponse.success(res, { id: removed.id }, 'Template deleted');
+};
+
+/* ------------------------------------------------------------------ */
+/* Images inside emails                                                */
+/* ------------------------------------------------------------------ */
+
+const IMAGE_MAX_BYTES = 200 * 1024; // the editor shrinks photos to under ~190 KB (base64 stays under the 300 000-character request limit)
+const IMAGE_MAX_PER_COMPANY = 500;
+const IMAGE_ORPHAN_AGE_MS = 7 * 24 * 3600 * 1000;
+const IMAGE_SIGNATURES = {
+  'image/png': (b) => b.length > 8 && b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47,
+  'image/jpeg': (b) => b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff,
+  'image/gif': (b) => b.length > 6 && b.toString('ascii', 0, 4) === 'GIF8',
+  'image/webp': (b) => b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP',
+};
+const imageUrl = (id) => `${config.apiPublicUrl}/api/v1/email/images/${id}`;
+
+/** Pictures not used in any template or campaign of this company for a week are removed. */
+const pruneEmailImages = (ownerId) => {
+  const used = new Set();
+  const scan = (html) => String(html || '').replace(/\/email\/images\/(ei_[a-f0-9]{24})/g, (m, id) => { used.add(id); return m; });
+  (dataStore.emailTemplates || []).filter((t) => t.owner_id === ownerId).forEach((t) => scan(t.body));
+  (dataStore.emailCampaigns || []).filter((c) => c.owner_id === ownerId).forEach((c) => scan(c.body));
+  const now = Date.now();
+  const drop = (dataStore.emailImages || [])
+    .filter((i) => i.owner_id === ownerId && !used.has(i.id) && now - Date.parse(i.created_at || 0) > IMAGE_ORPHAN_AGE_MS)
+    .map((i) => i.id);
+  if (drop.length) {
+    const gone = new Set(drop);
+    dataStore.emailImages = dataStore.emailImages.filter((i) => !gone.has(i.id));
+    dbSync.deleteEmailImages(drop);
+  }
+};
+
+const uploadImage = async (req, res) => {
+  const raw = req.body && req.body.data_url;
+  const m = typeof raw === 'string' ? raw.match(/^data:(image\/(?:png|jpeg|gif|webp));base64,([A-Za-z0-9+/]+={0,2})$/) : null;
+  if (!m) return ApiResponse.error(res, 'Please choose a JPG, PNG, GIF or WebP image.', 400);
+  const buf = Buffer.from(m[2], 'base64');
+  if (!buf.length || buf.length > IMAGE_MAX_BYTES) return ApiResponse.error(res, 'This image is too large (max 200 KB after compression). Please use a smaller picture.', 413);
+  if (!IMAGE_SIGNATURES[m[1]](buf)) return ApiResponse.error(res, 'This file is not a valid image.', 400);
+  dataStore.emailImages = dataStore.emailImages || [];
+  pruneEmailImages(req.user.id);
+  if (dataStore.emailImages.filter((i) => i.owner_id === req.user.id).length >= IMAGE_MAX_PER_COMPANY) {
+    return ApiResponse.error(res, 'Too many email images stored. Delete old templates or campaigns first.', 400);
+  }
+  const img = {
+    id: `ei_${crypto.randomBytes(12).toString('hex')}`,
+    owner_id: req.user.id,
+    name: String((req.body && req.body.name) || '').slice(0, 120),
+    mime: m[1],
+    data: buf.toString('base64'),
+    bytes: buf.length,
+    created_at: new Date().toISOString(),
+  };
+  dataStore.emailImages.push(img);
+  await dbSync.saveEmailImage(img);
+  return ApiResponse.created(res, { id: img.id, url: imageUrl(img.id), bytes: img.bytes }, 'Image uploaded');
+};
+
+/** GET /api/v1/email/images/:id — public, because email apps (Gmail, Outlook) load pictures without a login. */
+const getImage = (req, res) => {
+  const id = String(req.params.id || '');
+  if (!/^ei_[a-f0-9]{24}$/.test(id)) return res.status(404).end();
+  const img = (dataStore.emailImages || []).find((x) => x.id === id);
+  if (!img) return res.status(404).end();
+  const buf = Buffer.from(img.data, 'base64');
+  res.set({
+    'Content-Type': img.mime,
+    'Content-Length': buf.length,
+    'Cache-Control': 'public, max-age=31536000, immutable',
+    'X-Content-Type-Options': 'nosniff',
+    'Content-Security-Policy': "default-src 'none'",
+  });
+  return res.end(buf);
 };
 
 /* ------------------------------------------------------------------ */
@@ -512,6 +781,16 @@ const unsubscribe = async (req, res) => {
 
 module.exports = {
   requireFeature,
+  listTemplates,
+  createTemplate,
+  updateTemplate,
+  deleteTemplate,
+  uploadImage,
+  getImage,
+  scheduleCampaign,
+  unscheduleCampaign,
+  runScheduledCampaigns,
+  startEmailScheduler,
   normalizeTags,
   getStatus,
   getSettings,

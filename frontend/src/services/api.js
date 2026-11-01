@@ -351,6 +351,10 @@ class ApiClient {
     return this.request('/support/tickets', { method: 'POST', body: JSON.stringify(data) });
   }
 
+  uploadAvatar(dataUrl) {
+    return this.request('/avatars', { method: 'POST', body: JSON.stringify({ data_url: dataUrl }) });
+  }
+
   replyTicket(id, body) {
     return this.request(`/support/tickets/${id}/messages`, { method: 'POST', body: JSON.stringify({ body }) });
   }
@@ -479,6 +483,34 @@ class ApiClient {
       method: 'POST',
       body: JSON.stringify(data),
     });
+  }
+
+  scheduleEmailCampaign(id, scheduledAt) {
+    return this.request(`/email/campaigns/${id}/schedule`, { method: 'POST', body: JSON.stringify({ scheduled_at: scheduledAt }) });
+  }
+
+  unscheduleEmailCampaign(id) {
+    return this.request(`/email/campaigns/${id}/unschedule`, { method: 'POST', body: '{}' });
+  }
+
+  getEmailTemplates() {
+    return this.request('/email/templates');
+  }
+
+  createEmailTemplate(data) {
+    return this.request('/email/templates', { method: 'POST', body: JSON.stringify(data) });
+  }
+
+  updateEmailTemplate(id, data) {
+    return this.request(`/email/templates/${id}`, { method: 'PUT', body: JSON.stringify(data) });
+  }
+
+  deleteEmailTemplate(id) {
+    return this.request(`/email/templates/${id}`, { method: 'DELETE' });
+  }
+
+  uploadEmailImage(dataUrl, name = '') {
+    return this.request('/email/images', { method: 'POST', body: JSON.stringify({ data_url: dataUrl, name }) });
   }
 
   deleteEmailCampaign(id) {

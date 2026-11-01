@@ -1,8 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Bot, LifeBuoy, Plus, RefreshCw, ChevronLeft, Send, Lock } from 'lucide-react';
+import { Bot, LifeBuoy, Plus, RefreshCw, ChevronLeft, Send, Lock, BookOpen } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { AssistantChat, NewTicketForm, STATUS_STYLE, RichText } from '../components/support/SupportParts';
+import HelpCenter from '../components/help/HelpCenter';
+import { canSeeTab } from '../data/helpGuide';
 
 const when = (iso) => (iso ? new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : '');
 
@@ -97,9 +99,9 @@ function TicketThread({ id, onBack, onChanged }) {
 }
 
 export default function Support() {
-  const { isOwner } = useAuth();
+  const { isOwner, isStaff, profile } = useAuth();
   const pending = (() => { try { const v = sessionStorage.getItem('crm_open_ticket_id'); sessionStorage.removeItem('crm_open_ticket_id'); return v; } catch { return null; } })();
-  const [tab, setTab] = useState(pending ? 'tickets' : 'ai');
+  const [tab, setTab] = useState(pending ? 'tickets' : 'guide');
   const [tickets, setTickets] = useState([]);
   const [counts, setCounts] = useState({});
   const [filter, setFilter] = useState('active');
@@ -138,10 +140,11 @@ export default function Support() {
     <div className="space-y-4">
       <div>
         <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight">Help & Support</h1>
-        <p className="text-xs text-slate-500 mt-1 font-medium">Ask the AI assistant how to do something, or raise a ticket for the support team.{isOwner ? ' You also see tickets raised by your staff.' : ''}</p>
+        <p className="text-xs text-slate-500 mt-1 font-medium">Read the guide, ask the AI assistant how to do something, or raise a ticket for the support team.{isOwner ? ' You also see tickets raised by your staff.' : ''}</p>
       </div>
 
       <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-slate-800 rounded-xl w-fit">
+        <button type="button" onClick={() => setTab('guide')} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${tab === 'guide' ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}><BookOpen size={13} /> Guide</button>
         <button type="button" onClick={() => setTab('ai')} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${tab === 'ai' ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}><Bot size={13} /> Ask AI</button>
         <button type="button" onClick={() => setTab('tickets')} className={`px-3 py-1.5 rounded-lg text-xs font-bold flex items-center gap-1.5 cursor-pointer ${tab === 'tickets' ? 'bg-white dark:bg-slate-900 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500'}`}>
           <LifeBuoy size={13} /> Tickets {counts.unread ? <span className="px-1.5 rounded-full bg-rose-500 text-white text-[9px]">{counts.unread}</span> : null}
@@ -149,6 +152,15 @@ export default function Support() {
       </div>
 
       {notice && <div className="text-xs font-bold text-emerald-800 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">{notice}</div>}
+
+      {tab === 'guide' && (
+        <HelpCenter
+          isOwner={isOwner}
+          canSee={(t) => canSeeTab(isStaff, profile?.permissions, t)}
+          onAskAI={() => setTab('ai')}
+          onNewTicket={() => startTicket([], '')}
+        />
+      )}
 
       {tab === 'ai' && (
         <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden max-w-3xl">
