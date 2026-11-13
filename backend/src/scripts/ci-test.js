@@ -307,6 +307,70 @@ const runCITests = async () => {
     });
     assert('Commodity list cannot be emptied', emptyOptionsRes.status === 400);
 
+    // New-lead defaults used by the Add Lead form and the bulk import
+    const defaultsLeadRes = await fetch(`${BASE}/api/v1/leads`, {
+      method: 'POST', headers: optHeaders(ownerToken),
+      body: JSON.stringify({ name: 'CI Defaults Lead', follow_up_date: followDate, today_remarks: 'First call', next_follow_up_action: 'Send quote' }),
+    });
+    const defaultsLead = (await defaultsLeadRes.json()).data || {};
+    assert(
+      'A new lead starts at Lead Generation, source Direct Inquiry, time 10:00 (24h)',
+      defaultsLeadRes.status === 201 && defaultsLead.stage === 'Lead Generation' && defaultsLead.source === 'Direct Inquiry' && defaultsLead.follow_up_time === '10:00',
+      `${defaultsLead.stage} / ${defaultsLead.source} / ${defaultsLead.follow_up_time}`
+    );
+    const dupImportRes = await fetch(`${BASE}/api/v1/leads`, {
+      method: 'POST', headers: optHeaders(staffToken),
+      body: JSON.stringify({ name: '  ci defaults  LEAD ', follow_up_date: followDate, today_remarks: 'Imported from bulk upload', next_follow_up_action: 'First contact with buyer' }),
+    });
+    assert('Importing a company that already exists in the company is refused (409)', dupImportRes.status === 409);
+
+    // "Enter saves only the remark": a remark-only update adds one history entry and changes nothing else
+    const patchLead = async (id, token, body) => {
+      const r = await fetch(`${BASE}/api/v1/leads/${id}`, { method: 'PATCH', headers: optHeaders(token), body: JSON.stringify(body) });
+      return { status: r.status, data: (await r.json()).data || {} };
+    };
+    const remarkOnly = await patchLead(defaultsLead.id, ownerToken, { today_remarks: 'Second call: asked for price' });
+    assert(
+      'Remark-only update appends one remark and leaves the lead details alone',
+      remarkOnly.status === 200 && remarkOnly.data.previous_remarks.length === 2 &&
+        remarkOnly.data.previous_remarks[0].today_remark === 'Second call: asked for price' &&
+        remarkOnly.data.name === 'CI Defaults Lead' && remarkOnly.data.stage === 'Lead Generation' &&
+        remarkOnly.data.next_follow_up_action === 'Send quote'
+    );
+    const sameRemark = await patchLead(defaultsLead.id, ownerToken, { today_remarks: 'Second call: asked for price' });
+    assert('Saving the same remark again does not add a duplicate', sameRemark.status === 200 && (sameRemark.data.previous_remarks || []).length === 2);
+    const detailsOnly = await patchLead(defaultsLead.id, ownerToken, { name: 'CI Defaults Lead Renamed', company_name: 'CI Defaults Lead Renamed' });
+    assert(
+      'Updating lead details without a remark keeps the last remark and the history',
+      detailsOnly.status === 200 && detailsOnly.data.name === 'CI Defaults Lead Renamed' &&
+        detailsOnly.data.today_remarks === 'Second call: asked for price' && detailsOnly.data.previous_remarks.length === 2
+    );
+    const plannedOnly = await patchLead(defaultsLead.id, ownerToken, { next_follow_up_action: 'Share lab report' });
+    assert(
+      'A planned-action-only update is also a history entry',
+      plannedOnly.status === 200 && plannedOnly.data.previous_remarks.length === 3 && plannedOnly.data.previous_remarks[0].planned_action === 'Share lab report'
+    );
+    const staffOwnRemark = await patchLead(staffLeadId, staffToken, { today_remarks: 'Staff remark via Enter' });
+    assert('Staff can add a remark on their own lead', staffOwnRemark.status === 200 && staffOwnRemark.data.previous_remarks[0].today_remark === 'Staff remark via Enter');
+    const staffOtherRemark = await patchLead(defaultsLead.id, staffToken, { today_remarks: 'Not my lead' });
+    assert('Staff cannot add a remark on a lead that is not theirs', staffOtherRemark.status === 403 || staffOtherRemark.status === 404);
+
+    // Activity note saved with Enter in the lead popup
+    const actRes = await fetch(`${BASE}/api/v1/activity`, {
+      method: 'POST', headers: optHeaders(staffToken),
+      body: JSON.stringify({ type: 'note', title: 'Call initiated', description: 'Rang twice', lead_id: staffLeadId }),
+    });
+    const actOtherRes = await fetch(`${BASE}/api/v1/activity`, {
+      method: 'POST', headers: optHeaders(staffToken),
+      body: JSON.stringify({ type: 'note', title: 'Call initiated', description: 'x', lead_id: defaultsLead.id }),
+    });
+    const actList = (await (await fetch(`${BASE}/api/v1/activity?lead_id=${staffLeadId}`, { headers: optHeaders(ownerToken) })).json()).data || [];
+    assert(
+      'Staff can log an activity note on their own lead only, and the owner sees it in the history',
+      actRes.status === 201 && (actOtherRes.status === 403 || actOtherRes.status === 404) &&
+        actList.some((a) => a.title === 'Call initiated' && a.description === 'Rang twice' && !a.system)
+    );
+
     const ownerAssignedLeadRes = await fetch(`${BASE}/api/v1/leads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ownerToken}` },

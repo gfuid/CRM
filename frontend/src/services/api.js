@@ -375,8 +375,13 @@ class ApiClient {
     return this.request(`/support/tickets/${id}`, { method: 'PATCH', body: JSON.stringify(data) });
   }
 
-  getMyUsage() {
-    return this.request('/admin/my-usage');
+  getMyUsage(withMembers = false) {
+    return this.request(`/admin/my-usage${withMembers ? '?members=1' : ''}`);
+  }
+
+  // Help video library (links added by the platform admin)
+  getHelpVideos() {
+    return this.request('/support/videos');
   }
 
   getDailyReport(date) {

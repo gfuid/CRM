@@ -7,6 +7,7 @@ import UsersSection from './pages/UsersSection';
 import DeveloperSection from './pages/DeveloperSection';
 import SupportTicketsSection from './pages/SupportTicketsSection';
 import AiAssistantSection from './pages/AiAssistantSection';
+import HelpVideosSection from './pages/HelpVideosSection';
 import SettingsSection from './pages/SettingsSection';
 import BroadcastNotificationModal from './components/BroadcastNotificationModal';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
@@ -373,6 +374,10 @@ export default function App() {
 
               {activeSection === 'ai' && (
                 <AiAssistantSection apiBase={API_BASE} getHeaders={getHeaders} showToast={showToast} />
+              )}
+
+              {activeSection === 'videos' && (
+                <HelpVideosSection apiBase={API_BASE} getHeaders={getHeaders} showToast={showToast} />
               )}
 
               {activeSection === 'developer' && (

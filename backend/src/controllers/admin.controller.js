@@ -776,9 +776,31 @@ const moveOwnerToOwner = async (req, res) => {
  * The signed-in owner's own company storage (used / limit). Owner only.
  */
 const getMyUsage = async (req, res) => {
-  const { ownerOf } = require('../utils/usage');
+  const { ownerOf, tenantFootprint, storageLimitMb } = require('../utils/usage');
   const owner = ownerOf(req.user);
   if (!owner) return ApiResponse.error(res, 'Company owner not found', 404);
+  // ?members=1 adds who used how much (owner + each staff member), biggest first
+  if (req.query.members === '1' || req.query.members === 'true') {
+    const footprint = tenantFootprint(owner);
+    const limitBytes = storageLimitMb(owner) * 1024 * 1024;
+    const total = footprint.bytes || 1;
+    const members = footprint.members.map((m) => ({
+      id: m.id,
+      name: m.name,
+      role: m.role,
+      is_active: m.isActive,
+      used_bytes: m.bytes,
+      used_mb: Number((m.bytes / 1024 / 1024).toFixed(3)),
+      share_percent: Number(((m.bytes / total) * 100).toFixed(1)),
+      limit_percent: Number(((m.bytes / limitBytes) * 100).toFixed(1)),
+      leads: m.leads,
+      tasks: m.tasks,
+      follow_ups: m.followUps,
+      remarks: m.remarks,
+      my_days: m.myDays,
+    }));
+    return ApiResponse.success(res, { ...usageSummary(owner), members }, 'Storage usage');
+  }
   return ApiResponse.success(res, usageSummary(owner), 'Storage usage');
 };
 

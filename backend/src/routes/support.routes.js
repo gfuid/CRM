@@ -11,6 +11,9 @@ router.use(authenticate);
 router.get('/assistant/status', asyncHandler(support.assistantStatus));
 router.post('/assistant/chat', asyncHandler(support.assistantChat));
 
+// Help video library (added by the platform admin, watched by everyone)
+router.get('/videos', asyncHandler(require('../controllers/helpVideos.controller').listForUsers));
+
 // Support tickets (staff: own, owner: company, super admin: all)
 router.get('/tickets', asyncHandler(support.listTickets));
 router.post('/tickets', enforceStorageQuota, asyncHandler(support.createTicket));

@@ -32,6 +32,13 @@ router.get('/ai-settings', asyncHandler(support.getAiSettings));
 router.put('/ai-settings', asyncHandler(support.saveAiSettings));
 router.post('/ai-settings/test', asyncHandler(support.testAi));
 
+// Help video library shown in every company's Help & Support
+const helpVideos = require('../controllers/helpVideos.controller');
+router.get('/help-videos', asyncHandler(helpVideos.listForAdmin));
+router.post('/help-videos', asyncHandler(helpVideos.createVideo));
+router.patch('/help-videos/:id', asyncHandler(helpVideos.updateVideo));
+router.delete('/help-videos/:id', asyncHandler(helpVideos.deleteVideo));
+
 // Support tickets inbox for the platform team
 router.get('/support/tickets', asyncHandler(support.listTickets));
 router.get('/support/tickets/:id', asyncHandler(support.getTicket));

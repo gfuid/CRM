@@ -115,6 +115,40 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   const lim = await call('PATCH', `/admin/users/${other.data.data.user.id}/staff-limit`, SA, { staff_limit: 5 });
   rec('AD-08', 'Super Admin', 'Change any owner\'s staff limit', '200', lim.status, lim.status === 200);
 
+  // 6b. Help video library: platform admin adds links, everyone watches, staff do not get owner-only videos
+  const othStaffEmail = `vidstaff${u}@t.com`;
+  await call('POST', '/admin/users', OTH, { name: 'Video Staff', email: othStaffEmail, password: 'Staff123' });
+  const OTHSTAFF = (await login(othStaffEmail, 'Staff123')).data.data.token;
+  const ownerAdd = await call('POST', '/admin/help-videos', OTH, { title: 'x', url: 'https://youtu.be/abc', section: 'Leads' });
+  rec('HV-01', 'Owner', 'Owner tries to add a help video', '403', ownerAdd.status, ownerAdd.status === 403);
+  const badUrl = await call('POST', '/admin/help-videos', SA, { title: 'Bad link', url: 'javascript:alert(1)', section: 'Leads' });
+  const badSection = await call('POST', '/admin/help-videos', SA, { title: 'Bad section', url: 'https://youtu.be/abc', section: 'Nope' });
+  rec('HV-02', 'Super Admin', 'Unsafe link or unknown section is refused', '400 + 400', `${badUrl.status} ${badSection.status}`, badUrl.status === 400 && badSection.status === 400);
+  const v1 = await call('POST', '/admin/help-videos', SA, { title: 'How to import leads', url: 'https://www.youtube.com/watch?v=abc123', section: 'Bulk Import', keywords: 'CSV, upload', duration: '3:20' });
+  const v2 = await call('POST', '/admin/help-videos', SA, { title: 'How to raise the staff limit', url: 'https://youtu.be/xyz789', section: 'Staff & storage', audience: 'owners' });
+  rec('HV-03', 'Super Admin', 'Add two videos (one for owners only)', '201 + 201', `${v1.status} ${v2.status}`, v1.status === 201 && v2.status === 201 && v1.data.data.keywords.join() === 'csv,upload');
+  const ownerSees = (await call('GET', '/support/videos', OTH)).data.data.map((v) => v.title);
+  const staffSees = (await call('GET', '/support/videos', OTHSTAFF)).data.data.map((v) => v.title);
+  rec('HV-04', 'Owner / Staff', 'Owner sees both, staff do not see the owner-only video', '2 and 1', `${ownerSees.length} and ${staffSees.length}`, ownerSees.length === 2 && staffSees.length === 1 && staffSees[0] === 'How to import leads');
+  const upd = await call('PATCH', `/admin/help-videos/${v1.data.data.id}`, SA, { title: 'Import leads from a CSV file' });
+  const delV = await call('DELETE', `/admin/help-videos/${v2.data.data.id}`, SA);
+  const afterV = (await call('GET', '/support/videos', OTH)).data.data.map((v) => v.title);
+  rec('HV-05', 'Super Admin', 'Rename one video and delete the other', 'one left, renamed', afterV.join(' | '), upd.status === 200 && delV.status === 200 && afterV.length === 1 && afterV[0] === 'Import leads from a CSV file');
+  const noLogin = await call('GET', '/support/videos', null);
+  rec('HV-06', 'Public', 'Help videos need a login', '401', noLogin.status, noLogin.status === 401);
+
+  // 6c. Storage by team member (owner only)
+  await call('POST', '/leads', OTHSTAFF, { company_name: 'Staff storage buyer', follow_up_date: today, today_remarks: 'r', next_follow_up_action: 'n' });
+  const usageM = await call('GET', '/admin/my-usage?members=1', OTH);
+  const mem = usageM.data?.data?.members || [];
+  const staffRow = mem.find((m) => m.name === 'Video Staff');
+  const shareSum = mem.reduce((t, m) => t + m.share_percent, 0);
+  rec('SU-01', 'Owner', 'Storage is split per team member', 'owner + staff rows, shares add to ~100', `${mem.length} rows, staff leads=${staffRow?.leads}, sum=${shareSum.toFixed(0)}`, usageM.status === 200 && mem.length >= 2 && mem.some((m) => m.role === 'Owner') && staffRow && staffRow.leads === 1 && staffRow.used_bytes > 0 && Math.abs(shareSum - 100) < 1 && mem.every((m) => m.email === undefined));
+  const usagePlain = await call('GET', '/admin/my-usage', OTH);
+  rec('SU-02', 'Owner', 'Plain usage call stays small (no member list)', 'no members', String(usagePlain.data?.data?.members), usagePlain.status === 200 && usagePlain.data.data.members === undefined);
+  const staffUsage = await call('GET', '/admin/my-usage?members=1', OTHSTAFF);
+  rec('SU-03', 'Staff', 'Staff cannot open the storage breakdown', '403', staffUsage.status, staffUsage.status === 403);
+
   // 7. Keep-alive self ping reaches /health
   let hits = 0;
   const pingSrv = http.createServer((req, res) => { if (req.url.startsWith('/health')) hits++; res.end('{}'); });

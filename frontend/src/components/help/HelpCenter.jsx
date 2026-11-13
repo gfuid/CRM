@@ -2,6 +2,7 @@ import React, { useMemo, useState } from 'react';
 import { Search, PlayCircle, Compass, ChevronDown, ArrowRight, Wrench, ListChecks, Info, Bot, LifeBuoy } from 'lucide-react';
 import { HELP_SECTIONS, HELP_VIDEO_URL, HELP_VIDEO_POSTER } from '../../data/helpGuide';
 import { startTour } from './OnboardingTour';
+import HelpVideoLibrary from './HelpVideoLibrary';
 
 const go = (tab) => window.dispatchEvent(new CustomEvent('crm_navigate', { detail: { tab } }));
 
@@ -63,10 +64,13 @@ export default function HelpCenter({ isOwner, canSee = () => true, onAskAI, onNe
         <input
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search the guide — e.g. “staff limit”, “follow-up overdue”, “import CSV”"
+          placeholder="Search videos and the guide — e.g. “staff limit”, “follow-up overdue”, “import CSV”"
           className="w-full pl-9 pr-3 py-2.5 text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 focus:outline-none focus:ring-2 focus:ring-emerald-500/30"
         />
       </div>
+
+      {/* "How to" videos (filtered by the same search box) */}
+      <HelpVideoLibrary query={q} />
 
       {/* Sections */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">

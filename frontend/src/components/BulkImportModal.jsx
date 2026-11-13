@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useRef, useState } from 'react';
 import Modal from './Modal';
 import { api } from '../services/api';
 import { PIPELINE_STAGES, LEAD_SOURCES } from '../data/leadOptions';
+import { buildColumns, parseCsv, templateCsv, fileProblem, reviewImport } from '../data/leadImport';
 import {
   Download,
   Upload,
@@ -21,85 +22,6 @@ import {
  *                then Import (or Enter) saves only the rows that passed
  */
 
-const UNITS = ['MT', 'kg', 'Quintal', 'lbs', 'Containers', 'Bags'];
-// Local calendar date (toISOString would give yesterday's date early in the morning in India)
-const isoDate = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-const norm = (s) => String(s || '').toLowerCase().replace(/[^a-z0-9]/g, '');
-const same = (a, b) => String(a || '').trim().toLowerCase() === String(b || '').trim().toLowerCase();
-
-// One row per column of the template. `ownerOnly` columns are skipped for staff.
-const buildColumns = (commodities) => [
-  { key: 'company', header: 'Company Name', aliases: ['company', 'name'], required: true, rule: 'Buyer company name. Must be unique.', example: ['Al-Zahra Trading LLC', 'Global Agri Impex BV'] },
-  { key: 'country', header: 'Country', aliases: [], rule: 'Country of the buyer.', example: ['United Arab Emirates', 'Netherlands'] },
-  { key: 'contact', header: 'Contact Person', aliases: ['contact', 'contactname'], rule: 'Name of the person you deal with.', example: ['Ahmed Al-Mansoor', 'Lars Janssen'] },
-  { key: 'phone', header: 'Phone', aliases: ['mobile', 'phonenumber'], rule: 'With country code.', example: ['+971 50 111 2222', '+31 20 555 4321'] },
-  { key: 'email', header: 'Email', aliases: ['emailid', 'workemail'], rule: 'A valid email address.', example: ['ahmed@alzahra.ae', 'lars@globalagri.nl'] },
-  { key: 'whatsapp', header: 'WhatsApp', aliases: ['whatsappnumber', 'zalo'], rule: 'WhatsApp / Zalo number. Blank = same as Phone.', example: ['+971 50 111 2222', ''] },
-  { key: 'website', header: 'Website', aliases: ['url'], rule: 'Company website.', example: ['https://alzahra.ae', 'https://globalagri.nl'] },
-  { key: 'source', header: 'Lead Source', aliases: ['source'], rule: `One of: ${LEAD_SOURCES.join(', ')}. Blank = Direct Inquiry.`, example: ['Customs Data', 'Trade Fair'] },
-  { key: 'products', header: 'Products', aliases: ['product', 'commodity', 'commodities'], rule: `From your product list, separated by commas: ${commodities.join(', ')}.`, example: [commodities[0] || 'Turmeric', commodities.slice(1, 3).join(', ') || 'Rice DDGS'] },
-  { key: 'quantity', header: 'Quantity', aliases: ['qty', 'volume'], rule: 'A number only.', example: ['40', '80'] },
-  { key: 'unit', header: 'Unit', aliases: ['quantityunit'], rule: `One of: ${UNITS.join(', ')}. Blank = MT.`, example: ['MT', 'MT'] },
-  { key: 'value', header: 'Deal Value USD', aliases: ['dealvalue', 'price', 'value'], ownerOnly: true, rule: 'A number only, in US dollars.', example: ['68000', '95000'] },
-  { key: 'stage', header: 'Stage', aliases: ['pipelinestage', 'status'], rule: `One of: ${PIPELINE_STAGES.join(', ')}. Blank = Lead Generation.`, example: ['Lead Generation', 'Sample Sent'] },
-  { key: 'incoterm', header: 'Incoterm', aliases: [], ownerOnly: true, rule: 'e.g. FOB, CIF, CFR.', example: ['CIF', 'FOB'] },
-  { key: 'port', header: 'Port Delivery', aliases: ['port', 'portofdelivery'], ownerOnly: true, rule: 'Destination port.', example: ['Jebel Ali Port', 'Rotterdam'] },
-  { key: 'rep', header: 'Assigned Rep', aliases: ['assignedto', 'staff'], ownerOnly: true, rule: 'Exact name of a staff member. Blank = you.', example: ['', ''] },
-  { key: 'followup', header: 'Follow-up Date', aliases: ['followup', 'nextfollowupdate'], rule: 'YYYY-MM-DD or DD-MM-YYYY. Blank = today.', example: [isoDate(new Date(Date.now() + 5 * 864e5)), isoDate(new Date(Date.now() + 3 * 864e5))] },
-  { key: 'remarks', header: 'Remarks', aliases: ['todayremarks', 'remark'], rule: 'What was discussed so far.', example: ['Asked for price list', 'Feed grade analysis sent'] },
-  { key: 'nextaction', header: 'Next Action', aliases: ['plannedaction'], rule: 'What to do on the follow-up date.', example: ['Send quotation', 'Call for sample feedback'] },
-  { key: 'notes', header: 'Notes', aliases: ['note'], rule: 'Any extra note.', example: ['', ''] },
-];
-
-// CSV text -> { headers, rows }. Handles quoted cells, commas and line breaks inside quotes, and Excel's BOM.
-const parseCsv = (text) => {
-  const src = String(text || '').replace(/^﻿/, '');
-  const table = [];
-  let row = [];
-  let cell = '';
-  let quoted = false;
-  for (let i = 0; i < src.length; i++) {
-    const ch = src[i];
-    if (quoted) {
-      if (ch === '"' && src[i + 1] === '"') { cell += '"'; i++; }
-      else if (ch === '"') quoted = false;
-      else cell += ch;
-    } else if (ch === '"') quoted = true;
-    else if (ch === ',') { row.push(cell); cell = ''; }
-    else if (ch === '\n' || ch === '\r') {
-      if (ch === '\r' && src[i + 1] === '\n') i++;
-      row.push(cell); cell = '';
-      table.push(row); row = [];
-    } else cell += ch;
-  }
-  if (cell !== '' || row.length) { row.push(cell); table.push(row); }
-  const clean = table.map((r) => r.map((c) => c.trim())).filter((r) => r.some((c) => c !== ''));
-  return { headers: clean[0] || [], rows: clean.slice(1) };
-};
-
-const toIsoDate = (value) => {
-  const v = String(value || '').trim();
-  let m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(v);
-  let y; let mo; let d;
-  if (m) { y = +m[1]; mo = +m[2]; d = +m[3]; }
-  else {
-    m = /^(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$/.exec(v);
-    if (!m) return null;
-    d = +m[1]; mo = +m[2]; y = +m[3];
-  }
-  const dt = new Date(Date.UTC(y, mo - 1, d));
-  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== mo - 1 || dt.getUTCDate() !== d) return null;
-  return `${y}-${String(mo).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-};
-const toNumber = (value) => {
-  const v = String(value || '').replace(/[,\s$]/g, '');
-  if (v === '') return 0;
-  return /^\d+(\.\d+)?$/.test(v) ? Number(v) : null;
-};
-const pickFrom = (list, value) => list.find((item) => same(item, value));
-
-const escapeCsv = (val) => `"${String(val == null ? '' : val).replace(/"/g, '""')}"`;
-
 export default function BulkImportModal({ isOpen, onClose, isOwner, profile, teamList = [], commodities = [], existingNames = [], onImported }) {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState('');
@@ -109,14 +31,12 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   const [result, setResult] = useState(null); // { imported, failed: [] }
   const fileInput = useRef(null);
 
-  const columns = useMemo(
-    () => buildColumns(commodities).filter((c) => isOwner || !c.ownerOnly),
-    [commodities, isOwner]
+  const allColumns = useMemo(
+    () => buildColumns({ commodities, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES }),
+    [commodities]
   );
-  const lockedColumns = useMemo(
-    () => (isOwner ? [] : buildColumns(commodities).filter((c) => c.ownerOnly)),
-    [commodities, isOwner]
-  );
+  const columns = useMemo(() => allColumns.filter((c) => isOwner || !c.ownerOnly), [allColumns, isOwner]);
+  const lockedColumns = useMemo(() => (isOwner ? [] : allColumns.filter((c) => c.ownerOnly)), [allColumns, isOwner]);
 
   // Start fresh every time the window opens
   useEffect(() => {
@@ -126,12 +46,8 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   }, [isOpen]);
 
   const downloadTemplate = () => {
-    const lines = [
-      columns.map((c) => escapeCsv(c.header)).join(','),
-      columns.map((c) => escapeCsv(c.example[0])).join(','),
-      columns.map((c) => escapeCsv(c.example[1])).join(','),
-    ].join('\r\n');
-    const url = URL.createObjectURL(new Blob(['﻿' + lines], { type: 'text/csv;charset=utf-8;' }));
+    // The leading BOM makes Excel open the file as UTF-8
+    const url = URL.createObjectURL(new Blob([String.fromCharCode(0xFEFF) + templateCsv(columns)], { type: 'text/csv;charset=utf-8;' }));
     const link = document.createElement('a');
     link.href = url;
     link.setAttribute('download', 'lead_import_template.csv');
@@ -151,20 +67,9 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
     const reader = new FileReader();
     reader.onload = (e) => {
       const data = parseCsv(e.target.result);
-      if (!data.headers.length || !data.rows.length) {
-        setFileError('This file has no data rows. Fill the template and upload it again.');
-        return;
-      }
-      const hasCompany = data.headers.some((h) => {
-        const col = buildColumns(commodities)[0];
-        return [col.header, ...col.aliases].some((a) => norm(a) === norm(h));
-      });
-      if (!hasCompany) {
-        setFileError('The "Company Name" column was not found. Please use the template from step 1 without renaming its headings.');
-        return;
-      }
-      if (data.rows.length > 500) {
-        setFileError(`This file has ${data.rows.length} rows. Please import at most 500 leads at a time.`);
+      const problem = fileProblem(data);
+      if (problem) {
+        setFileError(problem);
         return;
       }
       setFileName(file.name);
@@ -175,131 +80,11 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
     reader.readAsText(file);
   };
 
-  // Match the file's headings to our columns, then check every row
+  // Match the file's headings to our columns, then check every row (rules live in data/leadImport.js)
   const review = useMemo(() => {
     if (!parsed) return null;
-    const all = buildColumns(commodities);
-    const indexOf = {};
-    const usedHeaderIdx = new Set();
-    all.forEach((col) => {
-      const names = [col.header, ...col.aliases].map(norm);
-      const idx = parsed.headers.findIndex((h, i) => !usedHeaderIdx.has(i) && names.includes(norm(h)));
-      if (idx >= 0) { indexOf[col.key] = idx; usedHeaderIdx.add(idx); }
-    });
-    const found = columns.filter((c) => indexOf[c.key] !== undefined);
-    const missing = columns.filter((c) => indexOf[c.key] === undefined);
-    const lockedFound = lockedColumns.filter((c) => indexOf[c.key] !== undefined);
-    const unknown = parsed.headers.filter((h, i) => !usedHeaderIdx.has(i) && h);
-
-    const today = isoDate(new Date());
-    const existing = new Set(existingNames.map((n) => String(n || '').trim().toLowerCase()).filter(Boolean));
-    const seen = new Map();
-
-    const rows = parsed.rows.map((cells, rowIdx) => {
-      const raw = (key) => (indexOf[key] !== undefined && columns.some((c) => c.key === key) ? String(cells[indexOf[key]] || '').trim() : '');
-      const errors = {}; // column key -> message
-      const company = raw('company');
-      if (!company) errors.company = 'Company Name is empty';
-      else {
-        const k = company.toLowerCase().replace(/\s+/g, ' ');
-        if (existing.has(k)) errors.company = 'Already in your CRM';
-        else if (seen.has(k)) errors.company = `Same company as row ${seen.get(k)}`;
-        else seen.set(k, rowIdx + 2);
-      }
-      const email = raw('email');
-      if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Not a valid email';
-
-      let source = raw('source');
-      if (source) {
-        const hit = pickFrom(LEAD_SOURCES, source);
-        if (hit) source = hit; else errors.source = 'Not in the lead source list';
-      } else source = 'Direct Inquiry';
-
-      let stage = raw('stage');
-      if (stage) {
-        const hit = pickFrom(PIPELINE_STAGES, stage);
-        if (hit) stage = hit; else errors.stage = 'Not a pipeline stage';
-      } else stage = 'Lead Generation';
-
-      const productNames = raw('products').split(',').map((p) => p.trim()).filter(Boolean);
-      const products = [];
-      const badProducts = [];
-      productNames.forEach((p) => {
-        const hit = pickFrom(commodities, p);
-        if (hit) { if (!products.includes(hit)) products.push(hit); } else badProducts.push(p);
-      });
-      if (badProducts.length) errors.products = `Not in your product list: ${badProducts.join(', ')}`;
-
-      const quantity = toNumber(raw('quantity'));
-      if (quantity === null) errors.quantity = 'Quantity must be a number';
-      let unit = raw('unit');
-      if (unit) {
-        const hit = pickFrom(UNITS, unit);
-        if (hit) unit = hit; else errors.unit = `Unit must be one of ${UNITS.join(', ')}`;
-      } else unit = 'MT';
-      const value = toNumber(raw('value'));
-      if (value === null) errors.value = 'Deal value must be a number';
-
-      let followUp = raw('followup');
-      if (followUp) {
-        const iso = toIsoDate(followUp);
-        if (iso) followUp = iso; else errors.followup = 'Use YYYY-MM-DD or DD-MM-YYYY';
-      } else followUp = today;
-
-      let assignedTo = profile?.id || '';
-      const rep = raw('rep');
-      if (rep) {
-        const member = teamList.find((t) => same(t.name, rep)) || (same(profile?.name, rep) ? profile : null);
-        if (member) assignedTo = member.id; else errors.rep = 'No staff member with this name';
-      }
-
-      const phone = raw('phone');
-      const payload = {
-        company_name: company,
-        name: company,
-        country: raw('country'),
-        contacts: [{ name: raw('contact'), phone, extra_phones: [], email, designation: '', linkedin: '' }],
-        contact_person: raw('contact'),
-        phone,
-        email,
-        whatsapp: raw('whatsapp') || phone,
-        website: raw('website'),
-        source,
-        stage,
-        follow_up_date: followUp,
-        follow_up_time: '10:00',
-        today_remarks: raw('remarks') || 'Imported from bulk upload',
-        next_follow_up_action: raw('nextaction') || 'First contact with buyer',
-        notes: raw('notes'),
-        ...(products.length || quantity ? {
-          products,
-          product: products.join(', '),
-          quantity: quantity || 0,
-          quantity_unit: unit,
-        } : {}),
-        ...(isOwner ? {
-          type: 'Export',
-          price: value || 0,
-          value: value || 0,
-          export_requirements: { quantity_unit: unit, incoterm: raw('incoterm'), port_delivery: raw('port') },
-          assigned_to: assignedTo,
-        } : {}),
-      };
-      // What the review table shows for each column (after defaults are applied)
-      const shown = {
-        company, country: raw('country'), contact: raw('contact'), phone, email, whatsapp: raw('whatsapp'), website: raw('website'),
-        source: errors.source ? raw('source') : source,
-        products: errors.products ? raw('products') : products.join(', '),
-        quantity: raw('quantity'), unit: errors.unit ? raw('unit') : (raw('quantity') ? unit : ''),
-        value: raw('value'), stage: errors.stage ? raw('stage') : stage, incoterm: raw('incoterm'), port: raw('port'), rep,
-        followup: errors.followup ? raw('followup') : followUp,
-        remarks: raw('remarks'), nextaction: raw('nextaction'), notes: raw('notes'),
-      };
-      return { line: rowIdx + 2, payload, shown, errors, ok: Object.keys(errors).length === 0 };
-    });
-
-    return { found, missing, lockedFound, unknown, rows, ready: rows.filter((r) => r.ok), bad: rows.filter((r) => !r.ok) };
-  }, [parsed, columns, lockedColumns, commodities, existingNames, teamList, profile, isOwner]);
+    return reviewImport(parsed, { isOwner, profile, teamList, commodities, existingNames, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES });
+  }, [parsed, commodities, existingNames, teamList, profile, isOwner]);
 
   const runImport = async () => {
     if (!review || review.ready.length === 0 || importing) return;
