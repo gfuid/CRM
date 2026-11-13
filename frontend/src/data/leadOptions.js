@@ -50,6 +50,19 @@ export const LEAD_SOURCES = [
 export const withCurrent = (list, current) =>
   current && !list.includes(current) ? [...list, current] : list;
 
+/** Remark / note boxes: Enter saves, Shift+Enter starts a new line. */
+const isPlainEnter = (e) => e.key === 'Enter' && !e.shiftKey && !e.nativeEvent?.isComposing;
+export const submitOnEnter = (e) => {
+  if (!isPlainEnter(e)) return;
+  e.preventDefault();
+  e.currentTarget.form?.requestSubmit();
+};
+export const runOnEnter = (fn) => (e) => {
+  if (!isPlainEnter(e)) return;
+  e.preventDefault();
+  fn();
+};
+
 const LEGACY_KEY = 'crm_user_commodities';
 
 export function useLeadOptions(isOwner) {

@@ -6,7 +6,7 @@ import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
-import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions } from '../data/leadOptions';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, submitOnEnter, runOnEnter } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -3576,6 +3576,7 @@ export default function Leads() {
                       placeholder="What was discussed / decided on today's call or meeting with the client..."
                       value={form.today_remarks}
                       onChange={(e) => setForm({ ...form, today_remarks: e.target.value })}
+                      onKeyDown={submitOnEnter}
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                   </div>
@@ -3590,6 +3591,7 @@ export default function Leads() {
                       placeholder="What specific action needs to be taken on scheduled date (e.g., share quote, verify LC)..."
                       value={form.next_follow_up_action}
                       onChange={(e) => setForm({ ...form, next_follow_up_action: e.target.value })}
+                      onKeyDown={submitOnEnter}
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                   </div>
@@ -4121,6 +4123,7 @@ export default function Leads() {
                   placeholder="Write what happened with this lead… (e.g. today their purchasers don't stay at office, requested protein > 45%)..."
                   value={dossierActivityNote}
                   onChange={(e) => setDossierActivityNote(e.target.value)}
+                  onKeyDown={runOnEnter(handleLogDossierActivity)}
                   className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none"
                 />
                 <div className="flex items-center justify-between">
@@ -4226,6 +4229,7 @@ export default function Leads() {
                       placeholder="What was discussed / done today (e.g. called client, discussed CIF price & sample)..."
                       value={dossierTodayRemark}
                       onChange={(e) => setDossierTodayRemark(e.target.value)}
+                      onKeyDown={runOnEnter(handleSaveDossierFollowUp)}
                       className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                     />
                   </div>
@@ -4239,6 +4243,7 @@ export default function Leads() {
                       placeholder="What action to take on future date (e.g. share lab report, check payment receipt)..."
                       value={dossierFutureAction}
                       onChange={(e) => setDossierFutureAction(e.target.value)}
+                      onKeyDown={runOnEnter(handleSaveDossierFollowUp)}
                       className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:outline-none"
                     />
                   </div>

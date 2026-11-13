@@ -24,7 +24,7 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import OneRootCustomerModal from '../components/OneRootCustomerModal';
-import { PIPELINE_STAGES } from '../data/leadOptions';
+import { PIPELINE_STAGES, submitOnEnter } from '../data/leadOptions';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
@@ -668,6 +668,7 @@ export default function FollowUp() {
                 placeholder="e.g. Called customer today. Discussed revised packaging requirements and payment terms. Customer requested 2 days to confirm proforma..."
                 value={quickTodayRemark}
                 onChange={(e) => setQuickTodayRemark(e.target.value)}
+                onKeyDown={submitOnEnter}
                 className="w-full px-3 py-2 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
               />
             </div>
@@ -722,6 +723,7 @@ export default function FollowUp() {
                 placeholder="e.g. Call back buyer to verify deposit receipt, confirm container booking with shipping line..."
                 value={quickFutureAction}
                 onChange={(e) => setQuickFutureAction(e.target.value)}
+                onKeyDown={submitOnEnter}
                 className="w-full px-3 py-2 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
               />
             </div>
