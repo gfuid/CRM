@@ -680,7 +680,7 @@ export default function Leads() {
     address: '',
     credit_rating: 'AA',
     turnover: '',
-    stage: 'Requirement Understood',
+    stage: 'Lead Generation', // a new lead starts at the first stage
     // Product
     products: [], // Empty array by default
     tags: [], // Optional marketing tags (used by Email Marketing audiences)
@@ -1346,9 +1346,9 @@ export default function Leads() {
         source: form.lead_source,
         address: form.address,
         tags: Array.isArray(form.tags) ? form.tags : [],
-        stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-        status: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
-        lead_stage: form.stage || (editingLead ? editingLead.stage : 'Requirement Understood'),
+        stage: form.stage || (editingLead ? editingLead.stage : 'Lead Generation'),
+        status: form.stage || (editingLead ? editingLead.stage : 'Lead Generation'),
+        lead_stage: form.stage || (editingLead ? editingLead.stage : 'Lead Generation'),
         follow_up_date: form.follow_up_date,
         follow_up_time: form.follow_up_time || '10:00',
         today_remarks: form.today_remarks || '',
@@ -1716,7 +1716,7 @@ export default function Leads() {
               website: r.website || '',
               source: r.leadsource || r.source || 'Bulk CSV Import',
               address: r.address || '',
-              stage: r.stage || 'Requirement Understood',
+              stage: r.stage || 'Lead Generation',
               priority: r.priority || 'Medium',
               follow_up_date: followUpDate,
               today_remarks: r.remarks || r.todayremarks || 'Imported via bulk CSV upload',
@@ -3470,8 +3470,9 @@ export default function Leads() {
                 </div>
               </div>}
 
-              {/* Lead Pipeline Stage */}
-              <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700">
+              {/* Lead Pipeline Stage + Assigned Rep (side by side) */}
+              <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
+               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
                     Lead Pipeline Stage <span className="text-rose-500">*</span>
@@ -3492,15 +3493,12 @@ export default function Leads() {
                   ))}
                 </select>
                 <p className="text-[11px] text-slate-500 mt-1">
-                  Select current stage of this trade opportunity. Can also be updated in 1-click directly from the leads table.
+                  Current stage of this lead. Can also be changed from the leads table.
                 </p>
-              </div>
+               </div>
 
-              {/* Assignment & Next Follow-up Card */}
-              <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div>
-                    <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
+                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
                       Assign Rep / Staff <span className="text-rose-500">*</span>
                     </label>
                     {isOwner ? (
@@ -3514,7 +3512,7 @@ export default function Leads() {
                             agent_name: selUser ? selUser.name : (e.target.value === profile?.id ? profile?.name : 'Staff Member'),
                           });
                         }}
-                        className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 font-bold text-emerald-900 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+                        className="w-full px-3 py-2 text-xs bg-white border border-slate-300 font-semibold text-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 focus:outline-none cursor-pointer"
                       >
                         <option value={profile?.id || 'owner'}>
                           {profile?.name || 'You (Company Owner)'} [Owner]
@@ -3530,11 +3528,18 @@ export default function Leads() {
                         type="text"
                         readOnly
                         value={`${profile?.name || 'You'} (Your Staff Account)`}
-                        className="w-full px-3 py-2 text-xs bg-emerald-100/60 border border-emerald-300 font-bold text-emerald-900 rounded-xl cursor-not-allowed"
+                        className="w-full px-3 py-2 text-xs bg-slate-100 border border-slate-300 font-semibold text-slate-700 rounded-xl cursor-not-allowed"
                       />
                     )}
+                    <p className="text-[11px] text-slate-500 mt-1">
+                      {isOwner ? 'Who will handle this lead.' : 'Leads you add are assigned to you.'}
+                    </p>
                   </div>
+              </div>
 
+              {/* Next Follow-up + Remarks Card (two columns in both rows) */}
+              <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1 flex items-center gap-1">
                       <Calendar size={12} className="text-emerald-600" />

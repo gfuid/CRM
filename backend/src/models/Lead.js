@@ -14,7 +14,7 @@ const leadSchema = new mongoose.Schema(
     quantity_unit: { type: String, default: 'MT' },
     stage: {
       type: String,
-      default: 'Requirement Understood',
+      default: 'Lead Generation',
     },
     source: { type: String, default: 'Direct' },
     assigned_to: { type: String, index: true },

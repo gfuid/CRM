@@ -338,7 +338,7 @@ const createLead = async (req, res) => {
     quantity_unit: quantity_unit || req.body.unit || (Number(quantity) >= 1000 ? 'kg' : 'MT'),
     price: isOwner ? (Number(price || price_usd) || 0) : 0,
     value: isOwner ? ((Number(value) || (Number(quantity || 0) * Number(price || price_usd || 0))) || 0) : 0,
-    stage: stage || 'Requirement Understood',
+    stage: stage || 'Lead Generation',
     priority: priority || 'Medium',
     export_requirements: isOwner ? (export_requirements || {}) : staffRequirements,
     assigned_to: isOwner ? (assigned_to || req.user.id) : req.user.id,
