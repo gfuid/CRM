@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
 import Modal from '../components/Modal';
 import OneRootCustomerModal from '../components/OneRootCustomerModal';
+import { PIPELINE_STAGES } from '../data/leadOptions';
 import CountryFlag from '../components/CountryFlag';
 import { findCountry } from '../data/countryCodes';
 import {
@@ -33,14 +34,8 @@ import {
   CheckCircle2,
 } from 'lucide-react';
 
-const STAGES = [
-  'Lead Generation',
-  'Contact Established',
-  'Requirement Understood',
-  'Quotation Sent',
-  'Closed Won',
-  'Closed Lost'
-];
+// Same stage list as every other lead screen, so no lead is left without a column
+const STAGES = PIPELINE_STAGES;
 
 const STAGE_THEMES = {
   'Lead Generation': {

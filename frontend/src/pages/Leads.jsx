@@ -6,6 +6,7 @@ import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -281,41 +282,9 @@ export const COUNTRIES_WITH_FLAGS = [
   { code: 'ZW', name: 'Zimbabwe', flag: '🇿🇼' },
 ];
 
-export const COMMODITY_PRODUCTS = [
-  'Turmeric',
-  'Tender Coconut',
-  'Red Chilli',
-  'Ginger',
-  'Maize',
-  'Rice DDGS',
-  'Corn DDGS',
-  'DORB',
-  'RSM',
-  'Soya seed',
-  'Jowar',
-];
-
-export const PIPELINE_STAGES = [
-  'Lead Generation',
-  'Contact Established',
-  'Requirement Understood',
-  'Sample Sent',
-  'Quotation Sent',
-  'Negotiation',
-  'Closed Won',
-  'Closed Lost',
-];
-
-export const LEAD_SOURCES = [
-  'Direct Inquiry',
-  'Gulfood Trade Show',
-  'LinkedIn Inbound',
-  'B2B Trade Portal',
-  'Referral',
-  'Cold Outreach',
-  'Website Form',
-  'Embassy / Trade Council',
-];
+// These lists live in data/leadOptions.js so every lead form shows the same options
+export const COMMODITY_PRODUCTS = DEFAULT_COMMODITIES;
+export { PIPELINE_STAGES, LEAD_SOURCES };
 
 export const CREDIT_RATINGS = ['AAA', 'AA+', 'AA', 'A', 'BBB', 'BB', 'Not Rated'];
 export const INCOTERMS = ['FOB', 'CIF', 'CFR', 'EXW', 'FCA', 'CIP', 'DDP', 'DAP', 'DPU'];
@@ -636,16 +605,14 @@ export default function Leads() {
   const [filterStatus, setFilterStatus] = useState('');
 
   // Dynamic Commodity options state (user can add & remove products)
-  const [allCommodityOptions, setAllCommodityOptions] = useState(() => {
-    try {
-      const saved = localStorage.getItem('crm_user_commodities');
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed) && parsed.length > 0) return parsed;
-      }
-    } catch {}
-    return COMMODITY_PRODUCTS;
-  });
+  // The company list is saved on the server, so the owner and all staff see the same products everywhere.
+  const { commodities: companyCommodities, saveOptions: saveLeadOptions } = useLeadOptions(isOwner);
+  // Products already on the lead being edited that are no longer in the company list
+  const [extraCommodities, setExtraCommodities] = useState([]);
+  const allCommodityOptions = useMemo(
+    () => Array.from(new Set([...companyCommodities, ...extraCommodities])),
+    [companyCommodities, extraCommodities]
+  );
   const [showCustomProductInput, setShowCustomProductInput] = useState(false);
   const [customProductText, setCustomProductText] = useState('');
 
@@ -1034,44 +1001,52 @@ export default function Leads() {
   };
 
   // Add custom commodity handler (Owner only)
-  const handleAddCustomCommodity = () => {
+  const handleAddCustomCommodity = async () => {
     if (!isOwner) {
       showNotification('Permission Denied: Only Company Owners/Admins can add new commodities or products.', 'error');
       return;
     }
     const trimmed = customProductText.trim();
     if (!trimmed) return;
-    let nextList = allCommodityOptions;
-    if (!allCommodityOptions.includes(trimmed)) {
-      nextList = [...allCommodityOptions, trimmed];
-      setAllCommodityOptions(nextList);
-      try { localStorage.setItem('crm_user_commodities', JSON.stringify(nextList)); } catch {}
+    if (!companyCommodities.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
+      try {
+        await saveLeadOptions({ commodities: [...companyCommodities, trimmed] });
+      } catch (err) {
+        showNotification(err?.message || 'The product could not be saved. Please try again.', 'error');
+        return;
+      }
     }
     if (!form.products.includes(trimmed)) {
       setForm((prev) => ({ ...prev, products: [...prev.products, trimmed] }));
     }
     setCustomProductText('');
     setShowCustomProductInput(false);
-    showNotification(`Commodity "${trimmed}" added and selected!`, 'success');
+    showNotification(`Commodity "${trimmed}" added for your whole team and selected!`, 'success');
   };
 
   // Remove commodity category handler (Owner only)
-  const handleRemoveCommodity = (prodToRemove) => {
+  const handleRemoveCommodity = async (prodToRemove) => {
     if (!isOwner || isStaff) {
       showNotification('Permission Denied: Only Company Owners/Admins can delete commodity categories.', 'error');
       return;
     }
-    if (allCommodityOptions.length <= 1) {
-      showNotification('At least one commodity must remain in list', 'error');
-      return;
+    if (companyCommodities.includes(prodToRemove)) {
+      if (companyCommodities.length <= 1) {
+        showNotification('At least one commodity must remain in list', 'error');
+        return;
+      }
+      try {
+        await saveLeadOptions({ commodities: companyCommodities.filter((p) => p !== prodToRemove) });
+      } catch (err) {
+        showNotification(err?.message || 'The product could not be removed. Please try again.', 'error');
+        return;
+      }
     }
-    const updated = allCommodityOptions.filter((p) => p !== prodToRemove);
-    setAllCommodityOptions(updated);
-    try { localStorage.setItem('crm_user_commodities', JSON.stringify(updated)); } catch {}
+    setExtraCommodities((prev) => prev.filter((p) => p !== prodToRemove));
     if (form.products.includes(prodToRemove)) {
       setForm((prev) => ({ ...prev, products: prev.products.filter((p) => p !== prodToRemove) }));
     }
-    showNotification(`Commodity "${prodToRemove}" removed from options.`, 'info');
+    showNotification(`Commodity "${prodToRemove}" removed from options for your whole team.`, 'info');
   };
 
   // Add custom payment term handler - OWNER ONLY
@@ -1178,6 +1153,7 @@ export default function Leads() {
   const openCreate = () => {
     setIsSubmitting(false);
     setEditingLead(null);
+    setExtraCommodities([]);
     setActiveFormTab('basic');
     setShowCustomProductInput(false);
     setCustomProductText('');
@@ -1248,9 +1224,7 @@ export default function Leads() {
       ? lead.product.split(',').map((p) => p.trim())
       : [];
 
-    if (leadProducts.length > 0) {
-      setAllCommodityOptions((prev) => Array.from(new Set([...prev, ...leadProducts])));
-    }
+    setExtraCommodities(leadProducts);
 
     const leadIndustry = lead.industry_type || lead.export_requirements?.industry_type || lead.legacy_industry_type || 'Food & Spice Processing';
     if (leadIndustry && !allIndustryOptions.includes(leadIndustry)) {
@@ -1405,6 +1379,18 @@ export default function Leads() {
           },
           assigned_to: finalAssignedTo,
           agent_name: finalAgentName,
+        } : {}),
+        // Staff choose the commodity and quantity when they add a lead (price stays with the owner).
+        // Sent only when something was filled in, so a lead without a product still saves as before.
+        ...(!isOwner && !editingLead && (form.products.length > 0 || Number(form.quantity) > 0 || String(form.product_notes || '').trim()) ? {
+          products: form.products,
+          product: form.products.join(', '),
+          quantity: Number(form.quantity) || 0,
+          quantity_unit: form.quantity_unit || 'MT',
+          export_requirements: {
+            product_notes: form.product_notes,
+            quantity_unit: form.quantity_unit || 'MT',
+          },
         } : {}),
       };
 
@@ -2189,7 +2175,7 @@ export default function Leads() {
             className="w-full px-3 py-2 text-xs font-medium bg-slate-50/70 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 text-slate-700"
           >
             <option value="">All Products</option>
-            {COMMODITY_PRODUCTS.map((p) => (
+            {companyCommodities.map((p) => (
               <option key={p} value={p}>
                 {p}
               </option>
@@ -2829,7 +2815,7 @@ export default function Leads() {
                     onChange={(e) => setForm({ ...form, lead_source: e.target.value })}
                     className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                   >
-                    {LEAD_SOURCES.map((s) => (
+                    {withCurrent(LEAD_SOURCES, form.lead_source).map((s) => (
                       <option key={s} value={s}>{s}</option>
                     ))}
                   </select>
@@ -3127,7 +3113,7 @@ export default function Leads() {
                           <select
                             value={link.platform || 'LinkedIn'}
                             onChange={(e) => handleUpdateSocialLink(sIdx, 'platform', e.target.value)}
-                            className="w-full pl-8 pr-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-semibold text-slate-800 dark:text-slate-100"
+                            className="w-full px-3 py-1.5 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none font-semibold text-slate-800 dark:text-slate-100"
                           >
                             {SOCIAL_PLATFORMS.map((p) => (
                               <option key={p.id} value={p.id}>
@@ -3135,9 +3121,6 @@ export default function Leads() {
                               </option>
                             ))}
                           </select>
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs pointer-events-none">
-                            {matchedPlatform.icon}
-                          </span>
                         </div>
 
                         {/* URL / ID Input */}
@@ -3170,7 +3153,7 @@ export default function Leads() {
             </div>
 
             {/* SECTION 3: PRODUCTS & DEAL */}
-            {isOwner && <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+            {(isOwner || !editingLead) && <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 flex items-center justify-center font-black text-xs">
                   3
@@ -3324,7 +3307,7 @@ export default function Leads() {
                   </span>
                 </div>
 
-                <div>
+                {isOwner && <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
                     Deal Value / Price ($ USD)
                   </label>
@@ -3339,7 +3322,7 @@ export default function Leads() {
                   <span className="text-[10px] text-slate-400 mt-1 block">
                     US Dollars: ${(Number(form.price) || 0).toLocaleString('en-US')}
                   </span>
-                </div>
+                </div>}
               </div>
 
               <div>
@@ -4419,10 +4402,21 @@ export default function Leads() {
                     <span className="text-slate-400 block text-[10px]">Payment Terms</span>
                     <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.payment_days || activeDetailLead.payment_terms || '—'}</span>
                   </div>
-                  <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
-                    <span className="text-slate-400 block text-[10px]">Polish / Treatment</span>
-                    <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements?.polish_level || '—'}</span>
-                  </div>
+                  {/* The owner's own specification fields (Protein %, Moisture %, ...) saved on this lead */}
+                  {Object.entries(activeDetailLead.export_requirements?.custom_specs || {})
+                    .filter(([, v]) => v)
+                    .map(([name, v]) => (
+                      <div key={name} className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                        <span className="text-slate-400 block text-[10px]">{name}</span>
+                        <span className="font-bold text-slate-800 dark:text-slate-200">{String(v)}</span>
+                      </div>
+                    ))}
+                  {activeDetailLead.export_requirements?.polish_level && (
+                    <div className="bg-slate-50 dark:bg-slate-800/40 p-2 rounded-lg border border-slate-200 dark:border-slate-700/60">
+                      <span className="text-slate-400 block text-[10px]">Polish / Treatment</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200">{activeDetailLead.export_requirements.polish_level}</span>
+                    </div>
+                  )}
                 </div>
               </div>
             )}

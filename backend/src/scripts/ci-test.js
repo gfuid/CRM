@@ -264,6 +264,49 @@ const runCITests = async () => {
     });
     assert('Staff cannot set owner-only commercial lead fields', staffProtectedLeadRes.status === 403);
 
+    // Staff may choose the commodity + quantity when adding a lead; the product list is one shared company list
+    const staffProductLeadRes = await fetch(`${BASE}/api/v1/leads`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${staffToken}` },
+      body: JSON.stringify({
+        today_remarks: 'CI discussion', next_follow_up_action: 'CI next step', name: 'CI Staff Product Lead', follow_up_date: followDate,
+        products: ['Rice DDGS', 'Maize'], quantity: 28, quantity_unit: 'MT',
+        export_requirements: { product_notes: '50 kg bags', incoterm: 'CIF' },
+      }),
+    });
+    const staffProductLead = await staffProductLeadRes.json();
+    assert(
+      'Staff can choose commodities and quantity when adding a lead (other requirement fields are dropped)',
+      staffProductLeadRes.status === 201 &&
+        JSON.stringify(staffProductLead.data?.products) === JSON.stringify(['Rice DDGS', 'Maize']) &&
+        staffProductLead.data?.quantity === 28 && staffProductLead.data?.price === 0 &&
+        staffProductLead.data?.export_requirements?.product_notes === '50 kg bags' &&
+        staffProductLead.data?.export_requirements?.incoterm === undefined
+    );
+
+    const optHeaders = (token) => ({ 'Content-Type': 'application/json', Authorization: `Bearer ${token}` });
+    const defaultOptions = await (await fetch(`${BASE}/api/v1/leads/options`, { headers: optHeaders(staffToken) })).json();
+    assert('Staff can read the company commodity list', Array.isArray(defaultOptions.data?.commodities) && defaultOptions.data.commodities.includes('Rice DDGS'));
+    const staffOptionsRes = await fetch(`${BASE}/api/v1/leads/options`, {
+      method: 'PUT', headers: optHeaders(staffToken), body: JSON.stringify({ commodities: ['Hacked'] }),
+    });
+    assert('Staff cannot change the company commodity list', staffOptionsRes.status === 403);
+    const ownerOptionsRes = await fetch(`${BASE}/api/v1/leads/options`, {
+      method: 'PUT', headers: optHeaders(ownerToken),
+      body: JSON.stringify({ commodities: [...defaultOptions.data.commodities, 'CI Cumin', 'ci cumin'], spec_fields: ['Protein %', 'Moisture %'] }),
+    });
+    const staffSeesOptions = await (await fetch(`${BASE}/api/v1/leads/options`, { headers: optHeaders(staffToken) })).json();
+    assert(
+      'Owner-added commodity and specification fields are visible to staff',
+      ownerOptionsRes.status === 200 &&
+        staffSeesOptions.data?.commodities?.filter((c) => c.toLowerCase() === 'ci cumin').length === 1 &&
+        JSON.stringify(staffSeesOptions.data?.spec_fields) === JSON.stringify(['Protein %', 'Moisture %'])
+    );
+    const emptyOptionsRes = await fetch(`${BASE}/api/v1/leads/options`, {
+      method: 'PUT', headers: optHeaders(ownerToken), body: JSON.stringify({ commodities: [] }),
+    });
+    assert('Commodity list cannot be emptied', emptyOptionsRes.status === 400);
+
     const ownerAssignedLeadRes = await fetch(`${BASE}/api/v1/leads`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${ownerToken}` },

@@ -24,17 +24,11 @@ import {
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import OneRootCustomerModal from '../components/OneRootCustomerModal';
+import { PIPELINE_STAGES } from '../data/leadOptions';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 
-const STAGES = [
-  'Lead Generation',
-  'Contact Established',
-  'Requirement Understood',
-  'Quotation Sent',
-  'Closed Won',
-  'Closed Lost'
-];
+const STAGES = PIPELINE_STAGES;
 
 export default function FollowUp() {
   const { isOwner } = useAuth();

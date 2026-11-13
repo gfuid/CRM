@@ -188,6 +188,18 @@ class ApiClient {
     return this.request(`/leads${query ? `?${query}` : ''}`);
   }
 
+  // Company-wide lead form lists (commodities, specification fields)
+  getLeadOptions() {
+    return this.request('/leads/options');
+  }
+
+  saveLeadOptions(options) {
+    return this.request('/leads/options', {
+      method: 'PUT',
+      body: JSON.stringify(options),
+    });
+  }
+
   createLead(leadData) {
     return this.request('/leads', {
       method: 'POST',

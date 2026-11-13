@@ -223,7 +223,8 @@ export default function Analytics() {
         .trim() || 'Global';
 
       // Primary Product
-      let primaryProd = 'Turmeric';
+      // A lead without a product must not be counted as Turmeric
+      let primaryProd = 'Not specified';
       if (Array.isArray(l.products) && l.products.length > 0 && l.products[0]) {
         primaryProd = l.products[0].trim();
       } else if (l.product) {

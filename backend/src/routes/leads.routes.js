@@ -8,6 +8,8 @@ const asyncHandler = require('../utils/asyncHandler');
 router.use(authenticate);
 router.use(enforceStorageQuota);
 
+router.get('/options', asyncHandler(leadsController.getLeadOptions));
+router.put('/options', asyncHandler(leadsController.saveLeadOptions));
 router.get('/', asyncHandler(leadsController.getLeads));
 router.get('/:id', asyncHandler(leadsController.getLeadById));
 router.post('/', asyncHandler(leadsController.createLead));

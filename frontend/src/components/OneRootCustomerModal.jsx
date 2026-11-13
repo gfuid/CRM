@@ -26,20 +26,15 @@ import {
   Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions } from '../data/leadOptions';
 
-const COMMODITIES = [
-  'Turmeric',
-  'Tender Coconut',
-  'Red Chilli',
-  'Ginger',
-  'Maize',
-  'Rice DDGS',
-  'Corn DDGS',
-  'DORB',
-  'RSM',
-  'Soya seed',
-  'Jowar'
-];
+// Older leads may still carry these turmeric-only values. They are kept, just no longer asked for every product.
+const LEGACY_SPEC_LABELS = {
+  material_type: 'Material type',
+  polish_level: 'Polish level',
+  min_curcumin: 'Min curcumin %',
+  cultivation_method: 'Cultivation method',
+};
 
 const ACTIVITIES = [
   'Call initiated',
@@ -55,15 +50,6 @@ const ACTIVITIES = [
   'Sent quotations',
   'Email reply',
   'Follow up calls'
-];
-
-const STAGES = [
-  'Closed Lost',
-  'Lead Generation',
-  'Contact Established',
-  'Requirement Understood',
-  'Quotation Sent',
-  'Closed Won'
 ];
 
 
@@ -101,18 +87,16 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
   );
 
   // Products
-  const [commoditiesList, setCommoditiesList] = useState(() => {
-    const list = [...COMMODITIES];
-    if (Array.isArray(lead.products)) {
-      lead.products.forEach((p) => {
-        if (p && !list.includes(p)) list.push(p);
-      });
-    }
-    if (lead.product && !list.includes(lead.product)) {
-      list.push(lead.product);
-    }
+  // Same company-wide list as the Add Lead form (saved on the server)
+  const { commodities: companyCommodities, specFields, saveOptions } = useLeadOptions(isOwner);
+  const commoditiesList = useMemo(() => {
+    const list = [...companyCommodities];
+    const own = Array.isArray(lead.products) && lead.products.length > 0
+      ? lead.products
+      : (lead.product ? String(lead.product).split(',').map((p) => p.trim()) : []);
+    own.forEach((p) => { if (p && !list.includes(p)) list.push(p); });
     return list;
-  });
+  }, [companyCommodities, lead.products, lead.product]);
   const [selectedProducts, setSelectedProducts] = useState(
     Array.isArray(lead.products) && lead.products.length > 0
       ? lead.products
@@ -131,10 +115,19 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     'Wholesale Commodity Trade'
   ]);
   const [reqIndustry, setReqIndustry] = useState(lead.export_requirements?.industry_type || '');
-  const [materialType, setMaterialType] = useState(lead.export_requirements?.material_type || '');
-  const [polishLevel, setPolishLevel] = useState(lead.export_requirements?.polish_level || '');
-  const [minCurcumin, setMinCurcumin] = useState(lead.export_requirements?.min_curcumin || '');
-  const [cultivation, setCultivation] = useState(lead.export_requirements?.cultivation_method || '');
+  // Specification values for this lead, keyed by the owner's own field names (e.g. Protein %, Moisture %)
+  const [customSpecs, setCustomSpecs] = useState(() => {
+    const saved = lead.export_requirements?.custom_specs;
+    return saved && typeof saved === 'object' && !Array.isArray(saved) ? { ...saved } : {};
+  });
+  const specFieldList = useMemo(() => {
+    const list = [...specFields];
+    Object.keys(customSpecs).forEach((k) => { if (customSpecs[k] && !list.includes(k)) list.push(k); });
+    return list;
+  }, [specFields, customSpecs]);
+  const legacySpecs = Object.keys(LEGACY_SPEC_LABELS)
+    .filter((k) => lead.export_requirements?.[k])
+    .map((k) => `${LEGACY_SPEC_LABELS[k]}: ${lead.export_requirements[k]}`);
   const [preferredOrigin, setPreferredOrigin] = useState(lead.export_requirements?.preferred_origin || '');
   const [quantityNeeded, setQuantityNeeded] = useState(lead.export_requirements?.quantity_needed_kg || '');
   const [maxPrice, setMaxPrice] = useState(lead.export_requirements?.max_price_inr || '');
@@ -222,8 +215,77 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     }
   };
 
-  const handleSubmit = (e) => {
+  // Activity history for this lead (what was ticked + the note, newest first)
+  const [activityHistory, setActivityHistory] = useState([]);
+  const [isSaving, setIsSaving] = useState(false);
+  useEffect(() => {
+    let alive = true;
+    api.getActivities({ lead_id: lead.id })
+      .then((res) => {
+        if (alive && Array.isArray(res?.data)) setActivityHistory(res.data.filter((a) => !a.system));
+      })
+      .catch(() => {});
+    return () => { alive = false; };
+  }, [lead.id]);
+
+  // Enter saves the form, Shift+Enter starts a new line
+  const saveOnEnter = (e) => {
+    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent?.isComposing) return;
     e.preventDefault();
+    e.currentTarget.form?.requestSubmit();
+  };
+
+  // Owner: add / remove a product or a specification field for the whole company
+  const addCompanyProduct = async () => {
+    const trimmed = (prompt('Enter custom commodity / product name:') || '').trim();
+    if (!trimmed) return;
+    try {
+      if (!companyCommodities.some((p) => p.toLowerCase() === trimmed.toLowerCase())) {
+        await saveOptions({ commodities: [...companyCommodities, trimmed] });
+      }
+      setSelectedProducts((prev) => (prev.includes(trimmed) ? prev : [...prev, trimmed]));
+    } catch (err) {
+      alert(err?.message || 'The product could not be saved. Please try again.');
+    }
+  };
+  const addSpecField = async () => {
+    const trimmed = (prompt('Name of the specification (e.g. Protein %, Moisture %, Aflatoxin, Fibre %):') || '').trim();
+    if (!trimmed || specFields.some((f) => f.toLowerCase() === trimmed.toLowerCase())) return;
+    try {
+      await saveOptions({ spec_fields: [...specFields, trimmed] });
+    } catch (err) {
+      alert(err?.message || 'The specification could not be saved. Please try again.');
+    }
+  };
+  const removeSpecField = async (field) => {
+    if (!window.confirm(`Remove "${field}" from the specification list for your whole company? Values already saved on leads are kept.`)) return;
+    try {
+      await saveOptions({ spec_fields: specFields.filter((f) => f !== field) });
+    } catch (err) {
+      alert(err?.message || 'The specification could not be removed. Please try again.');
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (isSaving) return;
+
+    // Daily activity is saved on its own (it is not part of the lead fields)
+    const note = activityNote.trim();
+    if (activeChecks.length > 0 || note) {
+      setIsSaving(true);
+      try {
+        const titles = activeChecks.length > 0 ? activeChecks : ['Note'];
+        for (const title of titles) {
+          await api.createActivity({ type: 'note', title, description: note, lead_id: lead.id });
+        }
+      } catch (err) {
+        setIsSaving(false);
+        alert(err?.message || 'The activity could not be saved. Please try again.');
+        return;
+      }
+      setIsSaving(false);
+    }
 
     let updatedRemarks = [...previousRemarks];
     const hasToday = todayRemarks && todayRemarks.trim().length > 0;
@@ -289,11 +351,9 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
       quantity_unit: quantityUnit || 'MT',
       price: Number(price) || 0,
       export_requirements: {
+        ...(lead.export_requirements || {}),
         industry_type: reqIndustry,
-        material_type: materialType,
-        polish_level: polishLevel,
-        min_curcumin: minCurcumin,
-        cultivation_method: cultivation,
+        custom_specs: customSpecs,
         preferred_origin: preferredOrigin,
         quantity_needed_kg: quantityNeeded,
         quantity_unit: quantityUnit || 'MT',
@@ -346,8 +406,16 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     if (changes.name !== undefined) changes.company_name = changes.name;
     if (changes.products !== undefined) changes.product = (changes.products || []).join(', ');
     const req = lead.export_requirements || {};
-    const reqAfter = { ...req, industry_type: reqIndustry, material_type: materialType, polish_level: polishLevel, min_curcumin: minCurcumin, cultivation_method: cultivation, preferred_origin: preferredOrigin, quantity_needed_kg: quantityNeeded, max_price_inr: maxPrice, incoterm, port_delivery: portDelivery, payment_days: paymentDays };
-    const reqChanged = Object.keys(reqAfter).some((k) => String(reqAfter[k] || '') !== String(req[k] || ''));
+    const specsAfter = Object.fromEntries(
+      Object.entries(customSpecs).map(([k, v]) => [k, String(v || '').trim()]).filter(([, v]) => v)
+    );
+    const reqAfter = { ...req, industry_type: reqIndustry, custom_specs: specsAfter, preferred_origin: preferredOrigin, quantity_needed_kg: quantityNeeded, max_price_inr: maxPrice, incoterm, port_delivery: portDelivery, payment_days: paymentDays };
+    const asText = (v) => (v && typeof v === 'object' ? JSON.stringify(v) : String(v || ''));
+    const reqChanged = Object.keys(reqAfter).some((k) =>
+      k === 'custom_specs'
+        ? JSON.stringify(specsAfter) !== JSON.stringify(req.custom_specs || {})
+        : asText(reqAfter[k]) !== asText(req[k])
+    );
     if (reqChanged) changes.export_requirements = reqAfter;
     if (hasToday) changes.today_remarks = todayRemarks.trim();
     if (hasFuture) changes.next_follow_up_action = nextFollowUpAction.trim();
@@ -415,16 +483,6 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
         {/* ============================================================== */}
         <div className="bg-[#0b1329] px-6 py-4 flex items-center justify-between border-b border-slate-800 text-white shrink-0">
           <div className="flex items-center gap-3">
-            {/* OneRoot Logo */}
-            <div className="flex items-center gap-1.5">
-              <span className="text-base font-black tracking-tight text-white">OneRoot</span>
-              <span className="text-[10px] font-bold text-emerald-400 bg-emerald-950/80 px-1.5 py-0.5 rounded">
-                .farm
-              </span>
-            </div>
-
-            <div className="h-4 w-px bg-slate-700" />
-
             <div>
               <h2 className="text-base font-bold text-white tracking-tight leading-snug">
                 {companyName || lead.company_name}
@@ -651,11 +709,9 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
                 >
                   <option value="">Select lead source</option>
-                  <option value="Self/own">Self/own</option>
-                  <option value="Website">Website</option>
-                  <option value="Trade Fair">Trade Fair</option>
-                  <option value="Referral">Referral</option>
-                  <option value="Cold Outreach">Cold Outreach</option>
+                  {withCurrent(LEAD_SOURCES, leadSource).map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
                 </select>
               </div>
             </div>
@@ -757,18 +813,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 {isOwner ? (
                   <button
                     type="button"
-                    onClick={() => {
-                      const newProd = prompt('Enter custom commodity / product name:');
-                      if (newProd && newProd.trim()) {
-                        const trimmed = newProd.trim();
-                        if (!commoditiesList.includes(trimmed)) {
-                          setCommoditiesList((prev) => [...prev, trimmed]);
-                        }
-                        if (!selectedProducts.includes(trimmed)) {
-                          setSelectedProducts((prev) => [...prev, trimmed]);
-                        }
-                      }
-                    }}
+                    onClick={addCompanyProduct}
                     className="text-[11px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-1 cursor-pointer"
                   >
                     <Plus size={12} /> + Add Product
@@ -889,69 +934,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 </select>
               </div>
 
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Material type
-                </label>
-                <select
-                  value={materialType}
-                  onChange={(e) => setMaterialType(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
-                >
-                  <option value="">Select material</option>
-                  <option value="Finger / Raw">Finger / Raw</option>
-                  <option value="Bulb">Bulb</option>
-                  <option value="Meal Pellet">Meal Pellet</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Polish level
-                </label>
-                <select
-                  value={polishLevel}
-                  onChange={(e) => setPolishLevel(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
-                >
-                  <option value="">Select polish</option>
-                  <option value="Single Polish">Single Polish</option>
-                  <option value="Double Polish">Double Polish</option>
-                  <option value="Unpolished">Unpolished</option>
-                </select>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Min curcumin %
-                </label>
-                <input
-                  type="text"
-                  placeholder="e.g. 3.5%"
-                  value={minCurcumin}
-                  onChange={(e) => setMinCurcumin(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
-                />
-              </div>
-
-              <div>
-                <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                  Cultivation methods
-                </label>
-                <select
-                  value={cultivation}
-                  onChange={(e) => setCultivation(e.target.value)}
-                  className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
-                >
-                  <option value="">Select cultivation method</option>
-                  <option value="Conventional Cleaned">Conventional Cleaned</option>
-                  <option value="Certified Organic">Certified Organic</option>
-                </select>
-              </div>
-
-              <div>
+              <div className="sm:col-span-2">
                 <label className="text-[11px] font-bold text-slate-600 block mb-1">
                   Preferred origin
                 </label>
@@ -963,6 +946,71 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
                 />
               </div>
+            </div>
+
+            {/* Product specifications: the owner decides which fields exist (different for every commodity) */}
+            <div className="p-3.5 rounded-xl border border-slate-200 bg-slate-50/60 space-y-3">
+              <div className="flex items-center justify-between gap-2">
+                <div>
+                  <div className="text-[11px] font-bold text-slate-700">Product specifications</div>
+                  <p className="text-[10px] text-slate-500 font-medium">
+                    {isOwner
+                      ? 'Add the specifications your products need (e.g. Protein %, Moisture %, Aflatoxin, Fibre %). They appear on every lead for your whole team.'
+                      : 'Specification fields are set by your company owner.'}
+                  </p>
+                </div>
+                {isOwner ? (
+                  <button
+                    type="button"
+                    onClick={addSpecField}
+                    className="text-[10px] font-bold text-purple-600 hover:text-purple-700 flex items-center gap-0.5 cursor-pointer shrink-0"
+                  >
+                    <Plus size={10} /> Add specification
+                  </button>
+                ) : (
+                  <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-0.5 shrink-0">
+                    <Lock size={9} className="text-slate-400" /> Owner only
+                  </span>
+                )}
+              </div>
+
+              {specFieldList.length === 0 ? (
+                <div className="text-[11px] text-slate-400 font-medium">
+                  No specification fields yet.
+                </div>
+              ) : (
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  {specFieldList.map((field) => (
+                    <div key={field}>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="text-[11px] font-bold text-slate-600 block truncate">{field}</label>
+                        {isOwner && specFields.includes(field) && (
+                          <button
+                            type="button"
+                            onClick={() => removeSpecField(field)}
+                            title={`Remove "${field}" from the specification list`}
+                            className="p-0.5 rounded text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          >
+                            <X size={11} />
+                          </button>
+                        )}
+                      </div>
+                      <input
+                        type="text"
+                        value={customSpecs[field] || ''}
+                        onChange={(e) => setCustomSpecs((prev) => ({ ...prev, [field]: e.target.value }))}
+                        className="w-full px-3 py-2 bg-white border border-slate-200 rounded-xl text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {legacySpecs.length > 0 && (
+                <p className="text-[10px] text-slate-500 font-medium">
+                  Saved earlier on this lead: {legacySpecs.join(' · ')}
+                </p>
+              )}
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -1075,7 +1123,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800"
                 >
-                  {STAGES.map((s) => (
+                  {withCurrent(PIPELINE_STAGES, status).map((s) => (
                     <option key={s} value={s}>
                       {s}
                     </option>
@@ -1134,10 +1182,11 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 placeholder="Write what happened with this lead…"
                 value={activityNote}
                 onChange={(e) => setActivityNote(e.target.value)}
+                onKeyDown={saveOnEnter}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
               />
               <p className="text-[10px] text-slate-400 font-medium mt-1">
-                Tick an activity above &mdash; a note on its own is not saved.
+                What you did today (call, email, sample&hellip;). Saved in the activity history below. Enter = save, Shift+Enter = new line.
               </p>
             </div>
           </div>
@@ -1145,11 +1194,31 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
           {/* Section 8: ACTIVITY HISTORY */}
           <div className="space-y-2 pt-2 border-t border-slate-200">
             <h3 className="text-[11px] font-black uppercase tracking-wider text-slate-400">
-              ACTIVITY HISTORY
+              ACTIVITY HISTORY ({activityHistory.length})
             </h3>
-            <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-500 font-medium">
-              No activity saved yet. The first one you save will appear here.
-            </div>
+            {activityHistory.length === 0 ? (
+              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200/80 text-xs text-slate-500 font-medium">
+                No activity saved yet. The first one you save will appear here.
+              </div>
+            ) : (
+              <div className="p-3 rounded-xl bg-slate-50 border border-slate-200/80 space-y-2 max-h-56 overflow-y-auto">
+                {activityHistory.map((act) => (
+                  <div key={act.id} className="p-2.5 rounded-lg bg-white border border-slate-200 text-xs space-y-1">
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="font-bold text-purple-800 bg-purple-50 border border-purple-200 px-2 py-0.5 rounded-md text-[10px]">
+                        {act.title}
+                      </span>
+                      <span className="text-[10px] text-slate-400 font-semibold">
+                        {act.user_name || 'Team member'} &bull; {new Date(act.timestamp || act.created_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                      </span>
+                    </div>
+                    {act.description && (
+                      <p className="text-slate-700 font-medium whitespace-pre-wrap">{act.description}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Section 9: FOLLOW-UP & SEPARATE REMARKS (Current vs. Future) */}
@@ -1230,6 +1299,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   placeholder="e.g. Called client today. Discussed 50 MT double-polish turmeric specs and CAD payment terms. Client requested updated CIF quote..."
                   value={todayRemarks}
                   onChange={(e) => setTodayRemarks(e.target.value)}
+                  onKeyDown={saveOnEnter}
                   className="w-full px-3.5 py-2.5 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                 />
               </div>
@@ -1253,6 +1323,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   placeholder="e.g. Share revised proforma invoice with 3.5% curcumin certificate, follow up on draft LC approval with procurement head..."
                   value={nextFollowUpAction}
                   onChange={(e) => setNextFollowUpAction(e.target.value)}
+                  onKeyDown={saveOnEnter}
                   className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
                 />
               </div>
@@ -1338,10 +1409,14 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-xs shadow-md shadow-purple-600/25 transition-all cursor-pointer"
+              disabled={isSaving}
+              className="w-full py-3.5 rounded-xl bg-purple-600 hover:bg-purple-700 active:bg-purple-800 text-white font-bold text-xs shadow-md shadow-purple-600/25 transition-all cursor-pointer disabled:opacity-60"
             >
-              Save changes
+              {isSaving ? 'Saving…' : 'Save changes'}
             </button>
+            <p className="text-[10px] text-slate-400 font-medium mt-1.5 text-center">
+              In the note and remark boxes, Enter saves and Shift+Enter starts a new line.
+            </p>
           </div>
 
           {/* Section 12: Delete Lead Action */}

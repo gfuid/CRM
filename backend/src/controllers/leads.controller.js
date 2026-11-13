@@ -23,6 +23,30 @@ const OWNER_ONLY_LEAD_FIELDS = [
   'port_delivery',
   'payment_days',
 ];
+// Staff may pick the commodity and quantity when they ADD a lead. Price, credit and the rest stay with the owner.
+const STAFF_CREATE_FIELDS = ['products', 'product', 'quantity', 'quantity_unit', 'product_notes', 'export_requirements'];
+const STAFF_REQUIREMENT_KEYS = ['product_notes', 'quantity_unit', 'custom_specs'];
+
+// Company-wide lists for the lead form (one copy on the server, shared by the owner and all staff)
+const DEFAULT_COMMODITIES = [
+  'Turmeric', 'Tender Coconut', 'Red Chilli', 'Ginger', 'Maize', 'Rice DDGS', 'Corn DDGS', 'DORB', 'RSM', 'Soya seed', 'Jowar',
+];
+const leadOptionsOwnerId = (user) =>
+  (isOwnerUser(user) || isSuperAdmin(user)) ? user.id : (user.created_by || user.company_id || user.id);
+const leadOptionsId = (user) => `lead_options:${leadOptionsOwnerId(user)}`;
+const cleanOptionList = (value, max = 100) => {
+  const seen = new Set();
+  const out = [];
+  (Array.isArray(value) ? value : []).forEach((item) => {
+    const text = String(item == null ? '' : item).replace(/\s+/g, ' ').trim().slice(0, 60);
+    const key = text.toLowerCase();
+    if (!text || seen.has(key)) return;
+    seen.add(key);
+    out.push(text);
+  });
+  return out.slice(0, max);
+};
+
 const LEAD_OWNERSHIP_FIELDS = [
   'owner_id',
   'company_id',
@@ -159,7 +183,7 @@ const createLead = async (req, res) => {
     return ApiResponse.error(res, 'Access denied: You do not have permission to create leads.', 403);
   }
   const protectedFields = [
-    ...(!isOwner ? OWNER_ONLY_LEAD_FIELDS : []),
+    ...(!isOwner ? OWNER_ONLY_LEAD_FIELDS.filter((f) => !STAFF_CREATE_FIELDS.includes(f)) : []),
     ...LEAD_OWNERSHIP_FIELDS,
   ].filter((field) => {
     if (!Object.prototype.hasOwnProperty.call(req.body, field)) return false;
@@ -245,6 +269,19 @@ const createLead = async (req, res) => {
 
   const primaryContact = Array.isArray(contacts) && contacts[0] ? contacts[0] : null;
 
+  // Staff: only the commodity notes / unit / spec values are kept from the requirements block
+  const reqIn = export_requirements && typeof export_requirements === 'object' && !Array.isArray(export_requirements)
+    ? export_requirements
+    : {};
+  const staffRequirements = {};
+  STAFF_REQUIREMENT_KEYS.forEach((k) => { if (reqIn[k] !== undefined) staffRequirements[k] = reqIn[k]; });
+  if (req.body.product_notes && staffRequirements.product_notes === undefined) {
+    staffRequirements.product_notes = String(req.body.product_notes);
+  }
+  const productList = Array.isArray(products)
+    ? products.map((p) => String(p || '').trim()).filter(Boolean)
+    : (product ? String(product).split(',').map((p) => p.trim()).filter(Boolean) : []);
+
   const ownerId = isOwner ? req.user.id : (req.user.created_by || req.user.company_id || req.user.id);
   const companyId = req.user?.company_id || ownerId;
   const ctx = getTenantContext(req.user);
@@ -295,15 +332,15 @@ const createLead = async (req, res) => {
     turnover: isOwner ? (turnover || '') : '',
     sourcing_region: isOwner ? (sourcing_region || '') : '',
     legacy_industry_type: isOwner ? (legacy_industry_type || '') : '',
-    products: isOwner ? (Array.isArray(products) ? products : (product ? [product] : [])) : [],
-    product: isOwner ? (Array.isArray(products) && products.length > 0 ? products.join(', ') : (product || '')) : '',
-    quantity: isOwner ? (Number(quantity) || 0) : 0,
-    quantity_unit: isOwner ? (quantity_unit || req.body.unit || (Number(quantity) >= 1000 ? 'kg' : 'MT')) : 'MT',
+    products: productList,
+    product: productList.join(', '),
+    quantity: Number(quantity) || 0,
+    quantity_unit: quantity_unit || req.body.unit || (Number(quantity) >= 1000 ? 'kg' : 'MT'),
     price: isOwner ? (Number(price || price_usd) || 0) : 0,
     value: isOwner ? ((Number(value) || (Number(quantity || 0) * Number(price || price_usd || 0))) || 0) : 0,
     stage: stage || 'Requirement Understood',
     priority: priority || 'Medium',
-    export_requirements: isOwner ? (export_requirements || {}) : {},
+    export_requirements: isOwner ? (export_requirements || {}) : staffRequirements,
     assigned_to: isOwner ? (assigned_to || req.user.id) : req.user.id,
     created_by_id: req.user.id,
     created_by_name: req.user.name || req.user.full_name || 'User',
@@ -534,7 +571,58 @@ const deleteLead = async (req, res) => {
   return ApiResponse.success(res, deleted, 'Lead deleted successfully');
 };
 
+/**
+ * Lead form lists (commodities + specification fields) for the caller's company.
+ * Everyone in the company reads the same list; only the owner changes it.
+ */
+const getLeadOptions = async (req, res) => {
+  const saved = (dataStore.appSettings || []).find((s) => s.id === leadOptionsId(req.user));
+  return ApiResponse.success(res, {
+    commodities: saved && Array.isArray(saved.commodities) && saved.commodities.length ? saved.commodities : DEFAULT_COMMODITIES,
+    spec_fields: saved && Array.isArray(saved.spec_fields) ? saved.spec_fields : [],
+    saved: Boolean(saved),
+  }, 'Lead options retrieved successfully');
+};
+
+const saveLeadOptions = async (req, res) => {
+  if (!canManageAll(req.user)) {
+    return ApiResponse.error(res, 'Access denied: Only the company owner can change the product and specification lists.', 403);
+  }
+  const id = leadOptionsId(req.user);
+  const list = dataStore.appSettings || (dataStore.appSettings = []);
+  const current = list.find((s) => s.id === id);
+  const next = {
+    id,
+    kind: 'lead_options',
+    owner_id: leadOptionsOwnerId(req.user),
+    commodities: current && Array.isArray(current.commodities) ? current.commodities : DEFAULT_COMMODITIES,
+    spec_fields: current && Array.isArray(current.spec_fields) ? current.spec_fields : [],
+    updated_at: new Date().toISOString(),
+    updated_by: req.user.id,
+  };
+  if (req.body.commodities !== undefined) {
+    const commodities = cleanOptionList(req.body.commodities);
+    if (!commodities.length) {
+      return ApiResponse.error(res, 'At least one commodity must remain in the list', 400);
+    }
+    next.commodities = commodities;
+  }
+  if (req.body.spec_fields !== undefined) next.spec_fields = cleanOptionList(req.body.spec_fields, 40);
+
+  if (current) list[list.indexOf(current)] = next;
+  else list.push(next);
+  dbSync.saveAppSetting(next);
+
+  return ApiResponse.success(res, {
+    commodities: next.commodities,
+    spec_fields: next.spec_fields,
+    saved: true,
+  }, 'Lead options saved successfully');
+};
+
 module.exports = {
+  getLeadOptions,
+  saveLeadOptions,
   getLeads,
   getLeadById,
   createLead,
