@@ -72,6 +72,7 @@ export const SOCIAL_PLATFORMS = [
   { id: 'Facebook', label: 'Facebook', icon: '📘', placeholder: 'https://facebook.com/page' },
   { id: 'WeChat', label: 'WeChat', icon: '💬', placeholder: 'WeChat ID or phone' },
   { id: 'WhatsApp', label: 'WhatsApp', icon: '📱', placeholder: '+971 50 123 4567' },
+  { id: 'Zalo', label: 'Zalo', icon: '💙', placeholder: 'Zalo number or https://zalo.me/...' },
   { id: 'Telegram', label: 'Telegram', icon: '✈️', placeholder: 'https://t.me/channel' },
   { id: 'YouTube', label: 'YouTube', icon: '🎥', placeholder: 'https://youtube.com/@channel' },
   { id: 'Website', label: 'Website / Other', icon: '🌐', placeholder: 'https://...' },
@@ -3069,7 +3070,7 @@ export default function Leads() {
               {/* Direct WhatsApp Field */}
               <div className="pt-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-                  <span>📱 Direct WhatsApp Number</span>
+                  <span>📱 Direct WhatsApp / Zalo Number</span>
                   <span className="text-[10px] text-slate-400 font-normal">(With country code)</span>
                 </label>
                 <div className="w-full sm:max-w-md">
@@ -3091,7 +3092,7 @@ export default function Leads() {
                       Social Media & Online Links
                     </span>
                     <span className="text-[10px] text-slate-400 font-medium hidden sm:inline">
-                      (LinkedIn, Instagram, Twitter/X, WeChat, Facebook, etc.)
+                      (LinkedIn, Instagram, Twitter/X, WeChat, Zalo, Facebook, etc.)
                     </span>
                   </div>
                   <button

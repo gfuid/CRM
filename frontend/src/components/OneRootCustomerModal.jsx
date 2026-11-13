@@ -658,7 +658,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
             {/* WhatsApp / Zalo */}
             <div>
               <label className="text-[11px] font-bold text-slate-600 block mb-1">
-                WhatsApp/zolo number
+                WhatsApp / Zalo number
               </label>
               <PhoneInputWithCountry
                 value={whatsapp}
