@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
+import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
@@ -35,7 +36,6 @@ import {
   AlertCircle,
   Download,
   Upload,
-  FileSpreadsheet,
   Share2,
   Factory,
   Sparkles,
@@ -582,10 +582,6 @@ export default function Leads() {
 
   // Bulk Import / Export state
   const [importModalOpen, setImportModalOpen] = useState(false);
-  const [importFile, setImportFile] = useState(null);
-  const [importPreview, setImportPreview] = useState([]);
-  const [importing, setImporting] = useState(false);
-  const [importError, setImportError] = useState('');
 
   // Toast notification
   const [notification, setNotification] = useState(null);
@@ -1485,52 +1481,6 @@ export default function Leads() {
     }
   };
 
-  // CSV Parser with quote-handling support
-  const parseCSV = (text) => {
-    const lines = text.split(/\r?\n/).filter((line) => line.trim().length > 0);
-    if (lines.length < 2) return [];
-
-    const parseRow = (rowStr) => {
-      const cells = [];
-      let inQuotes = false;
-      let currentCell = '';
-      for (let i = 0; i < rowStr.length; i++) {
-        const char = rowStr[i];
-        if (char === '"' || char === "'") {
-          if (inQuotes && rowStr[i + 1] === char) {
-            currentCell += char;
-            i++;
-          } else {
-            inQuotes = !inQuotes;
-          }
-        } else if (char === ',' && !inQuotes) {
-          cells.push(currentCell.trim());
-          currentCell = '';
-        } else {
-          currentCell += char;
-        }
-      }
-      cells.push(currentCell.trim());
-      return cells;
-    };
-
-    const headers = parseRow(lines[0]).map((h) => h.toLowerCase().replace(/[^a-z0-9]/g, ''));
-    const parsedRows = [];
-
-    for (let i = 1; i < lines.length; i++) {
-      const values = parseRow(lines[i]);
-      if (values.length === 0 || values.every((v) => !v)) continue;
-
-      const rowObj = {};
-      headers.forEach((h, idx) => {
-        rowObj[h] = values[idx] || '';
-      });
-      parsedRows.push(rowObj);
-    }
-
-    return parsedRows;
-  };
-
   // Export current leads as CSV (Company Owner Security Protection)
   const handleExportCSV = () => {
     if (!isOwner) {
@@ -1615,237 +1565,6 @@ export default function Leads() {
     URL.revokeObjectURL(url);
 
     showNotification(`Exported ${exportData.length} leads successfully!`, 'success');
-  };
-
-  // Download sample CSV template
-  const handleDownloadSampleCSV = () => {
-    const sampleHeaders = [
-      'Company Name',
-      'Type',
-      'Country',
-      'Contact Person',
-      'Phone',
-      'Email',
-      'WhatsApp',
-      'Website',
-      'Products',
-      'Quantity',
-      'Unit',
-      'Deal Value USD',
-      'Stage',
-      'Incoterm',
-      'Port Delivery',
-      'Assigned Rep',
-      'Follow-up Date',
-      'Notes',
-    ];
-
-    const sampleRows = [
-      [
-        'Al-Zahra Trading LLC',
-        'Export',
-        'United Arab Emirates 🇦🇪',
-        'Ahmed Al-Mansoor',
-        '+971 50 111 2222',
-        'ahmed@alzahra.ae',
-        '+971 50 111 2222',
-        'https://alzahra.ae',
-        'Turmeric',
-        '40',
-        'MT',
-        '68000',
-        'Requirement Understood',
-        'CIF',
-        'Jebel Ali Port',
-        '',
-        new Date(Date.now() + 86400000 * 5).toISOString().split('T')[0],
-        'Customer requested COA min 3.5% curcumin',
-      ],
-      [
-        'Global Agri Impex BV',
-        'Export',
-        'Netherlands 🇳🇱',
-        'Lars Janssen',
-        '+31 20 555 4321',
-        'lars@globalagri.nl',
-        '+31 20 555 4321',
-        'https://globalagri.nl',
-        'Rice DDGS, DORB',
-        '80',
-        'MT',
-        '95000',
-        'Sample Sent',
-        'FOB',
-        'Rotterdam',
-        '',
-        new Date(Date.now() + 86400000 * 3).toISOString().split('T')[0],
-        'Feed grade protein analysis submitted',
-      ],
-    ];
-
-    const escapeCSV = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
-    const csvContent = [
-      sampleHeaders.map(escapeCSV).join(','),
-      ...sampleRows.map((r) => r.map(escapeCSV).join(',')),
-    ].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.setAttribute('download', 'sample_trade_leads_template.csv');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  };
-
-  // Handle CSV file selection & parsing
-  const handleFileSelect = (file) => {
-    if (!file) return;
-    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-      setImportError('Please select a valid .csv spreadsheet file');
-      return;
-    }
-    setImportFile(file);
-    setImportError('');
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      try {
-        const text = e.target.result;
-        const rawRows = parseCSV(text);
-        if (rawRows.length === 0) {
-          setImportError('No valid data rows found in the CSV file.');
-          setImportPreview([]);
-          return;
-        }
-
-        const mapped = rawRows
-          .map((r) => {
-            const companyName = r.companyname || r.company || r.name || '';
-            if (!companyName) return null;
-
-            const contactName = r.contactperson || r.contact || '';
-            const phone = r.phone || '';
-            const email = r.email || '';
-            const products = String(r.products || r.product || '')
-              .split(',')
-              .map((p) => p.trim())
-              .filter(Boolean);
-            const today = new Date().toISOString().split('T')[0];
-            const followUpDate = /^\d{4}-\d{2}-\d{2}$/.test(String(r.followupdate || '').trim()) ? String(r.followupdate).trim() : today;
-            const qtyUnit = r.unit || r.quantityunit || (r.quantitykg ? 'kg' : 'MT');
-
-            // Basic details every user may import; commercial details only for the owner
-            const base = {
-              company_name: companyName,
-              name: companyName,
-              country: r.country || '',
-              contacts: [
-                {
-                  name: contactName,
-                  phone,
-                  extra_phones: [],
-                  email,
-                  designation: r.designation || '',
-                  linkedin: '',
-                },
-              ],
-              contact_person: contactName,
-              phone,
-              email,
-              whatsapp: r.whatsapp || phone,
-              website: r.website || '',
-              source: r.leadsource || r.source || 'Bulk CSV Import',
-              address: r.address || '',
-              stage: r.stage || 'Lead Generation',
-              priority: r.priority || 'Medium',
-              follow_up_date: followUpDate,
-              today_remarks: r.remarks || r.todayremarks || 'Imported via bulk CSV upload',
-              next_follow_up_action: r.nextaction || r.plannedaction || 'First contact with buyer',
-              notes: r.notes || 'Imported via bulk CSV upload',
-            };
-            if (!isOwner) return base;
-
-            const matchedRep = teamList.find((t) => (r.assignedrep || '').trim() && t.name?.toLowerCase() === String(r.assignedrep).trim().toLowerCase());
-            return {
-              ...base,
-              type: r.type || 'Export',
-              credit_rating: r.creditrating || '',
-              turnover: r.turnover || '',
-              sourcing_region: r.sourcingregion || '',
-              products,
-              product: products.join(', '),
-              quantity: Number(r.quantity || r.quantitykg) || 0,
-              quantity_unit: qtyUnit,
-              price: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
-              value: Number(r.dealvalueusd || r.dealvalue || r.price || r.value) || 0,
-              export_requirements: {
-                industry_type: r.industrytype || '',
-                quantity_unit: qtyUnit,
-                incoterm: r.incoterm || '',
-                port_delivery: r.portdelivery || r.port || '',
-                payment_days: r.paymentdays || '',
-              },
-              assigned_to: matchedRep ? matchedRep.id : (profile?.id || ''),
-            };
-          })
-          .filter(Boolean);
-
-        if (mapped.length === 0) {
-          setImportError('None of the rows had a valid "Company Name". Please verify headers in your CSV.');
-          setImportPreview([]);
-        } else {
-          setImportPreview(mapped);
-          setImportError('');
-        }
-      } catch (err) {
-        setImportError('Failed to parse CSV file: ' + err.message);
-        setImportPreview([]);
-      }
-    };
-    reader.readAsText(file);
-  };
-
-  // Execute bulk import
-  const executeBulkImport = async () => {
-    if (importPreview.length === 0) return;
-    setImporting(true);
-    setImportError('');
-    try {
-      const addedLeads = [];
-      const failed = [];
-      for (const leadData of importPreview) {
-        try {
-          const res = await api.createLead(leadData);
-          if (res && res.data && res.data.id) {
-            addedLeads.push(res.data);
-          } else {
-            failed.push(`${leadData.company_name}: ${res?.message || 'not saved'}`);
-          }
-        } catch (err) {
-          // Never add a lead to the screen that the server did not save
-          failed.push(`${leadData.company_name}: ${err?.message || 'not saved'}`);
-        }
-      }
-
-      setLeads((prev) => [...addedLeads, ...prev]);
-      if (failed.length) {
-        setImportPreview([]);
-        setImportError(`${addedLeads.length} imported, ${failed.length} not imported:\n${failed.slice(0, 15).join('\n')}${failed.length > 15 ? `\n…and ${failed.length - 15} more` : ''}`);
-        showNotification(`${addedLeads.length} imported, ${failed.length} skipped (see details).`, addedLeads.length ? 'success' : 'error');
-        return;
-      }
-      setImportModalOpen(false);
-      setImportPreview([]);
-      setImportFile(null);
-      showNotification(`Successfully imported ${addedLeads.length} trade leads in bulk!`, 'success');
-    } catch (err) {
-      setImportError('Failed to import leads: ' + (err.message || 'Unknown error'));
-    } finally {
-      setImporting(false);
-    }
   };
 
   // Filter & Sort Logic
@@ -1973,12 +1692,7 @@ export default function Leads() {
 
           {/* Bulk Import */}
           <button
-            onClick={() => {
-              setImportModalOpen(true);
-              setImportError('');
-              setImportPreview([]);
-              setImportFile(null);
-            }}
+            onClick={() => setImportModalOpen(true)}
             className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-emerald-200 bg-emerald-50/60 hover:bg-emerald-100/70 text-emerald-800 shadow-xs transition-all cursor-pointer"
             title="Import multiple leads via CSV spreadsheet"
           >
@@ -3731,136 +3445,20 @@ export default function Leads() {
         </form>
       </Modal>
 
-      {/* BULK IMPORT CSV MODAL */}
-      <Modal
+      {/* BULK IMPORT: format -> upload -> review & import */}
+      <BulkImportModal
         isOpen={importModalOpen}
         onClose={() => setImportModalOpen(false)}
-        title="Bulk Import Trade Leads"
-        subtitle="Upload a CSV spreadsheet to import multiple trade leads at once"
-        maxWidth="max-w-2xl"
-      >
-        <div className="space-y-4">
-          {/* Instructions and Download Template Card */}
-          <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-bold text-slate-900">Need the correct column format?</div>
-              <div className="text-[11px] text-slate-500 mt-0.5">Download our sample CSV template with pre-filled headers and examples.</div>
-            </div>
-            <button
-              type="button"
-              onClick={handleDownloadSampleCSV}
-              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 hover:bg-emerald-100 transition-colors shrink-0 cursor-pointer"
-            >
-              <Download size={13} />
-              <span>Download Sample CSV</span>
-            </button>
-          </div>
-
-          {/* Drag & Drop File Input Area */}
-          <div
-            onDragOver={(e) => e.preventDefault()}
-            onDrop={(e) => {
-              e.preventDefault();
-              if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-                handleFileSelect(e.dataTransfer.files[0]);
-              }
-            }}
-            className="border-2 border-dashed border-slate-300 hover:border-emerald-500 rounded-2xl p-6 text-center cursor-pointer transition-colors bg-white group"
-            onClick={() => document.getElementById('bulk-csv-input')?.click()}
-          >
-            <input
-              id="bulk-csv-input"
-              type="file"
-              accept=".csv,text/csv"
-              className="hidden"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleFileSelect(e.target.files[0]);
-                }
-              }}
-            />
-            <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-600 mx-auto flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
-              <FileSpreadsheet size={24} />
-            </div>
-            <div className="text-sm font-bold text-slate-800">
-              {importFile ? importFile.name : 'Click to select CSV file, or drag and drop here'}
-            </div>
-            <p className="text-xs text-slate-400 mt-1">
-              Supports standard comma-separated (.csv) files with headers
-            </p>
-          </div>
-
-          {importError && (
-            <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs font-semibold flex items-center gap-2">
-              <AlertCircle size={15} className="shrink-0" />
-              <span className="whitespace-pre-line">{importError}</span>
-            </div>
-          )}
-
-          {/* Parsed Preview Table */}
-          {importPreview.length > 0 && (
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-xs font-bold text-slate-700">
-                <span>Preview Ready ({importPreview.length} leads detected)</span>
-                <span className="text-[11px] text-slate-400 font-normal">First 5 rows shown below:</span>
-              </div>
-              <div className="max-h-48 overflow-y-auto border border-slate-200 rounded-xl">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 border-b border-slate-200 text-[10px] uppercase font-bold text-slate-500 sticky top-0">
-                    <tr>
-                      <th className="p-2">Company</th>
-                      <th className="p-2">Country</th>
-                      <th className="p-2">Contact</th>
-                      <th className="p-2">Products</th>
-                      <th className="p-2">Value</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100">
-                    {importPreview.slice(0, 5).map((row, idx) => (
-                      <tr key={idx} className="hover:bg-slate-50">
-                        <td className="p-2 font-semibold text-slate-900">{row.company_name}</td>
-                        <td className="p-2 text-slate-600">{row.country}</td>
-                        <td className="p-2 text-slate-600">{row.contact_person || '—'}</td>
-                        <td className="p-2 text-slate-600">{Array.isArray(row.products) ? row.products.join(', ') : row.product}</td>
-                        <td className="p-2 font-bold text-emerald-600">${Number(row.price || row.value || 0).toLocaleString()}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-
-          {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-3 border-t border-slate-100">
-            <button
-              type="button"
-              onClick={() => setImportModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition-colors cursor-pointer"
-            >
-              Cancel
-            </button>
-            <button
-              type="button"
-              disabled={importing || importPreview.length === 0}
-              onClick={executeBulkImport}
-              className="px-5 py-2 text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed rounded-xl shadow-md shadow-emerald-600/20 transition-all cursor-pointer flex items-center gap-1.5"
-            >
-              {importing ? (
-                <>
-                  <span className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                  <span>Importing...</span>
-                </>
-              ) : (
-                <>
-                  <Upload size={14} />
-                  <span>Import {importPreview.length} Leads Now</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      </Modal>
+        isOwner={isOwner}
+        profile={profile}
+        teamList={teamList}
+        commodities={companyCommodities}
+        existingNames={leads.map((l) => l.company_name || l.name)}
+        onImported={(added) => {
+          setLeads((prev) => [...added, ...prev]);
+          showNotification(`${added.length} lead${added.length === 1 ? '' : 's'} imported.`, 'success');
+        }}
+      />
 
       {/* DETAIL MODAL: VIEW FULL COMMODITY SPECIFICATIONS */}
       {/* DETAIL MODAL: VIEW & EDIT CUSTOMER FULL DOSSIER */}

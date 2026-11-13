@@ -326,7 +326,7 @@ const createLead = async (req, res) => {
     whatsapp: whatsapp || '',
     website: website || '',
     country: country || '',
-    source: source || lead_source || 'Direct Inbound',
+    source: source || lead_source || 'Direct Inquiry',
     address: address || '',
     credit_rating: isOwner ? (credit_rating || 'Not Rated') : 'Not Rated',
     turnover: isOwner ? (turnover || '') : '',
