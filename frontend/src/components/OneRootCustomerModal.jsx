@@ -1255,7 +1255,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                     required
                     value={followUpDate}
                     onChange={(e) => setFollowUpDate(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                    className="block w-full min-w-0 max-w-full h-[40px] box-border appearance-none text-left [&::-webkit-date-and-time-value]:text-left px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
                   />
                 </div>
 
@@ -1269,7 +1269,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                     required
                     value={followUpTime || '10:00'}
                     onChange={(e) => setFollowUpTime(e.target.value)}
-                    className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
+                    className="block w-full min-w-0 max-w-full h-[40px] box-border appearance-none text-left [&::-webkit-date-and-time-value]:text-left px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs font-bold text-slate-800 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
                   />
                 </div>
               </div>

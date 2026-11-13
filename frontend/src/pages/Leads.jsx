@@ -3472,12 +3472,12 @@ export default function Leads() {
 
               {/* Lead Pipeline Stage + Assigned Rep (side by side) */}
               <div className="bg-slate-50 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700 grid grid-cols-1 sm:grid-cols-2 gap-3">
-               <div>
-                <div className="flex items-center justify-between mb-1.5">
-                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+               <div className="min-w-0">
+                <div className="flex items-center justify-between gap-2 mb-1.5 min-h-[22px]">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 whitespace-nowrap shrink-0">
                     Lead Pipeline Stage <span className="text-rose-500">*</span>
                   </label>
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${getStatusBadge(form.stage)}`}>
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] font-bold border truncate min-w-0 ${getStatusBadge(form.stage)}`}>
                     {form.stage}
                   </span>
                 </div>
@@ -3497,9 +3497,9 @@ export default function Leads() {
                 </p>
                </div>
 
-                  <div>
-                    <label className="block text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
-                      Assign Rep / Staff <span className="text-rose-500">*</span>
+                  <div className="min-w-0">
+                    <label className="flex items-center min-h-[22px] text-xs font-bold text-slate-800 dark:text-slate-200 mb-1.5">
+                      <span>Assign Rep / Staff <span className="text-rose-500">*</span></span>
                     </label>
                     {isOwner ? (
                       <select
@@ -3540,7 +3540,7 @@ export default function Leads() {
               {/* Next Follow-up + Remarks Card (two columns in both rows) */}
               <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1 flex items-center gap-1">
                       <Calendar size={12} className="text-emerald-600" />
                       <span>Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
@@ -3550,11 +3550,11 @@ export default function Leads() {
                       required
                       value={form.follow_up_date}
                       onChange={(e) => setForm({ ...form, follow_up_date: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
+                      className="block w-full min-w-0 max-w-full h-[38px] box-border appearance-none text-left [&::-webkit-date-and-time-value]:text-left px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
                     />
                   </div>
 
-                  <div>
+                  <div className="min-w-0">
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1 flex items-center gap-1">
                       <Clock size={12} className="text-emerald-600" />
                       <span>Call Timing <span className="text-rose-500 font-extrabold">* (Mandatory)</span></span>
@@ -3564,7 +3564,7 @@ export default function Leads() {
                       required
                       value={form.follow_up_time || '10:00'}
                       onChange={(e) => setForm({ ...form, follow_up_time: e.target.value })}
-                      className="w-full px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
+                      className="block w-full min-w-0 max-w-full h-[38px] box-border appearance-none text-left [&::-webkit-date-and-time-value]:text-left px-3 py-2 text-xs bg-white border border-emerald-400 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none font-bold text-slate-800 dark:text-slate-100"
                     />
                   </div>
                 </div>
