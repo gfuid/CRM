@@ -6,7 +6,7 @@ import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
-import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, submitOnEnter, runOnEnter } from '../data/leadOptions';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -1270,9 +1270,10 @@ export default function Leads() {
       created_by_name: lead.created_by_name || profile?.name || 'Self',
       created_at: lead.created_at || new Date().toISOString(),
       follow_up_date: lead.follow_up_date || new Date(Date.now() + 86400000 * 2).toISOString().split('T')[0],
-      follow_up_time: lead.follow_up_time || '10:00',
-      today_remarks: lead.today_remarks || lead.notes || '',
-      next_follow_up_action: lead.next_follow_up_action || '',
+      follow_up_time: toTimeInputValue(lead.follow_up_time),
+      // Remark boxes start empty when editing: earlier remarks are listed under them, a new one is added with Enter
+      today_remarks: '',
+      next_follow_up_action: '',
       notes: lead.notes || '',
       tags: Array.isArray(lead.tags) ? lead.tags : [],
     });
@@ -1304,11 +1305,12 @@ export default function Leads() {
       alert('Follow-up date is mandatory! Please select a next follow-up date.');
       return;
     }
-    if (!form.today_remarks || !form.today_remarks.trim()) {
+    // A new lead needs its first remark + planned action. An existing lead already has them (new ones are optional).
+    if (!editingLead && (!form.today_remarks || !form.today_remarks.trim())) {
       alert("Today's Interaction / Discussion Remarks is mandatory! Please enter remarks.");
       return;
     }
-    if (!form.next_follow_up_action || !form.next_follow_up_action.trim()) {
+    if (!editingLead && (!form.next_follow_up_action || !form.next_follow_up_action.trim())) {
       alert("Planned Action for Next Follow-up Date is mandatory! Please enter next planned action.");
       return;
     }
@@ -1397,6 +1399,9 @@ export default function Leads() {
       };
 
       if (editingLead) {
+        // Empty remark boxes must not wipe the remark already saved on the lead
+        if (!String(leadPayload.today_remarks || '').trim()) delete leadPayload.today_remarks;
+        if (!String(leadPayload.next_follow_up_action || '').trim()) delete leadPayload.next_follow_up_action;
         const res = await api.updateLead(editingLead.id, leadPayload);
         updateAndPersistLeads((prev) =>
           prev.map((l) => (l.id === editingLead.id ? { ...l, ...(res?.data || leadPayload) } : l))
@@ -1422,6 +1427,44 @@ export default function Leads() {
       setIsSubmitting(false);
     }
   };
+
+  // Edit Lead form: Enter in a remark box saves ONLY the remark and lists it below.
+  // The lead itself is saved only with the Update button.
+  const [isSavingRemark, setIsSavingRemark] = useState(false);
+  const handleSaveRemarkOnly = async () => {
+    if (!editingLead || isSavingRemark) return;
+    const today = String(form.today_remarks || '').trim();
+    const planned = String(form.next_follow_up_action || '').trim();
+    if (!today && !planned) return;
+    if (!form.follow_up_date) {
+      showNotification('Please select the next follow-up date first.', 'error');
+      return;
+    }
+    setIsSavingRemark(true);
+    try {
+      const changes = {
+        ...(today ? { today_remarks: today } : {}),
+        ...(planned ? { next_follow_up_action: planned } : {}),
+      };
+      if (form.follow_up_date !== (editingLead.follow_up_date || '')) changes.follow_up_date = form.follow_up_date;
+      const formTime = form.follow_up_time || '10:00';
+      if (formTime !== toTimeInputValue(editingLead.follow_up_time)) changes.follow_up_time = formTime;
+      const res = await api.updateLead(editingLead.id, changes);
+      const saved = res?.data;
+      if (saved?.id) {
+        updateAndPersistLeads((prev) => prev.map((l) => (l.id === saved.id ? { ...l, ...saved } : l)));
+        setEditingLead((prev) => (prev ? { ...prev, ...saved } : prev));
+      }
+      setForm((prev) => ({ ...prev, today_remarks: '', next_follow_up_action: '' }));
+      showNotification('Remark saved.', 'success');
+    } catch (err) {
+      showNotification(err?.message || 'The remark could not be saved. Please try again.', 'error');
+    } finally {
+      setIsSavingRemark(false);
+    }
+  };
+  // Add Lead form: Enter moves to the next box (nothing is saved until the Save button)
+  const focusNextOnEnter = (nextId) => runOnEnter(() => document.getElementById(nextId)?.focus());
 
   // Delete Lead - Owner only
   const handleDelete = async (id) => {
@@ -3573,34 +3616,80 @@ export default function Leads() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Today's Interaction / Discussion Remarks <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
+                      Today's Interaction / Discussion Remarks {!editingLead && <span className="text-rose-500 font-extrabold">* (Mandatory)</span>}
                     </label>
                     <textarea
+                      id="lead-form-today-remark"
                       rows={2}
-                      required
+                      required={!editingLead}
                       placeholder="What was discussed / decided on today's call or meeting with the client..."
                       value={form.today_remarks}
                       onChange={(e) => setForm({ ...form, today_remarks: e.target.value })}
-                      onKeyDown={submitOnEnter}
+                      onKeyDown={editingLead ? runOnEnter(handleSaveRemarkOnly) : focusNextOnEnter('lead-form-planned-action')}
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                   </div>
 
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Planned Action for Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
+                      Planned Action for Next Follow-up Date {!editingLead && <span className="text-rose-500 font-extrabold">* (Mandatory)</span>}
                     </label>
                     <textarea
+                      id="lead-form-planned-action"
                       rows={2}
-                      required
+                      required={!editingLead}
                       placeholder="What specific action needs to be taken on scheduled date (e.g., share quote, verify LC)..."
                       value={form.next_follow_up_action}
                       onChange={(e) => setForm({ ...form, next_follow_up_action: e.target.value })}
-                      onKeyDown={submitOnEnter}
+                      onKeyDown={editingLead ? runOnEnter(handleSaveRemarkOnly) : focusNextOnEnter('lead-form-save-button')}
                       className="w-full px-3 py-2 text-xs bg-white border border-emerald-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
                     />
                   </div>
                 </div>
+
+                {/* Editing: Enter saves the remark and lists it here. The lead is saved only with the Update button. */}
+                {editingLead && (
+                  <div className="space-y-2">
+                    <p className="text-[11px] text-emerald-900/80 dark:text-emerald-200/80 font-medium">
+                      {isSavingRemark
+                        ? 'Saving remark…'
+                        : 'Press Enter to save the remark below (Shift+Enter = new line). Other lead details are saved only with the Update button.'}
+                    </p>
+                    <div className="rounded-xl border border-emerald-200 dark:border-emerald-800/60 bg-white/80 dark:bg-slate-900/40 max-h-44 overflow-y-auto divide-y divide-emerald-100 dark:divide-emerald-900/50">
+                      {(editingLead.previous_remarks || []).length === 0 ? (
+                        <div className="px-3 py-2.5 text-[11px] text-slate-400 font-medium">No remarks saved yet.</div>
+                      ) : (
+                        (editingLead.previous_remarks || []).slice(0, 30).map((rem, rIdx) => {
+                          const when = rem.date && !Number.isNaN(Date.parse(rem.date)) && /^\d{4}-\d{2}-\d{2}T/.test(String(rem.date))
+                            ? new Date(rem.date).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })
+                            : (rem.date || rem.timestamp || '');
+                          return (
+                            <div key={rIdx} className="px-3 py-2 text-[11px] space-y-0.5">
+                              <div className="flex items-center justify-between gap-2 text-[10px] text-slate-400 font-semibold">
+                                <span className="text-slate-600 dark:text-slate-300 font-bold truncate">{rem.author || 'Team member'}</span>
+                                <span className="shrink-0">{when}</span>
+                              </div>
+                              {rem.today_remark || rem.planned_action ? (
+                                <>
+                                  {rem.today_remark && (
+                                    <p className="text-slate-800 dark:text-slate-100 font-medium whitespace-pre-wrap">{rem.today_remark}</p>
+                                  )}
+                                  {rem.planned_action && (
+                                    <p className="text-emerald-800 dark:text-emerald-300 font-medium whitespace-pre-wrap">
+                                      Next{rem.follow_up_date ? ` (${rem.follow_up_date})` : ''}: {rem.planned_action}
+                                    </p>
+                                  )}
+                                </>
+                              ) : (
+                                <p className="text-slate-800 dark:text-slate-100 font-medium whitespace-pre-wrap">{rem.remark || rem.text}</p>
+                              )}
+                            </div>
+                          );
+                        })
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -3617,6 +3706,7 @@ export default function Leads() {
             </button>
 
             <button
+              id="lead-form-save-button"
               type="submit"
               disabled={isSubmitting}
               className={`px-6 py-2.5 text-xs font-bold text-white rounded-xl shadow-md transition-all flex items-center gap-2 ${

@@ -777,6 +777,7 @@ export default function FollowUp() {
           onClose={() => setEditingLead(null)}
           lead={editingLead}
           onSave={handleSaveCustomer}
+          onRemarkSaved={(fresh) => saveLeads(leads.map((l) => (l.id === fresh.id ? { ...l, ...fresh } : l)))}
           onDelete={handleDeleteCustomer}
         />
       )}

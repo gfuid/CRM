@@ -345,7 +345,7 @@ const createLead = async (req, res) => {
     created_by_id: req.user.id,
     created_by_name: req.user.name || req.user.full_name || 'User',
     follow_up_date: follow_up_date,
-    follow_up_time: follow_up_time || req.body.follow_up_time || '10:00 AM',
+    follow_up_time: follow_up_time || '10:00', // 24h "HH:mm", the format the time box understands
     today_remarks: today_remarks || '',
     next_follow_up_action: next_follow_up_action || '',
     previous_remarks: (Array.isArray(previous_remarks) && previous_remarks.length > 0)

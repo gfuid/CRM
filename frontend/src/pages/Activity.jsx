@@ -908,6 +908,7 @@ export default function ActivityBoard({ onNavigateToLeads, onNavigateToMyDays })
             const fresh = await persistLead(updatedLead.id, changes || updatedLead);
             if (fresh) setSelectedLead(null);
           }}
+          onRemarkSaved={(fresh) => saveLeads(leads.map((l) => (l.id === fresh.id ? { ...l, ...fresh } : l)))}
           onDelete={async (leadId) => {
             if (!isOwnerView) { alert('Only your company owner can delete a lead.'); return; }
             try {

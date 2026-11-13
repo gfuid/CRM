@@ -50,6 +50,18 @@ export const LEAD_SOURCES = [
 export const withCurrent = (list, current) =>
   current && !list.includes(current) ? [...list, current] : list;
 
+/** A time box only accepts 24h "HH:mm". Older leads may hold "10:00 AM"; convert so the box is never blank. */
+export const toTimeInputValue = (value, fallback = '10:00') => {
+  const m = /^\s*(\d{1,2}):(\d{2})(?::\d{2})?\s*(am|pm)?\s*$/i.exec(String(value || ''));
+  if (!m) return fallback;
+  let h = Number(m[1]);
+  const ap = (m[3] || '').toLowerCase();
+  if (ap === 'pm' && h < 12) h += 12;
+  if (ap === 'am' && h === 12) h = 0;
+  if (h > 23 || Number(m[2]) > 59) return fallback;
+  return `${String(h).padStart(2, '0')}:${m[2]}`;
+};
+
 /** Remark / note boxes: Enter saves, Shift+Enter starts a new line. */
 const isPlainEnter = (e) => e.key === 'Enter' && !e.shiftKey && !e.nativeEvent?.isComposing;
 export const submitOnEnter = (e) => {

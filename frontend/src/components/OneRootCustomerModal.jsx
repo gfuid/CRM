@@ -26,7 +26,7 @@ import {
   Lock
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions } from '../data/leadOptions';
+import { PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue } from '../data/leadOptions';
 
 // Older leads may still carry these turmeric-only values. They are kept, just no longer asked for every product.
 const LEGACY_SPEC_LABELS = {
@@ -59,7 +59,7 @@ export default function OneRootCustomerModal(props) {
   return <OneRootCustomerModalContent {...props} />;
 }
 
-function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }) {
+function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, onRemarkSaved }) {
   const { isOwner, profile, getTeamMembers } = useAuth();
 
   // Form states
@@ -173,9 +173,10 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
 
   // Follow-up & Dual Remarks (Current vs. Future)
   const [followUpDate, setFollowUpDate] = useState(lead.follow_up_date || '');
-  const [followUpTime, setFollowUpTime] = useState(lead.follow_up_time || lead.time || '10:00');
-  const [todayRemarks, setTodayRemarks] = useState(lead.today_remarks || '');
-  const [nextFollowUpAction, setNextFollowUpAction] = useState(lead.next_follow_up_action || '');
+  const [followUpTime, setFollowUpTime] = useState(toTimeInputValue(lead.follow_up_time || lead.time));
+  // The remark boxes start empty: earlier remarks are in the history below, a new one is added with Enter
+  const [todayRemarks, setTodayRemarks] = useState('');
+  const [nextFollowUpAction, setNextFollowUpAction] = useState('');
   const [previousRemarks, setPreviousRemarks] = useState(
     Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0
       ? lead.previous_remarks
@@ -186,8 +187,8 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
   useEffect(() => {
     if (lead) {
       setFollowUpDate(lead.follow_up_date || '');
-      setTodayRemarks(lead.today_remarks || '');
-      setNextFollowUpAction(lead.next_follow_up_action || '');
+      setTodayRemarks('');
+      setNextFollowUpAction('');
       if (Array.isArray(lead.previous_remarks)) {
         setPreviousRemarks(lead.previous_remarks);
       }
@@ -228,11 +229,51 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
     return () => { alive = false; };
   }, [lead.id]);
 
-  // Enter saves the form, Shift+Enter starts a new line
-  const saveOnEnter = (e) => {
-    if (e.key !== 'Enter' || e.shiftKey || e.nativeEvent?.isComposing) return;
-    e.preventDefault();
-    e.currentTarget.form?.requestSubmit();
+  // Enter in a note / remark box saves ONLY that note and lists it below; the popup stays open.
+  // Everything else on the lead is saved with the "Save changes" button.
+  const saveActivityOnly = async () => {
+    const note = activityNote.trim();
+    if (isSaving || (activeChecks.length === 0 && !note)) return;
+    setIsSaving(true);
+    try {
+      const titles = activeChecks.length > 0 ? activeChecks : ['Note'];
+      const created = [];
+      for (const title of titles) {
+        const res = await api.createActivity({ type: 'note', title, description: note, lead_id: lead.id });
+        if (res?.data) created.push({ ...res.data, user_name: profile?.name || 'You' });
+      }
+      setActivityHistory((prev) => [...created.reverse(), ...prev]);
+      setActiveChecks([]);
+      setActivityNote('');
+    } catch (err) {
+      alert(err?.message || 'The activity could not be saved. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
+  };
+  const saveRemarkOnly = async () => {
+    const today = todayRemarks.trim();
+    const planned = nextFollowUpAction.trim();
+    if (isSaving || (!today && !planned)) return;
+    if (!followUpDate) { alert('Please select the next follow-up date first.'); return; }
+    setIsSaving(true);
+    try {
+      const changes = {
+        ...(today ? { today_remarks: today } : {}),
+        ...(planned ? { next_follow_up_action: planned } : {}),
+      };
+      if (followUpDate !== (lead.follow_up_date || '')) changes.follow_up_date = followUpDate;
+      const res = await api.updateLead(lead.id, changes);
+      const fresh = res?.data;
+      if (fresh && Array.isArray(fresh.previous_remarks)) setPreviousRemarks(fresh.previous_remarks);
+      if (fresh?.id && onRemarkSaved) onRemarkSaved(fresh);
+      setTodayRemarks('');
+      setNextFollowUpAction('');
+    } catch (err) {
+      alert(err?.message || 'The remark could not be saved. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   // Owner: add / remove a product or a specification field for the whole company
@@ -390,7 +431,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
       products: Array.isArray(lead.products) && lead.products.length ? lead.products : (lead.product ? [lead.product] : []),
       quantity: Number(lead.quantity) || 0, quantity_unit: lead.quantity_unit || (Number(lead.quantity) >= 1000 ? 'kg' : 'MT'),
       price: Number(lead.price) || 0, assigned_to: lead.assigned_to || '', stage: lead.stage || lead.status || 'Requirement Understood',
-      follow_up_date: lead.follow_up_date || '', follow_up_time: lead.follow_up_time || lead.time || '10:00',
+      follow_up_date: lead.follow_up_date || '', follow_up_time: toTimeInputValue(lead.follow_up_time || lead.time),
     };
     const after = {
       type, name: companyName, contact_person: contactName, phone, email, designation, linkedin, whatsapp, website,
@@ -1182,11 +1223,11 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 placeholder="Write what happened with this lead…"
                 value={activityNote}
                 onChange={(e) => setActivityNote(e.target.value)}
-                onKeyDown={saveOnEnter}
+                onKeyDown={runOnEnter(saveActivityOnly)}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
               />
               <p className="text-[10px] text-slate-400 font-medium mt-1">
-                What you did today (call, email, sample&hellip;). Saved in the activity history below. Enter = save, Shift+Enter = new line.
+                What you did today (call, email, sample&hellip;). Press Enter to save it in the activity history below (Shift+Enter = new line).
               </p>
             </div>
           </div>
@@ -1285,7 +1326,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-blue-950 flex items-center gap-1.5">
                     <MessageCircle size={13} className="text-blue-600" />
-                    <span>Remarks / Notes for Today's Interaction <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
+                    <span>Remarks / Notes for Today's Interaction</span>
                   </label>
                   <span className="text-[10px] font-bold text-blue-700 bg-blue-100/70 px-2 py-0.5 rounded-full">
                     Today's Log
@@ -1299,7 +1340,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   placeholder="e.g. Called client today. Discussed 50 MT double-polish turmeric specs and CAD payment terms. Client requested updated CIF quote..."
                   value={todayRemarks}
                   onChange={(e) => setTodayRemarks(e.target.value)}
-                  onKeyDown={saveOnEnter}
+                  onKeyDown={runOnEnter(saveRemarkOnly)}
                   className="w-full px-3.5 py-2.5 bg-white border border-blue-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 shadow-2xs"
                 />
               </div>
@@ -1309,7 +1350,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                 <div className="flex items-center justify-between">
                   <label className="text-xs font-bold text-purple-950 flex items-center gap-1.5">
                     <Target size={13} className="text-purple-600" />
-                    <span>Planned Action / Remarks for Future Date <span className="text-rose-500 font-bold">* (Mandatory)</span></span>
+                    <span>Planned Action / Remarks for Future Date</span>
                   </label>
                   <span className="text-[10px] font-bold text-purple-700 bg-purple-100/70 px-2 py-0.5 rounded-full">
                     {followUpDate ? `For ${followUpDate}` : 'Future Task'}
@@ -1323,7 +1364,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
                   placeholder="e.g. Share revised proforma invoice with 3.5% curcumin certificate, follow up on draft LC approval with procurement head..."
                   value={nextFollowUpAction}
                   onChange={(e) => setNextFollowUpAction(e.target.value)}
-                  onKeyDown={saveOnEnter}
+                  onKeyDown={runOnEnter(saveRemarkOnly)}
                   className="w-full px-3.5 py-2.5 bg-white border border-purple-200 rounded-xl text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500/20 focus:border-purple-500 shadow-2xs"
                 />
               </div>
@@ -1415,7 +1456,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete }
               {isSaving ? 'Saving…' : 'Save changes'}
             </button>
             <p className="text-[10px] text-slate-400 font-medium mt-1.5 text-center">
-              In the note and remark boxes, Enter saves and Shift+Enter starts a new line.
+              In the note and remark boxes, Enter saves just that note below and keeps this window open (Shift+Enter = new line). All other changes are saved with this button.
             </p>
           </div>
 
