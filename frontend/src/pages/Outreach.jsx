@@ -25,6 +25,7 @@ import {
   Tag
 } from 'lucide-react';
 import { OUTREACH_COLUMNS, INITIAL_OUTREACH_LOGS } from '../data/outreachData';
+import { formatLocation, chatLinks } from '../data/leadOptions';
 
 // ISO formatting helper (YYYY-MM-DD)
 export const parseToIso = (d) => {
@@ -491,7 +492,7 @@ export default function Outreach() {
           Outreach
         </h1>
         <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 mt-1">
-          Daily calls, emails, WhatsApp and lead touches by user
+          Daily calls, emails, WhatsApp / Zalo and lead touches by user
         </p>
       </div>
 
@@ -961,14 +962,26 @@ export default function Outreach() {
                     {activePreviewLead.phone && (
                       <div className="flex items-center justify-between">
                         <span>📞 {activePreviewLead.phone}</span>
-                        <a
-                          href={`https://wa.me/${String(activePreviewLead.phone).replace(/[^0-9]/g, '')}`}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="text-[10px] font-bold text-rose-600 hover:underline flex items-center gap-0.5"
-                        >
-                          <MessageCircle size={10} /> Chat WA
-                        </a>
+                        {chatLinks(activePreviewLead.phone) && (
+                          <span className="flex items-center gap-2 shrink-0">
+                            <a
+                              href={chatLinks(activePreviewLead.phone).whatsapp}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] font-bold text-rose-600 hover:underline flex items-center gap-0.5"
+                            >
+                              <MessageCircle size={10} /> WhatsApp
+                            </a>
+                            <a
+                              href={chatLinks(activePreviewLead.phone).zalo}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-0.5"
+                            >
+                              <MessageCircle size={10} /> Zalo
+                            </a>
+                          </span>
+                        )}
                       </div>
                     )}
                     {activePreviewLead.email && (
@@ -986,6 +999,9 @@ export default function Outreach() {
                   <div className="text-slate-600 dark:text-slate-400">
                     {activePreviewLead.address || '—'}
                   </div>
+                  {formatLocation(activePreviewLead) && (
+                    <div className="text-slate-600 dark:text-slate-400">{formatLocation(activePreviewLead)}</div>
+                  )}
                   {activePreviewLead.website && (
                     <div className="flex items-center gap-1 pt-0.5">
                       <Globe size={11} className="text-slate-400" />

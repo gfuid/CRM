@@ -17,10 +17,14 @@ const pickFrom = (list, value) => list.find((item) => same(item, value));
 export const buildColumns = ({ commodities = [], leadSources = [], stages = [], now = new Date() } = {}) => [
   { key: 'company', header: 'Company Name', aliases: ['company', 'name'], required: true, rule: 'Buyer company name. Must be unique.', example: ['Al-Zahra Trading LLC', 'Global Agri Impex BV'] },
   { key: 'country', header: 'Country', aliases: [], rule: 'Country of the buyer.', example: ['United Arab Emirates', 'Netherlands'] },
+  { key: 'address', header: 'Address', aliases: ['warehouseaddress', 'corporateaddress', 'streetaddress'], rule: 'Street / warehouse address.', example: ['Warehouse 14, Al Quoz Industrial Area 3', 'Keizersgracht 120'] },
+  { key: 'state', header: 'State / Province', aliases: ['state', 'province', 'region'], rule: 'State or province.', example: ['Dubai', 'North Holland'] },
+  { key: 'city', header: 'Area / City', aliases: ['city', 'area', 'town'], rule: 'Area or city.', example: ['Al Quoz', 'Amsterdam'] },
+  { key: 'pincode', header: 'Pin Code', aliases: ['pin', 'pincode', 'zip', 'zipcode', 'postcode', 'postalcode'], rule: 'Pin / ZIP / postal code. Letters, numbers, spaces and - only.', example: ['00000', '1015 CW'] },
   { key: 'contact', header: 'Contact Person', aliases: ['contact', 'contactname'], rule: 'Name of the person you deal with.', example: ['Ahmed Al-Mansoor', 'Lars Janssen'] },
   { key: 'phone', header: 'Phone', aliases: ['mobile', 'phonenumber'], rule: 'With country code.', example: ['+971 50 111 2222', '+31 20 555 4321'] },
   { key: 'email', header: 'Email', aliases: ['emailid', 'workemail'], rule: 'A valid email address.', example: ['ahmed@alzahra.ae', 'lars@globalagri.nl'] },
-  { key: 'whatsapp', header: 'WhatsApp', aliases: ['whatsappnumber', 'zalo'], rule: 'WhatsApp / Zalo number. Blank = same as Phone.', example: ['+971 50 111 2222', ''] },
+  { key: 'whatsapp', header: 'WhatsApp / Zalo', aliases: ['whatsapp', 'whatsappnumber', 'zalo', 'zalonumber'], rule: 'WhatsApp or Zalo number. Blank = same as Phone.', example: ['+971 50 111 2222', ''] },
   { key: 'website', header: 'Website', aliases: ['url'], rule: 'Company website.', example: ['https://alzahra.ae', 'https://globalagri.nl'] },
   { key: 'source', header: 'Lead Source', aliases: ['source'], rule: `One of: ${leadSources.join(', ')}. Blank = Direct Inquiry.`, example: ['Customs Data', 'Trade Fair'] },
   { key: 'products', header: 'Products', aliases: ['product', 'commodity', 'commodities'], rule: `From your product list, separated by commas: ${commodities.join(', ')}.`, example: [commodities[0] || 'Turmeric', commodities.slice(1, 3).join(', ') || 'Rice DDGS'] },
@@ -30,7 +34,6 @@ export const buildColumns = ({ commodities = [], leadSources = [], stages = [], 
   { key: 'stage', header: 'Stage', aliases: ['pipelinestage', 'status'], rule: `One of: ${stages.join(', ')}. Blank = Lead Generation.`, example: ['Lead Generation', 'Sample Sent'] },
   { key: 'incoterm', header: 'Incoterm', aliases: [], ownerOnly: true, rule: 'e.g. FOB, CIF, CFR.', example: ['CIF', 'FOB'] },
   { key: 'port', header: 'Port Delivery', aliases: ['port', 'portofdelivery'], ownerOnly: true, rule: 'Destination port.', example: ['Jebel Ali Port', 'Rotterdam'] },
-  { key: 'rep', header: 'Assigned Rep', aliases: ['assignedto', 'staff'], ownerOnly: true, rule: 'Exact name of a staff member. Blank = you.', example: ['', ''] },
   { key: 'followup', header: 'Follow-up Date', aliases: ['followup', 'nextfollowupdate'], rule: 'YYYY-MM-DD or DD-MM-YYYY. Blank = today.', example: [localIsoDate(new Date(now.getTime() + 5 * 864e5)), localIsoDate(new Date(now.getTime() + 3 * 864e5))] },
   { key: 'remarks', header: 'Remarks', aliases: ['todayremarks', 'remark'], rule: 'What was discussed so far.', example: ['Asked for price list', 'Feed grade analysis sent'] },
   { key: 'nextaction', header: 'Next Action', aliases: ['plannedaction'], rule: 'What to do on the follow-up date.', example: ['Send quotation', 'Call for sample feedback'] },
@@ -107,15 +110,20 @@ export const fileProblem = (parsed, maxRows = 500) => {
   return null;
 };
 
+/** Old templates had a per-row "Assigned Rep" column. It is ignored now: one file goes to one person. */
+export const isAssignColumn = (header) => ['assignedrep', 'assignedto', 'assignee', 'rep', 'staff'].includes(norm(header));
+
 /**
  * Match the file's headings to our columns, then check every row against the rules.
+ * Who gets the leads: staff -> always themselves (the server enforces it);
+ * owner -> `assignTo` (one person for the whole file), the owner by default.
  * Returns which columns were found / missing / ignored, and for every row: the payload to save,
  * what to show, and the errors (a row with any error is not imported).
  */
 export const reviewImport = (parsed, {
   isOwner = false,
   profile = null,
-  teamList = [],
+  assignTo = '',
   commodities = [],
   existingNames = [],
   leadSources = [],
@@ -136,7 +144,8 @@ export const reviewImport = (parsed, {
   const found = columns.filter((c) => indexOf[c.key] !== undefined);
   const missing = columns.filter((c) => indexOf[c.key] === undefined);
   const lockedFound = lockedColumns.filter((c) => indexOf[c.key] !== undefined);
-  const unknown = parsed.headers.filter((h, i) => !usedHeaderIdx.has(i) && h);
+  const unknown = parsed.headers.filter((h, i) => !usedHeaderIdx.has(i) && h && !isAssignColumn(h));
+  const assignColumnIgnored = parsed.headers.find((h, i) => !usedHeaderIdx.has(i) && isAssignColumn(h)) || '';
 
   const existing = new Set(existingNames.map((n) => String(n || '').trim().toLowerCase().replace(/\s+/g, ' ')).filter(Boolean));
   const seen = new Map();
@@ -192,12 +201,10 @@ export const reviewImport = (parsed, {
       if (iso) followUp = iso; else errors.followup = 'Use YYYY-MM-DD or DD-MM-YYYY';
     } else followUp = today;
 
-    let assignedTo = profile?.id || '';
-    const rep = raw('rep');
-    if (rep) {
-      const member = teamList.find((t) => same(t.name, rep)) || (same(profile?.name, rep) ? profile : null);
-      if (member) assignedTo = member.id; else errors.rep = 'No staff member with this name';
-    }
+    const pincode = raw('pincode');
+    if (pincode && !/^[A-Za-z0-9][A-Za-z0-9 -]{1,11}$/.test(pincode)) errors.pincode = 'Pin code: letters, numbers, spaces and - only (max 12)';
+
+    const assignedTo = assignTo || profile?.id || '';
 
     const phone = raw('phone');
     const payload = {
@@ -210,6 +217,10 @@ export const reviewImport = (parsed, {
       email,
       whatsapp: raw('whatsapp') || phone,
       website: raw('website'),
+      address: raw('address'),
+      state: raw('state'),
+      city: raw('city'),
+      pincode,
       source,
       stage,
       follow_up_date: followUp,
@@ -233,16 +244,17 @@ export const reviewImport = (parsed, {
     };
     // What the review table shows for each column (after defaults are applied)
     const shown = {
-      company, country: raw('country'), contact: raw('contact'), phone, email, whatsapp: raw('whatsapp'), website: raw('website'),
+      company, country: raw('country'), address: raw('address'), state: raw('state'), city: raw('city'), pincode,
+      contact: raw('contact'), phone, email, whatsapp: raw('whatsapp'), website: raw('website'),
       source: errors.source ? raw('source') : source,
       products: errors.products ? raw('products') : products.join(', '),
       quantity: raw('quantity'), unit: errors.unit ? raw('unit') : (raw('quantity') ? unit : ''),
-      value: raw('value'), stage: errors.stage ? raw('stage') : stage, incoterm: raw('incoterm'), port: raw('port'), rep,
+      value: raw('value'), stage: errors.stage ? raw('stage') : stage, incoterm: raw('incoterm'), port: raw('port'),
       followup: errors.followup ? raw('followup') : followUp,
       remarks: raw('remarks'), nextaction: raw('nextaction'), notes: raw('notes'),
     };
     return { line: rowIdx + 2, payload, shown, errors, ok: Object.keys(errors).length === 0 };
   });
 
-  return { columns, lockedColumns, found, missing, lockedFound, unknown, rows, ready: rows.filter((r) => r.ok), bad: rows.filter((r) => !r.ok) };
+  return { columns, lockedColumns, found, missing, lockedFound, unknown, assignColumnIgnored, rows, ready: rows.filter((r) => r.ok), bad: rows.filter((r) => !r.ok) };
 };

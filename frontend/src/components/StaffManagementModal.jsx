@@ -852,7 +852,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
 
               <div>
                 <label className="block text-[11px] font-bold text-slate-800 dark:text-slate-200 mb-1">
-                  Phone / WhatsApp
+                  Phone / WhatsApp / Zalo
                 </label>
                 <div className="relative">
                   <Phone size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1331,7 +1331,7 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                 <div>
                   <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                    Phone / WhatsApp
+                    Phone / WhatsApp / Zalo
                   </label>
                   <input
                     type="tel"

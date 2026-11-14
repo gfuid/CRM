@@ -77,6 +77,9 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
   const [country, setCountry] = useState(lead.country || '');
   const [leadSource, setLeadSource] = useState(lead.source || '');
   const [address, setAddress] = useState(lead.address || '');
+  const [stateName, setStateName] = useState(lead.state || '');
+  const [city, setCity] = useState(lead.city || '');
+  const [pincode, setPincode] = useState(lead.pincode || '');
 
   // Profile
   const [creditRating, setCreditRating] = useState(lead.credit_rating || '');
@@ -382,6 +385,9 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
       country,
       source: leadSource,
       address,
+      state: stateName.trim(),
+      city: city.trim(),
+      pincode: pincode.trim(),
       credit_rating: creditRating,
       turnover,
       sourcing_region: sourcingRegion,
@@ -426,6 +432,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
       phone: lead.phone || '', email: lead.email || '', designation: lead.designation || '',
       linkedin: lead.linkedin || '', whatsapp: lead.whatsapp || lead.phone || '', website: lead.website || '',
       country: lead.country || '', source: lead.source || '', address: lead.address || '',
+      state: lead.state || '', city: lead.city || '', pincode: lead.pincode || '',
       credit_rating: lead.credit_rating || '', turnover: lead.turnover || '', sourcing_region: lead.sourcing_region || '',
       legacy_industry_type: lead.legacy_industry_type || lead.industry_type || '',
       products: Array.isArray(lead.products) && lead.products.length ? lead.products : (lead.product ? [lead.product] : []),
@@ -435,7 +442,8 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
     };
     const after = {
       type, name: companyName, contact_person: contactName, phone, email, designation, linkedin, whatsapp, website,
-      country, source: leadSource, address, credit_rating: creditRating, turnover, sourcing_region: sourcingRegion,
+      country, source: leadSource, address, state: stateName.trim(), city: city.trim(), pincode: pincode.trim(),
+      credit_rating: creditRating, turnover, sourcing_region: sourcingRegion,
       legacy_industry_type: legacyIndustry, products: selectedProducts, quantity: Number(quantity) || 0,
       quantity_unit: quantityUnit || 'MT', price: Number(price) || 0, assigned_to: assignedTo, stage: status,
       follow_up_date: followUpDate, follow_up_time: followUpTime || '10:00',
@@ -705,7 +713,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
                 value={whatsapp}
                 defaultCountry={country}
                 onChange={(fullPhone) => setWhatsapp(fullPhone)}
-                placeholder="WhatsApp number"
+                placeholder="WhatsApp / Zalo number"
               />
               <button
                 type="button"
@@ -767,6 +775,22 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
                 onChange={(e) => setAddress(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs"
               />
+            </div>
+
+            {/* State / City / Pin code: three across when there is room, wrapping on narrow screens */}
+            <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
+              <div className="min-w-0">
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">State / Province</label>
+                <input type="text" maxLength={80} value={stateName} placeholder="e.g. Western Province" onChange={(e) => setStateName(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs" />
+              </div>
+              <div className="min-w-0">
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Area / City</label>
+                <input type="text" maxLength={80} value={city} placeholder="e.g. Wattala" onChange={(e) => setCity(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs" />
+              </div>
+              <div className="min-w-0">
+                <label className="text-[11px] font-bold text-slate-600 block mb-1">Pin Code</label>
+                <input type="text" maxLength={12} value={pincode} placeholder="e.g. 11300" onChange={(e) => setPincode(e.target.value)} className="w-full px-3.5 py-2.5 bg-white border border-slate-200 rounded-xl text-xs" />
+              </div>
             </div>
           </div>
 

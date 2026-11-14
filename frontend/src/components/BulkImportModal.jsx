@@ -22,6 +22,30 @@ import {
  *                then Import (or Enter) saves only the rows that passed
  */
 
+/** A small "i" that explains a rule: shows on hover (desktop) and on tap (phone / iPad). */
+function InfoTip({ text }) {
+  const [open, setOpen] = useState(false);
+  return (
+    <span className="relative inline-flex" onMouseEnter={() => setOpen(true)} onMouseLeave={() => setOpen(false)}>
+      <button
+        type="button"
+        aria-label="Why?"
+        aria-expanded={open}
+        onClick={() => setOpen((v) => !v)}
+        onBlur={() => setOpen(false)}
+        className="w-4 h-4 rounded-full border border-slate-400 text-slate-500 hover:text-emerald-700 hover:border-emerald-600 text-[10px] font-bold leading-none flex items-center justify-center cursor-pointer"
+      >
+        i
+      </button>
+      {open && (
+        <span role="tooltip" className="absolute left-1/2 -translate-x-1/2 bottom-full mb-2 z-30 w-64 max-w-[80vw] p-2.5 rounded-lg bg-slate-900 text-white text-[11px] font-medium leading-snug shadow-lg">
+          {text}
+        </span>
+      )}
+    </span>
+  );
+}
+
 export default function BulkImportModal({ isOpen, onClose, isOwner, profile, teamList = [], commodities = [], existingNames = [], onImported }) {
   const [step, setStep] = useState(1);
   const [fileName, setFileName] = useState('');
@@ -29,7 +53,19 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   const [parsed, setParsed] = useState(null); // { headers, rows }
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null); // { imported, failed: [] }
+  const [assignTo, setAssignTo] = useState(''); // owner only: one person gets every lead of this file
   const fileInput = useRef(null);
+
+  // Owner first (the default), then each staff member
+  const people = useMemo(() => {
+    const list = [];
+    if (profile?.id) list.push({ id: profile.id, name: `${profile.name || 'You'} (Owner)` });
+    teamList.forEach((t) => { if (t?.id && t.id !== profile?.id) list.push({ id: t.id, name: t.name || 'Staff' }); });
+    return list;
+  }, [profile, teamList]);
+  const assignee = isOwner
+    ? (people.find((p) => p.id === (assignTo || profile?.id)) || { name: 'you' })
+    : { name: `${profile?.name || 'you'} (you)` };
 
   const allColumns = useMemo(
     () => buildColumns({ commodities, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES }),
@@ -41,7 +77,7 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   // Start fresh every time the window opens
   useEffect(() => {
     if (isOpen) {
-      setStep(1); setFileName(''); setFileError(''); setParsed(null); setImporting(false); setResult(null);
+      setStep(1); setFileName(''); setFileError(''); setParsed(null); setImporting(false); setResult(null); setAssignTo('');
     }
   }, [isOpen]);
 
@@ -83,8 +119,8 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   // Match the file's headings to our columns, then check every row (rules live in data/leadImport.js)
   const review = useMemo(() => {
     if (!parsed) return null;
-    return reviewImport(parsed, { isOwner, profile, teamList, commodities, existingNames, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES });
-  }, [parsed, commodities, existingNames, teamList, profile, isOwner]);
+    return reviewImport(parsed, { isOwner, profile, assignTo: isOwner ? assignTo : '', commodities, existingNames, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES });
+  }, [parsed, commodities, existingNames, assignTo, profile, isOwner]);
 
   const runImport = async () => {
     if (!review || review.ready.length === 0 || importing) return;
@@ -102,7 +138,7 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
       }
     }
     if (added.length && onImported) onImported(added);
-    setResult({ imported: added.length, failed, skipped: review.bad.length });
+    setResult({ imported: added.length, failed, skipped: review.bad.length, assignee: assignee.name });
     setImporting(false);
     setStep(4);
   };
@@ -112,16 +148,17 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
     if (!isOpen || step !== 3) return undefined;
     const onKey = (e) => {
       if (e.key !== 'Enter' || e.shiftKey) return;
-      // Enter on Cancel / Back must do what that button says
+      // Enter on Cancel / Back / the info icon or inside the assignee list must do what that control says
       const btn = e.target?.closest?.('button');
       if (btn && btn.id !== 'bulk-import-run') return;
+      if (e.target?.tagName === 'SELECT') return;
       e.preventDefault();
       runImport();
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, step, review, importing]);
+  }, [isOpen, step, review, importing, assignee.name]);
 
   const steps = ['Format', 'Upload', 'Review & Import'];
   const shownStep = Math.min(step, 3);
@@ -278,6 +315,11 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
             {review.lockedFound.length > 0 && (
               <p className="text-[11px] text-amber-700 font-medium">Skipped (owner only): {review.lockedFound.map((c) => c.header).join(', ')}</p>
             )}
+            {review.assignColumnIgnored && (
+              <p className="text-[11px] text-amber-700 font-medium">
+                Ignored: “{review.assignColumnIgnored}”. A file goes to one person only; {isOwner ? 'choose who below.' : 'leads you import are always assigned to you.'}
+              </p>
+            )}
           </div>
 
           {/* Every row, with what is wrong */}
@@ -317,6 +359,37 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
               : 'All rows follow the format.'}
             {review.ready.length > 0 && ' Press Enter or the Import button to save.'}
           </p>
+
+          {/* Who gets the leads: one person per file */}
+          <div className="p-3 rounded-xl border border-emerald-200 bg-emerald-50/60 dark:bg-emerald-950/30 dark:border-emerald-900 space-y-2">
+            <div className="flex items-center gap-1.5">
+              <span className="text-xs font-bold text-slate-800 dark:text-slate-100">Assign these leads to</span>
+              <InfoTip
+                text={isOwner
+                  ? 'All leads in one file go to one person, so everyone knows exactly which leads are theirs and a wrong row cannot land with the wrong person. To give leads to different staff, make one file per staff member and import each file separately.'
+                  : 'Leads you import are always assigned to you. Only your company owner can import leads for other people.'}
+              />
+            </div>
+            {isOwner ? (
+              <select
+                id="bulk-import-assignee"
+                value={assignTo || profile?.id || ''}
+                onChange={(e) => setAssignTo(e.target.value === profile?.id ? '' : e.target.value)}
+                disabled={importing}
+                className="w-full sm:w-80 max-w-full px-3 py-2 text-xs font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none cursor-pointer"
+              >
+                {people.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            ) : (
+              <div className="w-full sm:w-80 max-w-full px-3 py-2 text-xs font-semibold bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-slate-700 dark:text-slate-200">
+                {assignee.name}
+              </div>
+            )}
+            <p className="text-[11px] text-slate-600 dark:text-slate-300">
+              {review.ready.length} lead{review.ready.length === 1 ? '' : 's'} will go to <b>{assignee.name}</b>.
+              {isOwner && ' Only one person per file.'}
+            </p>
+          </div>
         </div>
       )}
 
@@ -325,7 +398,7 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
         <div className="space-y-3">
           <div className="p-4 rounded-xl border border-emerald-200 bg-emerald-50 flex items-center gap-2.5 text-sm font-bold text-emerald-900">
             <CheckCircle2 size={18} className="text-emerald-600 shrink-0" />
-            <span>{result.imported} lead{result.imported === 1 ? '' : 's'} imported.</span>
+            <span>{result.imported} lead{result.imported === 1 ? '' : 's'} imported and assigned to {result.assignee}.</span>
           </div>
           {result.skipped > 0 && (
             <p className="text-xs text-slate-600">{result.skipped} row{result.skipped === 1 ? '' : 's'} left out because they broke a rule (shown in red in the review).</p>

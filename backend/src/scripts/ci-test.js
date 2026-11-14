@@ -324,6 +324,31 @@ const runCITests = async () => {
     });
     assert('Importing a company that already exists in the company is refused (409)', dupImportRes.status === 409);
 
+    // Address details: state / province, area / city, pin code
+    const locRes = await fetch(`${BASE}/api/v1/leads`, {
+      method: 'POST', headers: optHeaders(staffToken),
+      body: JSON.stringify({ name: 'CI Location Lead', follow_up_date: followDate, today_remarks: 'r', next_follow_up_action: 'n', address: 'No 222 Bandaranayake Mawatha', state: ' Western Province ', city: 'Wattala', pincode: '11300' }),
+    });
+    const loc = (await locRes.json()).data || {};
+    assert(
+      'Staff can save state / province, area / city and pin code on a new lead',
+      locRes.status === 201 && loc.state === 'Western Province' && loc.city === 'Wattala' && loc.pincode === '11300' && loc.address === 'No 222 Bandaranayake Mawatha',
+      `${loc.state} / ${loc.city} / ${loc.pincode}`
+    );
+    const locFix = await fetch(`${BASE}/api/v1/leads/${loc.id}`, { method: 'PATCH', headers: optHeaders(ownerToken), body: JSON.stringify({ city: 'Colombo', pincode: '00100' }) });
+    const locFixed = (await locFix.json()).data || {};
+    assert('Owner can correct the city and pin code later', locFix.status === 200 && locFixed.city === 'Colombo' && locFixed.pincode === '00100' && locFixed.state === 'Western Province');
+    const locStaffEdit = await fetch(`${BASE}/api/v1/leads/${loc.id}`, { method: 'PATCH', headers: optHeaders(staffToken), body: JSON.stringify({ city: 'Kandy' }) });
+    assert('Staff cannot change the address details after the lead is saved (owner corrects them)', locStaffEdit.status === 403);
+
+    // Bulk import by staff: the leads always belong to that staff member, whatever the file says
+    const staffImportRes = await fetch(`${BASE}/api/v1/leads`, {
+      method: 'POST', headers: optHeaders(staffToken),
+      body: JSON.stringify({ name: 'CI Staff Import Lead', follow_up_date: followDate, today_remarks: 'Imported from bulk upload', next_follow_up_action: 'First contact with buyer', assigned_to: 'usr_someone_else' }),
+    });
+    const staffImport = (await staffImportRes.json()).data || {};
+    assert('A lead imported by staff is assigned to that staff member', staffImportRes.status === 201 && staffImport.assigned_to === staff.data?.id);
+
     // "Enter saves only the remark": a remark-only update adds one history entry and changes nothing else
     const patchLead = async (id, token, body) => {
       const r = await fetch(`${BASE}/api/v1/leads/${id}`, { method: 'PATCH', headers: optHeaders(token), body: JSON.stringify(body) });

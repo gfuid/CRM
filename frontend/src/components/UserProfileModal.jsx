@@ -326,7 +326,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200/80 dark:border-slate-700/60">
-                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Phone & WhatsApp</span>
+                    <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Phone & WhatsApp / Zalo</span>
                     <span className="text-sm font-bold text-slate-800 dark:text-slate-100 mt-0.5 block flex items-center gap-1.5">
                       <Phone size={14} className="text-emerald-600 dark:text-emerald-400" />
                       {formData.phone || 'Not specified'}
@@ -376,7 +376,7 @@ export default function UserProfileModal({ isOpen, onClose }) {
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                        Phone / WhatsApp *
+                        Phone / WhatsApp / Zalo *
                       </label>
                       <input
                         type="text"

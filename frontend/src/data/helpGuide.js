@@ -131,7 +131,7 @@ export const HELP_SECTIONS = [
     tab: 'outreach',
     title: 'Outreach',
     roles: ['owner', 'staff'],
-    summary: 'Daily outreach numbers per person — calls, emails, WhatsApp, LinkedIn, meetings, samples and price discussions.',
+    summary: 'Daily outreach numbers per person — calls, emails, WhatsApp / Zalo, LinkedIn, meetings, samples and price discussions.',
     how: [
       'Every logged interaction is counted by type and person.',
       'Use it to see who is actually reaching buyers each day.',

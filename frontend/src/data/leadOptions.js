@@ -46,6 +46,20 @@ export const LEAD_SOURCES = [
   'Embassy / Trade Council',
 ];
 
+/** "Al Quoz, Dubai - 00000" from the lead's city, state and pin code ('' when none is filled). */
+export const formatLocation = (lead) => {
+  const place = [lead?.city, lead?.state].map((v) => String(v || '').trim()).filter(Boolean).join(', ');
+  const pin = String(lead?.pincode || '').trim();
+  return [place, pin].filter(Boolean).join(' - ');
+};
+
+/** Chat links for a phone number: WhatsApp and Zalo both use the number with country code, digits only. */
+export const chatLinks = (phone) => {
+  const digits = String(phone || '').replace(/[^0-9]/g, '');
+  if (digits.length < 6) return null;
+  return { whatsapp: `https://wa.me/${digits}`, zalo: `https://zalo.me/${digits}` };
+};
+
 /** A saved value that is not in the list any more (old leads) is still shown, so nothing looks blank. */
 export const withCurrent = (list, current) =>
   current && !list.includes(current) ? [...list, current] : list;

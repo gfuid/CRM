@@ -7,7 +7,7 @@ import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
-import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue } from '../data/leadOptions';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue, formatLocation, chatLinks } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -674,6 +674,9 @@ export default function Leads() {
     country: 'United Arab Emirates 🇦🇪',
     lead_source: 'Direct Inquiry',
     address: '',
+    state: '',
+    city: '',
+    pincode: '',
     credit_rating: 'AA',
     turnover: '',
     stage: 'Lead Generation', // a new lead starts at the first stage
@@ -1249,6 +1252,9 @@ export default function Leads() {
       country: lead.country || '',
       lead_source: lead.source || 'Direct Inquiry',
       address: lead.address || '',
+      state: lead.state || '',
+      city: lead.city || '',
+      pincode: lead.pincode || '',
       credit_rating: lead.credit_rating || 'AA',
       turnover: lead.turnover || '',
       stage: lead.stage || lead.status || lead.lead_stage || 'Requirement Understood',
@@ -1343,6 +1349,9 @@ export default function Leads() {
         country: form.country,
         source: form.lead_source,
         address: form.address,
+        state: String(form.state || '').trim(),
+        city: String(form.city || '').trim(),
+        pincode: String(form.pincode || '').trim(),
         tags: Array.isArray(form.tags) ? form.tags : [],
         stage: form.stage || (editingLead ? editingLead.stage : 'Lead Generation'),
         status: form.stage || (editingLead ? editingLead.stage : 'Lead Generation'),
@@ -1498,10 +1507,14 @@ export default function Leads() {
       'Company Name',
       'Type',
       'Country',
+      'Address',
+      'State / Province',
+      'Area / City',
+      'Pin Code',
       'Contact Person',
       'Phone',
       'Email',
-      'WhatsApp',
+      'WhatsApp / Zalo',
       'Website',
       'Products',
       'Quantity',
@@ -1531,6 +1544,10 @@ export default function Leads() {
       escapeCSV(l.company_name || l.name),
       escapeCSV(l.type || 'Export'),
       escapeCSV(l.country || ''),
+      escapeCSV(l.address || ''),
+      escapeCSV(l.state || ''),
+      escapeCSV(l.city || ''),
+      escapeCSV(l.pincode || ''),
       escapeCSV(l.contact_person || l.contacts?.[0]?.name || ''),
       escapeCSV(l.phone || l.contacts?.[0]?.phone || ''),
       escapeCSV(l.email || l.contacts?.[0]?.email || ''),
@@ -2064,7 +2081,7 @@ export default function Leads() {
                           {lead.phone && <span>{lead.phone}</span>}
                           {lead.whatsapp && (
                             <span className="text-emerald-600 font-semibold flex items-center gap-0.5">
-                              <MessageCircle size={10} /> WA
+                              <MessageCircle size={10} /> WA / Zalo
                             </span>
                           )}
                           {(lead.social_links?.filter(s => s.url).length > 0 || lead.social_media) && (
@@ -2677,6 +2694,43 @@ export default function Leads() {
                   onChange={(e) => setForm({ ...form, address: e.target.value })}
                   className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
                 />
+              </div>
+
+              {/* State / City / Pin code: three across when there is room, wrapping on narrow screens */}
+              <div className="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-3">
+                <div className="min-w-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">State / Province</label>
+                  <input
+                    type="text"
+                    maxLength={80}
+                    placeholder="e.g. Dubai, Maharashtra"
+                    value={form.state || ''}
+                    onChange={(e) => setForm({ ...form, state: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Area / City</label>
+                  <input
+                    type="text"
+                    maxLength={80}
+                    placeholder="e.g. Al Quoz, Mumbai"
+                    value={form.city || ''}
+                    onChange={(e) => setForm({ ...form, city: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
+                <div className="min-w-0">
+                  <label className="block text-xs font-bold text-slate-700 mb-1">Pin Code</label>
+                  <input
+                    type="text"
+                    maxLength={12}
+                    placeholder="e.g. 400001"
+                    value={form.pincode || ''}
+                    onChange={(e) => setForm({ ...form, pincode: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -3579,14 +3633,26 @@ export default function Leads() {
                         {c.phone && (
                           <div className="flex items-center justify-between">
                             <span>📞 {c.phone}</span>
-                            <a
-                              href={`https://wa.me/${c.phone.replace(/[^0-9]/g, '')}`}
-                              target="_blank"
-                              rel="noreferrer"
-                              className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
-                            >
-                              <MessageCircle size={10} /> Chat WA
-                            </a>
+                            {chatLinks(c.phone) && (
+                              <span className="flex items-center gap-2 shrink-0">
+                                <a
+                                  href={chatLinks(c.phone).whatsapp}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] font-bold text-emerald-600 hover:underline flex items-center gap-0.5"
+                                >
+                                  <MessageCircle size={10} /> WhatsApp
+                                </a>
+                                <a
+                                  href={chatLinks(c.phone).zalo}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] font-bold text-blue-600 hover:underline flex items-center gap-0.5"
+                                >
+                                  <MessageCircle size={10} /> Zalo
+                                </a>
+                              </span>
+                            )}
                           </div>
                         )}
                         {c.email && (
@@ -3621,6 +3687,12 @@ export default function Leads() {
                     <span className="font-semibold text-slate-700 dark:text-slate-300">Address: </span>
                     {activeDetailLead.address || '—'}
                   </div>
+                  {formatLocation(activeDetailLead) && (
+                    <div className="text-slate-600 dark:text-slate-400">
+                      <span className="font-semibold text-slate-700 dark:text-slate-300">City / State / Pin: </span>
+                      {formatLocation(activeDetailLead)}
+                    </div>
+                  )}
                   {activeDetailLead.website && (
                     <div className="flex items-center gap-1 pt-0.5">
                       <Globe size={11} className="text-slate-400" />

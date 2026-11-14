@@ -62,7 +62,7 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   rec('ROW-01', 'A correct row is ready', 'Ready', good.rows[0].ok ? 'Ready' : errorsOf(good), good.rows[0].ok);
   rec('ROW-02', 'Spelling is normalised to the company lists', 'Customs Data / Sample Sent / Rice DDGS, Maize / MT', `${p.source} / ${p.stage} / ${p.products.join(', ')} / ${p.quantity_unit}`, p.source === 'Customs Data' && p.stage === 'Sample Sent' && p.products.join() === 'Rice DDGS,Maize' && p.quantity_unit === 'MT');
   rec('ROW-03', 'Numbers and dates are converted', '40, 68000, 2026-12-25', `${p.quantity}, ${p.value}, ${p.follow_up_date}`, p.quantity === 40 && p.value === 68000 && p.price === 68000 && p.follow_up_date === '2026-12-25');
-  rec('ROW-04', 'Assigned Rep name becomes that staff member', 'usr_staff1', p.assigned_to, p.assigned_to === 'usr_staff1');
+  rec('ROW-04', 'An old "Assigned Rep" column does not decide the assignee (owner by default)', 'usr_owner, column reported', `${p.assigned_to}, ${good.assignColumnIgnored}`, p.assigned_to === 'usr_owner' && good.assignColumnIgnored === 'Assigned Rep' && !good.unknown.includes('Assigned Rep'));
   rec('ROW-05', 'Shipping terms go to the requirements block', 'CIF / Jebel Ali', `${p.export_requirements.incoterm} / ${p.export_requirements.port_delivery}`, p.export_requirements.incoterm === 'CIF' && p.export_requirements.port_delivery === 'Jebel Ali');
 
   const blank = review(csv('Company Name', 'Only Name Co'));
@@ -84,7 +84,6 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
     ['ERR-09', 'Invalid email', 'X Co,not-an-email,,,,,,,,', /Not a valid email/],
     ['ERR-10', 'Impossible date (31 Feb)', 'X Co,,,,,,,,,31-02-2026', /Use YYYY-MM-DD or DD-MM-YYYY/],
     ['ERR-11', 'Date in words', 'X Co,,,,,,,,,next monday', /Use YYYY-MM-DD or DD-MM-YYYY/],
-    ['ERR-12', 'Assigned Rep is not a staff member', 'X Co,,,,,,,,Nobody Here,', /No staff member with this name/],
   ];
   cases.forEach(([id, scenario, line, re]) => {
     const r = bad(line);
@@ -92,7 +91,9 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   });
 
   const multi = bad('X Co,bad,Nope,Gold,abc,boxes,xyz,Winning,Nobody,31-02-2026');
-  rec('ERR-13', 'Every problem in a row is reported, not just the first', '9 reasons', Object.keys(multi.rows[0].errors).length, Object.keys(multi.rows[0].errors).length === 9);
+  rec('ERR-13', 'Every problem in a row is reported, not just the first', '8 reasons', Object.keys(multi.rows[0].errors).length, Object.keys(multi.rows[0].errors).length === 8);
+  const noRepError = bad('X Co,,,,,,,,Nobody Here,');
+  rec('ERR-12', 'An unknown name in an old "Assigned Rep" column is no longer an error', 'row ready', noRepError.rows[0].ok ? 'Ready' : errorsOf(noRepError), noRepError.rows[0].ok);
 }
 
 // ---------- Duplicates ----------
@@ -112,9 +113,51 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   ), asStaff);
   const p = r.rows[0].payload;
   rec('STF-01', 'Staff: owner-only columns are skipped, even with bad values', 'row ready', r.rows[0].ok ? 'Ready' : errorsOf(r), r.rows[0].ok);
-  rec('STF-02', 'Staff: skipped columns are listed for the user', 'Deal Value USD, Incoterm, Port Delivery, Assigned Rep', r.lockedFound.map((c) => c.header).join(', '), r.lockedFound.length === 4);
+  rec('STF-02', 'Staff: skipped columns are listed for the user', 'Deal Value USD, Incoterm, Port Delivery (+ Assigned Rep note)', `${r.lockedFound.map((c) => c.header).join(', ')} | ${r.assignColumnIgnored}`, r.lockedFound.length === 3 && r.assignColumnIgnored === 'Assigned Rep');
   rec('STF-03', 'Staff payload carries no price, terms or assignee', 'none of them', Object.keys(p).filter((k) => ['price', 'value', 'export_requirements', 'assigned_to', 'type'].includes(k)).join(',') || 'none', !('price' in p) && !('value' in p) && !('export_requirements' in p) && !('assigned_to' in p));
   rec('STF-04', 'Staff can still import product and quantity', 'Maize 10 kg', `${p.products} ${p.quantity} ${p.quantity_unit}`, p.products.join() === 'Maize' && p.quantity === 10 && p.quantity_unit === 'kg');
+}
+
+// ---------- Who gets the leads (one person per file) ----------
+{
+  const file = csv('Company Name', 'Assign A Co', 'Assign B Co', 'Assign C Co');
+  const ownerDefault = review(file);
+  rec('ASN-01', 'Owner import: every lead goes to the owner by default', 'usr_owner x3', ownerDefault.rows.map((r) => r.payload.assigned_to).join(','), ownerDefault.rows.every((r) => r.payload.assigned_to === 'usr_owner'));
+  const toStaff = reviewImport(parseCsv(file), { ...asOwner, assignTo: 'usr_staff1' });
+  rec('ASN-02', 'Owner picks one staff member: every lead of the file goes to that person', 'usr_staff1 x3', toStaff.rows.map((r) => r.payload.assigned_to).join(','), toStaff.rows.length === 3 && toStaff.rows.every((r) => r.payload.assigned_to === 'usr_staff1'));
+  const mixed = reviewImport(parseCsv(csv('Company Name,Assigned Rep', 'Mixed A,Ravi Kumar', 'Mixed B,Somebody Else')), { ...asOwner, assignTo: 'usr_staff1' });
+  rec('ASN-03', 'Different names per row cannot split one file between people', 'both rows -> chosen person', mixed.rows.map((r) => r.payload.assigned_to).join(','), mixed.rows.every((r) => r.payload.assigned_to === 'usr_staff1'));
+  const staffTry = reviewImport(parseCsv(file), { ...asStaff, assignTo: 'usr_owner' });
+  rec('ASN-04', 'Staff import never sends an assignee (the server gives the leads to that staff member)', 'no assigned_to', staffTry.rows.map((r) => ('assigned_to' in r.payload ? r.payload.assigned_to : '-')).join(','), staffTry.rows.every((r) => !('assigned_to' in r.payload)));
+  const tplCols = buildColumns(base).map((c) => c.header);
+  rec('ASN-05', 'The template has no "Assigned Rep" column any more', 'not present', tplCols.includes('Assigned Rep'), !tplCols.includes('Assigned Rep'));
+}
+
+// ---------- Address, State / Province, Area / City, Pin code ----------
+{
+  const r = review(csv(
+    'Company Name,Address,State / Province,Area / City,Pin Code',
+    'Loc Co,"Warehouse 14, Al Quoz",Dubai,Al Quoz,00000',
+    'Loc Two,No 222 Bandaranayake Mawatha,Western Province,Wattala,11300',
+    'Loc UK,1 High St,England,London,SW1A 1AA',
+    'Loc Bad,,,,12#45'
+  ));
+  const p = r.rows[0].payload;
+  rec('LOC-01', 'Address, state, city and pin code are imported', 'Warehouse 14, Al Quoz | Dubai | Al Quoz | 00000', `${p.address} | ${p.state} | ${p.city} | ${p.pincode}`, p.address === 'Warehouse 14, Al Quoz' && p.state === 'Dubai' && p.city === 'Al Quoz' && p.pincode === '00000');
+  rec('LOC-02', 'Letters and spaces in a pin code are fine (UK, NL style)', 'SW1A 1AA ready', `${r.rows[2].payload.pincode} ${r.rows[2].ok}`, r.rows[2].ok && r.rows[2].payload.pincode === 'SW1A 1AA');
+  rec('LOC-03', 'A pin code with symbols is refused', 'Pin code error', errorsOf(r, 3), !r.rows[3].ok && /Pin code/.test(errorsOf(r, 3)));
+  const alias = review(csv('Company Name,State,City,ZIP', 'Alias Co,Kerala,Kochi,682001'));
+  const a = alias.rows[0].payload;
+  rec('LOC-04', 'Short headings work too (State, City, ZIP / Postcode)', 'Kerala | Kochi | 682001', `${a.state} | ${a.city} | ${a.pincode}`, a.state === 'Kerala' && a.city === 'Kochi' && a.pincode === '682001');
+}
+
+// ---------- WhatsApp / Zalo column ----------
+{
+  const tpl = buildColumns(base).map((c) => c.header);
+  rec('ZAL-01', 'The template calls the column "WhatsApp / Zalo"', 'present', tpl.includes('WhatsApp / Zalo'), tpl.includes('WhatsApp / Zalo'));
+  const oldName = review(csv('Company Name,WhatsApp', 'Old Header Co,+84 90 123 4567'));
+  const zaloName = review(csv('Company Name,Zalo', 'Zalo Header Co,+84 90 765 4321'));
+  rec('ZAL-02', 'Old files with "WhatsApp", or a "Zalo" heading, still fill the same field', '+84 numbers saved', `${oldName.rows[0].payload.whatsapp} | ${zaloName.rows[0].payload.whatsapp}`, oldName.rows[0].payload.whatsapp === '+84 90 123 4567' && zaloName.rows[0].payload.whatsapp === '+84 90 765 4321');
 }
 
 // ---------- Small converters ----------
