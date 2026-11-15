@@ -2,11 +2,12 @@ import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Mail, Crown, Send, Settings, Tag, Users, Upload, CheckCircle2, AlertCircle, Loader2, Trash2, RefreshCw,
   ChevronDown, ChevronUp, Lock, Sparkles, FileText, ExternalLink, Eye, EyeOff, CalendarClock, Clock, LayoutTemplate,
-  Copy, Pencil, Save, X, Monitor, Smartphone, ShieldCheck, Plus, Play, Ban,
+  Copy, Pencil, Save, X, Monitor, Smartphone, ShieldCheck, Plus, Play, Ban, BarChart3, MailOpen, MousePointerClick,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import RichEmailEditor from '../components/email/RichEmailEditor';
+import EmailDashboard from '../components/email/EmailDashboard';
 import {
   PROVIDERS, providerById, detectProvider, explainSmtpError, sanitizeHtml, htmlIsEmpty, previewDocument,
   STARTER_TEMPLATES, toLocalInput, quickTimes, timeZoneLabel,
@@ -29,7 +30,7 @@ const statusStyle = (s) =>
     ? 'bg-violet-50 text-violet-700 border-violet-200 dark:bg-violet-950/40 dark:text-violet-300 dark:border-violet-800'
     : s === 'failed'
     ? 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800'
-    : s === 'paused'
+    : s === 'paused' || s === 'waiting_limit'
     ? 'bg-amber-50 text-amber-800 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
     : 'bg-slate-100 text-slate-600 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700';
 
@@ -75,7 +76,8 @@ function StepBadge({ n, done }) {
 }
 
 function SenderSettings({ profile, onSaved }) {
-  const [form, setForm] = useState({ host: '', port: 587, secure: false, user: '', pass: '', from_name: profile?.name || '', from_email: '', reply_to: '', rate_per_minute: 20 });
+  const [form, setForm] = useState({ host: '', port: 587, secure: false, user: '', pass: '', from_name: profile?.name || '', from_email: '', reply_to: '', rate_per_minute: 20, daily_limit: '' });
+  const [limitDefault, setLimitDefault] = useState(450);
   const [provider, setProvider] = useState('gmail');
   const [hasPassword, setHasPassword] = useState(false);
   const [verifiedAt, setVerifiedAt] = useState(null);
@@ -92,7 +94,8 @@ function SenderSettings({ profile, onSaved }) {
       .then((res) => {
         const s = res?.data;
         if (!s) return;
-        setForm((f) => ({ ...f, host: s.host, port: s.port, secure: s.secure, user: s.user, from_name: s.from_name || f.from_name, from_email: s.from_email, reply_to: s.reply_to, rate_per_minute: s.rate_per_minute }));
+        setForm((f) => ({ ...f, host: s.host, port: s.port, secure: s.secure, user: s.user, from_name: s.from_name || f.from_name, from_email: s.from_email, reply_to: s.reply_to, rate_per_minute: s.rate_per_minute, daily_limit: s.daily_limit === s.daily_limit_default ? '' : s.daily_limit }));
+        if (s.daily_limit_default) setLimitDefault(s.daily_limit_default);
         setHasPassword(Boolean(s.has_password));
         setVerifiedAt(s.verified_at);
         const match = PROVIDERS.find((p) => p.id === s.provider) || PROVIDERS.find((p) => p.host && p.host === s.host);
@@ -116,7 +119,8 @@ function SenderSettings({ profile, onSaved }) {
   const onEmail = (value) => {
     setForm((f) => ({ ...f, user: value }));
     const d = detectProvider(value);
-    if (d && d.id !== provider) pickProvider(d.id);
+    // Also when Gmail was already selected but its server was never filled in (the first visit)
+    if (d && (d.id !== provider || !form.host)) pickProvider(d.id);
   };
 
   const saveAndTest = async (e) => {
@@ -278,6 +282,11 @@ function SenderSettings({ profile, onSaved }) {
               <label className={labelCls}>Emails per minute</label>
               <input className={inputCls} type="number" min={1} max={120} value={form.rate_per_minute} onChange={(e) => setForm({ ...form, rate_per_minute: Number(e.target.value) })} />
               <p className="text-[10px] text-slate-400 mt-1">Keep 10–20 for Gmail (Gmail allows about 500 emails a day).</p>
+            </div>
+            <div>
+              <label className={labelCls} htmlFor="email-daily-limit">Daily limit (emails per 24 hours)</label>
+              <input id="email-daily-limit" className={inputCls} type="number" min={1} max={100000} value={form.daily_limit} onChange={(e) => setForm({ ...form, daily_limit: e.target.value })} placeholder={`${limitDefault} (safe default)`} />
+              <p className="text-[10px] text-slate-400 mt-1">Leave blank for the safe default. Going over your provider’s limit can block your mailbox for a day.</p>
             </div>
             <div>
               <label className={labelCls}>SMTP server</label>
@@ -759,6 +768,11 @@ function CampaignList({ campaigns, onRefresh, configured, onNew }) {
                   {c.audience?.mode === 'tags' ? `Tags: ${(c.audience.tags || []).join(', ')}` : c.audience?.mode === 'custom' ? 'Custom list' : 'All leads'} · Created {fmtDate(c.created_at)}
                   {c.finished_at ? ` · Finished ${fmtDate(c.finished_at)}` : ''}
                 </div>
+                {c.status === 'waiting_limit' && (
+                  <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-amber-800 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 rounded-md px-2 py-1">
+                    <Clock size={12} /> Daily limit reached — continues by itself{c.resume_at ? ` after ${fmtDate(c.resume_at)}` : ''}
+                  </div>
+                )}
                 {c.status === 'scheduled' && (
                   <div className="mt-1.5 inline-flex items-center gap-1.5 text-[11px] font-semibold text-violet-700 dark:text-violet-300 bg-violet-50 dark:bg-violet-950/40 border border-violet-200 dark:border-violet-900 rounded-md px-2 py-1">
                     <CalendarClock size={12} /> Sends automatically on {fmtDate(c.scheduled_at)}
@@ -804,7 +818,15 @@ function CampaignList({ campaigns, onRefresh, configured, onNew }) {
             {c.status !== 'draft' && c.status !== 'scheduled' && (
               <div className="mt-3">
                 <div className="flex items-center justify-between text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                  <span><span className="text-emerald-600">{c.sent} sent</span>{c.failed > 0 && <span className="text-rose-500"> · {c.failed} failed</span>}<span> · {c.total} total</span></span>
+                  <span>
+                    <span className="text-emerald-600">{c.sent} sent</span>{c.failed > 0 && <span className="text-rose-500"> · {c.failed} failed</span>}<span> · {c.total} total</span>
+                    {c.sent > 0 && (
+                      <span className="ml-2 inline-flex items-center gap-2" data-campaign-opens>
+                        <span className="inline-flex items-center gap-0.5 text-blue-600"><MailOpen size={11} /> {c.opened || 0} opened ({Math.round(((c.opened || 0) / c.sent) * 100)}%)</span>
+                        <span className="inline-flex items-center gap-0.5 text-violet-600"><MousePointerClick size={11} /> {c.clicked || 0} clicked</span>
+                      </span>
+                    )}
+                  </span>
                   <span>{pct}%</span>
                 </div>
                 <div className="h-2 rounded-full bg-slate-100 dark:bg-slate-800 mt-1 overflow-hidden flex">
@@ -822,13 +844,15 @@ function CampaignList({ campaigns, onRefresh, configured, onNew }) {
                 ) : (
                   <div className="max-h-64 overflow-y-auto">
                     <table className="w-full text-[11px]">
-                      <thead className="text-slate-400 text-left"><tr><th className="py-1 pr-2">Email</th><th className="py-1 pr-2">Company</th><th className="py-1 pr-2">Status</th><th className="py-1">Note</th></tr></thead>
+                      <thead className="text-slate-400 text-left"><tr><th className="py-1 pr-2">Email</th><th className="py-1 pr-2">Company</th><th className="py-1 pr-2">Status</th><th className="py-1 pr-2">Opened</th><th className="py-1 pr-2">Clicked</th><th className="py-1">Note</th></tr></thead>
                       <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                         {(detail.recipients || []).map((r) => (
                           <tr key={r.email}>
                             <td className="py-1 pr-2 font-semibold text-slate-700 dark:text-slate-200">{r.email}</td>
                             <td className="py-1 pr-2 text-slate-500">{r.company || '—'}</td>
                             <td className="py-1 pr-2"><span className={`px-1.5 py-0.5 rounded border text-[10px] font-semibold ${statusStyle(r.status === 'pending' ? 'draft' : r.status)}`}>{r.status}</span></td>
+                            <td className="py-1 pr-2 text-blue-600 whitespace-nowrap">{r.opened_at ? `${fmtDate(r.opened_at)}${r.opens > 1 ? ` (${r.opens}×)` : ''}` : '—'}</td>
+                            <td className="py-1 pr-2 text-violet-600 whitespace-nowrap">{r.clicked_at ? `${fmtDate(r.clicked_at)}${r.clicks > 1 ? ` (${r.clicks}×)` : ''}` : '—'}</td>
                             <td className="py-1 text-rose-500 truncate max-w-[220px]">{r.error || ''}</td>
                           </tr>
                         ))}
@@ -877,7 +901,7 @@ export default function EmailMarketing({ onNavigateToLeads }) {
     if (!status?.enabled) return;
     loadCampaigns();
     loadTemplates();
-    setTab((t) => t || (status.configured ? 'campaigns' : 'settings'));
+    setTab((t) => t || (status.configured ? 'dashboard' : 'settings'));
   }, [status?.enabled, status?.configured, loadCampaigns, loadTemplates]);
 
   const anyActive = campaigns.some((c) => c.status === 'sending' || (c.status === 'scheduled' && Date.parse(c.scheduled_at) - Date.now() < 5 * 60000));
@@ -889,6 +913,7 @@ export default function EmailMarketing({ onNavigateToLeads }) {
 
   const scheduledCount = campaigns.filter((c) => c.status === 'scheduled').length;
   const tabs = [
+    { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
     { id: 'campaigns', label: 'Campaigns', icon: Mail, count: campaigns.length },
     { id: 'new', label: 'New Campaign', icon: Send },
     { id: 'templates', label: 'Templates', icon: LayoutTemplate, count: templates.length },
@@ -971,6 +996,7 @@ export default function EmailMarketing({ onNavigateToLeads }) {
             <Notice type="warn">Connect your email first — it takes 2 minutes. <button className="underline font-semibold cursor-pointer" onClick={() => setTab('settings')}>Open sender setup</button></Notice>
           )}
 
+          {tab === 'dashboard' && <EmailDashboard onOpenSettings={() => setTab('settings')} />}
           {tab === 'campaigns' && <CampaignList campaigns={campaigns} onRefresh={loadCampaigns} configured={status.configured} onNew={() => openComposer(null)} />}
           {tab === 'new' && (
             <Composer

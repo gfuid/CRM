@@ -263,7 +263,59 @@ export const SCENES = {
     await k.click(page.getByRole('button', { name: /^Tickets/ }), 1000);
     await k.spot(page.getByRole('button', { name: /New ticket/ }), 'Still stuck? Raise a ticket. The reply comes to your bell.');
   },
+  'email-setup': async (k) => {
+    const { page } = k;
+    // The demo has no real mailbox: the test email step is answered locally, exactly as a working Gmail answers
+    await page.route('**/api/v1/email/settings/test', (route) => route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ success: true, data: { to: 'rahul.novaagro@gmail.com' }, message: 'Test email sent' }) }));
+    await k.nav('email');
+    await k.say('Email Marketing sends your campaigns from your own mailbox, so buyers reply straight to you. You connect it once.');
+    const form = page.locator('[data-sender-setup]');
+    await k.type(form.locator('input[type="email"]').first(), 'rahul.novaagro@gmail.com');
+    await k.spot(form.getByRole('radiogroup', { name: 'Email provider' }), 'Type your email address. The CRM picks Gmail, Outlook, Yahoo or Zoho by itself.');
+    await k.spot(form.locator('li').nth(1), 'Gmail and Outlook need an “app password”: a special password only for the CRM. Your normal password is never used.');
+    await k.spot(form.locator('[data-app-password-link]'), 'This button opens Google’s App passwords page. Turn on 2-Step Verification first if Google asks.');
+    await k.say('On that page, type a name such as “Travel-Trade CRM”, press Create, and copy the 16-letter password Google shows.');
+    await k.type(form.getByLabel('App password'), 'abcd efgh ijkl mnop');
+    await k.say('Paste it here. Spaces do not matter. It is stored encrypted and never shown again.');
+    await k.click(form.getByRole('button', { name: /Save & send test email/ }), 1800);
+    await k.spot(form.locator('text=Connected!').first(), 'The CRM sends you a test email. When you see “Connected”, you are ready.');
+    await k.click(page.getByRole('button', { name: /Advanced/ }).first(), 900);
+    await k.spot(page.locator('#email-daily-limit'), 'Under Advanced you can set the daily limit. Leave it blank for the safe default: about 450 a day for Gmail.');
+    await k.say('If you send more than your provider allows, the mailbox can be blocked for a day. The CRM stops at the limit and continues the next day by itself.');
+  },
+
+  'email-campaign': async (k) => {
+    const { page } = k;
+    await k.nav('email');
+    await page.waitForSelector('[data-email-dashboard]');
+    await k.spot(page.locator('#email-limit-used'), 'The dashboard first shows today’s limit: how many emails went out in the last 24 hours, and how many are left.');
+    await k.spot(page.locator('[data-stat="sent"]').locator('..'), 'Then the results: sent, opened, clicked a link, failed, and unsubscribed.');
+    await k.spot(page.locator('[data-recent-activity]'), 'Here you see which buyer opened your email or clicked a link. Call them while they are interested.');
+    await k.click(page.getByRole('tab', { name: /New Campaign/ }), 1200);
+    await k.spot(page.locator('[data-template-strip]'), 'To write a campaign, start from one of your templates, or write a new email.');
+    await k.click(page.locator('[data-template-strip]').getByRole('button', { name: /Turmeric price list/ }), 1200);
+    await k.type(k.byPh('October turmeric offer'), 'Turmeric offer – November');
+    await k.say('Words in double curly brackets, like company name, are filled in for each buyer.');
+    const byTags = page.getByRole('button', { name: /^By tags$/ });
+    await k.click(byTags, 900);
+    await k.click(page.getByRole('button', { name: /turmeric-buyer/ }).first(), 1200);
+    await k.say('Pick who gets it by tag. Here, every lead tagged “turmeric-buyer”. Tags are added on the lead form, or for a whole file in Bulk Import.');
+    const send = page.getByRole('button', { name: /^Send to \d+ now$/ });
+    await k.spot(send, 'Press “Test to me” first if you want to check it. Then send now, or schedule it for later.');
+    await k.click(send, 3500);
+    await k.click(page.getByRole('tab', { name: /^Campaigns/ }), 1500);
+    await k.spot(page.locator('[data-campaign]').nth(1), 'Each campaign shows how many were sent, opened and clicked. Open “Recipients” to see every buyer.');
+    await k.nav('leads');
+    await k.click(page.locator('#leads-filter-tag'), 500);
+    await page.selectOption('#leads-filter-tag', 'turmeric-buyer');
+    await k.wait(900);
+    await k.spot(page.locator('#leads-filter-tag'), 'In Leads, filter by a tag to see exactly the buyers in that list.');
+    await k.click(page.getByText('Al-Zahra Trading LLC').first(), 1800);
+    await k.spot(page.locator('[data-lead-email-history]'), 'Inside a lead you see every marketing email it got, and whether it was opened or clicked.');
+  },
 };
 
 // A new company may have only 2 staff seats: record "create staff" with one staff member so a seat is free
 SCENES['create-staff'].seed = { oneStaff: true };
+SCENES['email-setup'].seed = { email: 'setup' };
+SCENES['email-campaign'].seed = { email: 'campaign' };

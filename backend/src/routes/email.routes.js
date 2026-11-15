@@ -7,6 +7,9 @@ const asyncHandler = require('../utils/asyncHandler');
 
 // Public one-click unsubscribe (signed token, no login)
 router.get('/unsubscribe/:token', asyncHandler(emailController.unsubscribe));
+// Public open pixel and click counter (signed tokens, no login)
+router.get('/t/o/:token', asyncHandler(emailController.trackOpen));
+router.get('/t/c/:token', asyncHandler(emailController.trackClick));
 
 router.use(authenticate);
 router.use(enforceStorageQuota);
@@ -21,6 +24,8 @@ router.get('/settings', asyncHandler(emailController.getSettings));
 router.put('/settings', asyncHandler(emailController.saveSettings));
 router.post('/settings/test', asyncHandler(emailController.testSettings));
 
+router.get('/dashboard', asyncHandler(emailController.getDashboard));
+router.get('/lead/:leadId', asyncHandler(emailController.getLeadHistory));
 router.get('/tags', asyncHandler(emailController.getTags));
 router.get('/audience/preview', asyncHandler(emailController.previewAudience));
 

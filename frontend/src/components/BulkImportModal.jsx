@@ -54,6 +54,7 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   const [importing, setImporting] = useState(false);
   const [result, setResult] = useState(null); // { imported, failed: [] }
   const [assignTo, setAssignTo] = useState(''); // owner only: one person gets every lead of this file
+  const [extraTags, setExtraTags] = useState(''); // tag(s) put on every lead of this file, e.g. "old-list"
   const fileInput = useRef(null);
 
   // Owner first (the default), then each staff member
@@ -119,8 +120,8 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
   // Match the file's headings to our columns, then check every row (rules live in data/leadImport.js)
   const review = useMemo(() => {
     if (!parsed) return null;
-    return reviewImport(parsed, { isOwner, profile, assignTo: isOwner ? assignTo : '', commodities, existingNames, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES });
-  }, [parsed, commodities, existingNames, assignTo, profile, isOwner]);
+    return reviewImport(parsed, { isOwner, profile, assignTo: isOwner ? assignTo : '', extraTags, commodities, existingNames, leadSources: LEAD_SOURCES, stages: PIPELINE_STAGES });
+  }, [parsed, commodities, existingNames, assignTo, extraTags, profile, isOwner]);
 
   const runImport = async () => {
     if (!review || review.ready.length === 0 || importing) return;
@@ -389,6 +390,23 @@ export default function BulkImportModal({ isOpen, onClose, isOwner, profile, tea
               {review.ready.length} lead{review.ready.length === 1 ? '' : 's'} will go to <b>{assignee.name}</b>.
               {isOwner && ' Only one person per file.'}
             </p>
+          </div>
+
+          {/* One tag for the whole file, so this list can be found again for email marketing */}
+          <div className="p-3 rounded-xl border border-slate-200 dark:border-slate-700 space-y-1.5">
+            <div className="flex items-center gap-1.5">
+              <label htmlFor="bulk-import-tags" className="text-xs font-bold text-slate-800 dark:text-slate-100">Tag every lead in this file (optional)</label>
+              <InfoTip text="Give this list a name like old-list or dubai-fair-2026. Later, in Email Marketing → By tags, pick this tag to mail exactly these leads, or filter Leads by it. Separate several tags with commas. A Tags column in your file works too." />
+            </div>
+            <input
+              id="bulk-import-tags"
+              value={extraTags}
+              onChange={(e) => setExtraTags(e.target.value)}
+              disabled={importing}
+              maxLength={120}
+              placeholder="e.g. old-list, dubai"
+              className="w-full sm:w-80 max-w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
+            />
           </div>
         </div>
       )}

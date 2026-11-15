@@ -9,7 +9,9 @@ const day = (offset) => {
 };
 
 // oneStaff: only Priya (new companies may have 2 staff, so the "create staff" video needs a free seat)
-export async function seedDemoCompany(api, { oneStaff = false } = {}) {
+// email: 'setup' = Email Marketing switched on, not connected yet;
+//        'campaign' = connected to the local SMTP sink (smtp-sink.mjs) with one campaign already sent, opened and clicked
+export async function seedDemoCompany(api, { oneStaff = false, email = '', sink = null } = {}) {
   if (!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(api)) throw new Error('Seeding is only allowed against a local backend');
   const call = async (path, method, body, token) => {
     const res = await fetch(api + path, {
@@ -41,13 +43,19 @@ export async function seedDemoCompany(api, { oneStaff = false } = {}) {
     { name: 'Kenya Poultry Feeds', country: 'Kenya', city: 'Nairobi', products: ['Maize', 'Soya seed'], quantity: 60, price: 21000, stage: 'Lead Generation', source: 'Cold Outreach', assigned_to: arjun.id, fu: -1, today: 'First email sent with company profile.', next: 'Call purchase manager', contact: 'Grace Wanjiru', phone: '+254 712 345 678' },
     { name: 'Dhaka Agro Industries', country: 'Bangladesh', city: 'Dhaka', products: ['DORB'], quantity: 120, price: 26400, stage: 'Closed Won', source: 'Trade Fair', assigned_to: priya.id, fu: 7, today: 'Order confirmed, LC received.', next: 'Book container', contact: 'Rafiq Hasan', phone: '+880 1711 234567' },
   ];
+  // Email address + marketing tags for each demo buyer (made-up .example addresses)
+  const TAGS = [['turmeric-buyer'], ['customs-data', 'rice-ddgs'], ['vietnam', 'hot'], ['dubai', 'turmeric-buyer'], ['turmeric-buyer', 'netherlands'], ['old-list'], ['old-list']];
+  leads.forEach((l, i) => {
+    l.email = `purchase@${l.name.toLowerCase().replace(/[^a-z]+/g, '').slice(0, 14)}.example`;
+    l.tags = TAGS[i] || [];
+  });
   const created = [];
   for (const l of leads) {
     const row = await call('/leads', 'POST', {
       name: l.name, company_name: l.name, country: l.country, city: l.city || '', state: l.state || '', pincode: l.pincode || '',
       products: l.products, quantity: l.quantity, quantity_unit: 'MT', price: l.price, value: l.price, stage: l.stage, source: l.source,
       ...(l.assigned_to ? { assigned_to: l.assigned_to } : {}),
-      contacts: [{ name: l.contact, phone: l.phone, email: '', designation: 'Purchase Manager' }], contact_person: l.contact, phone: l.phone, whatsapp: l.phone,
+      contacts: [{ name: l.contact, phone: l.phone, email: l.email, designation: 'Purchase Manager' }], contact_person: l.contact, phone: l.phone, whatsapp: l.phone, email: l.email, tags: l.tags,
       follow_up_date: day(l.fu), follow_up_time: '11:00', today_remarks: l.today, next_follow_up_action: l.next,
       export_requirements: { incoterm: 'CIF', port_delivery: '', quantity_unit: 'MT' },
     }, owner);
@@ -63,5 +71,31 @@ export async function seedDemoCompany(api, { oneStaff = false } = {}) {
   await call('/activity', 'POST', { type: 'note', title: 'Call initiated', description: 'Spoke to Nimal, wants protein report.', lead_id: created[1].id }, owner);
   await call('/activity', 'POST', { type: 'note', title: 'Sample sent', description: 'DHL waybill shared on WhatsApp.', lead_id: created[3].id }, owner);
 
+  if (email) await seedEmail(api, call, owner, reg.user.id, email, sink, stamp);
+
   return { owner, staff: priyaLogin.token, priyaId: priya.id, arjunId: arjun.id, leads: created };
+}
+
+async function seedEmail(api, call, owner, ownerId, mode, sink, stamp) {
+  const admin = await call('/auth/admin-login', 'POST', { username: process.env.HV_ADMIN_USER || 'admin', password: process.env.HV_ADMIN_PASS || 'admin123' });
+  await call(`/admin/users/${ownerId}/features`, 'PATCH', { email_marketing: true }, admin.token);
+  if (mode !== 'campaign') return;
+  if (!sink) throw new Error('The campaign video needs the local SMTP sink');
+  const port = Number(process.env.SINK_PORT || 2525);
+  await call('/email/settings', 'PUT', { provider: 'custom', host: '127.0.0.1', port, secure: false, user: `rahul.${stamp}@novaagro.example`, pass: 'local-sink', from_name: 'Rahul from Nova Agro Exports', rate_per_minute: 120, daily_limit: 450 }, owner);
+  await call('/email/templates', 'POST', { name: 'Turmeric price list', subject: 'Fresh turmeric for {{company_name}}', body: '<h2>New crop turmeric is ready</h2><p>Dear {{contact_name}},</p><p>Our new season turmeric (curcumin 3%+) is ready to ship. See the <a href="https://example.com/price-list">price list</a>.</p><p>Regards,<br/>Rahul, Nova Agro Exports</p>' }, owner);
+  const before = sink.mails.length;
+  const c = await call('/email/campaigns', 'POST', { name: 'Rice DDGS offer – October', subject: 'Rice DDGS for {{company_name}}', body: '<p>Dear {{contact_name}},</p><p>Rice DDGS, protein 45%+, ready for loading. See our <a href="https://example.com/rice-ddgs">specification sheet</a>.</p><p>Regards, Rahul</p>', audience: { mode: 'all' } }, owner);
+  await call(`/email/campaigns/${c.id}/send`, 'POST', {}, owner);
+  for (let i = 0; i < 60; i++) {
+    const list = await call('/email/campaigns', 'GET', null, owner);
+    if (!list.some((x) => x.status === 'sending')) break;
+    await new Promise((r) => setTimeout(r, 300));
+  }
+  const qp = (raw) => raw.replace(/=\r?\n/g, '').replace(/=([0-9A-F]{2})/g, (m, h) => String.fromCharCode(parseInt(h, 16)));
+  const html = sink.mails.slice(before).map((m) => qp(m.raw));
+  const pixels = html.map((h) => (h.match(/src="([^"]+\/email\/t\/o\/[^"]+)"/) || [])[1]).filter(Boolean);
+  const links = html.map((h) => ((h.match(/href="([^"]+\/email\/t\/c\/[^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&')).filter(Boolean);
+  for (const p of pixels.slice(0, 4)) await fetch(p);
+  for (const l of links.slice(1, 3)) await fetch(l, { redirect: 'manual' });
 }

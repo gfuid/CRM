@@ -38,7 +38,18 @@ export const buildColumns = ({ commodities = [], leadSources = [], stages = [], 
   { key: 'remarks', header: 'Remarks', aliases: ['todayremarks', 'remark'], rule: 'What was discussed so far.', example: ['Asked for price list', 'Feed grade analysis sent'] },
   { key: 'nextaction', header: 'Next Action', aliases: ['plannedaction'], rule: 'What to do on the follow-up date.', example: ['Send quotation', 'Call for sample feedback'] },
   { key: 'notes', header: 'Notes', aliases: ['note'], rule: 'Any extra note.', example: ['', ''] },
+  { key: 'tags', header: 'Tags', aliases: ['tag', 'labels', 'label', 'groups'], rule: 'Words to group leads for email marketing, separated by commas.', example: ['turmeric-buyer, dubai', 'netherlands'] },
 ];
+
+/** "a, b;c" -> ['a','b','c'] (trimmed, max 40 chars each, no duplicates ignoring case, at most 20). */
+export const splitTags = (...values) => {
+  const out = [];
+  values.flat().forEach((v) => String(v || '').split(/[,;|]/).forEach((t) => {
+    const clean = t.trim().replace(/\s+/g, ' ').slice(0, 40);
+    if (clean && !out.some((x) => x.toLowerCase() === clean.toLowerCase())) out.push(clean);
+  }));
+  return out.slice(0, 20);
+};
 
 /** CSV text -> { headers, rows }. Handles quoted cells, commas and line breaks inside quotes, and Excel's BOM. */
 export const parseCsv = (text) => {
@@ -124,6 +135,7 @@ export const reviewImport = (parsed, {
   isOwner = false,
   profile = null,
   assignTo = '',
+  extraTags = '', // added to every row of the file (e.g. "old-list")
   commodities = [],
   existingNames = [],
   leadSources = [],
@@ -207,6 +219,7 @@ export const reviewImport = (parsed, {
     const assignedTo = assignTo || profile?.id || '';
 
     const phone = raw('phone');
+    const tags = splitTags(raw('tags'), extraTags);
     const payload = {
       company_name: company,
       name: company,
@@ -228,6 +241,7 @@ export const reviewImport = (parsed, {
       today_remarks: raw('remarks') || 'Imported from bulk upload',
       next_follow_up_action: raw('nextaction') || 'First contact with buyer',
       notes: raw('notes'),
+      tags,
       ...(products.length || quantity ? {
         products,
         product: products.join(', '),
@@ -252,6 +266,7 @@ export const reviewImport = (parsed, {
       value: raw('value'), stage: errors.stage ? raw('stage') : stage, incoterm: raw('incoterm'), port: raw('port'),
       followup: errors.followup ? raw('followup') : followUp,
       remarks: raw('remarks'), nextaction: raw('nextaction'), notes: raw('notes'),
+      tags: tags.join(', '),
     };
     return { line: rowIdx + 2, payload, shown, errors, ok: Object.keys(errors).length === 0 };
   });

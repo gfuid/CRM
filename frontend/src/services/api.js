@@ -550,6 +550,14 @@ class ApiClient {
     return this.request('/email/images', { method: 'POST', body: JSON.stringify({ data_url: dataUrl, name }) });
   }
 
+  getEmailDashboard(days = 30) {
+    return this.request(`/email/dashboard?days=${encodeURIComponent(days)}`);
+  }
+
+  getLeadEmailHistory(leadId) {
+    return this.request(`/email/lead/${encodeURIComponent(leadId)}`);
+  }
+
   deleteEmailCampaign(id) {
     return this.request(`/email/campaigns/${id}`, {
       method: 'DELETE',

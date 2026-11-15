@@ -3,6 +3,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
+import LeadEmailHistory from '../components/email/LeadEmailHistory';
 import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
@@ -601,6 +602,7 @@ export default function Leads() {
   const [filterCountry, setFilterCountry] = useState('');
   const [filterProduct, setFilterProduct] = useState('');
   const [filterStatus, setFilterStatus] = useState('');
+  const [filterTag, setFilterTag] = useState('');
 
   // Dynamic Commodity options state (user can add & remove products)
   // The company list is saved on the server, so the owner and all staff see the same products everywhere.
@@ -1585,6 +1587,18 @@ export default function Leads() {
   };
 
   // Filter & Sort Logic
+  // Every tag used on the leads this person can see, with how many leads carry it
+  const tagOptions = Object.values(
+    leads.reduce((acc, l) => {
+      (Array.isArray(l.tags) ? l.tags : []).forEach((t) => {
+        const k = String(t).trim().toLowerCase();
+        if (!k) return;
+        acc[k] = acc[k] || { tag: String(t).trim(), count: 0 };
+        acc[k].count += 1;
+      });
+      return acc;
+    }, {})
+  ).sort((a, b) => a.tag.localeCompare(b.tag));
   const noContactCount = leads.filter((l) => l.no_contact_alert).length;
   const filteredLeads = leads
     .filter((lead) => {
@@ -1630,6 +1644,11 @@ export default function Leads() {
         if (!prods.some((p) => p.toLowerCase().includes(filterProduct.toLowerCase()))) {
           return false;
         }
+      }
+
+      // Tag (exact, ignoring case)
+      if (filterTag && !(Array.isArray(lead.tags) && lead.tags.some((t) => String(t).trim().toLowerCase() === filterTag.toLowerCase()))) {
+        return false;
       }
 
       // Status
@@ -1920,7 +1939,7 @@ export default function Leads() {
         </div>
 
         {/* Row 2: Search, Country, Product, Stage, and Staff Filter (Owner only) */}
-        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isOwner ? 'lg:grid-cols-5' : 'lg:grid-cols-4'} gap-2.5 pt-2 border-t border-slate-100`}>
+        <div className={`grid grid-cols-1 sm:grid-cols-2 ${isOwner ? 'lg:grid-cols-6' : 'lg:grid-cols-5'} gap-2.5 pt-2 border-t border-slate-100`}>
           <div className="relative">
             <Search size={14} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
             <input
@@ -1967,6 +1986,21 @@ export default function Leads() {
             {PIPELINE_STAGES.map((s) => (
               <option key={s} value={s}>
                 {s}
+              </option>
+            ))}
+          </select>
+
+          <select
+            id="leads-filter-tag"
+            value={filterTag}
+            onChange={(e) => setFilterTag(e.target.value)}
+            aria-label="Filter by tag"
+            className={`w-full px-3 py-2 text-xs font-medium border rounded-xl focus:outline-none focus:ring-2 focus:ring-emerald-500 ${filterTag ? 'bg-emerald-50 border-emerald-300 text-emerald-900' : 'bg-slate-50/70 border-slate-200 text-slate-700'}`}
+          >
+            <option value="">{tagOptions.length ? 'All Tags' : 'No tags yet'}</option>
+            {tagOptions.map((t) => (
+              <option key={t.tag} value={t.tag}>
+                #{t.tag} ({t.count})
               </option>
             ))}
           </select>
@@ -2628,8 +2662,12 @@ export default function Leads() {
                       </button>
                     </span>
                   ))}
+                  <datalist id="lead-tag-suggestions">
+                    {tagOptions.filter((t) => !(form.tags || []).some((x) => x.toLowerCase() === t.tag.toLowerCase())).map((t) => <option key={t.tag} value={t.tag} />)}
+                  </datalist>
                   <input
                     type="text"
+                    list="lead-tag-suggestions"
                     value={tagInput}
                     onChange={(e) => setTagInput(e.target.value)}
                     onKeyDown={(e) => {
@@ -3904,6 +3942,9 @@ export default function Leads() {
                   </button>
                 </div>
               </div>
+
+              {/* Campaign mails sent to this lead (owner only; hidden when there are none) */}
+              {isOwner && <LeadEmailHistory leadId={activeDetailLead.id} />}
 
               {/* Activity History Timeline */}
               {activeDetailLead.activity_history && activeDetailLead.activity_history.length > 0 && (

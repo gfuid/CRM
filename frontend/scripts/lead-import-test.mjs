@@ -3,7 +3,7 @@
  * Run:  npm --prefix frontend run test:import
  * No browser and no server needed: it feeds CSV text to the same code the import window uses.
  */
-import { buildColumns, parseCsv, templateCsv, fileProblem, reviewImport, toIsoDate, toNumber } from '../src/data/leadImport.js';
+import { buildColumns, parseCsv, templateCsv, fileProblem, reviewImport, toIsoDate, toNumber, splitTags } from '../src/data/leadImport.js';
 
 const SOURCES = ['Direct Inquiry', 'Self/own', 'Customs Data', 'Website', 'Trade Fair', 'Referral', 'Cold Outreach'];
 const STAGES = ['Lead Generation', 'Contact Established', 'Requirement Understood', 'Sample Sent', 'Quotation Sent', 'Negotiation', 'Closed Won', 'Closed Lost'];
@@ -166,6 +166,16 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   rec('CNV-01', 'Dates: accepted formats and impossible dates', d.map((x) => x[1]).join('|'), d.map((x) => toIsoDate(x[0])).join('|'), d.every(([i, o]) => toIsoDate(i) === o));
   const n = [['', 0], ['40', 40], ['1,250.5', 1250.5], ['$ 68,000', 68000], ['-5', null], ['4 MT', null], ['1e3', null]];
   rec('CNV-02', 'Numbers: commas and $ allowed, text and negatives refused', n.map((x) => x[1]).join('|'), n.map((x) => toNumber(x[0])).join('|'), n.every(([i, o]) => toNumber(i) === o));
+}
+
+// Tags: from a Tags column and/or one tag for the whole file
+{
+  const r = reviewImport(parseCsv(csv('Company Name,Tags', 'Tag A,"dubai, Hot"', 'Tag B,', 'Tag C,hot;Dubai|fair')), { ...asOwner, extraTags: 'old-list' });
+  const t = r.rows.map((x) => x.payload.tags.join('+'));
+  rec('TAG-01', 'Tags column + file tag are saved on each lead (no duplicates)', 'dubai+Hot+old-list | old-list | hot+Dubai+fair+old-list', t.join(' | '), t[0] === 'dubai+Hot+old-list' && t[1] === 'old-list' && t[2] === 'hot+Dubai+fair+old-list');
+  rec('TAG-02', 'splitTags trims, limits length and count', '2 tags, 40 chars', splitTags(' a ,A, ' + 'x'.repeat(60)).map((x) => x.length).join(','), splitTags(' a ,A, ' + 'x'.repeat(60)).length === 2 && splitTags(Array.from({ length: 30 }, (_, i) => 't' + i).join(',')).length === 20);
+  const none = reviewImport(parseCsv(csv('Company Name', 'No Tag Co')), asOwner);
+  rec('TAG-03', 'No tags anywhere = empty list', '[]', JSON.stringify(none.rows[0].payload.tags), Array.isArray(none.rows[0].payload.tags) && none.rows[0].payload.tags.length === 0);
 }
 
 const fails = results.filter((x) => x.result === 'FAIL');

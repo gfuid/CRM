@@ -14,6 +14,7 @@ import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { seedDemoCompany } from './seed.mjs';
+import { startSmtpSink } from './smtp-sink.mjs';
 import { SCENES } from './scenes.mjs';
 
 const require = createRequire(import.meta.url);
@@ -346,7 +347,8 @@ for (const meta of convertOnly ? [] : BUILTIN_HELP_VIDEOS) {
   if (only.length && !only.includes(meta.file)) continue;
   const scene = SCENES[meta.file];
   if (!scene) { console.log(`skip ${meta.file}: no scene`); continue; }
-  const demo = await seedDemoCompany(API, scene.seed || {});
+  if (scene.seed && scene.seed.email === 'campaign' && !globalThis.__sink) globalThis.__sink = await startSmtpSink(Number(process.env.SINK_PORT || 2525));
+  const demo = await seedDemoCompany(API, { ...(scene.seed || {}), sink: globalThis.__sink || null });
   const ctx = await browser.newContext({ viewport: SIZE, recordVideo: { dir: TMP, size: SIZE }, acceptDownloads: true });
   await ctx.addInitScript((t) => {
     try { localStorage.setItem('crm_token', t); localStorage.removeItem('crm_logged_out'); localStorage.setItem('crm_tour_skip', '1'); localStorage.setItem('crm_active_tab', 'analytics'); } catch {}
@@ -396,6 +398,7 @@ for (const meta of convertOnly ? [] : BUILTIN_HELP_VIDEOS) {
 }
 await browser.close();
 if (tts) tts.close();
+if (globalThis.__sink) globalThis.__sink.close();
 
 // Poster (first frame after the title card) + MP4
 for (const r of (process.env.NO_MP4 ? [] : results)) {

@@ -141,6 +141,60 @@ const inFuture = (min) => new Date(Date.now() + min * 60000).toISOString();
   rec('EM-23', 'Server', 'Old unused pictures removed, pictures used in templates kept', 'orphan gone, used kept', `${!ids.includes(orphan)} ${ids.includes(up.data.data.id)}`, !ids.includes(orphan) && ids.includes(up.data.data.id));
   for (let i = 0; i < 40 && dataStore.emailCampaigns.some((c) => c.status === 'sending'); i++) await wait(150);
 
+  // 6. Daily limit, open / click tracking, dashboard, t_lead history (company B, so A's earlier mails do not count)
+  const envCfg = require('../config/env');
+  const local = (url) => url.replace(envCfg.apiPublicUrl, ORIGIN);
+  const waitIdle = async () => { for (let i = 0; i < 80 && dataStore.emailCampaigns.some((c) => c.owner_id === B.id && c.status === 'sending'); i++) await wait(150); };
+  const bSet = await call('PUT', '/email/settings', B.token, { provider: 'gmail', host: 'smtp.gmail.com', port: 587, user: `bilal${u}@gmail.com`, pass: 'abcdefghijklmnop', rate_per_minute: 120, daily_limit: 3 });
+  const bDefault = (await call('PUT', '/email/settings', A.token, { provider: 'gmail', host: 'smtp.gmail.com', port: 587, user: `asha${u}@gmail.com`, daily_limit: '' })).data?.data;
+  rec('EM-24', 'Owner', 'Daily limit can be set; blank = safe Gmail default', '3 / 450', `${bSet.data?.data?.daily_limit} / ${bDefault?.daily_limit}`, bSet.status === 200 && bSet.data.data.daily_limit === 3 && bDefault.daily_limit === 450);
+
+  const t_lead = await call('POST', '/leads', B.token, { company_name: `Track Buyer ${u}`, name: `Track Buyer ${u}`, email: `trackbuyer${u}@x.com`, country: 'Netherlands', tags: ['trk'], stage: 'Lead Generation', follow_up_date: '2030-01-01', follow_up_time: '10:00', today_remarks: 'x', next_follow_up_action: 'y' });
+  const leadId = t_lead.data?.data?.id;
+  const trkBefore = outbox.length;
+  const t_tc = await call('POST', '/email/campaigns', B.token, { name: 'Tracked', subject: 'Hi {{company_name}}', body: '<p>Hello</p><p><a href="https://example.com/catalog?a=1&amp;b=2">Catalogue</a> <a href="mailto:x@y.com">t_mail</a></p>', audience: { mode: 'tags', tags: ['trk'] } });
+  await call('POST', `/email/campaigns/${t_tc.data.data.id}/send`, B.token, {});
+  await waitIdle();
+  const t_mail = outbox[trkBefore] || {};
+  const t_pixel = (String(t_mail.html).match(/src="([^"]+\/email\/t\/o\/[^"]+)"/) || [])[1] || '';
+  const t_link = ((String(t_mail.html).match(/href="([^"]+\/email\/t\/c\/[^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&');
+  rec('EM-25', 'Server', 'Campaign mail carries an open pixel and a tracked link; mailto and unsubscribe untouched', 'pixel + 1 tracked link', `${leadId ? 'lead' : 'nolead'} ${Boolean(t_pixel)} ${Boolean(t_link)} mailto=${String(t_mail.html).includes('mailto:x@y.com')} unsub=${/\/email\/unsubscribe\//.test(String(t_mail.html))}`, Boolean(leadId && t_pixel && t_link) && String(t_mail.html).includes('mailto:x@y.com') && /\/email\/unsubscribe\//.test(String(t_mail.html)));
+
+  const o1 = await fetch(local(t_pixel));
+  await fetch(local(t_pixel));
+  const tcRec = dataStore.emailCampaigns.find((c) => c.id === t_tc.data.data.id);
+  rec('EM-26', 'Email app', 'Opening twice: 1 unique open, 2 opens, picture is a GIF', '200 gif, opened 1, opens 2', `${o1.status} ${o1.headers.get('content-type')} ${tcRec.opened} ${tcRec.recipients[0].opens}`, o1.status === 200 && o1.headers.get('content-type') === 'image/gif' && tcRec.opened === 1 && tcRec.recipients[0].opens === 2);
+
+  const t_bad = await fetch(local(t_link).replace('example.com', 'evil.example'), { redirect: 'manual' });
+  const fakeTok = await fetch(`${ORIGIN}/api/v1/email/t/o/abc.def.gif`);
+  const t_good = await fetch(local(t_link), { redirect: 'manual' });
+  rec('EM-27', 'Buyer', 'Tracked t_link goes to the real page; a changed link or fake token is refused / ignored', '302 to catalog, 400, gif', `${t_good.status} ${t_good.headers.get('location')} ${t_bad.status} ${fakeTok.status}`, t_good.status === 302 && t_good.headers.get('location') === 'https://example.com/catalog?a=1&b=2' && t_bad.status === 400 && fakeTok.status === 200 && tcRec.clicked === 1 && tcRec.opened === 1);
+
+  const t_lim = await call('POST', '/email/campaigns', B.token, { name: 'Over limit', subject: 'S', body: '<p>Hello</p>', audience: { mode: 'custom', emails: [1, 2, 3, 4, 5].map((n) => `t_lim${n}${u}@x.com`) } });
+  await call('POST', `/email/campaigns/${t_lim.data.data.id}/send`, B.token, {});
+  await waitIdle();
+  const limC = dataStore.emailCampaigns.find((c) => c.id === t_lim.data.data.id);
+  const t_again = await call('POST', `/email/campaigns/${t_lim.data.data.id}/send`, B.token, {});
+  rec('EM-28', 'Server', 'Daily limit 3 (1 already sent): sends 2, then waits; Send is refused while waiting', 'waiting_limit, 2 sent, 409', `${limC.status} ${limC.sent} ${t_again.status}`, limC.status === 'waiting_limit' && limC.sent === 2 && Boolean(limC.resume_at) && t_again.status === 409);
+
+  const t_dash = (await call('GET', '/email/dashboard?days=30', B.token)).data?.data || {};
+  rec('EM-29', 'Owner', 'Dashboard: 3/3 used, 0 left, 3 sent, 1 opened, 1 clicked, 1 waiting', '3 0 3 1 1 1', `${t_dash.limit?.sent_24h} ${t_dash.limit?.left} ${t_dash.totals?.sent} ${t_dash.totals?.opened} ${t_dash.totals?.clicked} ${t_dash.limit?.waiting_campaigns?.length}`, t_dash.limit?.sent_24h === 3 && t_dash.limit.left === 0 && t_dash.totals.sent === 3 && t_dash.totals.opened === 1 && t_dash.totals.clicked === 1 && t_dash.limit.waiting_campaigns.length === 1 && t_dash.totals.open_rate === 33.3 && t_dash.recent?.[0]?.what === 'clicked');
+
+  // 24 hours later the scheduler continues the waiting campaign by itself
+  dataStore.emailCampaigns.filter((c) => c.owner_id === B.id).forEach((c) => c.recipients.forEach((r) => { if (r.sent_at) r.sent_at = new Date(Date.now() - 25 * 3600e3).toISOString(); }));
+  const resumed = await email.runScheduledCampaigns(Date.now() + 25 * 3600e3);
+  await waitIdle();
+  rec('EM-30', 'Server', 'After 24 hours the waiting campaign continues and finishes', 'resumed 1, sent 5', `${resumed} ${limC.status} ${limC.sent}`, resumed === 1 && limC.status === 'sent' && limC.sent === 5);
+
+  const t_hist = await call('GET', `/email/lead/${leadId}`, B.token);
+  const h = t_hist.data?.data?.mails?.[0] || {};
+  const histOther = await call('GET', `/email/lead/${leadId}`, A.token);
+  const dashStaff = await call('GET', '/email/dashboard', ST);
+  rec('EM-31', 'Owner / Other company / Staff', 'Lead shows its mail opened + clicked; others cannot see it or the dashboard', 'opened+clicked, 404, 403', `${t_hist.status} ${Boolean(h.opened_at)} ${Boolean(h.clicked_at)} ${histOther.status} ${dashStaff.status}`, t_hist.status === 200 && Boolean(h.opened_at) && Boolean(h.clicked_at) && h.opens === 2 && histOther.status === 404 && dashStaff.status === 403);
+
+  const aDash = (await call('GET', '/email/dashboard', A.token)).data?.data || {};
+  rec('EM-32', 'Other company', "Company A's dashboard never shows company B's mails", 'no B activity', (aDash.recent || []).map((r) => r.email).join(',') || 'none', !(aDash.recent || []).some((r) => String(r.email).includes('trackbuyer')));
+
   server.close();
   const fails = results.filter((x) => x.result === 'FAIL');
   console.table(results.map((x) => ({ ...x, scenario: x.scenario.slice(0, 66), actual: x.actual.slice(0, 50) })));

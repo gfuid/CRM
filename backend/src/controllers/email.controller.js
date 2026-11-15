@@ -11,6 +11,7 @@ const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const mailer = require('../services/mailer.service');
 const crypto = require('crypto');
 const { sanitizeEmailHtml, htmlToText } = require('../utils/emailHtml');
+const tracking = require('../utils/emailTracking');
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
@@ -66,6 +67,8 @@ const maskSettings = (s) =>
         from_email: s.from_email || '',
         reply_to: s.reply_to || '',
         rate_per_minute: s.rate_per_minute || 20,
+        daily_limit: tracking.dailyLimitOf(s),
+        daily_limit_default: tracking.defaultDailyLimit(s),
         has_password: Boolean(s.pass_enc),
         verified_at: s.verified_at || null,
         unsubscribed_count: Array.isArray(s.unsubscribed) ? s.unsubscribed.length : 0,
@@ -133,7 +136,7 @@ const buildRecipients = (user, audience = {}) => {
   for (const r of picked) {
     if (!EMAIL_RE.test(r.email) || seen.has(r.email) || unsubscribed.has(r.email)) continue;
     seen.add(r.email);
-    out.push({ ...r, status: 'pending', error: '' });
+    out.push({ ...r, rid: tracking.newRid(), status: 'pending', error: '' });
   }
   return { mode, tags: normalizeTags(audience.tags), recipients: out };
 };
@@ -158,7 +161,7 @@ const getStatus = async (req, res) => {
 const getSettings = async (req, res) => ApiResponse.success(res, maskSettings(getSettingsRecord(req.user.id)));
 
 const saveSettings = async (req, res) => {
-  const { host, port, secure, user, pass, from_name, from_email, reply_to, rate_per_minute } = req.body || {};
+  const { host, port, secure, user, pass, from_name, from_email, reply_to, rate_per_minute, daily_limit } = req.body || {};
   if (!host || !user) return ApiResponse.error(res, 'SMTP host and username are required', 400);
   if (from_email && !EMAIL_RE.test(from_email)) return ApiResponse.error(res, 'From email is not valid', 400);
   if (reply_to && !EMAIL_RE.test(reply_to)) return ApiResponse.error(res, 'Reply-to email is not valid', 400);
@@ -180,6 +183,10 @@ const saveSettings = async (req, res) => {
     from_email: String(from_email || '').trim().toLowerCase(),
     reply_to: String(reply_to || '').trim().toLowerCase(),
     rate_per_minute: Math.min(120, Math.max(1, Number(rate_per_minute) || 20)),
+    // blank = the provider's safe default (see utils/emailTracking.js)
+    daily_limit: Number(daily_limit) >= 1
+      ? Math.min(100000, Math.floor(Number(daily_limit)))
+      : daily_limit === undefined && existing ? existing.daily_limit || null : null,
     updated_at: new Date().toISOString(),
   };
   if (pass || !existing || existing.host !== record.host || existing.user !== record.user) record.verified_at = null;
@@ -294,9 +301,13 @@ const buildMessage = ({ campaign, settings, ownerId, recipient }) => {
   const bodyText = mailer.renderTemplate(campaign.body, vars);
   const unsubUrl = `${config.apiPublicUrl}/api/v1/email/unsubscribe/${mailer.unsubscribeToken(ownerId, recipient.email)}`;
   const senderLabel = mailer.escapeHtml(settings.from_name || settings.from_email || settings.user);
+  // Campaign mails count opens and clicks; test mails do not
+  const bodyHtml = campaign.id && recipient.rid
+    ? tracking.addTracking(mailer.textToHtml(bodyText), tracking.makeToken(campaign.id, recipient.rid))
+    : mailer.textToHtml(bodyText);
   const html = mailer.wrapHtml({
     title: subject,
-    bodyHtml: mailer.textToHtml(bodyText),
+    bodyHtml,
     footerHtml: `You are receiving this email from ${senderLabel}. <a href="${unsubUrl}" style="color:#64748b">Unsubscribe</a>`,
   });
   const text = `${htmlToText(bodyText)}\n\n--\nUnsubscribe: ${unsubUrl}`;
@@ -372,9 +383,24 @@ const runCampaign = async (campaign, settings, ownerId) => {
   const delay = Math.max(400, Math.floor(60000 / (Number(settings.rate_per_minute) || 20)));
   const from = mailer.formatFrom(settings);
   let sinceSave = 0;
+  const limit = tracking.dailyLimitOf(settings);
+  const mine = () => dataStore.emailCampaigns.filter((c) => c.owner_id === ownerId);
+  let used = tracking.sentLast24h(mine());
 
   for (const r of campaign.recipients) {
     if (r.status === 'sent') continue;
+    if (!r.rid) r.rid = tracking.newRid();
+    if (used >= limit) {
+      // Daily limit reached: wait; the scheduler continues by itself when the 24-hour window has room
+      used = tracking.sentLast24h(mine());
+      if (used >= limit) {
+        campaign.status = 'waiting_limit';
+        campaign.resume_at = tracking.nextFreeAt(mine(), limit);
+        campaign.error = '';
+        dbSync.saveEmailCampaign(campaign);
+        return;
+      }
+    }
     const msg = buildMessage({ campaign, settings, ownerId, recipient: r });
     try {
       await transport.sendMail({
@@ -390,6 +416,7 @@ const runCampaign = async (campaign, settings, ownerId) => {
       r.error = '';
       r.sent_at = new Date().toISOString();
       campaign.sent += 1;
+      used += 1;
     } catch (err) {
       r.status = 'failed';
       r.error = String(err.message || err).slice(0, 200);
@@ -404,6 +431,7 @@ const runCampaign = async (campaign, settings, ownerId) => {
   }
 
   campaign.status = campaign.sent === 0 && campaign.failed > 0 ? 'failed' : 'sent';
+  campaign.resume_at = null;
   campaign.finished_at = new Date().toISOString();
   dbSync.saveEmailCampaign(campaign);
 };
@@ -421,7 +449,7 @@ const launchCampaign = (campaign, ownerUser) => {
   if (campaign.status === 'scheduled') campaign.status = 'draft';
 
   // A campaign interrupted by a restart continues with the recipients that were not sent yet
-  if (campaign.status === 'draft_resume') {
+  if (campaign.status === 'draft_resume' || campaign.status === 'waiting_limit') {
     campaign.status = 'draft';
     campaign.resumed = true;
   } else if (campaign.audience && campaign.audience.mode !== 'custom' && campaign.status === 'draft') {
@@ -507,6 +535,13 @@ const runScheduledCampaigns = async (now = Date.now()) => {
   ticking = true;
   let started = 0;
   try {
+    // Campaigns that stopped at the daily limit continue once the window has room again
+    const waiting = (dataStore.emailCampaigns || []).filter((c) => c.status === 'waiting_limit' && (!c.resume_at || Date.parse(c.resume_at) <= now));
+    for (const c of waiting) {
+      const owner = dataStore.users.find((u) => u.id === c.owner_id);
+      if (!owner || owner.is_active === false || !featureEnabledFor(owner)) continue;
+      if (launchCampaign(c, owner).ok) started += 1;
+    }
     const due = (dataStore.emailCampaigns || []).filter((c) => c.status === 'scheduled' && c.scheduled_at && Date.parse(c.scheduled_at) <= now);
     for (const c of due) {
       const owner = dataStore.users.find((u) => u.id === c.owner_id);
@@ -548,6 +583,10 @@ const sendCampaign = async (req, res) => {
   if (!c) return ApiResponse.error(res, 'Campaign not found', 404);
   if (c.status === 'paused') {
     c.status = 'draft_resume';
+  }
+  if (c.status === 'waiting_limit') {
+    const when = c.resume_at ? ` after ${new Date(c.resume_at).toUTCString()}` : '';
+    return ApiResponse.error(res, `Daily sending limit reached. This campaign continues by itself${when}.`, 409);
   }
   if (c.status === 'scheduled') {
     c.status = 'draft';
@@ -757,10 +796,13 @@ const unsubscribe = async (req, res) => {
   const settings = getSettingsRecord(ownerId);
   if (settings) {
     settings.unsubscribed = Array.isArray(settings.unsubscribed) ? settings.unsubscribed : [];
-    if (!settings.unsubscribed.includes(email)) settings.unsubscribed.push(email);
+    if (!settings.unsubscribed.includes(email)) {
+      settings.unsubscribed.push(email);
+      settings.unsub_log = [...(Array.isArray(settings.unsub_log) ? settings.unsub_log : []), { email, at: new Date().toISOString() }].slice(-5000);
+    }
     dbSync.saveEmailSetting(settings);
   } else {
-    const rec = { owner_id: ownerId, unsubscribed: [email], updated_at: new Date().toISOString() };
+    const rec = { owner_id: ownerId, unsubscribed: [email], unsub_log: [{ email, at: new Date().toISOString() }], updated_at: new Date().toISOString() };
     dataStore.emailSettings.push(rec);
     dbSync.saveEmailSetting(rec);
   }
@@ -779,7 +821,175 @@ const unsubscribe = async (req, res) => {
   return res.send(page('You are unsubscribed', `${email} will not receive further marketing emails from this sender.`));
 };
 
+/* ------------------------------------------------------------------ */
+/* Open / click tracking (public, signed tokens)                       */
+/* ------------------------------------------------------------------ */
+
+const saveTimers = new Map();
+const saveSoon = (campaign) => {
+  if (saveTimers.has(campaign.id)) return;
+  const t = setTimeout(() => {
+    saveTimers.delete(campaign.id);
+    dbSync.saveEmailCampaign(campaign);
+  }, 3000);
+  if (t.unref) t.unref();
+  saveTimers.set(campaign.id, t);
+};
+
+const findTracked = (token) => {
+  const parsed = tracking.parseToken(token);
+  if (!parsed) return null;
+  const campaign = (dataStore.emailCampaigns || []).find((c) => c.id === parsed.campaignId);
+  const recipient = campaign && (campaign.recipients || []).find((r) => r.rid === parsed.rid);
+  return recipient ? { campaign, recipient } : null;
+};
+
+const markOpened = (campaign, r, now) => {
+  if (!r.opened_at) {
+    r.opened_at = now;
+    campaign.opened = (Number(campaign.opened) || 0) + 1;
+  }
+  r.opens = (Number(r.opens) || 0) + 1;
+};
+
+const trackOpen = async (req, res) => {
+  const hit = findTracked(req.params.token);
+  if (hit) {
+    markOpened(hit.campaign, hit.recipient, new Date().toISOString());
+    saveSoon(hit.campaign);
+  }
+  res.set({ 'Content-Type': 'image/gif', 'Cache-Control': 'no-store, no-cache, must-revalidate, private', Pragma: 'no-cache' });
+  return res.end(tracking.PIXEL);
+};
+
+const trackClick = async (req, res) => {
+  const { token } = req.params;
+  const url = String(req.query.u || '');
+  if (!tracking.clickTargetOk(token, url, String(req.query.s || ''))) {
+    return res.status(400).send(page('Link not valid', 'This link is not valid.'));
+  }
+  const hit = findTracked(token);
+  if (hit) {
+    const now = new Date().toISOString();
+    const r = hit.recipient;
+    // a click means the mail was opened, even when images were blocked (but it is not a second open)
+    if (!r.opened_at) markOpened(hit.campaign, r, now);
+    if (!r.clicked_at) {
+      r.clicked_at = now;
+      hit.campaign.clicked = (Number(hit.campaign.clicked) || 0) + 1;
+    }
+    r.clicks = (Number(r.clicks) || 0) + 1;
+    r.last_click_url = url.slice(0, 500);
+    saveSoon(hit.campaign);
+  }
+  return res.redirect(302, url);
+};
+
+/* ------------------------------------------------------------------ */
+/* Dashboard + per-lead history                                        */
+/* ------------------------------------------------------------------ */
+
+const dayKey = (iso) => String(iso || '').slice(0, 10);
+
+const getDashboard = async (req, res) => {
+  const days = Math.min(90, Math.max(7, Number(req.query.days) || 30));
+  const now = Date.now();
+  const since = now - days * tracking.DAY_MS;
+  const settings = getSettingsRecord(req.user.id) || {};
+  const campaigns = ownerCampaigns(req.user);
+  const limit = tracking.dailyLimitOf(settings);
+  const used = tracking.sentLast24h(campaigns, now);
+
+  const totals = { sent: 0, failed: 0, opened: 0, clicked: 0, opens: 0, clicks: 0 };
+  const series = {};
+  for (let i = 13; i >= 0; i--) series[dayKey(new Date(now - i * tracking.DAY_MS).toISOString())] = { sent: 0, opened: 0, clicked: 0 };
+  const recent = [];
+  for (const c of campaigns) {
+    for (const r of c.recipients || []) {
+      if (r.status === 'failed' && Date.parse(r.sent_at || c.finished_at || c.created_at) >= since) totals.failed += 1;
+      const sentT = r.sent_at ? Date.parse(r.sent_at) : NaN;
+      if (r.status !== 'sent' || !(sentT >= since)) continue;
+      totals.sent += 1;
+      if (r.opened_at) {
+        totals.opened += 1;
+        totals.opens += Number(r.opens) || 1;
+      }
+      if (r.clicked_at) {
+        totals.clicked += 1;
+        totals.clicks += Number(r.clicks) || 1;
+      }
+      const d = series[dayKey(r.sent_at)];
+      if (d) {
+        d.sent += 1;
+        if (r.opened_at) d.opened += 1;
+        if (r.clicked_at) d.clicked += 1;
+      }
+      const base = { campaign: c.name || c.subject, email: r.email, company: r.company || '', lead_id: r.lead_id || null };
+      if (r.clicked_at) recent.push({ ...base, what: 'clicked', at: r.clicked_at, url: r.last_click_url || '' });
+      else if (r.opened_at) recent.push({ ...base, what: 'opened', at: r.opened_at });
+    }
+  }
+  const unsubLog = Array.isArray(settings.unsub_log) ? settings.unsub_log : [];
+  const pct = (a, b) => (b > 0 ? Math.round((a / b) * 1000) / 10 : 0);
+
+  return ApiResponse.success(res, {
+    days,
+    limit: {
+      daily_limit: limit,
+      is_default: !(Number(settings.daily_limit) >= 1),
+      sent_24h: used,
+      left: Math.max(0, limit - used),
+      next_free_at: used >= limit ? tracking.nextFreeAt(campaigns, limit, now) : null,
+      waiting_campaigns: campaigns
+        .filter((c) => c.status === 'waiting_limit')
+        .map((c) => ({ id: c.id, name: c.name || c.subject, resume_at: c.resume_at || null, left_to_send: (c.recipients || []).filter((r) => r.status !== 'sent' && r.status !== 'failed').length })),
+    },
+    totals: {
+      ...totals,
+      unsubscribed: unsubLog.filter((u) => Date.parse(u.at) >= since).length,
+      unsubscribed_all_time: Array.isArray(settings.unsubscribed) ? settings.unsubscribed.length : 0,
+      open_rate: pct(totals.opened, totals.sent),
+      click_rate: pct(totals.clicked, totals.sent),
+      fail_rate: pct(totals.failed, totals.sent + totals.failed),
+    },
+    series: Object.entries(series).map(([date, v]) => ({ date, ...v })),
+    recent: recent.sort((a, b) => String(b.at).localeCompare(String(a.at))).slice(0, 15),
+  });
+};
+
+/** Every campaign mail one lead received, newest first. */
+const getLeadHistory = async (req, res) => {
+  const lead = ownerLeads(req.user).find((l) => l.id === req.params.leadId);
+  if (!lead) return ApiResponse.error(res, 'Lead not found', 404);
+  const out = [];
+  for (const c of ownerCampaigns(req.user)) {
+    for (const r of c.recipients || []) {
+      if (r.lead_id !== lead.id || (r.status !== 'sent' && r.status !== 'failed')) continue;
+      out.push({
+        campaign_id: c.id,
+        campaign: c.name || c.subject,
+        subject: c.subject,
+        email: r.email,
+        status: r.status,
+        error: r.status === 'failed' ? r.error || '' : '',
+        sent_at: r.sent_at || null,
+        opened_at: r.opened_at || null,
+        opens: Number(r.opens) || 0,
+        clicked_at: r.clicked_at || null,
+        clicks: Number(r.clicks) || 0,
+      });
+    }
+  }
+  out.sort((a, b) => String(b.sent_at).localeCompare(String(a.sent_at)));
+  return ApiResponse.success(res, { unsubscribed: Boolean(lead.email_unsubscribed), mails: out });
+};
+
+
 module.exports = {
+  trackOpen,
+  trackClick,
+  getDashboard,
+  getLeadHistory,
   requireFeature,
   listTemplates,
   createTemplate,
