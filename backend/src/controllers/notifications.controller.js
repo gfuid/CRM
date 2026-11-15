@@ -2,13 +2,25 @@ const ApiResponse = require('../utils/apiResponse');
 const { dataStore, dbSync } = require('../repositories/dataStore');
 const { isOwnerUser } = require('../utils/access');
 
+const joinedAt = (user) => {
+  const stored = (dataStore.users || []).find((u) => u.id === user.id);
+  const t = Date.parse((stored && stored.created_at) || user.created_at || '');
+  return Number.isFinite(t) ? t : 0;
+};
+
 const isVisibleToUser = (notification, user) => {
-  const isOwner = isOwnerUser(user);
-  return (
-    notification.target === 'all' ||
-    (notification.target === 'all_owners' && isOwner) ||
-    notification.target_user_id === user.id
-  );
+  if (notification.target_user_id === user.id) return true;
+  const broadcast = notification.target === 'all' || (notification.target === 'all_owners' && isOwnerUser(user));
+  if (!broadcast) return false;
+  // A company that joined later does not see announcements sent before it existed
+  const sent = Date.parse(notification.created_at || '');
+  return !Number.isFinite(sent) || sent >= joinedAt(user);
+};
+
+/** What a user receives: never the list of other people who read it. */
+const forUser = (n, user) => {
+  const { read_by: readBy, ...rest } = n;
+  return { ...rest, is_read: Array.isArray(readBy) && readBy.includes(user.id) };
 };
 
 /**
@@ -22,10 +34,7 @@ const getUserNotifications = async (req, res) => {
   // Filter relevant notifications
   const userNotifs = allNotifs
     .filter((notification) => isVisibleToUser(notification, user))
-    .map((n) => ({
-      ...n,
-      is_read: Array.isArray(n.read_by) && n.read_by.includes(user.id),
-    }));
+    .map((n) => forUser(n, user));
 
   return ApiResponse.success(res, userNotifs, 'Notifications retrieved successfully');
 };
@@ -53,7 +62,7 @@ const markAsRead = async (req, res) => {
     dbSync.saveNotification(notif);
   }
 
-  return ApiResponse.success(res, { ...notif, is_read: true }, 'Notification marked as read');
+  return ApiResponse.success(res, forUser(notif, user), 'Notification marked as read');
 };
 
 /**

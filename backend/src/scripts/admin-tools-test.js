@@ -180,6 +180,23 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   const shipDel = await call('DELETE', `/shipping/sheets/${sid}`, OTH);
   rec('SH-07', 'Owner', 'Owner deletes the sheet', '200', shipDel.status, shipDel.status === 200);
 
+  // 6b. Admin announcements: popup choice, late joiners, privacy of the read list
+  const annHigh = await call('POST', '/admin/notifications', SA, { target: 'all_owners', title: `CI notice ${u}`, message: 'Prices change on 1 Dec.', type: 'info', priority: 'high' });
+  const annBell = await call('POST', '/admin/notifications', SA, { target: 'all_owners', title: `CI bell ${u}`, message: 'Bell only.', type: 'info', priority: 'normal' });
+  const annOdd = await call('POST', '/admin/notifications', SA, { target: 'all_owners', title: `CI odd ${u}`, message: 'x', priority: 'urgent!!' });
+  rec('AN-01', 'Admin', 'Announcement keeps the popup/bell choice (unknown value = popup)', 'high normal high', `${annHigh.data?.data?.priority} ${annBell.data?.data?.priority} ${annOdd.data?.data?.priority}`, annHigh.status === 201 && annHigh.data.data.priority === 'high' && annHigh.data.data.kind === 'announcement' && annBell.data.data.priority === 'normal' && annOdd.data.data.priority === 'high');
+  const othList = (await call('GET', '/notifications', OTH)).data?.data || [];
+  const othNotice = othList.find((n) => n.title === `CI notice ${u}`);
+  rec('AN-02', 'Owner', 'Owner receives it, unread, with no read list of other users', 'is_read false, no read_by', othNotice ? `${othNotice.is_read} ${'read_by' in othNotice}` : 'missing', !!othNotice && othNotice.is_read === false && othList.every((n) => !('read_by' in n)));
+  await new Promise((r) => setTimeout(r, 20));
+  const late = await call('POST', '/auth/register', null, { name: 'Late Owner', email: `late${u}@t.com`, password: 'Late1234', company_name: 'Late Co' });
+  const lateList = (await call('GET', '/notifications', late.data?.data?.token)).data?.data || [];
+  rec('AN-03', 'New owner', 'A company that joins later does not get older announcements', 'not listed', lateList.map((n) => n.title).join('|') || 'none', late.status === 201 && !lateList.some((n) => String(n.title).includes(String(u))));
+  const read = await call('PATCH', `/notifications/${othNotice?.id}/read`, OTH);
+  const again = ((await call('GET', '/notifications', OTH)).data?.data || []).find((n) => n.id === othNotice?.id);
+  rec('AN-04', 'Owner', 'After "OK" the notice is read (popup will not repeat), read list hidden', 'true, no read_by', `${read.status} ${again?.is_read} ${'read_by' in (read.data?.data || {})}`, read.status === 200 && again?.is_read === true && !('read_by' in read.data.data));
+  for (const a of [annHigh, annBell, annOdd]) if (a.data?.data?.id) await call('DELETE', `/admin/notifications/${a.data.data.id}`, SA);
+
   // 7. Keep-alive self ping reaches /health
   let hits = 0;
   const pingSrv = http.createServer((req, res) => { if (req.url.startsWith('/health')) hits++; res.end('{}'); });

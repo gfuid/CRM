@@ -7,6 +7,7 @@ import TopBar from './components/TopBar';
 import MobileTopHeader from './components/MobileTopHeader';
 import AssistantWidget from './components/support/AssistantWidget';
 import OnboardingTour from './components/help/OnboardingTour';
+import AnnouncementPopup from './components/AnnouncementPopup';
 import { canSeeTab } from './data/helpGuide';
 import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
@@ -377,6 +378,9 @@ function AppContent() {
 
       {/* First-login guided tour (skippable, replay from Help & Support) */}
       <OnboardingTour userId={profile?.id || user?.id} isOwner={isOwner} canSee={canSee} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* Important notices from the CRM admin (every screen size) */}
+      <AnnouncementPopup userId={profile?.id || user?.id} />
 
       {/* Floating AI help assistant (every page) */}
       <AssistantWidget activeTab={activeTab} setActiveTab={setActiveTab} />

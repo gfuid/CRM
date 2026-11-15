@@ -1290,7 +1290,8 @@ const sendNotification = async (req, res) => {
     title: title.trim(),
     message: message.trim(),
     type: type || 'subscription', // 'subscription' | 'warning' | 'info' | 'success'
-    priority: priority || 'high',
+    priority: priority === 'normal' ? 'normal' : 'high', // high = popup on the user's screen + bell; normal = bell only
+    kind: 'announcement',
     created_at: new Date().toISOString(),
     created_by: req.user ? req.user.name : 'Super Administrator',
     read_by: [],
