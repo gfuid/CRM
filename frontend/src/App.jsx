@@ -50,6 +50,7 @@ const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
 const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
+const Shipping = lazyWithRetry(() => import('./pages/Shipping'));
 
 const tabNames = {
   analytics: 'Analytics',
@@ -62,6 +63,7 @@ const tabNames = {
   email: 'Email Marketing',
   review: 'Team Review',
   support: 'Help & Support',
+  shipping: 'Shipping & Costing',
 };
 
 function AppContent() {
@@ -314,6 +316,8 @@ function AppContent() {
         return <TeamReview />;
       case 'support':
         return <Support />;
+      case 'shipping':
+        return <Shipping />;
       default:
         return <Analytics />;
     }

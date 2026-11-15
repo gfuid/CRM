@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, lazy, Suspense } from 'react';
 import { avatarSrc, avatarFallback } from '../data/avatars';
 import { api } from '../services/api';
 import {
@@ -12,6 +12,7 @@ import {
   Sun,
   Moon,
   User as UserIcon,
+  Calculator,
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -20,6 +21,9 @@ import PremiumPlanModal from './PremiumPlanModal';
 import NotificationsPopover, { remindersToItems } from './NotificationsPopover';
 import TradeNotesModal from './TradeNotesModal';
 import DashboardCustomizerModal from './DashboardCustomizerModal';
+
+// Loaded only when someone opens it, so the top bar stays light
+const QuickCalculator = lazy(() => import('../pages/Shipping').then((m) => ({ default: m.QuickCalculator })));
 
 export default function TopBar({
   breadcrumb = 'Main Menu / Dashboard',
@@ -54,6 +58,7 @@ export default function TopBar({
     return () => { alive = false; clearInterval(t); };
   }, [notifOpen]);
   const [customizerOpen, setCustomizerOpen] = useState(false);
+  const [calcOpen, setCalcOpen] = useState(false);
 
   const parts = breadcrumb.split('/');
   const rootName = parts[0]?.trim() || 'Main Menu';
@@ -107,6 +112,16 @@ export default function TopBar({
 
           {/* Action Buttons: Notes, Notifications, Dark Mode Toggle */}
           <div className="flex items-center gap-1">
+            {/* Quick shipment / quotation calculator (opens over any page) */}
+            <button
+              onClick={() => setCalcOpen(true)}
+              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
+              title="Quick calculator: price a quotation or a shipment"
+              aria-label="Quick calculator"
+            >
+              <Calculator size={16} />
+            </button>
+
             {/* Quick Trade Notes / Chat */}
             <button
               onClick={() => setNotesOpen(true)}
@@ -209,6 +224,11 @@ export default function TopBar({
       <UserProfileModal isOpen={profileOpen} onClose={() => setProfileOpen(false)} />
       <PremiumPlanModal isOpen={premiumOpen} onClose={() => setPremiumOpen(false)} />
       <TradeNotesModal isOpen={notesOpen} onClose={() => setNotesOpen(false)} />
+      {calcOpen && (
+        <Suspense fallback={null}>
+          <QuickCalculator isOpen={calcOpen} onClose={() => setCalcOpen(false)} />
+        </Suspense>
+      )}
       <DashboardCustomizerModal
         isOpen={customizerOpen}
         onClose={() => setCustomizerOpen(false)}

@@ -3,6 +3,7 @@ import { PlayCircle, Clock, ExternalLink, Video } from 'lucide-react';
 import Modal from '../Modal';
 import { api } from '../../services/api';
 import { toPlayable } from '../../data/videoEmbed';
+import { BUILTIN_HELP_VIDEOS } from '../../data/builtinHelpVideos';
 
 const words = (q) => String(q || '').toLowerCase().split(/\s+/).filter(Boolean);
 const haystack = (v) => [v.title, v.section, v.description, ...(v.keywords || [])].join(' ').toLowerCase();
@@ -11,18 +12,24 @@ const haystack = (v) => [v.title, v.section, v.description, ...(v.keywords || []
  * "How to" videos added by the platform team. The same search box as the guide filters them,
  * and a section chip narrows the list. A video plays inside the CRM (YouTube, Vimeo, Drive, Loom or an .mp4 file).
  */
-export default function HelpVideoLibrary({ query = '' }) {
-  const [videos, setVideos] = useState(null); // null = loading
+export default function HelpVideoLibrary({ query = '', isOwner = false }) {
+  const [extra, setExtra] = useState([]); // videos the platform admin added
   const [section, setSection] = useState('All');
   const [playing, setPlaying] = useState(null);
 
   useEffect(() => {
     let alive = true;
     api.getHelpVideos()
-      .then((res) => { if (alive) setVideos(Array.isArray(res?.data) ? res.data : []); })
-      .catch(() => { if (alive) setVideos([]); });
+      .then((res) => { if (alive) setExtra(Array.isArray(res?.data) ? res.data : []); })
+      .catch(() => {});
     return () => { alive = false; };
   }, []);
+
+  // Built-in videos first (in their own order), then the ones the platform admin added
+  const videos = useMemo(
+    () => [...BUILTIN_HELP_VIDEOS.filter((v) => isOwner || v.audience !== 'owners'), ...extra],
+    [extra, isOwner]
+  );
 
   const sections = useMemo(() => {
     const seen = [];
@@ -39,8 +46,7 @@ export default function HelpVideoLibrary({ query = '' }) {
     });
   }, [videos, query, section]);
 
-  // Nothing to show until the platform team adds the first video
-  if (!videos || videos.length === 0) return null;
+  if (videos.length === 0) return null;
   const searching = words(query).length > 0;
   const player = playing ? toPlayable(playing.url) : null;
 
@@ -92,8 +98,8 @@ export default function HelpVideoLibrary({ query = '' }) {
                 className="group text-left rounded-xl border border-slate-200 dark:border-slate-800 overflow-hidden bg-white dark:bg-slate-900 hover:border-emerald-400 hover:shadow-sm transition-all cursor-pointer flex flex-col"
               >
                 <div className="relative w-full aspect-video bg-slate-900 overflow-hidden">
-                  {p.thumb && (
-                    <img src={p.thumb} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
+                  {(v.poster || p.thumb) && (
+                    <img src={v.poster || p.thumb} alt="" loading="lazy" className="absolute inset-0 w-full h-full object-cover opacity-85 group-hover:opacity-100 transition-opacity" onError={(e) => { e.currentTarget.style.display = 'none'; }} />
                   )}
                   <span className="absolute inset-0 flex items-center justify-center text-white">
                     {p.kind === 'link'
@@ -139,7 +145,7 @@ export default function HelpVideoLibrary({ query = '' }) {
                 />
               )}
               {player.kind === 'video' && (
-                <video src={player.src} controls autoPlay playsInline className="w-full h-full" />
+                <video src={player.src} poster={playing.poster || undefined} controls autoPlay playsInline className="w-full h-full" />
               )}
             </div>
             {(

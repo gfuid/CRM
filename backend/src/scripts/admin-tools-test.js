@@ -149,6 +149,37 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   const staffUsage = await call('GET', '/admin/my-usage?members=1', OTHSTAFF);
   rec('SU-03', 'Staff', 'Staff cannot open the storage breakdown', '403', staffUsage.status, staffUsage.status === 403);
 
+  // 6d. Shipping cost sheets: owner sees everything; staff see shipments and tasks but no costs unless allowed
+  const sheetBody = {
+    name: 'CI Saigon CIF', buyer: 'Saigon Feed Mill', product: 'Corn DDGS', term: 'CIF',
+    container: { type: '20 ft', tons_per: 25, count: 2, bags_per: 500 }, currency: { local: 'INR', foreign: 'USD', rate: 83 },
+    purchase_per_ton: 24900, deduction_per_ton: 400, selling_price_per_ton: 380,
+    costs: { customs: 41500, local_charges: 16600, agency: 8300, freight_per_container: 1200, insurance_pct: 0.5 },
+    commission: { agent_pct: 2, consultant_pct: 1, sales_pct: 0.5 }, tax_pct: 25,
+    tasks: [{ title: 'Container booking', person_id: '', tat_days: 2 }], evil: '<script>',
+  };
+  const shipCreated = await call('PUT', '/shipping/sheets/new', OTH, sheetBody);
+  const sid = shipCreated.data?.data?.id;
+  rec('SH-01', 'Owner', 'Owner creates a cost sheet (unknown fields dropped)', '201, costs kept', `${shipCreated.status} ${shipCreated.data?.data?.purchase_per_ton} ${shipCreated.data?.data?.evil}`, shipCreated.status === 201 && shipCreated.data.data.purchase_per_ton === 24900 && shipCreated.data.data.evil === undefined && shipCreated.data.data.tasks.length === 1);
+  const staffView = await call('GET', '/shipping', OTHSTAFF);
+  const sv = (staffView.data?.data || []).find((x) => x.id === sid) || {};
+  rec('SH-02', 'Staff', 'Staff (default) see the sheet without costs, commissions or tax', 'no money keys', `${staffView.status} ${Object.keys(sv).filter((k) => ['purchase_per_ton', 'costs', 'commission', 'tax_pct'].includes(k)).join(',') || 'none'}`, staffView.status === 200 && sv.name === 'CI Saigon CIF' && sv.costs === undefined && sv.purchase_per_ton === undefined && staffView.data.meta.can_see_money === false);
+  const staffEdit = await call('PUT', `/shipping/sheets/${sid}`, OTHSTAFF, { ...sv, selling_price_per_ton: 390, purchase_per_ton: 1, costs: { customs: 0 } });
+  const ownerAfter = ((await call('GET', '/shipping', OTH)).data?.data || []).find((x) => x.id === sid) || {};
+  rec('SH-03', 'Staff', 'Staff can change the selling price but not the hidden costs', 'price 390, purchase still 24900', `${staffEdit.status} ${ownerAfter.selling_price_per_ton} ${ownerAfter.purchase_per_ton} ${ownerAfter.costs?.customs}`, staffEdit.status === 200 && ownerAfter.selling_price_per_ton === 390 && ownerAfter.purchase_per_ton === 24900 && ownerAfter.costs.customs === 41500);
+  const staffDel = await call('DELETE', `/shipping/sheets/${sid}`, OTHSTAFF);
+  const staffSet = await call('PUT', '/shipping/settings', OTHSTAFF, { staff_access: 'full' });
+  rec('SH-04', 'Staff', 'Staff cannot delete sheets or change who sees Shipping', '403 + 403', `${staffDel.status} ${staffSet.status}`, staffDel.status === 403 && staffSet.status === 403);
+  await call('PUT', '/shipping/settings', OTH, { staff_access: 'full' });
+  const fullView = ((await call('GET', '/shipping', OTHSTAFF)).data?.data || []).find((x) => x.id === sid) || {};
+  await call('PUT', '/shipping/settings', OTH, { staff_access: 'none' });
+  const noneView = await call('GET', '/shipping', OTHSTAFF);
+  rec('SH-05', 'Owner', 'Owner can give staff full access, or none', 'costs visible, then 403', `${fullView.purchase_per_ton} ${noneView.status}`, fullView.purchase_per_ton === 24900 && noneView.status === 403);
+  const otherCo = await call('GET', '/shipping', NEW);
+  rec('SH-06', 'Other company', 'Another company never sees these sheets', '0 sheets', (otherCo.data?.data || []).length, otherCo.status === 200 && !(otherCo.data.data || []).some((x) => x.id === sid));
+  const shipDel = await call('DELETE', `/shipping/sheets/${sid}`, OTH);
+  rec('SH-07', 'Owner', 'Owner deletes the sheet', '200', shipDel.status, shipDel.status === 200);
+
   // 7. Keep-alive self ping reaches /health
   let hits = 0;
   const pingSrv = http.createServer((req, res) => { if (req.url.startsWith('/health')) hits++; res.end('{}'); });

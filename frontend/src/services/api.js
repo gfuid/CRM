@@ -379,6 +379,26 @@ class ApiClient {
     return this.request(`/admin/my-usage${withMembers ? '?members=1' : ''}`);
   }
 
+  // Shipping: cost sheets and quotations (one list per company)
+  getShippingSheets() {
+    return this.request('/shipping');
+  }
+
+  saveShippingSheet(id, sheet) {
+    return this.request(`/shipping/sheets/${encodeURIComponent(id || 'new')}`, {
+      method: 'PUT',
+      body: JSON.stringify(sheet),
+    });
+  }
+
+  deleteShippingSheet(id) {
+    return this.request(`/shipping/sheets/${encodeURIComponent(id)}`, { method: 'DELETE' });
+  }
+
+  saveShippingSettings(settings) {
+    return this.request('/shipping/settings', { method: 'PUT', body: JSON.stringify(settings) });
+  }
+
   // Help video library (links added by the platform admin)
   getHelpVideos() {
     return this.request('/support/videos');

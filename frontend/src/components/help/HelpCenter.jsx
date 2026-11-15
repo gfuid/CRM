@@ -70,7 +70,7 @@ export default function HelpCenter({ isOwner, canSee = () => true, onAskAI, onNe
       </div>
 
       {/* "How to" videos (filtered by the same search box) */}
-      <HelpVideoLibrary query={q} />
+      <HelpVideoLibrary query={q} isOwner={isOwner} />
 
       {/* Sections */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
