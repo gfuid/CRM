@@ -8,8 +8,11 @@
 const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const { isOwnerUser, isSuperAdmin } = require('../utils/access');
+const { upgradeSheet, quotePerTon } = require('../utils/shippingQuote');
 
-const MONEY_KEYS = ['purchase_per_ton', 'deduction_per_ton', 'costs', 'commission', 'tax_pct', 'target_margin_pct'];
+// Costs, profit and commissions (plus the fields of sheets saved before 2026-11-16)
+const MONEY_KEYS = ['price_per_kg', 'transport_per_kg', 'costs', 'profit_pct', 'commission', 'tax_pct',
+  'purchase_per_ton', 'deduction_per_ton', 'target_margin_pct'];
 const ACCESS = ['none', 'basic', 'full'];
 const MAX_SHEETS = 500;
 const MAX_SHEET_BYTES = 60 * 1024;
@@ -21,7 +24,9 @@ const storeId = (u) => `shipping:${ownerIdOf(u)}`;
 const readStore = (u) => {
   const row = (dataStore.appSettings || []).find((s) => s.id === storeId(u));
   return {
-    sheets: row && Array.isArray(row.sheets) ? row.sheets : [],
+    sheets: row && Array.isArray(row.sheets)
+      ? row.sheets.map((sh) => { const up = upgradeSheet(sh); return up.quote ? up : { ...up, quote: quotePerTon(up) }; })
+      : [],
     settings: { staff_access: 'basic', ...(row && row.settings ? row.settings : {}) },
   };
 };
@@ -53,6 +58,7 @@ const clean = (b) => ({
   lead_id: str(b.lead_id, 60),
   product: str(b.product, 80),
   term: ['FOB', 'CFR', 'CIF'].includes(b.term) ? b.term : 'CIF',
+  quote_unit: b.quote_unit === 'kg' ? 'kg' : 'ton',
   container: {
     type: str(b.container?.type, 40) || '20 ft',
     tons_per: nonNeg(b.container?.tons_per, 1e6),
@@ -64,23 +70,20 @@ const clean = (b) => ({
     foreign: str(b.currency?.foreign, 6).toUpperCase() || 'USD',
     rate: nonNeg(b.currency?.rate, 1e7) || 1,
   },
-  selling_price_per_ton: nonNeg(b.selling_price_per_ton),
-  purchase_per_ton: nonNeg(b.purchase_per_ton),
-  deduction_per_ton: anyNum(b.deduction_per_ton),
+  price_per_kg: nonNeg(b.price_per_kg, 1e9),
+  transport_per_kg: nonNeg(b.transport_per_kg, 1e9),
   costs: {
-    customs: nonNeg(b.costs?.customs),
-    local_charges: nonNeg(b.costs?.local_charges),
-    agency: nonNeg(b.costs?.agency),
+    customs_per_container: nonNeg(b.costs?.customs_per_container),
     freight_per_container: nonNeg(b.costs?.freight_per_container),
-    insurance_pct: nonNeg(b.costs?.insurance_pct, 100),
+    insurance_per_container: nonNeg(b.costs?.insurance_per_container),
   },
+  profit_pct: anyNum(b.profit_pct, 1000),
   commission: {
     agent_pct: nonNeg(b.commission?.agent_pct, 100),
     consultant_pct: nonNeg(b.commission?.consultant_pct, 100),
     sales_pct: nonNeg(b.commission?.sales_pct, 100),
   },
   tax_pct: nonNeg(b.tax_pct, 100),
-  target_margin_pct: nonNeg(b.target_margin_pct, 99),
   tasks: (Array.isArray(b.tasks) ? b.tasks : []).slice(0, 60).map((t) => ({
     id: str(t.id, 24) || generateId('t'),
     title: str(t.title, 160),
@@ -115,12 +118,14 @@ const saveSheet = async (req, res) => {
   if (!id && store.sheets.length >= MAX_SHEETS) return ApiResponse.error(res, `You can keep at most ${MAX_SHEETS} cost sheets. Delete old ones first.`, 400);
 
   const current = idx >= 0 ? store.sheets[idx] : null;
-  let next = clean(req.body || {});
+  let next = clean(upgradeSheet(req.body || {}));
   // Staff without money access cannot see or change costs: keep what was saved before
   if (!canSeeMoney(access)) {
     const keep = current || clean({});
-    MONEY_KEYS.forEach((k) => { next[k] = keep[k]; });
+    MONEY_KEYS.forEach((k) => { if (keep[k] !== undefined) next[k] = keep[k]; else delete next[k]; });
   }
+  // The quote is always worked out here, so staff who cannot see costs still get the right price
+  next.quote = quotePerTon(next);
   const now = new Date().toISOString();
   next = {
     ...next,

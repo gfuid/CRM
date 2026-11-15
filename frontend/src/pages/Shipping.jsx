@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import { useLeadOptions } from '../data/leadOptions';
-import { CONTAINER_TYPES, PRICE_TERMS, CURRENCIES, newSheet, calcSheet, copySheet, money } from '../data/shippingCalc';
+import { CONTAINER_TYPES, PRICE_TERMS, QUOTE_UNITS, CURRENCIES, newSheet, calcSheet, copySheet, upgradeSheet, money } from '../data/shippingCalc';
 
 const inputCls = 'w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
 const labelCls = 'block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1';
@@ -52,55 +52,63 @@ function Row({ label, value, strong, tone }) {
 function Results({ sheet, r }) {
   const cur = sheet.currency?.foreign || 'USD';
   const loc = sheet.currency?.local || 'INR';
+  const unitLabel = r.unit === 'kg' ? 'per kg' : 'per ton';
+  const digits = r.unit === 'kg' ? 4 : 2;
   return (
-    <div className="space-y-3">
+    <div className="space-y-3" data-ship-results>
+      <div className={`${cardCls} bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900`}>
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Quotation {unitLabel} ({cur})</h3>
+        {PRICE_TERMS.map((t) => (
+          <Row key={t} label={t === r.term ? `${t} (this quote)` : t} value={money(r.quote[t.toLowerCase()], cur, digits)} strong={t === r.term} tone={t === r.term ? 'good' : undefined} />
+        ))}
+        {r.unit === 'kg' && !r.hidden && <p className="text-[10px] text-slate-500">Per ton: FOB {money(r.perTon.fob, cur)} · CFR {money(r.perTon.cfr, cur)} · CIF {money(r.perTon.cif, cur)}</p>}
+        {r.unit === 'ton' && !r.hidden && <p className="text-[10px] text-slate-500">Per kg: FOB {money(r.perKg.fob, cur, 4)} · CFR {money(r.perKg.cfr, cur, 4)} · CIF {money(r.perKg.cif, cur, 4)}</p>}
+      </div>
       <div className={cardCls}>
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Quantity</h3>
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Shipment</h3>
         <Row label="Containers" value={`${r.containers} × ${sheet.container?.type || ''}`} />
         <Row label="Total quantity" value={`${r.tons.toLocaleString()} MT`} />
         <Row label="Total bags" value={r.bags.toLocaleString()} />
-        <Row label={`Sale value (${sheet.term})`} value={money(r.saleValue, cur)} strong />
+        <Row label={`Shipment value (${r.term})`} value={money(r.saleValue, cur)} strong />
+        {!r.hidden && <Row label={`Shipment value in ${loc}`} value={money(r.saleLocal, loc, 0)} />}
       </div>
       {r.hidden ? (
         <div className={`${cardCls} text-[11px] text-slate-500 flex items-start gap-2`}>
           <Lock size={14} className="shrink-0 mt-0.5" />
-          <span>Costs, commissions and profit are visible to the company owner only.</span>
+          <span>Costs and profit are visible to the company owner only. The quote above is worked out from them.</span>
         </div>
       ) : (
         <>
           <div className={cardCls}>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Cost (whole shipment)</h3>
-            <Row label="Product cost" value={money(r.product, cur)} />
-            <Row label="Customs, local & agency" value={money(r.fobCharges, cur)} />
-            <Row label="FOB cost" value={money(r.fob, cur)} strong />
-            <Row label="Ocean freight" value={money(r.freight, cur)} />
-            <Row label="CFR cost" value={money(r.cfr, cur)} strong />
-            <Row label="Insurance" value={money(r.insurance, cur)} />
-            <Row label="CIF cost" value={money(r.cif, cur)} strong />
-            <p className="text-[10px] text-slate-400">Per ton: FOB {money(r.perTon.fob, cur)} · CFR {money(r.perTon.cfr, cur)} · CIF {money(r.perTon.cif, cur)}</p>
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">How the price is built (per ton)</h3>
+            <Row label={`Ex-plant + transport (${loc})`} value={money(r.build.goods, loc)} />
+            <Row label={`Customs & local charges (${loc})`} value={money(r.build.customs, loc)} />
+            <Row label={`Cost up to port (${loc})`} value={money(r.build.costFobLocal, loc)} strong />
+            <Row label={`+ ${sheet.profit_pct || 0}% profit, divided by rate ${r.rate} = FOB`} value={money(r.perTon.fob, cur)} />
+            <Row label={`Ocean freight (${cur})`} value={money(r.build.freight, cur)} />
+            <Row label="FOB + freight = CFR" value={money(r.perTon.cfr, cur)} />
+            <Row label={`Insurance (${loc})`} value={money(r.build.insurance, loc)} />
+            <Row label="With insurance and profit, + freight = CIF" value={money(r.perTon.cif, cur)} />
+            <p className="text-[10px] text-slate-400">Profit is added to the goods, customs and insurance, not to the ocean freight.</p>
           </div>
           <div className={cardCls}>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Profit ({r.term})</h3>
-            <Row label="Gross profit" value={money(r.gross, cur)} tone={r.gross >= 0 ? 'good' : 'bad'} />
-            <Row label="Commission to agent" value={money(-r.commissions.agent, cur)} />
-            <Row label="Commission to consultant" value={money(-r.commissions.consultant, cur)} />
-            <Row label="Incentive to sales person" value={money(-r.commissions.sales, cur)} />
+            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Profit on this shipment ({r.term})</h3>
+            <Row label="Profit in the price" value={money(r.profit, cur)} tone={r.profit >= 0 ? 'good' : 'bad'} />
+            {r.commissions.total > 0 && (
+              <>
+                <Row label="Commission to agent" value={money(-r.commissions.agent, cur)} />
+                <Row label="Commission to consultant" value={money(-r.commissions.consultant, cur)} />
+                <Row label="Incentive to sales person" value={money(-r.commissions.sales, cur)} />
+              </>
+            )}
             <Row label="Profit before tax" value={money(r.pbt, cur)} strong tone={r.pbt >= 0 ? 'good' : 'bad'} />
-            <Row label="Tax" value={money(-r.tax, cur)} />
+            {r.tax > 0 && <Row label="Tax" value={money(-r.tax, cur)} />}
             <Row label="Net profit" value={money(r.net, cur)} strong tone={r.net >= 0 ? 'good' : 'bad'} />
-            <Row label={`Net profit in ${loc}`} value={money(r.netLocal, loc)} />
-            <Row label="Net margin" value={`${r.marginPct}%`} />
-          </div>
-          <div className={`${cardCls} bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900`}>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Quote price per ton</h3>
-            <p className="text-[10px] text-slate-500">Price that keeps a {sheet.target_margin_pct || 0}% margin after commissions.</p>
-            <Row label="FOB" value={money(r.quotePerTon.fob, cur)} />
-            <Row label="CFR" value={money(r.quotePerTon.cfr, cur)} />
-            <Row label="CIF" value={money(r.quotePerTon.cif, cur)} />
+            <Row label={`Net profit in ${loc}`} value={money(r.netLocal, loc, 0)} />
           </div>
         </>
       )}
-      <p className="text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Provisional formulas. They will follow your company’s own sheet once it is added.</p>
+      <p className="text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Formula from your company’s Quotation Calculator sheet.</p>
     </div>
   );
 }
@@ -154,49 +162,53 @@ function SheetForm({ sheet, setSheet, canMoney, team, leadNames, quick = false }
         </div>
       </Section>
 
-      <Section title="Currency & price">
+      <Section title="Currency & quote">
         <div className={grid}>
           <div className="min-w-0">
             <label className={labelCls}>Local currency</label>
             <select value={loc} onChange={(e) => setIn('currency', { local: e.target.value })} className={inputCls}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
           </div>
           <div className="min-w-0">
-            <label className={labelCls}>Conversion currency</label>
+            <label className={labelCls}>Quote in currency</label>
             <select value={cur} onChange={(e) => setIn('currency', { foreign: e.target.value })} className={inputCls}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
           </div>
           <Num label={`Rate: ${loc} for 1 ${cur}`} value={sheet.currency?.rate} onChange={(v) => setIn('currency', { rate: v })} />
           <div className="min-w-0">
+            <label className={labelCls}>Quote</label>
+            <select value={sheet.quote_unit || 'ton'} onChange={(e) => set({ quote_unit: e.target.value })} className={inputCls} aria-label="Quote per ton or per kg">
+              {QUOTE_UNITS.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
+            </select>
+          </div>
+          <div className="min-w-0">
             <label className={labelCls}>Price term</label>
             <select value={sheet.term} onChange={(e) => set({ term: e.target.value })} className={inputCls}>{PRICE_TERMS.map((t) => <option key={t}>{t}</option>)}</select>
           </div>
-          <Num label={`Selling price per ton (${cur})`} value={sheet.selling_price_per_ton} onChange={(v) => set({ selling_price_per_ton: v })} />
         </div>
       </Section>
 
       {canMoney && (
         <>
-          <Section title="Buying cost" locked>
+          <Section title="Product cost" locked>
             <div className={grid}>
-              <Num label={`Purchase price per ton (${loc})`} value={sheet.purchase_per_ton} onChange={(v) => set({ purchase_per_ton: v })} />
-              <Num label={`Variation / deduction per ton (${loc})`} value={sheet.deduction_per_ton} onChange={(v) => set({ deduction_per_ton: v })} min={undefined} hint="Use a minus number to add instead" />
+              <Num label={`Ex-plant price per kg (${loc})`} value={sheet.price_per_kg} onChange={(v) => set({ price_per_kg: v })} hint="Including packaging and loading" />
+              <Num label={`Transport to port per kg (${loc})`} value={sheet.transport_per_kg} onChange={(v) => set({ transport_per_kg: v })} />
+              <Num label="Profit" value={sheet.profit_pct} onChange={(v) => set({ profit_pct: v })} suffix="%" min={undefined} />
             </div>
           </Section>
-          <Section title="Charges" locked>
+          <Section title="Charges per container" locked>
             <div className={grid}>
-              <Num label={`Customs clearance (${loc}, total)`} value={sheet.costs?.customs} onChange={(v) => setIn('costs', { customs: v })} />
-              <Num label={`Local charges (${loc}, total)`} value={sheet.costs?.local_charges} onChange={(v) => setIn('costs', { local_charges: v })} />
-              <Num label={`Agency charges (${loc}, total)`} value={sheet.costs?.agency} onChange={(v) => setIn('costs', { agency: v })} />
-              <Num label={`Ocean freight per container (${cur})`} value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} />
-              <Num label="Insurance" value={sheet.costs?.insurance_pct} onChange={(v) => setIn('costs', { insurance_pct: v })} suffix="% of CFR" />
+              <Num label={`Customs clearance + local charges (${loc})`} value={sheet.costs?.customs_per_container} onChange={(v) => setIn('costs', { customs_per_container: v })} />
+              <Num label={`Ocean freight (${cur})`} value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} />
+              <Num label={`Insurance (${loc})`} value={sheet.costs?.insurance_per_container} onChange={(v) => setIn('costs', { insurance_per_container: v })} hint="Only in the CIF price" />
             </div>
           </Section>
-          <Section title="Commission & tax" locked>
+          <Section title="Commission & tax (optional)" locked>
+            <p className="text-[10px] text-slate-500 -mt-1">Taken out of your profit; they do not change the quote.</p>
             <div className={grid}>
               <Num label="Commission to agent" value={sheet.commission?.agent_pct} onChange={(v) => setIn('commission', { agent_pct: v })} suffix="%" />
               <Num label="Commission to consultant" value={sheet.commission?.consultant_pct} onChange={(v) => setIn('commission', { consultant_pct: v })} suffix="%" />
               <Num label="Incentive to sales person" value={sheet.commission?.sales_pct} onChange={(v) => setIn('commission', { sales_pct: v })} suffix="%" />
               <Num label="Tax on profit" value={sheet.tax_pct} onChange={(v) => set({ tax_pct: v })} suffix="%" />
-              <Num label="Target margin for quotes" value={sheet.target_margin_pct} onChange={(v) => set({ target_margin_pct: v })} suffix="%" />
             </div>
           </Section>
         </>
@@ -278,7 +290,7 @@ export default function Shipping() {
   const load = async () => {
     try {
       const res = await api.getShippingSheets();
-      setSheets(res?.data || []);
+      setSheets((res?.data || []).map(upgradeSheet));
       setMeta(res?.meta || {});
       setError('');
     } catch (err) {
@@ -366,7 +378,7 @@ export default function Shipping() {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div className="min-w-0">
           <h1 className="text-2xl font-black text-slate-900 dark:text-slate-100 tracking-tight flex items-center gap-2"><Ship size={22} className="text-emerald-600" /> Shipping & Costing</h1>
-          <p className="text-xs text-slate-500 mt-1 font-medium">Cost sheets for every shipment: containers, charges, commissions and profit. Use the same sheet for quotations.</p>
+          <p className="text-xs text-slate-500 mt-1 font-medium">FOB, CFR and CIF quotes per ton or per kg, and cost sheets for every shipment: containers, charges, profit and tasks.</p>
         </div>
         <div className="flex flex-wrap gap-2">
           <button type="button" onClick={() => setQuickOpen(true)} className="px-3 py-2 rounded-xl border border-emerald-200 bg-emerald-50 text-emerald-800 text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Calculator size={14} /> Quick calculator</button>
@@ -415,7 +427,7 @@ export default function Shipping() {
                   </button>
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${s.mode === 'quotation' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{s.mode === 'quotation' ? 'Quotation' : 'Shipment'}</span>
                 </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-300">{r.containers} × {s.container?.type} · {r.tons.toLocaleString()} MT · {s.term} {money(r.sellingPerTon, s.currency?.foreign)}/MT</div>
+                <div className="text-[11px] text-slate-600 dark:text-slate-300">{r.containers} × {s.container?.type} · {r.tons.toLocaleString()} MT · {r.term} {money(r.quote[r.term.toLowerCase()], s.currency?.foreign, r.unit === 'kg' ? 4 : 2)}/{r.unit === 'kg' ? 'kg' : 'MT'}</div>
                 {!r.hidden && <div className={`text-xs font-extrabold ${r.net >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>Net profit {money(r.net, s.currency?.foreign)} <span className="font-semibold text-slate-400">({r.marginPct}%)</span></div>}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <span className={`text-[10px] font-bold ${late ? 'text-rose-600' : 'text-slate-400'}`}>{openTasks ? `${openTasks} open task${openTasks === 1 ? '' : 's'}${late ? `, ${late} late` : ''}` : 'No open tasks'}</span>

@@ -1,60 +1,68 @@
 /**
  * Test cases for the shipment cost sheet / quotation calculator (frontend/src/data/shippingCalc.js).
+ * The numbers come from the company's own "Quotation Calculator" Google Sheet.
  * Run:  npm --prefix frontend run test:shipping
  */
-import { newSheet, calcSheet, copySheet } from '../src/data/shippingCalc.js';
+import { newSheet, calcSheet, copySheet, upgradeSheet } from '../src/data/shippingCalc.js';
 
 const results = [];
 const rec = (id, scenario, expected, actual, pass) => results.push({ id, scenario, expected: String(expected), actual: String(actual), result: pass ? 'PASS' : 'FAIL' });
 const near = (a, b, eps = 0.01) => Math.abs(a - b) <= eps;
 
-// 2 x 20 ft, 25 MT each = 50 MT. Buy at 24,900 INR/MT less 400 deduction; rate 83 INR per USD.
-const base = newSheet({
+// The example in the sheet: 25 MT per container, 95 INR per USD, ex-plant 10/kg, transport 1/kg,
+// customs 60,000 per container, 3% profit, freight 400 USD per container, insurance 5,000 per container.
+const sheetExample = newSheet({
   term: 'CIF',
-  container: { type: '20 ft', tons_per: 25, count: 2, bags_per: 500 },
-  currency: { local: 'INR', foreign: 'USD', rate: 83 },
-  purchase_per_ton: 24900,
-  deduction_per_ton: 400,
-  costs: { customs: 41500, local_charges: 16600, agency: 8300, freight_per_container: 1200, insurance_pct: 0.5 },
-  selling_price_per_ton: 380,
-  commission: { agent_pct: 2, consultant_pct: 1, sales_pct: 0.5 },
-  tax_pct: 25,
-  target_margin_pct: 10,
+  quote_unit: 'ton',
+  container: { type: '20 ft', tons_per: 25, count: 1, bags_per: 500 },
+  currency: { local: 'INR', foreign: 'USD', rate: 95 },
+  price_per_kg: 10,
+  transport_per_kg: 1,
+  costs: { customs_per_container: 60000, freight_per_container: 400, insurance_per_container: 5000 },
+  profit_pct: 3,
 });
-const r = calcSheet(base);
+const r = calcSheet(sheetExample);
 
-rec('Q-01', 'Total quantity and bags from the containers', '50 MT, 1000 bags', `${r.tons} MT, ${r.bags} bags`, r.tons === 50 && r.bags === 1000);
-rec('C-01', 'Product cost = (purchase - deduction) x tons, converted', '(24900-400)*50/83 = 14759.04', r.product, near(r.product, 14759.04));
-rec('C-02', 'FOB = product + customs, local and agency charges', '14759.04 + 800 = 15559.04', r.fob, near(r.fob, 15559.04));
-rec('C-03', 'CFR = FOB + freight per container x containers', '15559.04 + 2400 = 17959.04', r.cfr, near(r.cfr, 17959.04));
-rec('C-04', 'CIF = CFR + insurance % of CFR', '17959.04 * 1.005 = 18048.84', r.cif, near(r.cif, 18048.84));
-rec('P-01', 'Sale value = selling price x tons', '380 * 50 = 19000', r.saleValue, r.saleValue === 19000);
-rec('P-02', 'Gross profit on CIF = sale - CIF cost', '19000 - 18048.84 = 951.16', r.gross, near(r.gross, 951.16));
-rec('P-03', 'Commissions are % of the sale value', '380 + 190 + 95 = 665', r.commissions.total, near(r.commissions.total, 665));
-rec('P-04', 'Profit before tax = gross - commissions', '286.16', r.pbt, near(r.pbt, 286.16));
-rec('P-05', 'Tax on a positive profit, net = PBT - tax', 'tax 71.54, net 214.62', `${r.tax}, ${r.net}`, near(r.tax, 71.54) && near(r.net, 214.62));
-rec('P-06', 'Net profit is also shown in the local currency', 'net x 83 ≈ 17814 (within 1)', r.netLocal, near(r.netLocal, r.net * 83, 1));
+rec('SHEET-01', 'FOB per ton = same as the company sheet', '145.28', r.perTon.fob, near(r.perTon.fob, 145.28));
+rec('SHEET-02', 'CFR per ton = same as the company sheet', '161.28', r.perTon.cfr, near(r.perTon.cfr, 161.28));
+rec('SHEET-03', 'CIF per ton = same as the company sheet', '163.45', r.perTon.cif, near(r.perTon.cif, 163.45));
+rec('B-01', 'Cost up to port per ton in INR = 11,000 + 60,000 / 25', '13400', r.build.costFobLocal, r.build.costFobLocal === 13400);
+rec('B-02', 'Freight per ton = 400 / 25, without profit on it', '16', r.build.freight, r.build.freight === 16 && near(r.perTon.cfr - r.perTon.fob, 16));
+rec('B-03', 'Insurance only in CIF: 5,000 / 25 = 200 INR per ton', '200', r.build.insurance, r.build.insurance === 200);
 
-const fob = calcSheet({ ...base, term: 'FOB' });
-rec('T-01', 'On FOB terms the profit is against the FOB cost', '19000 - 15559.04 = 3440.96', fob.gross, near(fob.gross, 3440.96));
-const loss = calcSheet({ ...base, selling_price_per_ton: 300 });
-rec('T-02', 'A loss shows as a negative profit and no tax', 'net < 0, tax 0', `${loss.net}, ${loss.tax}`, loss.net < 0 && loss.tax === 0);
+const kg = calcSheet({ ...sheetExample, quote_unit: 'kg' });
+rec('KG-01', 'Per kg quote = per ton / 1000 (the sheet’s per-kg mistake is fixed)', 'FOB 0.1453, CIF 0.1635', `${kg.quote.fob}, ${kg.quote.cif}`, near(kg.quote.fob, 0.1453, 0.0001) && near(kg.quote.cif, 0.1635, 0.0001));
+rec('KG-02', 'Per ton quote shows per ton numbers', '145.28', r.quote.fob, near(r.quote.fob, 145.28));
 
-// Quote price: cost per ton / (1 - (margin + commissions)%)
-rec('QT-01', 'Quote price per ton keeps the target margin after commissions', 'CIF 360.98 / (1 - 0.135) = 417.32', r.quotePerTon.cif, near(r.quotePerTon.cif, 417.32));
-const impossible = calcSheet({ ...base, target_margin_pct: 99 });
-rec('QT-02', 'An impossible margin gives no quote instead of a wrong number', 'null', impossible.quotePerTon.cif, impossible.quotePerTon.cif === null);
+const two = calcSheet({ ...sheetExample, container: { ...sheetExample.container, count: 2 } });
+rec('Q-01', 'Total quantity and bags from the containers', '50 MT, 1000 bags', `${two.tons} MT, ${two.bags} bags`, two.tons === 50 && two.bags === 1000);
+rec('Q-02', 'Price per ton does not change with the number of containers', '163.45', two.perTon.cif, near(two.perTon.cif, 163.45));
+rec('P-01', 'Shipment value = CIF price x tons', '163.45 x 50 ≈ 8172.63', two.saleValue, near(two.saleValue, 8172.63, 0.05));
+rec('P-02', 'Profit = 3% of the cost (goods + customs + insurance), in USD', '13,600 x 0.03 / 95 x 50 ≈ 214.74', two.profit, near(two.profit, 214.74, 0.05));
+rec('P-03', 'No commission or tax = net profit equals the profit', 'equal', `${two.net} / ${two.profit}`, near(two.net, two.profit));
 
-const hidden = calcSheet(base, { hidden: true });
-rec('H-01', 'Hidden mode (staff without cost access) returns no money results', 'net null, sale shown', `${hidden.net}, ${hidden.saleValue}`, hidden.net === null && hidden.fob === null && hidden.saleValue === 19000);
+const withCm = calcSheet({ ...sheetExample, commission: { agent_pct: 1, consultant_pct: 0, sales_pct: 0.5 }, tax_pct: 25 });
+rec('CM-01', 'Commissions are taken out of the profit and do not change the quote', 'CIF still 163.45', withCm.perTon.cif, near(withCm.perTon.cif, 163.45));
+rec('CM-02', 'Commissions = % of the shipment value; tax on positive profit', 'pbt = profit - 1.5% of sale', withCm.pbt, near(withCm.pbt, withCm.profit - withCm.saleValue * 0.015) && near(withCm.tax, withCm.pbt * 0.25));
+const loss = calcSheet({ ...sheetExample, profit_pct: 1, commission: { agent_pct: 5 }, tax_pct: 25 });
+rec('CM-03', 'A loss after commissions shows negative and no tax', 'net < 0, tax 0', `${loss.net}, ${loss.tax}`, loss.net < 0 && loss.tax === 0);
+
+const fob = calcSheet({ ...sheetExample, term: 'FOB' });
+rec('T-01', 'Choosing FOB makes FOB the shipment price', '145.28', fob.quotePerTon, near(fob.quotePerTon, 145.28));
+
+const hidden = calcSheet({ ...sheetExample, quote: { fob: 145.28, cfr: 161.28, cif: 163.45 }, price_per_kg: undefined, costs: undefined }, { hidden: true });
+rec('H-01', 'Staff without cost access get the quote from the server, no money details', 'CIF 163.45, net null', `${hidden.quote.cif}, ${hidden.net}`, hidden.quote.cif === 163.45 && hidden.net === null && hidden.build === undefined);
 
 const empty = calcSheet(newSheet({ container: { type: '20 ft', tons_per: 0, count: 0, bags_per: 0 } }));
-rec('E-01', 'An empty sheet gives zeros, not errors', '0 tons, net 0', `${empty.tons}, ${empty.net}, ${empty.perTon.fob}`, empty.tons === 0 && empty.net === 0 && empty.perTon.fob === 0);
-const text = calcSheet({ ...base, purchase_per_ton: '24,900', currency: { ...base.currency, rate: '' } });
-rec('E-02', 'Text with commas is read as a number; a missing rate counts as 1', 'product 1225000', text.product, near(text.product, (24900 - 400) * 50));
+rec('E-01', 'An empty sheet gives zeros, not errors', '0 tons, net 0, FOB 0', `${empty.tons}, ${empty.net}, ${empty.perTon.fob}`, empty.tons === 0 && empty.net === 0 && empty.perTon.fob === 0);
+const text = calcSheet({ ...sheetExample, price_per_kg: '10', costs: { ...sheetExample.costs, customs_per_container: '60,000' }, currency: { ...sheetExample.currency, rate: '95' } });
+rec('E-02', 'Text with commas is read as a number', '145.28', text.perTon.fob, near(text.perTon.fob, 145.28));
 
-const copy = copySheet({ ...base, id: 'ship_1', name: 'Saigon CIF', tasks: [{ id: 'a', title: 'Booking', done: true }] });
-rec('CP-01', 'Copy keeps every number but is a new sheet with open tasks', 'no id, (copy), task open', `${copy.id || 'no id'} | ${copy.name} | ${copy.tasks[0].done}`, copy.id === '' && copy.name === 'Saigon CIF (copy)' && copy.tasks[0].done === false && copy.purchase_per_ton === 24900 && copy.tasks[0].id !== 'a');
+const old = upgradeSheet({ container: { tons_per: 25, count: 2 }, purchase_per_ton: 24900, deduction_per_ton: 400, costs: { customs: 41500, local_charges: 16600, agency: 8300, freight_per_container: 1200, insurance_pct: 0.5 }, target_margin_pct: 10 });
+rec('UP-01', 'Sheets saved with the old fields are turned into the new ones', 'price 24.5/kg, customs 33,200/container, profit 10%', `${old.price_per_kg}, ${old.costs.customs_per_container}, ${old.profit_pct}`, old.price_per_kg === 24.5 && old.costs.customs_per_container === 33200 && old.costs.freight_per_container === 1200 && old.profit_pct === 10);
+
+const copy = copySheet({ ...sheetExample, id: 'ship_1', name: 'Saigon CIF', tasks: [{ id: 'a', title: 'Booking', done: true }] });
+rec('CP-01', 'Copy keeps every number but is a new sheet with open tasks', 'no id, (copy), task open', `${copy.id || 'no id'} | ${copy.name} | ${copy.tasks[0].done}`, copy.id === '' && copy.name === 'Saigon CIF (copy)' && copy.tasks[0].done === false && copy.price_per_kg === 10 && copy.tasks[0].id !== 'a');
 
 const fails = results.filter((x) => x.result === 'FAIL');
 console.table(results.map((x) => ({ ...x, scenario: x.scenario.slice(0, 62), expected: x.expected.slice(0, 36), actual: x.actual.slice(0, 40) })));

@@ -1,26 +1,27 @@
 /**
  * Shipment cost sheet / quotation calculator.
  *
- * PROVISIONAL FORMULAS: these follow common export practice and will be replaced by the
- * company's own sheet once it is shared. Keep every formula in this file so that swap is one place.
+ * FORMULA = the company's "Quotation Calculator" sheet (shared on 2026-11-16). Per ton, in the quote currency:
  *
- *   Product cost      = (purchase price per ton - variation/deduction per ton) x total tons      [local currency]
- *   FOB cost          = product cost + customs clearance + local charges + agency charges          [converted at the rate]
- *   CFR cost          = FOB cost + ocean freight per container x containers
- *   CIF cost          = CFR cost + insurance (% of CFR cost)
- *   Sale value        = selling price per ton x total tons (on the chosen term)
- *   Gross profit      = sale value - cost on that term
- *   Commissions       = sale value x (agent % + consultant % + sales incentive %)
- *   Profit before tax = gross profit - commissions
- *   Net profit        = profit before tax - tax % of a positive profit
+ *   base (local, per ton) = (ex-plant price per kg + transport to port per kg) x 1000
+ *   FOB = (base + customs per container / tons per container) x (1 + profit %) / rate
+ *   CFR = FOB + ocean freight per container / tons per container                      (no profit on freight)
+ *   CIF = (base + (customs + insurance) per container / tons per container) x (1 + profit %) / rate
+ *         + ocean freight per container / tons per container
+ *
+ * A quote "per kg" is the per-ton price / 1000 (the sheet added per-container charges per ton to a per-kg
+ * price when "per kg" was chosen; that is corrected here).
+ * Commissions and tax are optional: they are taken out of the profit and do not change the quote.
+ * The server keeps the same formula in backend/src/utils/shippingQuote.js (for staff who cannot see costs).
  */
 
 export const CONTAINER_TYPES = ['20 ft', '40 ft', '40 ft HC', '20 ft Reefer', '40 ft Reefer', 'Break bulk'];
 export const PRICE_TERMS = ['FOB', 'CFR', 'CIF'];
+export const QUOTE_UNITS = [{ id: 'ton', label: 'per ton' }, { id: 'kg', label: 'per kg' }];
 export const CURRENCIES = ['INR', 'USD', 'EUR', 'AED', 'VND', 'LKR', 'BDT', 'NGN', 'KES', 'GBP', 'CNY', 'IDR', 'THB', 'MYR'];
 
 /** Fields only the owner (or staff with full access) may see or change. */
-export const MONEY_KEYS = ['purchase_per_ton', 'deduction_per_ton', 'costs', 'commission', 'tax_pct', 'target_margin_pct'];
+export const MONEY_KEYS = ['price_per_kg', 'transport_per_kg', 'costs', 'profit_pct', 'commission', 'tax_pct'];
 
 export const newSheet = (overrides = {}) => ({
   id: '',
@@ -30,15 +31,15 @@ export const newSheet = (overrides = {}) => ({
   lead_id: '',
   product: '',
   term: 'CIF',
+  quote_unit: 'ton',
   container: { type: '20 ft', tons_per: 25, count: 1, bags_per: 500 },
-  currency: { local: 'INR', foreign: 'USD', rate: 83 }, // rate = local currency for 1 foreign
-  purchase_per_ton: 0,
-  deduction_per_ton: 0,
-  costs: { customs: 0, local_charges: 0, agency: 0, freight_per_container: 0, insurance_pct: 0 },
-  selling_price_per_ton: 0,
+  currency: { local: 'INR', foreign: 'USD', rate: 95 }, // rate = local currency for 1 foreign
+  price_per_kg: 0,
+  transport_per_kg: 0,
+  costs: { customs_per_container: 0, freight_per_container: 0, insurance_per_container: 0 },
+  profit_pct: 3,
   commission: { agent_pct: 0, consultant_pct: 0, sales_pct: 0 },
   tax_pct: 0,
-  target_margin_pct: 10,
   tasks: [],
   notes: '',
   ...overrides,
@@ -50,83 +51,120 @@ const num = (v) => {
 };
 const round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
 
+/** Sheets saved before 2026-11-16 used other fields: turn them into the new ones (nothing is lost). */
+export const upgradeSheet = (s) => {
+  if (!s || s.price_per_kg !== undefined || s.purchase_per_ton === undefined) return s;
+  const count = Math.max(1, num(s.container?.count));
+  const old = s.costs || {};
+  return {
+    ...s,
+    quote_unit: 'ton',
+    price_per_kg: round((num(s.purchase_per_ton) - num(s.deduction_per_ton)) / 1000, 4),
+    transport_per_kg: 0,
+    costs: {
+      customs_per_container: round((num(old.customs) + num(old.local_charges) + num(old.agency)) / count),
+      freight_per_container: num(old.freight_per_container),
+      insurance_per_container: 0,
+    },
+    profit_pct: s.target_margin_pct !== undefined ? num(s.target_margin_pct) : 3,
+  };
+};
+
 /**
  * All the numbers for one sheet. `hidden` = true when the viewer may not see costs:
- * then only quantities and the sale value are returned, money results are null.
+ * then the quote comes from what the server worked out (`sheet.quote`) and money details are null.
  */
-export function calcSheet(sheet, { hidden = false } = {}) {
-  const s = sheet || {};
+export function calcSheet(input, { hidden = false } = {}) {
+  const s = upgradeSheet(input) || {};
   const c = s.container || {};
-  const tons = num(c.tons_per) * num(c.count);
+  const tonsPer = num(c.tons_per);
+  const tons = tonsPer * num(c.count);
   const bags = num(c.bags_per) * num(c.count);
-  const rate = num(s.currency?.rate) || 1;
-  const saleValue = num(s.selling_price_per_ton) * tons;
-  const base = {
-    tons: round(tons, 3),
-    bags: Math.round(bags),
-    containers: num(c.count),
-    saleValue: round(saleValue),
-    sellingPerTon: num(s.selling_price_per_ton),
-  };
-  if (hidden) return { ...base, hidden: true, fob: null, cfr: null, cif: null, gross: null, net: null };
-
-  const costs = s.costs || {};
-  const productLocal = (num(s.purchase_per_ton) - num(s.deduction_per_ton)) * tons;
-  const product = productLocal / rate;
-  const fobCharges = (num(costs.customs) + num(costs.local_charges) + num(costs.agency)) / rate;
-  const fob = product + fobCharges;
-  const freight = num(costs.freight_per_container) * num(c.count);
-  const cfr = fob + freight;
-  const insurance = (num(costs.insurance_pct) / 100) * cfr;
-  const cif = cfr + insurance;
   const term = PRICE_TERMS.includes(s.term) ? s.term : 'CIF';
-  const cost = term === 'FOB' ? fob : term === 'CFR' ? cfr : cif;
-  const gross = saleValue - cost;
+  const unit = s.quote_unit === 'kg' ? 'kg' : 'ton';
+  const perUnit = (perTon) => (perTon === null || perTon === undefined ? null : round(unit === 'kg' ? perTon / 1000 : perTon, unit === 'kg' ? 4 : 2));
+  const base = { tons: round(tons, 3), bags: Math.round(bags), containers: num(c.count), term, unit };
+
+  if (hidden) {
+    const q = s.quote || {};
+    const perTon = { fob: q.fob ?? null, cfr: q.cfr ?? null, cif: q.cif ?? null };
+    const price = perTon[term.toLowerCase()];
+    return {
+      ...base,
+      hidden: true,
+      perTon,
+      quote: { fob: perUnit(perTon.fob), cfr: perUnit(perTon.cfr), cif: perUnit(perTon.cif) },
+      quotePerTon: price,
+      saleValue: price === null ? null : round(price * tons),
+      net: null,
+    };
+  }
+
+  const rate = num(s.currency?.rate) || 1;
+  const costs = s.costs || {};
+  const markup = 1 + num(s.profit_pct) / 100;
+  const perContainer = (v) => (tonsPer > 0 ? num(v) / tonsPer : 0); // a per-container charge, per ton
+
+  // Local currency, per ton
+  const goods = (num(s.price_per_kg) + num(s.transport_per_kg)) * 1000;
+  const customs = perContainer(costs.customs_per_container);
+  const insurance = perContainer(costs.insurance_per_container);
+  const costFobLocal = goods + customs;
+  const costCifLocal = goods + customs + insurance;
+  // Quote currency, per ton
+  const freight = perContainer(costs.freight_per_container);
+  const fob = (costFobLocal * markup) / rate;
+  const cfr = fob + freight;
+  const cif = (costCifLocal * markup) / rate + freight;
+  const cost = { fob: costFobLocal / rate, cfr: costFobLocal / rate + freight, cif: costCifLocal / rate + freight };
+
+  const key = term.toLowerCase();
+  const pricePerTon = { fob, cfr, cif }[key];
+  const saleValue = pricePerTon * tons;
+  const profit = (pricePerTon - cost[key]) * tons;
   const cm = s.commission || {};
-  const commissionPct = num(cm.agent_pct) + num(cm.consultant_pct) + num(cm.sales_pct);
   const commissions = {
     agent: (num(cm.agent_pct) / 100) * saleValue,
     consultant: (num(cm.consultant_pct) / 100) * saleValue,
     sales: (num(cm.sales_pct) / 100) * saleValue,
   };
   const commissionTotal = commissions.agent + commissions.consultant + commissions.sales;
-  const pbt = gross - commissionTotal;
+  const pbt = profit - commissionTotal;
   const tax = pbt > 0 ? (num(s.tax_pct) / 100) * pbt : 0;
   const net = pbt - tax;
-  const perTon = (v) => (tons > 0 ? round(v / tons) : 0);
-  // Quotation: the price per ton that leaves the target margin after commissions
-  const margin = num(s.target_margin_pct);
-  const denominator = 1 - (margin + commissionPct) / 100;
-  const quote = (v) => (tons > 0 && denominator > 0 ? round(v / tons / denominator) : null);
 
   return {
     ...base,
     hidden: false,
-    term,
-    productLocal: round(productLocal),
-    product: round(product),
-    fobCharges: round(fobCharges),
-    freight: round(freight),
-    insurance: round(insurance),
-    fob: round(fob),
-    cfr: round(cfr),
-    cif: round(cif),
-    cost: round(cost),
-    perTon: { fob: perTon(fob), cfr: perTon(cfr), cif: perTon(cif), cost: perTon(cost) },
-    gross: round(gross),
+    rate,
+    build: {
+      goods: round(goods),
+      customs: round(customs),
+      insurance: round(insurance),
+      costFobLocal: round(costFobLocal),
+      costCifLocal: round(costCifLocal),
+      freight: round(freight),
+    },
+    perTon: { fob: round(fob), cfr: round(cfr), cif: round(cif) },
+    perKg: { fob: round(fob / 1000, 4), cfr: round(cfr / 1000, 4), cif: round(cif / 1000, 4) },
+    quote: { fob: perUnit(fob), cfr: perUnit(cfr), cif: perUnit(cif) },
+    quotePerTon: round(pricePerTon),
+    costPerTon: { fob: round(cost.fob), cfr: round(cost.cfr), cif: round(cost.cif) },
+    saleValue: round(saleValue),
+    profit: round(profit),
     commissions: { agent: round(commissions.agent), consultant: round(commissions.consultant), sales: round(commissions.sales), total: round(commissionTotal) },
     pbt: round(pbt),
     tax: round(tax),
     net: round(net),
     netLocal: round(net * rate),
+    saleLocal: round(saleValue * rate),
     marginPct: saleValue > 0 ? round((net / saleValue) * 100, 1) : 0,
-    quotePerTon: { fob: quote(fob), cfr: quote(cfr), cif: quote(cif) },
   };
 }
 
 /** A copy of a sheet to start a new one from (keeps every number, clears the id and tasks' done state). */
 export const copySheet = (sheet) => ({
-  ...JSON.parse(JSON.stringify(sheet || {})),
+  ...JSON.parse(JSON.stringify(upgradeSheet(sheet) || {})),
   id: '',
   name: `${sheet?.name || 'Cost sheet'} (copy)`,
   tasks: (sheet?.tasks || []).map((t) => ({ ...t, id: `t${Math.random().toString(36).slice(2, 9)}`, done: false })),
@@ -134,5 +172,5 @@ export const copySheet = (sheet) => ({
   updated_at: undefined,
 });
 
-export const money = (v, cur = 'USD') =>
-  v === null || v === undefined ? '—' : `${cur} ${Number(v).toLocaleString('en-US', { maximumFractionDigits: 2, minimumFractionDigits: 0 })}`;
+export const money = (v, cur = 'USD', digits = 2) =>
+  v === null || v === undefined ? '—' : `${cur} ${Number(v).toLocaleString('en-US', { maximumFractionDigits: digits, minimumFractionDigits: 0 })}`;

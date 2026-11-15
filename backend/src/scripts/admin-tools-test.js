@@ -150,23 +150,32 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   rec('SU-03', 'Staff', 'Staff cannot open the storage breakdown', '403', staffUsage.status, staffUsage.status === 403);
 
   // 6d. Shipping cost sheets: owner sees everything; staff see shipments and tasks but no costs unless allowed
+  // Same example as the company's "Quotation Calculator" sheet: FOB 145.28, CFR 161.28, CIF 163.45 USD per ton
   const sheetBody = {
-    name: 'CI Saigon CIF', buyer: 'Saigon Feed Mill', product: 'Corn DDGS', term: 'CIF',
-    container: { type: '20 ft', tons_per: 25, count: 2, bags_per: 500 }, currency: { local: 'INR', foreign: 'USD', rate: 83 },
-    purchase_per_ton: 24900, deduction_per_ton: 400, selling_price_per_ton: 380,
-    costs: { customs: 41500, local_charges: 16600, agency: 8300, freight_per_container: 1200, insurance_pct: 0.5 },
+    name: 'CI Saigon CIF', buyer: 'Saigon Feed Mill', product: 'Corn DDGS', term: 'CIF', quote_unit: 'ton',
+    container: { type: '20 ft', tons_per: 25, count: 2, bags_per: 500 }, currency: { local: 'INR', foreign: 'USD', rate: 95 },
+    price_per_kg: 10, transport_per_kg: 1, profit_pct: 3,
+    costs: { customs_per_container: 60000, freight_per_container: 400, insurance_per_container: 5000 },
     commission: { agent_pct: 2, consultant_pct: 1, sales_pct: 0.5 }, tax_pct: 25,
+    quote: { fob: 1, cfr: 1, cif: 1 },
     tasks: [{ title: 'Container booking', person_id: '', tat_days: 2 }], evil: '<script>',
   };
   const shipCreated = await call('PUT', '/shipping/sheets/new', OTH, sheetBody);
   const sid = shipCreated.data?.data?.id;
-  rec('SH-01', 'Owner', 'Owner creates a cost sheet (unknown fields dropped)', '201, costs kept', `${shipCreated.status} ${shipCreated.data?.data?.purchase_per_ton} ${shipCreated.data?.data?.evil}`, shipCreated.status === 201 && shipCreated.data.data.purchase_per_ton === 24900 && shipCreated.data.data.evil === undefined && shipCreated.data.data.tasks.length === 1);
+  const q0 = shipCreated.data?.data?.quote || {};
+  rec('SH-01', 'Owner', 'Owner creates a cost sheet; the server works out the sheet quote (a sent quote is ignored)', '201, 145.28/161.28/163.45', `${shipCreated.status} ${q0.fob}/${q0.cfr}/${q0.cif} ${shipCreated.data?.data?.evil}`, shipCreated.status === 201 && q0.fob === 145.28 && q0.cfr === 161.28 && q0.cif === 163.45 && shipCreated.data.data.price_per_kg === 10 && shipCreated.data.data.evil === undefined && shipCreated.data.data.tasks.length === 1);
   const staffView = await call('GET', '/shipping', OTHSTAFF);
   const sv = (staffView.data?.data || []).find((x) => x.id === sid) || {};
-  rec('SH-02', 'Staff', 'Staff (default) see the sheet without costs, commissions or tax', 'no money keys', `${staffView.status} ${Object.keys(sv).filter((k) => ['purchase_per_ton', 'costs', 'commission', 'tax_pct'].includes(k)).join(',') || 'none'}`, staffView.status === 200 && sv.name === 'CI Saigon CIF' && sv.costs === undefined && sv.purchase_per_ton === undefined && staffView.data.meta.can_see_money === false);
-  const staffEdit = await call('PUT', `/shipping/sheets/${sid}`, OTHSTAFF, { ...sv, selling_price_per_ton: 390, purchase_per_ton: 1, costs: { customs: 0 } });
+  rec('SH-02', 'Staff', 'Staff (default) see the quote but no costs, profit, commissions or tax', 'quote 163.45, no money keys', `${staffView.status} ${sv.quote?.cif} ${Object.keys(sv).filter((k) => ['price_per_kg', 'transport_per_kg', 'costs', 'profit_pct', 'commission', 'tax_pct'].includes(k)).join(',') || 'none'}`, staffView.status === 200 && sv.name === 'CI Saigon CIF' && sv.quote?.cif === 163.45 && sv.costs === undefined && sv.price_per_kg === undefined && sv.profit_pct === undefined && staffView.data.meta.can_see_money === false);
+  const staffEdit = await call('PUT', `/shipping/sheets/${sid}`, OTHSTAFF, { ...sv, term: 'FOB', price_per_kg: 1, profit_pct: 50, costs: { customs_per_container: 0 } });
   const ownerAfter = ((await call('GET', '/shipping', OTH)).data?.data || []).find((x) => x.id === sid) || {};
-  rec('SH-03', 'Staff', 'Staff can change the selling price but not the hidden costs', 'price 390, purchase still 24900', `${staffEdit.status} ${ownerAfter.selling_price_per_ton} ${ownerAfter.purchase_per_ton} ${ownerAfter.costs?.customs}`, staffEdit.status === 200 && ownerAfter.selling_price_per_ton === 390 && ownerAfter.purchase_per_ton === 24900 && ownerAfter.costs.customs === 41500);
+  rec('SH-03', 'Staff', 'Staff can change the term but not the hidden costs; the quote stays right', 'FOB, 10/kg, 3%, 145.28', `${staffEdit.status} ${ownerAfter.term} ${ownerAfter.price_per_kg} ${ownerAfter.profit_pct} ${ownerAfter.quote?.fob}`, staffEdit.status === 200 && ownerAfter.term === 'FOB' && ownerAfter.price_per_kg === 10 && ownerAfter.profit_pct === 3 && ownerAfter.costs.customs_per_container === 60000 && ownerAfter.quote.fob === 145.28);
+  // A sheet saved before the new formula is read with the new fields
+  const shipStore = dataStore.appSettings.find((x) => x.id === `shipping:${shipCreated.data.data.created_by_id}`);
+  shipStore.sheets.push({ id: 'ship_old_ci', name: 'Old sheet', container: { type: '20 ft', tons_per: 25, count: 2 }, currency: { local: 'INR', foreign: 'USD', rate: 95 }, purchase_per_ton: 11000, deduction_per_ton: 0, costs: { customs: 60000, local_charges: 0, agency: 60000, freight_per_container: 400, insurance_pct: 0 }, target_margin_pct: 3, tasks: [], updated_at: new Date().toISOString() });
+  const oldRead = ((await call('GET', '/shipping', OTH)).data?.data || []).find((x) => x.id === 'ship_old_ci') || {};
+  rec('SH-08', 'Owner', 'A cost sheet saved with the old fields opens with the new ones', '11/kg, 60,000/container, FOB 145.28', `${oldRead.price_per_kg} ${oldRead.costs?.customs_per_container} ${oldRead.quote?.fob}`, oldRead.price_per_kg === 11 && oldRead.costs?.customs_per_container === 60000 && oldRead.quote?.fob === 145.28);
+  shipStore.sheets = shipStore.sheets.filter((x) => x.id !== 'ship_old_ci');
   const staffDel = await call('DELETE', `/shipping/sheets/${sid}`, OTHSTAFF);
   const staffSet = await call('PUT', '/shipping/settings', OTHSTAFF, { staff_access: 'full' });
   rec('SH-04', 'Staff', 'Staff cannot delete sheets or change who sees Shipping', '403 + 403', `${staffDel.status} ${staffSet.status}`, staffDel.status === 403 && staffSet.status === 403);
@@ -174,7 +183,7 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   const fullView = ((await call('GET', '/shipping', OTHSTAFF)).data?.data || []).find((x) => x.id === sid) || {};
   await call('PUT', '/shipping/settings', OTH, { staff_access: 'none' });
   const noneView = await call('GET', '/shipping', OTHSTAFF);
-  rec('SH-05', 'Owner', 'Owner can give staff full access, or none', 'costs visible, then 403', `${fullView.purchase_per_ton} ${noneView.status}`, fullView.purchase_per_ton === 24900 && noneView.status === 403);
+  rec('SH-05', 'Owner', 'Owner can give staff full access, or none', 'costs visible, then 403', `${fullView.price_per_kg} ${noneView.status}`, fullView.price_per_kg === 10 && noneView.status === 403);
   const otherCo = await call('GET', '/shipping', NEW);
   rec('SH-06', 'Other company', 'Another company never sees these sheets', '0 sheets', (otherCo.data?.data || []).length, otherCo.status === 200 && !(otherCo.data.data || []).some((x) => x.id === sid));
   const shipDel = await call('DELETE', `/shipping/sheets/${sid}`, OTH);
