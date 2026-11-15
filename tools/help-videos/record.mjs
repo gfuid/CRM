@@ -12,6 +12,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import { createRequire } from 'node:module';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { spawn } from 'node:child_process';
 import { seedDemoCompany } from './seed.mjs';
 import { SCENES } from './scenes.mjs';
 
@@ -63,10 +64,72 @@ const OVERLAY = () => {
   document.addEventListener('DOMContentLoaded', ensure);
 };
 
+// ---------- English voice-over (Windows built-in voice, offline) ----------
+// Every caption is also spoken. Clips are made by tts-server.ps1 and cached by text,
+// and each video keeps a list of { at (ms from the start), url } so the MP4 step can mix them in.
+const VOICE = process.env.VOICE || 'Microsoft Zira Desktop';
+const NO_VOICE = Boolean(process.env.NO_VOICE);
+const AUDIO_DIR = path.join(TMP, 'audio');
+fs.mkdirSync(AUDIO_DIR, { recursive: true });
+const startTts = () => {
+  const proc = spawn('powershell', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', path.join(here, 'tts-server.ps1'), '-Voice', VOICE], { stdio: ['pipe', 'pipe', 'inherit'] });
+  const waiters = [];
+  let buf = '';
+  proc.stdout.on('data', (d) => {
+    buf += d;
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).trim();
+      buf = buf.slice(i + 1);
+      if (!line || line === 'ready') continue;
+      const w = waiters.shift();
+      if (w) w(line);
+    }
+  });
+  return {
+    speak: (file, text) => new Promise((res, rej) => {
+      waiters.push((line) => (line.startsWith('ok') ? res(file) : rej(new Error(`voice: ${line}`))));
+      proc.stdin.write(`${file}\t${String(text).replace(/[\r\n\t]+/g, ' ')}\n`);
+    }),
+    close: () => { try { proc.stdin.end('quit\n'); } catch { /* already closed */ } },
+  };
+};
+const wavSeconds = (file) => {
+  const b = fs.readFileSync(file);
+  const byteRate = b.readUInt32LE(28);
+  const i = b.indexOf('data');
+  return i > 0 && byteRate ? b.readUInt32LE(i + 4) / byteRate : 0;
+};
+const clipName = (text) => {
+  let h = 0;
+  for (const ch of String(text)) h = (h * 31 + ch.codePointAt(0)) >>> 0;
+  return `v${h.toString(16)}-${String(text).length}.wav`;
+};
+let tts = null;
+/** The clip for a caption (made once, then reused); returns its file name and length in ms. */
+const voiceClip = async (text) => {
+  const name = clipName(text);
+  const file = path.join(AUDIO_DIR, name);
+  if (!fs.existsSync(file)) {
+    if (!tts) tts = startTts();
+    await tts.speak(file, text);
+  }
+  return { name, ms: Math.round(wavSeconds(file) * 1000) };
+};
+/** Speak written text naturally: "Help & Support" -> "Help and Support", "/" -> " or ". */
+const spoken = (text) => String(text).replace(/&/g, ' and ').replace(/\s\/\s/g, ' or ').replace(/…/g, '...').replace(/[“”]/g, '');
+
 // ---------- helpers a scene uses ----------
-const makeKit = (page, demo) => {
+const makeKit = (page, demo, voiceLog, t0) => {
   const wait = (ms) => page.waitForTimeout(ms);
   const readMs = (text) => Math.max(2300, Math.round(String(text).split(/\s+/).length * 340));
+  // Start the clip now; returns how long it lasts so the screen can wait for it
+  const speakNow = async (text) => {
+    if (NO_VOICE || !text) return 0;
+    const clip = await voiceClip(spoken(text));
+    voiceLog.push({ at: Date.now() - t0, url: `audio/${clip.name}` });
+    return clip.ms;
+  };
   const box = async (loc) => {
     await loc.scrollIntoViewIfNeeded({ timeout: 6000 }).catch(() => {});
     await wait(250);
@@ -78,9 +141,22 @@ const makeKit = (page, demo) => {
   };
   const kit = {
     page, demo, wait,
-    async say(text, ms) { await page.evaluate((t) => window.__rec.cap(t), text); await wait(ms || readMs(text)); },
+    speakNow,
+    async say(text, ms) {
+      if (!NO_VOICE) await voiceClip(spoken(text)); // make the clip before the caption appears
+      await page.evaluate((t) => window.__rec.cap(t), text);
+      const voiceMs = await speakNow(text);
+      await wait(Math.max(ms || readMs(text), voiceMs ? voiceMs + 450 : 0));
+    },
     async hush() { await page.evaluate(() => window.__rec.cap(null)); },
-    async card(badge, title, sub, ms = 3200) { await page.evaluate(([b, t, s]) => window.__rec.card(b, t, s), [badge, title, sub]); await wait(ms); await page.evaluate(() => window.__rec.card()); await wait(400); },
+    async card(badge, title, sub, ms = 3200, speech) {
+      if (!NO_VOICE && speech) await voiceClip(spoken(speech));
+      await page.evaluate(([b, t, s]) => window.__rec.card(b, t, s), [badge, title, sub]);
+      const voiceMs = await speakNow(speech);
+      await wait(Math.max(ms, voiceMs ? voiceMs + 500 : 0));
+      await page.evaluate(() => window.__rec.card());
+      await wait(400);
+    },
     async point(loc) {
       const b = await box(loc);
       if (!b) throw new Error(`not on screen: ${loc}`);
@@ -128,20 +204,62 @@ const MUXER_JS = process.env.MUXER_JS; // path to mp4-muxer/build/mp4-muxer.js
 const BITRATE = Number(process.env.BITRATE) || 700000;
 async function toMp4(webmName) {
   if (!MUXER_JS) throw new Error('Set MUXER_JS to mp4-muxer/build/mp4-muxer.js');
+  const voiceFile = path.join(TMP, webmName.replace(/\.webm$/, '.voice.json'));
+  const saved = fs.existsSync(voiceFile) ? JSON.parse(fs.readFileSync(voiceFile, 'utf8')) : [];
+  const voice = Array.isArray(saved) ? saved : (saved.clips || []);
+  const wallMs = Array.isArray(saved) ? 0 : Number(saved.wallMs) || 0;
   fs.copyFileSync(MUXER_JS, path.join(TMP, 'mp4-muxer.js'));
   fs.writeFileSync(path.join(TMP, 'transcode.html'), '<!doctype html><meta charset="utf-8"><body style="margin:0;background:#000"><script src="mp4-muxer.js"></script></body>');
   const browser = await chromium.launch({ channel: 'chrome', headless: true, args: ['--autoplay-policy=no-user-gesture-required'] });
   const page = await browser.newPage({ acceptDownloads: true });
   await page.goto(`${APP}__rec/transcode.html`);
   const download = page.waitForEvent('download', { timeout: 15 * 60 * 1000 });
-  const info = await page.evaluate(async ({ src, bitrate }) => {
+  const info = await page.evaluate(async ({ src, bitrate, voice, wallMs, base }) => {
    try {
     const v = document.createElement('video');
     v.src = src; v.muted = true; v.playsInline = true; document.body.appendChild(v);
     await new Promise((res, rej) => { v.onloadeddata = res; v.onerror = () => rej(new Error('video load failed')); });
     const width = v.videoWidth; const height = v.videoHeight;
-    const muxer = new Mp4Muxer.Muxer({ target: new Mp4Muxer.ArrayBufferTarget(), video: { codec: 'avc', width, height }, fastStart: 'in-memory', firstTimestampBehavior: 'offset' });
+    const SR = 48000;
+    const withAudio = voice.length > 0;
+    const muxer = new Mp4Muxer.Muxer({
+      target: new Mp4Muxer.ArrayBufferTarget(),
+      video: { codec: 'avc', width, height },
+      ...(withAudio ? { audio: { codec: 'aac', numberOfChannels: 1, sampleRate: SR } } : {}),
+      fastStart: 'in-memory',
+      firstTimestampBehavior: 'offset',
+    });
     let encError = null;
+    // Voice track: place every clip at its time on one silent track, then encode it as AAC (plays on iPhone/iPad)
+    let audioSeconds = 0;
+    const stretch = wallMs > 0 && Number.isFinite(v.duration) ? (v.duration * 1000) / wallMs : 1;
+    if (withAudio) {
+      const lengthS = (Number.isFinite(v.duration) ? v.duration : Math.max(...voice.map((c) => c.at)) / 1000 + 20) + 0.5;
+      const off = new OfflineAudioContext(1, Math.ceil(lengthS * SR), SR);
+      for (const clip of voice) {
+        const data = await (await fetch(base + clip.url)).arrayBuffer();
+        const buf = await off.decodeAudioData(data);
+        const node = off.createBufferSource();
+        node.buffer = buf;
+        node.connect(off.destination);
+        node.start(Math.max(0, (clip.at * stretch) / 1000));
+      }
+      const rendered = await off.startRendering();
+      const pcm = rendered.getChannelData(0);
+      const aenc = new AudioEncoder({
+        output: (chunk, meta) => { try { muxer.addAudioChunk(chunk, meta); } catch (e) { encError = encError || e; } },
+        error: (e) => { encError = e; },
+      });
+      aenc.configure({ codec: 'mp4a.40.2', sampleRate: SR, numberOfChannels: 1, bitrate: 96000 });
+      for (let i = 0; i < pcm.length; i += 1024) {
+        const n = Math.min(1024, pcm.length - i);
+        const ad = new AudioData({ format: 'f32-planar', sampleRate: SR, numberOfFrames: n, numberOfChannels: 1, timestamp: Math.round((i / SR) * 1e6), data: pcm.slice(i, i + n) });
+        aenc.encode(ad);
+        ad.close();
+      }
+      await aenc.flush();
+      audioSeconds = pcm.length / SR;
+    }
     // Chrome leaves colorSpace empty for canvas frames; the muxer needs it, so give the standard HD one
     const BT709 = { primaries: 'bt709', transfer: 'bt709', matrix: 'bt709', fullRange: false };
     const enc = new VideoEncoder({
@@ -182,9 +300,9 @@ async function toMp4(webmName) {
     a.download = 'out.mp4';
     document.body.appendChild(a);
     a.click();
-    return { frames: n, seconds: last / 1e6, width, height };
+    return { frames: n, seconds: last / 1e6, width, height, voiceClips: voice.length, audioSeconds, stretch: Number(stretch.toFixed(3)) };
    } catch (e) { throw new Error(`MP4 step failed: ${e && e.stack ? e.stack : e}`); }
-  }, { src: `${APP}__rec/${webmName}`, bitrate: BITRATE });
+  }, { src: `${APP}__rec/${webmName}`, bitrate: BITRATE, voice, wallMs, base: `${APP}__rec/` });
   const d = await download;
   const target = path.join(TMP, webmName.replace(/\.webm$/, '.mp4'));
   await d.saveAs(target);
@@ -192,9 +310,31 @@ async function toMp4(webmName) {
   return { target, ...info };
 }
 
+// ---------- make all voice clips first ----------
+// Captions are plain strings in scenes.mjs; titles come from builtinHelpVideos.js.
+const prewarmVoice = async (files) => {
+  if (NO_VOICE) return;
+  const src = fs.readFileSync(path.join(here, 'scenes.mjs'), 'utf8');
+  const texts = new Set();
+  // Match every quoted string (any length) so quotes pair up correctly, then keep the sentences
+  for (const m of src.matchAll(/'((?:[^'\\\n]|\\.)*)'/g)) {
+    const t = m[1].replace(/\\'/g, "'");
+    if (t.length >= 20 && /\s/.test(t) && /[.!?]$/.test(t)) texts.add(t);
+  }
+  BUILTIN_HELP_VIDEOS.filter((m) => !files.length || files.includes(m.file)).forEach((m) => texts.add(`${m.title}.`));
+  texts.add('Need more help? Search the videos in Help and Support, ask the AI assistant, or raise a ticket.');
+  let made = 0;
+  for (const t of texts) {
+    const file = path.join(AUDIO_DIR, clipName(spoken(t)));
+    if (!fs.existsSync(file)) { await voiceClip(spoken(t)); made += 1; }
+  }
+  console.log(`voice clips ready: ${texts.size} (${made} new)`);
+};
+
 // ---------- run ----------
 // --convert-only: skip recording and turn the WebM files already in __rec into MP4 again
 const convertOnly = process.argv.includes('--convert-only');
+if (!convertOnly) await prewarmVoice(only);
 const browser = await chromium.launch({ headless: true });
 const results = [];
 if (convertOnly) {
@@ -213,40 +353,49 @@ for (const meta of convertOnly ? [] : BUILTIN_HELP_VIDEOS) {
   }, demo.owner);
   await ctx.addInitScript(OVERLAY);
   const page = await ctx.newPage();
+  const t0 = Date.now(); // the recording starts with the page
+  const voiceLog = [];
   const errors = [];
   page.on('pageerror', (e) => errors.push(e.message));
   page.on('dialog', (d) => d.accept(page.__answer || ''));
-  const kit = makeKit(page, demo);
+  const kit = makeKit(page, demo, voiceLog, t0);
   const started = Date.now();
   let failed = null;
   try {
+    const titleSpeech = `${meta.title}.`;
+    if (!NO_VOICE) await voiceClip(spoken(titleSpeech));
     await page.goto(APP);
     await page.waitForSelector('[data-tour="nav-leads"]', { timeout: 20000 });
     await kit.wait(1200);
     // Title card; the poster picture is taken from it
     await page.evaluate(([b, t, s]) => window.__rec.card(b, t, s), [meta.section, meta.title, meta.description]);
+    const titleMs = await kit.speakNow(titleSpeech);
     await kit.wait(700);
     await page.screenshot({ path: path.join(OUT, `${meta.file}.jpg`), type: 'jpeg', quality: 78 });
-    await kit.wait(2600);
+    await kit.wait(Math.max(2600, titleMs - 700 + 600));
     await page.evaluate(() => window.__rec.card());
     await kit.wait(400);
     await scene(kit, meta);
     await kit.hush();
-    await kit.card('Need more help?', 'Search the videos in Help & Support', 'Or ask the AI assistant, or raise a ticket to the support team.', 2600);
+    await kit.card('Need more help?', 'Search the videos in Help & Support', 'Or ask the AI assistant, or raise a ticket to the support team.', 2600,
+      'Need more help? Search the videos in Help and Support, ask the AI assistant, or raise a ticket.');
   } catch (e) {
     failed = e.message.split('\n')[0];
     await page.screenshot({ path: path.join(TMP, `${meta.file}-failed.png`) }).catch(() => {});
   }
   const video = page.video();
+  const wallMs = Date.now() - t0;
   await ctx.close();
   const seconds = Math.round((Date.now() - started) / 1000);
   const webm = path.join(TMP, `${meta.file}.webm`);
   if (fs.existsSync(webm)) fs.rmSync(webm);
   fs.renameSync(await video.path(), webm);
+  fs.writeFileSync(path.join(TMP, `${meta.file}.voice.json`), JSON.stringify({ clips: voiceLog, wallMs }));
   results.push({ file: meta.file, seconds, failed, errors: errors.slice(0, 3) });
   console.log(`${failed ? 'FAILED' : 'recorded'} ${meta.file} (${seconds}s)${failed ? ` -> ${failed}` : ''}`);
 }
 await browser.close();
+if (tts) tts.close();
 
 // Poster (first frame after the title card) + MP4
 for (const r of (process.env.NO_MP4 ? [] : results)) {
@@ -257,6 +406,6 @@ for (const r of (process.env.NO_MP4 ? [] : results)) {
   r.mp4Seconds = Math.round(conv.seconds);
   const mb = (fs.statSync(path.join(OUT, `${r.file}.mp4`)).size / 1024 / 1024).toFixed(1);
   const s = r.mp4Seconds;
-  console.log(`mp4 ${r.file}: ${mb} MB, ${r.frames} frames, length ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`);
+  console.log(`mp4 ${r.file}: ${mb} MB, ${r.frames} frames, length ${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}, voice clips ${conv.voiceClips}`);
 }
 console.log(JSON.stringify(results, null, 1));
