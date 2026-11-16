@@ -26,18 +26,6 @@ function Num({ label, value, onChange, suffix, step = 'any', min = 0, hint }) {
   );
 }
 
-function Section({ title, children, locked }) {
-  return (
-    <div className={cardCls}>
-      <div className="flex items-center justify-between gap-2">
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">{title}</h3>
-        {locked && <span className="text-[10px] font-semibold text-slate-400 flex items-center gap-1"><Lock size={10} /> Owner only</span>}
-      </div>
-      {children}
-    </div>
-  );
-}
-
 function Row({ label, value, strong, tone }) {
   const color = tone === 'good' ? 'text-emerald-700 dark:text-emerald-400' : tone === 'bad' ? 'text-rose-600' : 'text-slate-800 dark:text-slate-100';
   return (
@@ -48,207 +36,248 @@ function Row({ label, value, strong, tone }) {
   );
 }
 
-/** The numbers panel shared by the cost sheet and the quick calculator. */
-function Results({ sheet, r }) {
-  const cur = sheet.currency?.foreign || 'USD';
-  const loc = sheet.currency?.local || 'INR';
-  const unitLabel = r.unit === 'kg' ? 'per kg' : 'per ton';
-  const digits = r.unit === 'kg' ? 4 : 2;
+/* ------------------------------------------------------------------ */
+/* The quotation calculator, laid out like the company's own sheet      */
+/* ------------------------------------------------------------------ */
+
+const cellInput = 'w-full min-w-0 px-2.5 py-1.5 text-sm text-right font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
+
+function SheetRow({ n, label, hint, children }) {
   return (
-    <div className="space-y-3" data-ship-results>
-      <div className={`${cardCls} bg-emerald-50/60 dark:bg-emerald-950/20 border-emerald-200 dark:border-emerald-900`}>
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">Quotation {unitLabel} ({cur})</h3>
-        {PRICE_TERMS.map((t) => (
-          <Row key={t} label={t === r.term ? `${t} (this quote)` : t} value={money(r.quote[t.toLowerCase()], cur, digits)} strong={t === r.term} tone={t === r.term ? 'good' : undefined} />
-        ))}
-        {r.unit === 'kg' && !r.hidden && <p className="text-[10px] text-slate-500">Per ton: FOB {money(r.perTon.fob, cur)} · CFR {money(r.perTon.cfr, cur)} · CIF {money(r.perTon.cif, cur)}</p>}
-        {r.unit === 'ton' && !r.hidden && <p className="text-[10px] text-slate-500">Per kg: FOB {money(r.perKg.fob, cur, 4)} · CFR {money(r.perKg.cfr, cur, 4)} · CIF {money(r.perKg.cif, cur, 4)}</p>}
+    <div className="grid grid-cols-[16px_minmax(0,1fr)_minmax(160px,44%)] items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
+      <span className="text-[10px] font-bold text-slate-400 text-center">{n}</span>
+      <div className="min-w-0">
+        <div className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">{label}</div>
+        {hint && <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{hint}</div>}
       </div>
-      <div className={cardCls}>
-        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Shipment</h3>
-        <Row label="Containers" value={`${r.containers} × ${sheet.container?.type || ''}`} />
-        <Row label="Total quantity" value={`${r.tons.toLocaleString()} MT`} />
-        <Row label="Total bags" value={r.bags.toLocaleString()} />
-        <Row label={`Shipment value (${r.term})`} value={money(r.saleValue, cur)} strong />
-        {!r.hidden && <Row label={`Shipment value in ${loc}`} value={money(r.saleLocal, loc, 0)} />}
-      </div>
-      {r.hidden ? (
-        <div className={`${cardCls} text-[11px] text-slate-500 flex items-start gap-2`}>
-          <Lock size={14} className="shrink-0 mt-0.5" />
-          <span>Costs and profit are visible to the company owner only. The quote above is worked out from them.</span>
-        </div>
-      ) : (
-        <>
-          <div className={cardCls}>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">How the price is built (per ton)</h3>
-            <Row label={`Ex-plant + transport (${loc})`} value={money(r.build.goods, loc)} />
-            <Row label={`Customs & local charges (${loc})`} value={money(r.build.customs, loc)} />
-            <Row label={`Cost up to port (${loc})`} value={money(r.build.costFobLocal, loc)} strong />
-            <Row label={`+ ${sheet.profit_pct || 0}% profit, divided by rate ${r.rate} = FOB`} value={money(r.perTon.fob, cur)} />
-            <Row label={`Ocean freight (${cur})`} value={money(r.build.freight, cur)} />
-            <Row label="FOB + freight = CFR" value={money(r.perTon.cfr, cur)} />
-            <Row label={`Insurance (${loc})`} value={money(r.build.insurance, loc)} />
-            <Row label="With insurance and profit, + freight = CIF" value={money(r.perTon.cif, cur)} />
-            <p className="text-[10px] text-slate-400">Profit is added to the goods, customs and insurance, not to the ocean freight.</p>
-          </div>
-          <div className={cardCls}>
-            <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Profit on this shipment ({r.term})</h3>
-            <Row label="Profit in the price" value={money(r.profit, cur)} tone={r.profit >= 0 ? 'good' : 'bad'} />
-            {r.commissions.total > 0 && (
-              <>
-                <Row label="Commission to agent" value={money(-r.commissions.agent, cur)} />
-                <Row label="Commission to consultant" value={money(-r.commissions.consultant, cur)} />
-                <Row label="Incentive to sales person" value={money(-r.commissions.sales, cur)} />
-              </>
-            )}
-            <Row label="Profit before tax" value={money(r.pbt, cur)} strong tone={r.pbt >= 0 ? 'good' : 'bad'} />
-            {r.tax > 0 && <Row label="Tax" value={money(-r.tax, cur)} />}
-            <Row label="Net profit" value={money(r.net, cur)} strong tone={r.net >= 0 ? 'good' : 'bad'} />
-            <Row label={`Net profit in ${loc}`} value={money(r.netLocal, loc, 0)} />
-          </div>
-        </>
-      )}
-      <p className="text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Formula from your company’s Quotation Calculator sheet.</p>
+      <div className="min-w-0">{children}</div>
     </div>
   );
 }
 
-/** All input sections of a sheet. `canMoney` hides cost fields for staff without access. */
-function SheetForm({ sheet, setSheet, canMoney, team, leadNames, quick = false }) {
+function SheetInput({ value, onChange, unit, label }) {
+  return (
+    <div className="flex items-center gap-1.5">
+      <input type="number" inputMode="decimal" step="any" value={value ?? ''} aria-label={label}
+        onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} className={cellInput} />
+      {unit && <span className="w-9 shrink-0 text-[10px] font-bold text-slate-400">{unit}</span>}
+    </div>
+  );
+}
+
+/** A result line (FOB / CFR / CIF): the price in the quote currency, and the same in the local currency. */
+function PriceRow({ term, r, cur, loc, active, onPick, how }) {
+  const key = term.toLowerCase();
+  const digits = r.unit === 'kg' ? 4 : 2;
+  const localValue = r.hidden ? null : (r.unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
+  return (
+    <button type="button" onClick={onPick} data-price-row={term}
+      className={`w-full text-left grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 border-b border-emerald-200/70 dark:border-emerald-900 cursor-pointer transition-colors ${active ? 'bg-emerald-100/80 dark:bg-emerald-900/40' : 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/50'}`}>
+      <span className={`w-3.5 h-3.5 rounded-full border-2 justify-self-center ${active ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`} />
+      <div className="min-w-0">
+        <div className="text-sm font-black text-slate-900 dark:text-white">{term} <span className="text-[11px] font-semibold text-slate-500">{r.unit === 'kg' ? 'per kg' : 'per ton'}</span></div>
+        {how && <div className="text-[10px] text-slate-500 leading-tight">{how}</div>}
+      </div>
+      <div className="text-right">
+        <div className="text-base font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{money(r.quote[key], cur, digits)}</div>
+        {localValue !== null && Number.isFinite(localValue) && <div className="text-[10px] font-semibold text-slate-500 tabular-nums">= {money(localValue, loc, r.unit === 'kg' ? 2 : 0)}</div>}
+      </div>
+    </button>
+  );
+}
+
+function QuoteTable({ sheet, setSheet, r, canMoney }) {
   const set = (patch) => setSheet((s) => ({ ...s, ...patch }));
   const setIn = (key, patch) => setSheet((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
   const cur = sheet.currency?.foreign || 'USD';
   const loc = sheet.currency?.local || 'INR';
+  const pick = (term) => set({ term });
   return (
-    <div className="space-y-3">
-      {!quick && (
-        <Section title="Shipment">
-          <div className={grid}>
-            <div className="min-w-0">
-              <label className={labelCls}>Name / reference</label>
-              <input value={sheet.name} onChange={(e) => set({ name: e.target.value })} placeholder="e.g. Saigon Feed Mill · Corn DDGS · Nov" className={inputCls} />
-            </div>
-            <div className="min-w-0">
-              <label className={labelCls}>Buyer</label>
-              <input list="ship-buyers" value={sheet.buyer} onChange={(e) => set({ buyer: e.target.value })} placeholder="Company name" className={inputCls} />
-              <datalist id="ship-buyers">{leadNames.map((n) => <option key={n} value={n} />)}</datalist>
-            </div>
-            <div className="min-w-0">
-              <label className={labelCls}>Product</label>
-              <input list="ship-products" value={sheet.product} onChange={(e) => set({ product: e.target.value })} placeholder="e.g. Corn DDGS" className={inputCls} />
-            </div>
-            <div className="min-w-0">
-              <label className={labelCls}>Type</label>
-              <select value={sheet.mode} onChange={(e) => set({ mode: e.target.value })} className={inputCls}>
-                <option value="shipment">Shipment cost sheet</option>
-                <option value="quotation">Quotation</option>
-              </select>
-            </div>
-          </div>
-        </Section>
-      )}
-
-      <Section title="Containers">
-        <div className={grid}>
-          <div className="min-w-0">
-            <label className={labelCls}>Type of container</label>
-            <select value={sheet.container?.type} onChange={(e) => setIn('container', { type: e.target.value })} className={inputCls}>
-              {CONTAINER_TYPES.map((t) => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <Num label="Tons in each container" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} suffix="MT" />
-          <Num label="Total containers" value={sheet.container?.count} onChange={(v) => setIn('container', { count: v })} step="1" />
-          <Num label="Bags in each container" value={sheet.container?.bags_per} onChange={(v) => setIn('container', { bags_per: v })} step="1" />
+    <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden" data-quote-table>
+      <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+        <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Quotation calculator</div>
+        <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Quote per ton or per kg">
+          {QUOTE_UNITS.map((u) => (
+            <button key={u.id} type="button" role="radio" aria-checked={(sheet.quote_unit || 'ton') === u.id} onClick={() => set({ quote_unit: u.id })}
+              className={`px-2.5 py-1 rounded-md cursor-pointer ${(sheet.quote_unit || 'ton') === u.id ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>
+              {u.label}
+            </button>
+          ))}
         </div>
-      </Section>
+      </div>
 
-      <Section title="Currency & quote">
-        <div className={grid}>
-          <div className="min-w-0">
-            <label className={labelCls}>Local currency</label>
-            <select value={loc} onChange={(e) => setIn('currency', { local: e.target.value })} className={inputCls}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
-          </div>
-          <div className="min-w-0">
-            <label className={labelCls}>Quote in currency</label>
-            <select value={cur} onChange={(e) => setIn('currency', { foreign: e.target.value })} className={inputCls}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
-          </div>
-          <Num label={`Rate: ${loc} for 1 ${cur}`} value={sheet.currency?.rate} onChange={(v) => setIn('currency', { rate: v })} />
-          <div className="min-w-0">
-            <label className={labelCls}>Quote</label>
-            <select value={sheet.quote_unit || 'ton'} onChange={(e) => set({ quote_unit: e.target.value })} className={inputCls} aria-label="Quote per ton or per kg">
-              {QUOTE_UNITS.map((u) => <option key={u.id} value={u.id}>{u.label}</option>)}
-            </select>
-          </div>
-          <div className="min-w-0">
-            <label className={labelCls}>Price term</label>
-            <select value={sheet.term} onChange={(e) => set({ term: e.target.value })} className={inputCls}>{PRICE_TERMS.map((t) => <option key={t}>{t}</option>)}</select>
-          </div>
+      <SheetRow n={1} label="Total tons in a container">
+        <SheetInput label="Total tons in a container" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} unit="MT" />
+      </SheetRow>
+      <SheetRow n={2} label="Quote in currency">
+        <div className="flex items-center gap-1.5">
+          <select value={cur} onChange={(e) => setIn('currency', { foreign: e.target.value })} aria-label="Quote currency" className={cellInput}>
+            {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
+          </select>
+          <span className="w-9 shrink-0" />
         </div>
-      </Section>
+      </SheetRow>
+      <SheetRow n={3} label="Exchange rate" hint={`1 ${cur} = how many ${loc}`}>
+        <SheetInput label="Exchange rate" value={sheet.currency?.rate} onChange={(v) => setIn('currency', { rate: v })} unit={loc} />
+      </SheetRow>
 
-      {canMoney && (
+      {canMoney ? (
         <>
-          <Section title="Product cost" locked>
-            <div className={grid}>
-              <Num label={`Ex-plant price per kg (${loc})`} value={sheet.price_per_kg} onChange={(v) => set({ price_per_kg: v })} hint="Including packaging and loading" />
-              <Num label={`Transport to port per kg (${loc})`} value={sheet.transport_per_kg} onChange={(v) => set({ transport_per_kg: v })} />
-              <Num label="Profit" value={sheet.profit_pct} onChange={(v) => set({ profit_pct: v })} suffix="%" min={undefined} />
-            </div>
-          </Section>
-          <Section title="Charges per container" locked>
-            <div className={grid}>
-              <Num label={`Customs clearance + local charges (${loc})`} value={sheet.costs?.customs_per_container} onChange={(v) => setIn('costs', { customs_per_container: v })} />
-              <Num label={`Ocean freight (${cur})`} value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} />
-              <Num label={`Insurance (${loc})`} value={sheet.costs?.insurance_per_container} onChange={(v) => setIn('costs', { insurance_per_container: v })} hint="Only in the CIF price" />
-            </div>
-          </Section>
-          <Section title="Commission & tax (optional)" locked>
-            <p className="text-[10px] text-slate-500 -mt-1">Taken out of your profit; they do not change the quote.</p>
-            <div className={grid}>
-              <Num label="Commission to agent" value={sheet.commission?.agent_pct} onChange={(v) => setIn('commission', { agent_pct: v })} suffix="%" />
-              <Num label="Commission to consultant" value={sheet.commission?.consultant_pct} onChange={(v) => setIn('commission', { consultant_pct: v })} suffix="%" />
-              <Num label="Incentive to sales person" value={sheet.commission?.sales_pct} onChange={(v) => setIn('commission', { sales_pct: v })} suffix="%" />
-              <Num label="Tax on profit" value={sheet.tax_pct} onChange={(v) => set({ tax_pct: v })} suffix="%" />
-            </div>
-          </Section>
+          <SheetRow n={4} label="Ex-plant price per kg" hint="Including packaging and loading">
+            <SheetInput label="Ex-plant price per kg" value={sheet.price_per_kg} onChange={(v) => set({ price_per_kg: v })} unit={`${loc}/kg`} />
+          </SheetRow>
+          <SheetRow n={5} label="Local transportation up to port" hint="Per kg">
+            <SheetInput label="Local transportation per kg" value={sheet.transport_per_kg} onChange={(v) => set({ transport_per_kg: v })} unit={`${loc}/kg`} />
+          </SheetRow>
+          <SheetRow n={6} label="Customs clearance incl. local charges" hint="Per container">
+            <SheetInput label="Customs clearance per container" value={sheet.costs?.customs_per_container} onChange={(v) => setIn('costs', { customs_per_container: v })} unit={loc} />
+          </SheetRow>
+          <SheetRow n={7} label="Profit">
+            <SheetInput label="Profit percent" value={sheet.profit_pct} onChange={(v) => set({ profit_pct: v })} unit="%" />
+          </SheetRow>
+          <PriceRow term="FOB" r={r} cur={cur} loc={loc} active={r.term === 'FOB'} onPick={() => pick('FOB')} how="Rows 4 to 7, divided by the rate" />
+          <SheetRow n={8} label="Ocean freight" hint="Per container">
+            <SheetInput label="Ocean freight per container" value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} unit={cur} />
+          </SheetRow>
+          <PriceRow term="CFR" r={r} cur={cur} loc={loc} active={r.term === 'CFR'} onPick={() => pick('CFR')} how="FOB + freight (no profit on freight)" />
+          <SheetRow n={9} label="Insurance" hint="Per container">
+            <SheetInput label="Insurance per container" value={sheet.costs?.insurance_per_container} onChange={(v) => setIn('costs', { insurance_per_container: v })} unit={loc} />
+          </SheetRow>
+          <PriceRow term="CIF" r={r} cur={cur} loc={loc} active={r.term === 'CIF'} onPick={() => pick('CIF')} how="Like FOB with insurance added, + freight" />
+        </>
+      ) : (
+        <>
+          {PRICE_TERMS.map((t) => <PriceRow key={t} term={t} r={r} cur={cur} loc={loc} active={r.term === t} onPick={() => pick(t)} />)}
+          <div className="px-3 py-2 text-[11px] text-slate-500 flex items-start gap-1.5"><Lock size={12} className="shrink-0 mt-0.5" /> Costs and profit are set by the company owner. These prices are worked out from them.</div>
         </>
       )}
+      <div className="px-3 py-2 text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Same formula as your company’s Quotation Calculator sheet. Tap FOB, CFR or CIF to use it for this shipment.</div>
+    </div>
+  );
+}
 
-      {!quick && (
-        <Section title="Shipment tasks">
-          <p className="text-[11px] text-slate-500 -mt-1">Each step with the responsible person and the TAT (days allowed).</p>
-          <div className="space-y-2">
-            {(sheet.tasks || []).map((t, i) => {
-              const patch = (p) => setSheet((s) => ({ ...s, tasks: s.tasks.map((x, j) => (j === i ? { ...x, ...p } : x)) }));
-              const overdue = !t.done && t.due_date && t.due_date < today();
-              return (
-                <div key={t.id} className={`grid grid-cols-1 sm:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.3fr)_90px_130px_auto] gap-2 items-center p-2 rounded-xl border ${overdue ? 'border-rose-200 bg-rose-50/50 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-800'}`}>
-                  <input type="checkbox" checked={t.done} onChange={(e) => patch({ done: e.target.checked })} className="w-4 h-4 accent-emerald-600" aria-label="Done" />
-                  <input value={t.title} onChange={(e) => patch({ title: e.target.value })} placeholder="e.g. Container booking" className={inputCls} />
-                  <select value={t.person_id} onChange={(e) => patch({ person_id: e.target.value })} className={inputCls}>
-                    <option value="">Responsible person</option>
-                    {team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
-                  </select>
-                  <input type="number" min={0} value={t.tat_days} onChange={(e) => patch({ tat_days: Number(e.target.value) || 0, due_date: addDays(today(), e.target.value) })} className={inputCls} aria-label="TAT days" title="TAT in days" />
-                  <input type="date" value={t.due_date} onChange={(e) => patch({ due_date: e.target.value })} className={inputCls} aria-label="Due date" />
-                  <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: s.tasks.filter((_, j) => j !== i) }))} className="p-2 text-slate-400 hover:text-rose-600 cursor-pointer justify-self-end" aria-label="Remove task"><X size={14} /></button>
-                </div>
-              );
-            })}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: [...(s.tasks || []), { id: `t${Date.now()}`, title: '', person_id: '', tat_days: 2, due_date: addDays(today(), 2), done: false }] }))} className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer flex items-center gap-1"><Plus size={12} /> Add task</button>
-            {(sheet.tasks || []).length === 0 && (
-              <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: ['Container booking', 'Stuffing & loading', 'Customs clearance', 'Shipping documents & BL', 'Payment follow-up'].map((title, i) => ({ id: `t${Date.now()}${i}`, title, person_id: '', tat_days: [2, 3, 2, 5, 7][i], due_date: addDays(today(), [2, 3, 2, 5, 7][i]), done: false })) }))} className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 cursor-pointer flex items-center gap-1"><ListChecks size={12} /> Add the usual export steps</button>
-            )}
-          </div>
-        </Section>
+/** The summary on the right: the shipment and the profit. */
+function Results({ sheet, r }) {
+  const cur = sheet.currency?.foreign || 'USD';
+  const loc = sheet.currency?.local || 'INR';
+  return (
+    <div className="space-y-3" data-ship-results>
+      <div className={cardCls}>
+        <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">This shipment ({r.term})</h3>
+        <Row label="Containers" value={`${r.containers} × ${sheet.container?.type || ''}`} />
+        <Row label="Total quantity" value={`${r.tons.toLocaleString()} MT`} />
+        <Row label={`Price per ton (${r.term})`} value={money(r.quotePerTon, cur)} />
+        <Row label="Shipment value" value={money(r.saleValue, cur)} strong />
+        {!r.hidden && <Row label={`In ${loc}`} value={money(r.saleLocal, loc, 0)} />}
+      </div>
+      {!r.hidden && (
+        <div className={cardCls}>
+          <h3 className="text-xs font-extrabold uppercase tracking-wider text-slate-500">Your profit</h3>
+          <Row label={`${sheet.profit_pct || 0}% profit in the price`} value={money(r.profit, cur)} tone={r.profit >= 0 ? 'good' : 'bad'} />
+          {r.commissions.total > 0 && <Row label="Commissions" value={money(-r.commissions.total, cur)} />}
+          {r.tax > 0 && <Row label="Tax" value={money(-r.tax, cur)} />}
+          <Row label="Net profit" value={money(r.net, cur)} strong tone={r.net >= 0 ? 'good' : 'bad'} />
+          <Row label={`In ${loc}`} value={money(r.netLocal, loc, 0)} />
+        </div>
       )}
+    </div>
+  );
+}
 
+/** Everything that is not needed for the price: shown under "More details". */
+function SheetForm({ sheet, setSheet, canMoney, team, leadNames, r, quick = false }) {
+  const set = (patch) => setSheet((s) => ({ ...s, ...patch }));
+  const setIn = (key, patch) => setSheet((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
+  const loc = sheet.currency?.local || 'INR';
+  return (
+    <div className="space-y-3">
+      <QuoteTable sheet={sheet} setSheet={setSheet} r={r} canMoney={canMoney} />
       {!quick && (
-        <Section title="Notes">
-          <textarea rows={2} value={sheet.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Packing, payment terms, validity of the quotation…" className={inputCls} />
-        </Section>
+        <details className="group bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800" data-more-details>
+          <summary className="px-4 py-3 text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer select-none flex items-center justify-between">
+            More details: buyer, containers, commission, tasks, notes
+            <span className="text-slate-400 group-open:rotate-180 transition-transform">▾</span>
+          </summary>
+          <div className="px-4 pb-4 space-y-4 border-t border-slate-100 dark:border-slate-800 pt-4">
+            <div className={grid}>
+              <div className="min-w-0">
+                <label className={labelCls}>Buyer</label>
+                <input list="ship-buyers" value={sheet.buyer} onChange={(e) => set({ buyer: e.target.value })} placeholder="Company name" className={inputCls} />
+                <datalist id="ship-buyers">{leadNames.map((n) => <option key={n} value={n} />)}</datalist>
+              </div>
+              <div className="min-w-0">
+                <label className={labelCls}>Product</label>
+                <input list="ship-products" value={sheet.product} onChange={(e) => set({ product: e.target.value })} placeholder="e.g. Corn DDGS" className={inputCls} />
+              </div>
+              <div className="min-w-0">
+                <label className={labelCls}>Type</label>
+                <select value={sheet.mode} onChange={(e) => set({ mode: e.target.value })} className={inputCls}>
+                  <option value="shipment">Shipment cost sheet</option>
+                  <option value="quotation">Quotation</option>
+                </select>
+              </div>
+              <div className="min-w-0">
+                <label className={labelCls}>Local currency</label>
+                <select value={loc} onChange={(e) => setIn('currency', { local: e.target.value })} className={inputCls}>{CURRENCIES.map((c) => <option key={c}>{c}</option>)}</select>
+              </div>
+            </div>
+            <div className={grid}>
+              <div className="min-w-0">
+                <label className={labelCls}>Type of container</label>
+                <select value={sheet.container?.type} onChange={(e) => setIn('container', { type: e.target.value })} className={inputCls}>
+                  {CONTAINER_TYPES.map((t) => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <Num label="Total containers" value={sheet.container?.count} onChange={(v) => setIn('container', { count: v })} step="1" />
+              <Num label="Bags in each container" value={sheet.container?.bags_per} onChange={(v) => setIn('container', { bags_per: v })} step="1" />
+            </div>
+            {canMoney && (
+              <div>
+                <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Commission & tax (optional)</div>
+                <p className="text-[10px] text-slate-500 mb-2">Taken out of your profit; they do not change the quote.</p>
+                <div className={grid}>
+                  <Num label="Commission to agent" value={sheet.commission?.agent_pct} onChange={(v) => setIn('commission', { agent_pct: v })} suffix="%" />
+                  <Num label="Commission to consultant" value={sheet.commission?.consultant_pct} onChange={(v) => setIn('commission', { consultant_pct: v })} suffix="%" />
+                  <Num label="Incentive to sales person" value={sheet.commission?.sales_pct} onChange={(v) => setIn('commission', { sales_pct: v })} suffix="%" />
+                  <Num label="Tax on profit" value={sheet.tax_pct} onChange={(v) => set({ tax_pct: v })} suffix="%" />
+                </div>
+              </div>
+            )}
+            <div>
+              <div className="text-[11px] font-bold text-slate-700 dark:text-slate-300">Shipment tasks</div>
+              <p className="text-[10px] text-slate-500 mb-2">Each step with the responsible person and the TAT (days allowed).</p>
+              <div className="space-y-2">
+                {(sheet.tasks || []).map((t, i) => {
+                  const patch = (p) => setSheet((s) => ({ ...s, tasks: s.tasks.map((x, j) => (j === i ? { ...x, ...p } : x)) }));
+                  const overdue = !t.done && t.due_date && t.due_date < today();
+                  return (
+                    <div key={t.id} className={`grid grid-cols-1 sm:grid-cols-[auto_minmax(0,2fr)_minmax(0,1.3fr)_90px_130px_auto] gap-2 items-center p-2 rounded-xl border ${overdue ? 'border-rose-200 bg-rose-50/50 dark:bg-rose-950/20' : 'border-slate-200 dark:border-slate-800'}`}>
+                      <input type="checkbox" checked={t.done} onChange={(e) => patch({ done: e.target.checked })} className="w-4 h-4 accent-emerald-600" aria-label="Done" />
+                      <input value={t.title} onChange={(e) => patch({ title: e.target.value })} placeholder="e.g. Container booking" className={inputCls} />
+                      <select value={t.person_id} onChange={(e) => patch({ person_id: e.target.value })} className={inputCls}>
+                        <option value="">Responsible person</option>
+                        {team.map((m) => <option key={m.id} value={m.id}>{m.name}</option>)}
+                      </select>
+                      <input type="number" min={0} value={t.tat_days} onChange={(e) => patch({ tat_days: Number(e.target.value) || 0, due_date: addDays(today(), e.target.value) })} className={inputCls} aria-label="TAT days" title="TAT in days" />
+                      <input type="date" value={t.due_date} onChange={(e) => patch({ due_date: e.target.value })} className={inputCls} aria-label="Due date" />
+                      <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: s.tasks.filter((_, j) => j !== i) }))} className="p-2 text-slate-400 hover:text-rose-600 cursor-pointer justify-self-end" aria-label="Remove task"><X size={14} /></button>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="flex flex-wrap gap-2 mt-2">
+                <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: [...(s.tasks || []), { id: `t${Date.now()}`, title: '', person_id: '', tat_days: 2, due_date: addDays(today(), 2), done: false }] }))} className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 cursor-pointer flex items-center gap-1"><Plus size={12} /> Add task</button>
+                {(sheet.tasks || []).length === 0 && (
+                  <button type="button" onClick={() => setSheet((s) => ({ ...s, tasks: ['Container booking', 'Stuffing & loading', 'Customs clearance', 'Shipping documents & BL', 'Payment follow-up'].map((title, i) => ({ id: `t${Date.now()}${i}`, title, person_id: '', tat_days: [2, 3, 2, 5, 7][i], due_date: addDays(today(), [2, 3, 2, 5, 7][i]), done: false })) }))} className="px-3 py-1.5 rounded-lg text-[11px] font-bold text-slate-600 bg-slate-50 border border-slate-200 cursor-pointer flex items-center gap-1"><ListChecks size={12} /> Add the usual export steps</button>
+                )}
+              </div>
+            </div>
+            <div>
+              <label className={labelCls}>Notes</label>
+              <textarea rows={2} value={sheet.notes} onChange={(e) => set({ notes: e.target.value })} placeholder="Packing, payment terms, validity of the quotation…" className={inputCls} />
+            </div>
+          </div>
+        </details>
       )}
     </div>
   );
@@ -259,13 +288,10 @@ export function QuickCalculator({ isOpen, onClose, onOpenAsSheet }) {
   const [sheet, setSheet] = useState(() => newSheet({ name: 'Quick calculation', mode: 'quotation' }));
   const r = useMemo(() => calcSheet(sheet), [sheet]);
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Quick calculator" subtitle="Check a price or a quotation in seconds" maxWidth="max-w-4xl">
-      <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] gap-4">
-        <SheetForm sheet={sheet} setSheet={setSheet} canMoney team={[]} leadNames={[]} quick />
-        <Results sheet={sheet} r={r} />
-      </div>
+    <Modal isOpen={isOpen} onClose={onClose} title="Quick calculator" subtitle="FOB, CFR and CIF in seconds" maxWidth="max-w-xl">
+      <QuoteTable sheet={sheet} setSheet={setSheet} r={r} canMoney />
       {onOpenAsSheet && (
-        <div className="flex justify-end pt-2">
+        <div className="flex justify-end pt-3">
           <button type="button" onClick={() => onOpenAsSheet(sheet)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"><FileText size={14} /> Save as a cost sheet</button>
         </div>
       )}
@@ -363,9 +389,10 @@ export default function Shipping() {
             <button type="button" onClick={save} disabled={saving} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer disabled:opacity-60"><Save size={13} /> {saving ? 'Saving…' : 'Save'}</button>
           </div>
         </div>
+        <input value={editing.name} onChange={(e) => setEditing((x) => ({ ...x, name: e.target.value }))} placeholder="Name this quotation, e.g. Saigon Feed Mill · Corn DDGS · Nov" aria-label="Name / reference" className="w-full px-3 py-2.5 text-base font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:outline-none" />
         <datalist id="ship-products">{commodities.map((c) => <option key={c} value={c} />)}</datalist>
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] gap-4 items-start">
-          <SheetForm sheet={editing} setSheet={(fn) => setEditing((s) => (typeof fn === 'function' ? fn(s) : fn))} canMoney={canMoney} team={people} leadNames={leadNames} />
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4 items-start">
+          <SheetForm sheet={editing} setSheet={(fn) => setEditing((s) => (typeof fn === 'function' ? fn(s) : fn))} canMoney={canMoney} team={people} leadNames={leadNames} r={r} />
           <div className="lg:sticky lg:top-4"><Results sheet={editing} r={r} /></div>
         </div>
       </div>
