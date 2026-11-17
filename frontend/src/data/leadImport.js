@@ -16,7 +16,7 @@ const pickFrom = (list, value) => list.find((item) => same(item, value));
 /** One entry per column of the template. `ownerOnly` columns are left out for staff. */
 export const buildColumns = ({ commodities = [], leadSources = [], stages = [], now = new Date() } = {}) => [
   { key: 'company', header: 'Company Name', aliases: ['company', 'name'], required: true, rule: 'Buyer company name. Must be unique.', example: ['Al-Zahra Trading LLC', 'Global Agri Impex BV'] },
-  { key: 'country', header: 'Country', aliases: [], rule: 'Country of the buyer.', example: ['United Arab Emirates', 'Netherlands'] },
+  { key: 'country', header: 'Country', aliases: ['buyercountry', 'countryname'], required: true, rule: 'Country of the buyer. Required.', example: ['United Arab Emirates', 'Netherlands'] },
   { key: 'address', header: 'Address', aliases: ['warehouseaddress', 'corporateaddress', 'streetaddress'], rule: 'Street / warehouse address.', example: ['Warehouse 14, Al Quoz Industrial Area 3', 'Keizersgracht 120'] },
   { key: 'state', header: 'State / Province', aliases: ['state', 'province', 'region'], rule: 'State or province.', example: ['Dubai', 'North Holland'] },
   { key: 'city', header: 'Area / City', aliases: ['city', 'area', 'town'], rule: 'Area or city.', example: ['Al Quoz', 'Amsterdam'] },
@@ -173,6 +173,7 @@ export const reviewImport = (parsed, {
       else if (seen.has(k)) errors.company = `Same company as row ${seen.get(k)}`;
       else seen.set(k, rowIdx + 2);
     }
+    if (!raw('country')) errors.country = 'Country is empty';
     const email = raw('email');
     if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) errors.email = 'Not a valid email';
 

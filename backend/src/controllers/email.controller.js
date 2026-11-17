@@ -115,8 +115,12 @@ const buildRecipients = (user, audience = {}) => {
       .flatMap((l) => {
         const emails = new Set();
         if (l.email) emails.add(String(l.email).trim().toLowerCase());
-        (Array.isArray(l.contacts) ? l.contacts : []).forEach((c) => c && c.email && emails.add(String(c.email).trim().toLowerCase()));
-        const contactFor = (email) => (Array.isArray(l.contacts) ? l.contacts : []).find((c) => c && String(c.email || '').toLowerCase() === email);
+        (Array.isArray(l.contacts) ? l.contacts : []).forEach((c) => {
+          if (!c) return;
+          if (c.email) emails.add(String(c.email).trim().toLowerCase());
+          (Array.isArray(c.extra_emails) ? c.extra_emails : []).forEach((e) => e && emails.add(String(e).trim().toLowerCase()));
+        });
+        const contactFor = (email) => (Array.isArray(l.contacts) ? l.contacts : []).find((c) => c && (String(c.email || '').toLowerCase() === email || (Array.isArray(c.extra_emails) && c.extra_emails.some((e) => String(e || '').trim().toLowerCase() === email))));
         return [...emails].map((email) => {
           const c = contactFor(email);
           return {
@@ -235,7 +239,7 @@ const testSettings = async (req, res) => {
 const getTags = async (req, res) => {
   const counts = new Map();
   for (const l of ownerLeads(req.user)) {
-    const hasEmail = Boolean(l.email) || (Array.isArray(l.contacts) && l.contacts.some((c) => c && c.email));
+    const hasEmail = Boolean(l.email) || (Array.isArray(l.contacts) && l.contacts.some((c) => c && (c.email || (Array.isArray(c.extra_emails) && c.extra_emails.some(Boolean)))));
     for (const t of normalizeTags(l.tags)) {
       const key = t.toLowerCase();
       const cur = counts.get(key) || { tag: t, leads: 0, with_email: 0 };
@@ -812,7 +816,7 @@ const unsubscribe = async (req, res) => {
     if (!senderUser || !isLeadInUserScope(l, senderUser)) return;
     const match =
       String(l.email || '').toLowerCase() === email ||
-      (Array.isArray(l.contacts) && l.contacts.some((c) => c && String(c.email || '').toLowerCase() === email));
+      (Array.isArray(l.contacts) && l.contacts.some((c) => c && (String(c.email || '').toLowerCase() === email || (Array.isArray(c.extra_emails) && c.extra_emails.some((e) => String(e || '').trim().toLowerCase() === email)))));
     if (match) {
       l.email_unsubscribed = true;
       dbSync.saveLead(l);

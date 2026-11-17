@@ -40,15 +40,15 @@ function Row({ label, value, strong, tone }) {
 /* The quotation calculator, laid out like the company's own sheet      */
 /* ------------------------------------------------------------------ */
 
-const cellInput = 'w-full min-w-0 px-2.5 py-1.5 text-sm text-right font-semibold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
+const cellInput = 'w-full min-w-0 px-3 py-2.5 text-base text-right font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
 
 function SheetRow({ n, label, hint, children }) {
   return (
-    <div className="grid grid-cols-[16px_minmax(0,1fr)_minmax(160px,44%)] items-center gap-2 px-3 py-2 border-b border-slate-100 dark:border-slate-800">
-      <span className="text-[10px] font-bold text-slate-400 text-center">{n}</span>
+    <div className="grid grid-cols-[22px_minmax(0,1fr)_minmax(170px,44%)] items-center gap-3 px-4 py-3 border-b border-slate-100 dark:border-slate-800">
+      <span className="w-6 h-6 rounded-full bg-slate-100 dark:bg-slate-800 text-[11px] font-bold text-slate-500 flex items-center justify-center">{n}</span>
       <div className="min-w-0">
-        <div className="text-[13px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">{label}</div>
-        {hint && <div className="text-[10px] text-slate-400 leading-tight mt-0.5">{hint}</div>}
+        <div className="text-sm sm:text-[15px] font-semibold text-slate-800 dark:text-slate-100 leading-tight">{label}</div>
+        {hint && <div className="text-[11px] text-slate-400 leading-tight mt-0.5">{hint}</div>}
       </div>
       <div className="min-w-0">{children}</div>
     </div>
@@ -60,7 +60,7 @@ function SheetInput({ value, onChange, unit, label }) {
     <div className="flex items-center gap-1.5">
       <input type="number" inputMode="decimal" step="any" value={value ?? ''} aria-label={label}
         onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} className={cellInput} />
-      {unit && <span className="w-9 shrink-0 text-[10px] font-bold text-slate-400">{unit}</span>}
+      {unit && <span className="w-11 shrink-0 text-[11px] font-bold text-slate-400">{unit}</span>}
     </div>
   );
 }
@@ -72,15 +72,15 @@ function PriceRow({ term, r, cur, loc, active, onPick, how }) {
   const localValue = r.hidden ? null : (r.unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
   return (
     <button type="button" onClick={onPick} data-price-row={term}
-      className={`w-full text-left grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2.5 border-b border-emerald-200/70 dark:border-emerald-900 cursor-pointer transition-colors ${active ? 'bg-emerald-100/80 dark:bg-emerald-900/40' : 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/50'}`}>
+      className={`w-full text-left grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 border-b border-emerald-200/70 dark:border-emerald-900 cursor-pointer transition-colors ${active ? 'bg-emerald-100/80 dark:bg-emerald-900/40' : 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/50'}`}>
       <span className={`w-3.5 h-3.5 rounded-full border-2 justify-self-center ${active ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`} />
       <div className="min-w-0">
-        <div className="text-sm font-black text-slate-900 dark:text-white">{term} <span className="text-[11px] font-semibold text-slate-500">{r.unit === 'kg' ? 'per kg' : 'per ton'}</span></div>
-        {how && <div className="text-[10px] text-slate-500 leading-tight">{how}</div>}
+        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{term} <span className="text-xs font-semibold text-slate-500">{r.unit === 'kg' ? 'price per kg' : 'price per ton'}</span></div>
+        {how && <div className="text-[11px] text-slate-500 leading-tight">{how}</div>}
       </div>
       <div className="text-right">
-        <div className="text-base font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{money(r.quote[key], cur, digits)}</div>
-        {localValue !== null && Number.isFinite(localValue) && <div className="text-[10px] font-semibold text-slate-500 tabular-nums">= {money(localValue, loc, r.unit === 'kg' ? 2 : 0)}</div>}
+        <div className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{money(r.quote[key], cur, digits)}</div>
+        {localValue !== null && Number.isFinite(localValue) && <div className="text-[11px] font-semibold text-slate-500 tabular-nums">= {money(localValue, loc, r.unit === 'kg' ? 2 : 0)}</div>}
       </div>
     </button>
   );
@@ -94,12 +94,28 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
   const pick = (term) => set({ term });
   return (
     <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden" data-quote-table>
-      <div className="flex items-center justify-between gap-2 px-3 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
-        <div className="text-xs font-extrabold uppercase tracking-wider text-slate-600 dark:text-slate-300">Quotation calculator</div>
+      <div className="px-4 pt-4 pb-3 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex items-start gap-3">
+          <span className="w-10 h-10 shrink-0 rounded-xl bg-emerald-600 text-white flex items-center justify-center"><Calculator size={20} /></span>
+          <div className="min-w-0">
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white leading-tight">Export price calculator</h2>
+            <p className="text-xs sm:text-[13px] text-slate-600 dark:text-slate-300 mt-1 leading-snug">
+              Works out the price to quote your buyer. Fill the white boxes from top to bottom; the green lines show the price.
+            </p>
+          </div>
+        </div>
+        <ul className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2 text-[11px] text-slate-600 dark:text-slate-300">
+          <li className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5"><b className="text-slate-900 dark:text-white">FOB</b>: goods loaded on the ship at your port</li>
+          <li className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5"><b className="text-slate-900 dark:text-white">CFR</b>: FOB + sea freight to the buyer’s port</li>
+          <li className="rounded-lg bg-white/80 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 px-2.5 py-1.5"><b className="text-slate-900 dark:text-white">CIF</b>: CFR + insurance of the goods</li>
+        </ul>
+      </div>
+      <div className="flex items-center justify-between gap-2 px-4 py-2.5 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-200 dark:border-slate-800">
+        <div className="text-xs font-bold text-slate-600 dark:text-slate-300">Show the price</div>
         <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Quote per ton or per kg">
           {QUOTE_UNITS.map((u) => (
             <button key={u.id} type="button" role="radio" aria-checked={(sheet.quote_unit || 'ton') === u.id} onClick={() => set({ quote_unit: u.id })}
-              className={`px-2.5 py-1 rounded-md cursor-pointer ${(sheet.quote_unit || 'ton') === u.id ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>
+              className={`px-3 py-1.5 rounded-md cursor-pointer ${(sheet.quote_unit || 'ton') === u.id ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>
               {u.label}
             </button>
           ))}
@@ -114,7 +130,7 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
           <select value={cur} onChange={(e) => setIn('currency', { foreign: e.target.value })} aria-label="Quote currency" className={cellInput}>
             {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
           </select>
-          <span className="w-9 shrink-0" />
+          <span className="w-11 shrink-0" />
         </div>
       </SheetRow>
       <SheetRow n={3} label="Exchange rate" hint={`1 ${cur} = how many ${loc}`}>
@@ -151,7 +167,7 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
           <div className="px-3 py-2 text-[11px] text-slate-500 flex items-start gap-1.5"><Lock size={12} className="shrink-0 mt-0.5" /> Costs and profit are set by the company owner. These prices are worked out from them.</div>
         </>
       )}
-      <div className="px-3 py-2 text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Same formula as your company’s Quotation Calculator sheet. Tap FOB, CFR or CIF to use it for this shipment.</div>
+      <div className="px-4 py-2.5 text-[11px] text-slate-500 flex items-start gap-1.5"><Info size={12} className="shrink-0 mt-px" /> Same formula as your company’s Quotation Calculator sheet. Tap FOB, CFR or CIF to use that price for this shipment.</div>
     </div>
   );
 }
@@ -288,7 +304,7 @@ export function QuickCalculator({ isOpen, onClose, onOpenAsSheet }) {
   const [sheet, setSheet] = useState(() => newSheet({ name: 'Quick calculation', mode: 'quotation' }));
   const r = useMemo(() => calcSheet(sheet), [sheet]);
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Quick calculator" subtitle="FOB, CFR and CIF in seconds" maxWidth="max-w-xl">
+    <Modal isOpen={isOpen} onClose={onClose} title="Quick calculator" subtitle="FOB, CFR and CIF in seconds" maxWidth="max-w-2xl">
       <QuoteTable sheet={sheet} setSheet={setSheet} r={r} canMoney />
       {onOpenAsSheet && (
         <div className="flex justify-end pt-3">
@@ -391,7 +407,7 @@ export default function Shipping() {
         </div>
         <input value={editing.name} onChange={(e) => setEditing((x) => ({ ...x, name: e.target.value }))} placeholder="Name this quotation, e.g. Saigon Feed Mill · Corn DDGS · Nov" aria-label="Name / reference" className="w-full px-3 py-2.5 text-base font-bold bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:outline-none" />
         <datalist id="ship-products">{commodities.map((c) => <option key={c} value={c} />)}</datalist>
-        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)] gap-4 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.8fr)_minmax(0,1fr)] gap-4 items-start">
           <SheetForm sheet={editing} setSheet={(fn) => setEditing((s) => (typeof fn === 'function' ? fn(s) : fn))} canMoney={canMoney} team={people} leadNames={leadNames} r={r} />
           <div className="lg:sticky lg:top-4"><Results sheet={editing} r={r} /></div>
         </div>
@@ -413,6 +429,17 @@ export default function Shipping() {
           <button type="button" onClick={() => setEditing(newSheet({ name: 'New shipment' }))} className="px-3 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"><Plus size={14} /> New cost sheet</button>
         </div>
       </div>
+
+      {/* What this section is for, with the calculator one tap away */}
+      <button type="button" onClick={() => setQuickOpen(true)} data-open-calculator
+        className="w-full text-left rounded-2xl border border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/30 dark:to-slate-900 p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center gap-4 cursor-pointer hover:border-emerald-400 transition-colors">
+        <span className="w-12 h-12 shrink-0 rounded-2xl bg-emerald-600 text-white flex items-center justify-center"><Calculator size={24} /></span>
+        <span className="min-w-0 flex-1">
+          <span className="block text-base sm:text-lg font-black text-slate-900 dark:text-white">Export price calculator</span>
+          <span className="block text-xs sm:text-sm text-slate-600 dark:text-slate-300 mt-0.5">Enter your product cost, customs, freight and profit; get the FOB, CFR and CIF price to quote your buyer, per ton or per kg.</span>
+        </span>
+        <span className="shrink-0 px-4 py-2.5 rounded-xl bg-emerald-600 text-white text-sm font-bold text-center">Open calculator</span>
+      </button>
 
       {isOwner && meta.settings && (
         <div className="flex flex-wrap items-center gap-2 text-[11px] bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2">

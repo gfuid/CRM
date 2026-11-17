@@ -667,6 +667,7 @@ export default function Leads() {
     industry_type: 'Food & Spice Processing', // Explicit industry type
     contacts: [{ ...defaultContact }], // Contact 1, 2, ...
     whatsapp: '',
+    extra_whatsapp: [], // more WhatsApp / Zalo numbers of the company
     website: '',
     social_media: '',
     social_links: [
@@ -1248,6 +1249,7 @@ export default function Leads() {
       industry_type: leadIndustry,
       contacts: existingContacts,
       whatsapp: lead.whatsapp || lead.phone || '',
+      extra_whatsapp: Array.isArray(lead.extra_whatsapp) ? [...lead.extra_whatsapp] : [],
       website: lead.website || '',
       social_media: lead.social_media || '',
       social_links: leadSocialLinks,
@@ -1340,11 +1342,15 @@ export default function Leads() {
       const leadPayload = {
         company_name: form.company_name,
         name: form.company_name,
-        contacts: form.contacts,
+        // Extra emails are sent only when the contact has (or had) them, so nothing changes for older leads
+        contacts: (form.contacts || []).map((c) => (c.extra_emails === undefined ? c : { ...c, extra_emails: c.extra_emails.map((e) => String(e || '').trim()).filter(Boolean) })),
         contact_person: primary.name,
         email: primary.email,
         phone: primary.phone,
         whatsapp: form.whatsapp,
+        ...((form.extra_whatsapp || []).length || Array.isArray(editingLead?.extra_whatsapp)
+          ? { extra_whatsapp: (form.extra_whatsapp || []).filter((n) => String(n || '').replace(/[^0-9]/g, '').length > 4) }
+          : {}),
         website: form.website,
         social_media: form.social_media || form.social_links?.[0]?.url || '',
         social_links: form.social_links || [],
@@ -2913,6 +2919,40 @@ export default function Leads() {
                         />
                       </div>
                     </div>
+
+                    {/* More email addresses for this person */}
+                    {(contact.extra_emails || []).map((em, eIdx) => (
+                      <div key={eIdx} className="flex items-center gap-2" data-extra-email>
+                        <input
+                          type="email"
+                          placeholder={`Another email #${eIdx + 2}`}
+                          value={em}
+                          onChange={(e) => {
+                            const v = e.target.value;
+                            setForm((f) => ({ ...f, contacts: f.contacts.map((c, j) => (j === cIdx ? { ...c, extra_emails: (c.extra_emails || []).map((x, k) => (k === eIdx ? v : x)) } : c)) }));
+                          }}
+                          className="flex-1 min-w-0 px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setForm((f) => ({ ...f, contacts: f.contacts.map((c, j) => (j === cIdx ? { ...c, extra_emails: (c.extra_emails || []).filter((_, k) => k !== eIdx) } : c)) }))}
+                          className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl cursor-pointer transition-colors"
+                          title="Remove email"
+                          aria-label="Remove email"
+                        >
+                          <X size={14} />
+                        </button>
+                      </div>
+                    ))}
+                    {(contact.extra_emails || []).length < 5 && (
+                      <button
+                        type="button"
+                        onClick={() => setForm((f) => ({ ...f, contacts: f.contacts.map((c, j) => (j === cIdx ? { ...c, extra_emails: [...(c.extra_emails || []), ''] } : c)) }))}
+                        className="text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                      >
+                        <Plus size={13} /> Add another email
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
@@ -2931,6 +2971,36 @@ export default function Leads() {
                     placeholder="e.g. 50 892 4110"
                   />
                 </div>
+                {(form.extra_whatsapp || []).map((num, wIdx) => (
+                  <div key={wIdx} className="flex items-center gap-2 mt-2 w-full sm:max-w-md" data-extra-whatsapp>
+                    <div className="flex-1 min-w-0">
+                      <PhoneInputWithCountry
+                        value={num}
+                        defaultCountry={form.country}
+                        onChange={(fullPhone) => setForm((f) => ({ ...f, extra_whatsapp: (f.extra_whatsapp || []).map((x, j) => (j === wIdx ? fullPhone : x)) }))}
+                        placeholder={`WhatsApp / Zalo #${wIdx + 2}`}
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setForm((f) => ({ ...f, extra_whatsapp: (f.extra_whatsapp || []).filter((_, j) => j !== wIdx) }))}
+                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-xl cursor-pointer transition-colors"
+                      title="Remove this number"
+                      aria-label="Remove WhatsApp / Zalo number"
+                    >
+                      <X size={14} />
+                    </button>
+                  </div>
+                ))}
+                {(form.extra_whatsapp || []).length < 5 && (
+                  <button
+                    type="button"
+                    onClick={() => setForm((f) => ({ ...f, extra_whatsapp: [...(f.extra_whatsapp || []), ''] }))}
+                    className="mt-2 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <Plus size={13} /> Add another WhatsApp / Zalo number
+                  </button>
+                )}
               </div>
 
               {/* Multi-Social Media Links Manager */}
@@ -3700,6 +3770,13 @@ export default function Leads() {
                             </a>
                           </div>
                         )}
+                        {(c.extra_emails || []).filter(Boolean).map((em) => (
+                          <div key={em}>
+                            <a href={`mailto:${em}`} className="text-blue-600 hover:underline">
+                              ✉️ {em}
+                            </a>
+                          </div>
+                        ))}
                         {c.linkedin && (
                           <div>
                             <a href={c.linkedin.startsWith('http') ? c.linkedin : `https://${c.linkedin}`} target="_blank" rel="noreferrer" className="text-indigo-600 hover:underline inline-flex items-center gap-1">
@@ -3721,6 +3798,17 @@ export default function Leads() {
                 {/* Additional Company Profile */}
                 <div className="p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700/60 text-[11px] space-y-1.5">
                   <div className="font-bold text-slate-800 dark:text-slate-200">Company Profile & Location</div>
+                  {[activeDetailLead.whatsapp, ...(activeDetailLead.extra_whatsapp || [])].filter(Boolean).map((num, i) => (
+                    <div key={`${num}-${i}`} className="text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-2">
+                      <span><span className="font-semibold text-slate-700 dark:text-slate-300">WhatsApp / Zalo{i ? ` #${i + 1}` : ''}: </span>{num}</span>
+                      {chatLinks(num) && (
+                        <>
+                          <a href={chatLinks(num).whatsapp} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-emerald-600 hover:underline">WhatsApp</a>
+                          <a href={chatLinks(num).zalo} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">Zalo</a>
+                        </>
+                      )}
+                    </div>
+                  ))}
                   <div className="text-slate-600 dark:text-slate-400">
                     <span className="font-semibold text-slate-700 dark:text-slate-300">Address: </span>
                     {activeDetailLead.address || '—'}

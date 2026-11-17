@@ -65,9 +65,9 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   rec('ROW-04', 'An old "Assigned Rep" column does not decide the assignee (owner by default)', 'usr_owner, column reported', `${p.assigned_to}, ${good.assignColumnIgnored}`, p.assigned_to === 'usr_owner' && good.assignColumnIgnored === 'Assigned Rep' && !good.unknown.includes('Assigned Rep'));
   rec('ROW-05', 'Shipping terms go to the requirements block', 'CIF / Jebel Ali', `${p.export_requirements.incoterm} / ${p.export_requirements.port_delivery}`, p.export_requirements.incoterm === 'CIF' && p.export_requirements.port_delivery === 'Jebel Ali');
 
-  const blank = review(csv('Company Name', 'Only Name Co'));
+  const blank = review(csv('Company Name,Country', 'Only Name Co,India'));
   const b = blank.rows[0].payload;
-  rec('ROW-06', 'A row with only the company name is ready, with defaults', 'Lead Generation, Direct Inquiry, today, assigned to me', `${b.stage}, ${b.source}, ${b.follow_up_date}, ${b.assigned_to}`, blank.rows[0].ok && b.stage === 'Lead Generation' && b.source === 'Direct Inquiry' && b.follow_up_date === '2026-11-14' && b.assigned_to === 'usr_owner' && b.follow_up_time === '10:00');
+  rec('ROW-06', 'A row with only the company name and country is ready, with defaults', 'Lead Generation, Direct Inquiry, today, assigned to me', `${b.stage}, ${b.source}, ${b.follow_up_date}, ${b.assigned_to}`, blank.rows[0].ok && b.stage === 'Lead Generation' && b.source === 'Direct Inquiry' && b.follow_up_date === '2026-11-14' && b.assigned_to === 'usr_owner' && b.follow_up_time === '10:00');
   rec('ROW-07', 'Remark and next action get a default (the server needs them)', 'non-empty', `${b.today_remarks} / ${b.next_follow_up_action}`, Boolean(b.today_remarks) && Boolean(b.next_follow_up_action));
   rec('ROW-08', 'No product block is sent when none was given', 'no products key', Object.keys(b).includes('products'), !('products' in b));
 
@@ -91,14 +91,18 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
   });
 
   const multi = bad('X Co,bad,Nope,Gold,abc,boxes,xyz,Winning,Nobody,31-02-2026');
-  rec('ERR-13', 'Every problem in a row is reported, not just the first', '8 reasons', Object.keys(multi.rows[0].errors).length, Object.keys(multi.rows[0].errors).length === 8);
-  const noRepError = bad('X Co,,,,,,,,Nobody Here,');
+  rec('ERR-13', 'Every problem in a row is reported, not just the first', '9 reasons (incl. empty country)', Object.keys(multi.rows[0].errors).length, Object.keys(multi.rows[0].errors).length === 9 && Boolean(multi.rows[0].errors.country));
+  const noRepError = bad('X Co,,,,,,,,Nobody Here,,India', 'Company Name,Email,Lead Source,Products,Quantity,Unit,Deal Value USD,Stage,Assigned Rep,Follow-up Date,Country');
+  const noCountry = review(csv('Company Name,Country', 'No Country Co,', 'Has Country Co,Vietnam'));
+  rec('ERR-14', 'Country is required: an empty country is refused, a filled one is ready', 'refused / ready', `${errorsOf(noCountry, 0)} / ${noCountry.rows[1].ok}`, /Country is empty/.test(errorsOf(noCountry, 0)) && noCountry.rows[1].ok && noCountry.columns.find((c) => c.key === 'country').required === true);
+  const noCountryColumn = review(csv('Company Name', 'Only Name Co'));
+  rec('ERR-15', 'A file without a Country column: every row is refused and Country is listed as missing', 'refused, missing', `${noCountryColumn.rows[0].ok} ${noCountryColumn.missing.map((c) => c.key).includes('country')}`, !noCountryColumn.rows[0].ok && noCountryColumn.missing.some((c) => c.key === 'country'));
   rec('ERR-12', 'An unknown name in an old "Assigned Rep" column is no longer an error', 'row ready', noRepError.rows[0].ok ? 'Ready' : errorsOf(noRepError), noRepError.rows[0].ok);
 }
 
 // ---------- Duplicates ----------
 {
-  const r = reviewImport(parseCsv(csv('Company Name', 'Existing Buyer Ltd', 'New Co', 'new  co', 'NEW CO', 'Other Co')), { ...asOwner, existingNames: ['  existing buyer LTD '] });
+  const r = reviewImport(parseCsv(csv('Company Name,Country', 'Existing Buyer Ltd,UAE', 'New Co,UAE', 'new  co,UAE', 'NEW CO,UAE', 'Other Co,UAE')), { ...asOwner, existingNames: ['  existing buyer LTD '] });
   rec('DUP-01', 'A company already in the CRM is refused (case and spaces ignored)', 'Already in your CRM', errorsOf(r, 0), /Already in your CRM/.test(errorsOf(r, 0)));
   rec('DUP-02', 'The same company twice in the file: first is kept, repeats are refused', 'row 3 kept, rows 4 and 5 refused', `${r.rows[1].ok} / ${errorsOf(r, 2)} / ${errorsOf(r, 3)}`, r.rows[1].ok && /Same company as row 3/.test(errorsOf(r, 2)) && /Same company as row 3/.test(errorsOf(r, 3)));
   rec('DUP-03', 'Only the clean rows are counted as ready', '2 ready, 3 refused', `${r.ready.length} ready, ${r.bad.length} refused`, r.ready.length === 2 && r.bad.length === 3 && r.ready.map((x) => x.payload.company_name).join() === 'New Co,Other Co');
@@ -108,8 +112,8 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
 // ---------- Staff ----------
 {
   const r = review(csv(
-    'Company Name,Products,Quantity,Unit,Deal Value USD,Incoterm,Port Delivery,Assigned Rep',
-    'Staff Lead Co,Maize,10,kg,not-a-number,CIF,Dubai,Somebody Else'
+    'Company Name,Country,Products,Quantity,Unit,Deal Value USD,Incoterm,Port Delivery,Assigned Rep',
+    'Staff Lead Co,UAE,Maize,10,kg,not-a-number,CIF,Dubai,Somebody Else'
   ), asStaff);
   const p = r.rows[0].payload;
   rec('STF-01', 'Staff: owner-only columns are skipped, even with bad values', 'row ready', r.rows[0].ok ? 'Ready' : errorsOf(r), r.rows[0].ok);
@@ -136,11 +140,11 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
 // ---------- Address, State / Province, Area / City, Pin code ----------
 {
   const r = review(csv(
-    'Company Name,Address,State / Province,Area / City,Pin Code',
-    'Loc Co,"Warehouse 14, Al Quoz",Dubai,Al Quoz,00000',
-    'Loc Two,No 222 Bandaranayake Mawatha,Western Province,Wattala,11300',
-    'Loc UK,1 High St,England,London,SW1A 1AA',
-    'Loc Bad,,,,12#45'
+    'Company Name,Country,Address,State / Province,Area / City,Pin Code',
+    'Loc Co,UAE,"Warehouse 14, Al Quoz",Dubai,Al Quoz,00000',
+    'Loc Two,Sri Lanka,No 222 Bandaranayake Mawatha,Western Province,Wattala,11300',
+    'Loc UK,United Kingdom,1 High St,England,London,SW1A 1AA',
+    'Loc Bad,UAE,,,,12#45'
   ));
   const p = r.rows[0].payload;
   rec('LOC-01', 'Address, state, city and pin code are imported', 'Warehouse 14, Al Quoz | Dubai | Al Quoz | 00000', `${p.address} | ${p.state} | ${p.city} | ${p.pincode}`, p.address === 'Warehouse 14, Al Quoz' && p.state === 'Dubai' && p.city === 'Al Quoz' && p.pincode === '00000');
@@ -170,11 +174,11 @@ const errorsOf = (r, i = 0) => Object.values(r.rows[i].errors).join('; ');
 
 // Tags: from a Tags column and/or one tag for the whole file
 {
-  const r = reviewImport(parseCsv(csv('Company Name,Tags', 'Tag A,"dubai, Hot"', 'Tag B,', 'Tag C,hot;Dubai|fair')), { ...asOwner, extraTags: 'old-list' });
+  const r = reviewImport(parseCsv(csv('Company Name,Country,Tags', 'Tag A,UAE,"dubai, Hot"', 'Tag B,UAE,', 'Tag C,UAE,hot;Dubai|fair')), { ...asOwner, extraTags: 'old-list' });
   const t = r.rows.map((x) => x.payload.tags.join('+'));
   rec('TAG-01', 'Tags column + file tag are saved on each lead (no duplicates)', 'dubai+Hot+old-list | old-list | hot+Dubai+fair+old-list', t.join(' | '), t[0] === 'dubai+Hot+old-list' && t[1] === 'old-list' && t[2] === 'hot+Dubai+fair+old-list');
   rec('TAG-02', 'splitTags trims, limits length and count', '2 tags, 40 chars', splitTags(' a ,A, ' + 'x'.repeat(60)).map((x) => x.length).join(','), splitTags(' a ,A, ' + 'x'.repeat(60)).length === 2 && splitTags(Array.from({ length: 30 }, (_, i) => 't' + i).join(',')).length === 20);
-  const none = reviewImport(parseCsv(csv('Company Name', 'No Tag Co')), asOwner);
+  const none = reviewImport(parseCsv(csv('Company Name,Country', 'No Tag Co,UAE')), asOwner);
   rec('TAG-03', 'No tags anywhere = empty list', '[]', JSON.stringify(none.rows[0].payload.tags), Array.isArray(none.rows[0].payload.tags) && none.rows[0].payload.tags.length === 0);
 }
 
