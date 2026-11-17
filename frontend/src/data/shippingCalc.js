@@ -20,6 +20,24 @@ export const PRICE_TERMS = ['FOB', 'CFR', 'CIF'];
 export const QUOTE_UNITS = [{ id: 'ton', label: 'per ton' }, { id: 'kg', label: 'per kg' }];
 export const CURRENCIES = ['INR', 'USD', 'EUR', 'AED', 'VND', 'LKR', 'BDT', 'NGN', 'KES', 'GBP', 'CNY', 'IDR', 'THB', 'MYR'];
 
+// Every country's currency (from the browser), with the common export currencies first
+const FALLBACK_CURRENCIES = ['AUD', 'BRL', 'CAD', 'CHF', 'DKK', 'EGP', 'ETB', 'GHS', 'HKD', 'IQD', 'IRR', 'JPY', 'JOD', 'KRW', 'KWD', 'KZT', 'LBP', 'MAD', 'MMK', 'MXN', 'NOK', 'NPR', 'NZD', 'OMR', 'PHP', 'PKR', 'PLN', 'QAR', 'RUB', 'SAR', 'SEK', 'SGD', 'TRY', 'TWD', 'TZS', 'UAH', 'UGX', 'UZS', 'XAF', 'XOF', 'ZAR', 'ZMW'];
+const allCodes = (() => {
+  try {
+    const list = typeof Intl !== 'undefined' && typeof Intl.supportedValuesOf === 'function' ? Intl.supportedValuesOf('currency') : [];
+    if (list && list.length) return list;
+  } catch { /* older browser */ }
+  return FALLBACK_CURRENCIES;
+})();
+export const OTHER_CURRENCIES = allCodes.filter((c) => !CURRENCIES.includes(c)).sort();
+const displayNames = (() => { try { return new Intl.DisplayNames(['en'], { type: 'currency' }); } catch { return null; } })();
+/** "INR" -> "INR – Indian Rupee" */
+export const currencyLabel = (code) => {
+  let name = '';
+  try { name = displayNames ? displayNames.of(code) : ''; } catch { name = ''; }
+  return name && name !== code ? `${code} – ${name}` : code;
+};
+
 /** Fields only the owner (or staff with full access) may see or change. */
 export const MONEY_KEYS = ['price_per_kg', 'transport_per_kg', 'costs', 'profit_pct', 'commission', 'tax_pct'];
 

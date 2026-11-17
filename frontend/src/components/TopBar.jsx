@@ -115,11 +115,12 @@ export default function TopBar({
             {/* Quick shipment / quotation calculator (opens over any page) */}
             <button
               onClick={() => setCalcOpen(true)}
-              className="w-8 h-8 rounded-lg flex items-center justify-center text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-800 dark:hover:text-white transition-colors cursor-pointer"
-              title="Quick calculator: price a quotation or a shipment"
+              className="mr-1 h-9 px-3 rounded-xl flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-sm transition-colors cursor-pointer"
+              title="Export price calculator: FOB, CFR and CIF for a quotation"
               aria-label="Quick calculator"
             >
               <Calculator size={16} />
+              <span>Price calculator</span>
             </button>
 
             {/* Quick Trade Notes / Chat */}
