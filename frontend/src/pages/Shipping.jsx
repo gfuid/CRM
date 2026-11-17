@@ -66,13 +66,15 @@ function SheetInput({ value, onChange, unit, label }) {
 }
 
 /** Any country's currency: the usual export currencies first, then all the others A–Z. */
-function CurrencySelect({ value, onChange, label, className }) {
+function CurrencySelect({ value, onChange, label, className, short = false }) {
   const known = CURRENCIES.includes(value) || OTHER_CURRENCIES.includes(value);
+  // `short`: only the code (USD, INR) so it fits a small box; the full name shows on hover
+  const text = (c) => (short ? c : currencyLabel(c));
   return (
     <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} title={currencyLabel(value)} className={className}>
       {!known && value && <option value={value}>{value}</option>}
-      <optgroup label="Common">{CURRENCIES.map((c) => <option key={c} value={c}>{currencyLabel(c)}</option>)}</optgroup>
-      <optgroup label="All currencies">{OTHER_CURRENCIES.map((c) => <option key={c} value={c}>{currencyLabel(c)}</option>)}</optgroup>
+      <optgroup label="Common">{CURRENCIES.map((c) => <option key={c} value={c}>{text(c)}</option>)}</optgroup>
+      <optgroup label="All currencies">{OTHER_CURRENCIES.map((c) => <option key={c} value={c}>{text(c)}</option>)}</optgroup>
     </select>
   );
 }
@@ -317,98 +319,110 @@ function SheetForm({ sheet, setSheet, canMoney, team, leadNames, r, quick = fals
   );
 }
 
-/** One input box of the big calculator: number, label on top, unit inside. */
-function BigField({ n, label, hint, unit, value, onChange, children }) {
+/* ------------------------------------------------------------------ */
+/* Calculator window: looks like the company's own Google Sheet          */
+/* ------------------------------------------------------------------ */
+
+const sheetCell = 'border border-slate-400 dark:border-slate-600 px-2 py-1';
+const sheetInputCell = `${sheetCell} bg-[#a4c2f4] dark:bg-blue-900/50 p-0`;
+const sheetResultCell = `${sheetCell} bg-[#a2c4c9] dark:bg-teal-900/50 text-right font-bold tabular-nums`;
+const sheetInput = 'w-full bg-transparent px-2 py-1 text-right text-sm font-semibold text-slate-900 dark:text-white tabular-nums focus:outline-none focus:bg-white/60 dark:focus:bg-slate-900/60';
+const sheetSelect = 'bg-transparent px-1 py-1 text-sm font-semibold text-slate-900 dark:text-white cursor-pointer focus:outline-none';
+
+function SheetNum({ label, value, onChange }) {
   return (
-    <label className="block rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 p-3 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20">
-      <span className="flex items-center gap-1.5 text-xs font-bold text-slate-700 dark:text-slate-200">
-        <span className="w-5 h-5 rounded-full bg-slate-100 dark:bg-slate-800 text-[10px] text-slate-500 flex items-center justify-center shrink-0">{n}</span>
-        <span className="truncate">{label}</span>
-      </span>
-      {hint && <span className="block text-[10px] text-slate-400 ml-6.5 mt-0.5 truncate">{hint}</span>}
-      <span className="mt-2 flex items-center gap-2">
-        {children || (
-          <input
-            type="number" inputMode="decimal" step="any" aria-label={label}
-            value={value ?? ''} onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))}
-            className="w-full min-w-0 bg-transparent text-2xl font-black text-slate-900 dark:text-white focus:outline-none tabular-nums"
-          />
-        )}
-        {unit && <span className="shrink-0 text-xs font-bold text-slate-400">{unit}</span>}
-      </span>
-    </label>
+    <input type="number" inputMode="decimal" step="any" aria-label={label} value={value ?? ''}
+      onChange={(e) => onChange(e.target.value === '' ? '' : Number(e.target.value))} className={sheetInput} />
   );
 }
 
-/** The calculator as one full screen: every box on the left, the three prices big on the right. */
-function BigCalculator({ sheet, setSheet, r }) {
+function SheetCalculator({ sheet, setSheet, r }) {
   const set = (patch) => setSheet((s) => ({ ...s, ...patch }));
   const setIn = (key, patch) => setSheet((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
   const cur = sheet.currency?.foreign || 'USD';
   const loc = sheet.currency?.local || 'INR';
   const unit = sheet.quote_unit === 'kg' ? 'kg' : 'ton';
   const digits = unit === 'kg' ? 4 : 2;
-  const selectCls = 'w-full min-w-0 bg-transparent text-lg font-black text-slate-900 dark:text-white focus:outline-none cursor-pointer';
-  const prices = [
-    { term: 'FOB', what: 'Loaded on the ship at your port', how: 'Boxes 4–7 + profit' },
-    { term: 'CFR', what: 'FOB + sea freight to the buyer’s port', how: 'FOB + freight' },
-    { term: 'CIF', what: 'CFR + insurance of the goods', how: 'FOB + insurance + freight' },
-  ];
+  const result = (term) => {
+    const key = term.toLowerCase();
+    const local = (unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
+    return (
+      <tr data-price-row={term}>
+        <td className={`${sheetCell} font-bold`}>
+          {term} <span className="font-normal text-[11px] text-slate-500">({cur} per {unit}{Number.isFinite(local) ? ` · = ${money(local, loc, unit === 'kg' ? 2 : 0)}` : ''})</span>
+        </td>
+        <td className={sheetResultCell}>{money(r.quote[key], cur, digits).replace(`${cur} `, '')}</td>
+      </tr>
+    );
+  };
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(0,1.7fr)_minmax(300px,1fr)] gap-4" data-big-calculator>
-      <div className="space-y-3 min-w-0">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <p className="text-sm text-slate-600 dark:text-slate-300">Fill the boxes; the prices on the right change as you type.</p>
-          <div className="flex bg-slate-100 dark:bg-slate-800 rounded-xl p-1 text-xs font-bold" role="radiogroup" aria-label="Quote per ton or per kg">
-            {QUOTE_UNITS.map((u) => (
-              <button key={u.id} type="button" role="radio" aria-checked={unit === u.id} onClick={() => set({ quote_unit: u.id })}
-                className={`px-4 py-1.5 rounded-lg cursor-pointer ${unit === u.id ? 'bg-emerald-600 text-white shadow-sm' : 'text-slate-500'}`}>
-                Price {u.label}
-              </button>
-            ))}
-          </div>
-        </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5">
-          <BigField n={1} label="Tons in a container" unit="MT" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} />
-          <BigField n={2} label="Quote in currency">
-            <CurrencySelect value={cur} onChange={(v) => setIn('currency', { foreign: v })} label="Quote currency" className={selectCls} />
-          </BigField>
-          <BigField n={3} label="Exchange rate" hint={`1 ${cur} = how many ${loc}`}>
-            <input type="number" inputMode="decimal" step="any" aria-label="Exchange rate" value={sheet.currency?.rate ?? ''}
-              onChange={(e) => setIn('currency', { rate: e.target.value === '' ? '' : Number(e.target.value) })}
-              className="w-full min-w-0 bg-transparent text-2xl font-black text-slate-900 dark:text-white focus:outline-none tabular-nums" />
-            <CurrencySelect value={loc} onChange={(v) => setIn('currency', { local: v })} label="Your local currency"
-              className="w-[76px] shrink-0 px-1 py-1 text-xs font-bold bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg cursor-pointer" />
-          </BigField>
-          <BigField n={4} label="Ex-plant price per kg" hint="Incl. packaging & loading" unit={`${loc}/kg`} value={sheet.price_per_kg} onChange={(v) => set({ price_per_kg: v })} />
-          <BigField n={5} label="Transport up to port" hint="Per kg" unit={`${loc}/kg`} value={sheet.transport_per_kg} onChange={(v) => set({ transport_per_kg: v })} />
-          <BigField n={6} label="Customs + local charges" hint="Per container" unit={loc} value={sheet.costs?.customs_per_container} onChange={(v) => setIn('costs', { customs_per_container: v })} />
-          <BigField n={7} label="Profit" unit="%" value={sheet.profit_pct} onChange={(v) => set({ profit_pct: v })} />
-          <BigField n={8} label="Ocean freight" hint="Per container" unit={cur} value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} />
-          <BigField n={9} label="Insurance" hint="Per container" unit={loc} value={sheet.costs?.insurance_per_container} onChange={(v) => setIn('costs', { insurance_per_container: v })} />
-        </div>
-      </div>
-
-      <div className="space-y-2.5" data-ship-results>
-        {prices.map(({ term, what, how }) => {
-          const key = term.toLowerCase();
-          const local = (unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
-          return (
-            <div key={term} data-price-row={term} className="rounded-2xl border-2 border-emerald-200 dark:border-emerald-900 bg-gradient-to-br from-emerald-50 to-white dark:from-emerald-950/40 dark:to-slate-900 p-4">
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-xl font-black text-slate-900 dark:text-white">{term}</span>
-                <span className="text-[11px] font-semibold text-slate-500 text-right">{what}</span>
+    <div data-big-calculator>
+      <table className="w-full border-collapse text-sm text-slate-900 dark:text-slate-100">
+        <thead>
+          <tr>
+            <th className={`${sheetCell} text-left text-base font-black`}>Particulars</th>
+            <th className={`${sheetCell} text-left text-base font-black w-[44%]`}>Input field</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td className={sheetCell}>Total ton in a container</td>
+            <td className={sheetInputCell}><SheetNum label="Tons in a container" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} /></td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Share quote in which currency USD/other currency <span className="text-[11px] text-slate-500">(1 {cur} = ? {loc})</span></td>
+            <td className={sheetInputCell}>
+              <div className="flex items-center">
+                <CurrencySelect value={cur} onChange={(v) => setIn('currency', { foreign: v })} label="Quote currency" className={`${sheetSelect} w-[68px] shrink-0`} short />
+                <SheetNum label="Exchange rate" value={sheet.currency?.rate} onChange={(v) => setIn('currency', { rate: v })} />
               </div>
-              <div className="mt-1 text-3xl sm:text-4xl font-black text-emerald-700 dark:text-emerald-400 tabular-nums leading-tight">{money(r.quote[key], cur, digits)}</div>
-              <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 mt-0.5">
-                <span>per {unit} · {how}</span>
-                {Number.isFinite(local) && <span className="font-semibold tabular-nums shrink-0">= {money(local, loc, unit === 'kg' ? 2 : 0)}</span>}
-              </div>
-            </div>
-          );
-        })}
-        <p className="text-[10px] text-slate-400 flex items-start gap-1"><Info size={11} className="shrink-0 mt-px" /> Same formula as your company’s Quotation Calculator sheet.</p>
-      </div>
+            </td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Local value in currency</td>
+            <td className={sheetInputCell}>
+              <CurrencySelect value={loc} onChange={(v) => setIn('currency', { local: v })} label="Your local currency" className={`${sheetSelect} w-full text-right`} />
+            </td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Need quote in Ton/kg</td>
+            <td className={sheetInputCell}>
+              <select value={unit} onChange={(e) => set({ quote_unit: e.target.value })} aria-label="Quote per ton or per kg" className={`${sheetSelect} w-full text-right`}>
+                <option value="ton">Ton</option>
+                <option value="kg">Kg</option>
+              </select>
+            </td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Per Kg Price ex plant Including packaging and loading <span className="text-[11px] text-slate-500">({loc})</span></td>
+            <td className={sheetInputCell}><SheetNum label="Ex-plant price per kg" value={sheet.price_per_kg} onChange={(v) => set({ price_per_kg: v })} /></td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Local transportation up to port <span className="text-[11px] text-slate-500">({loc} per kg)</span></td>
+            <td className={sheetInputCell}><SheetNum label="Transport to port per kg" value={sheet.transport_per_kg} onChange={(v) => set({ transport_per_kg: v })} /></td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Customs clearance including local charges <span className="text-[11px] text-slate-500">({loc} per container)</span></td>
+            <td className={sheetInputCell}><SheetNum label="Customs per container" value={sheet.costs?.customs_per_container} onChange={(v) => setIn('costs', { customs_per_container: v })} /></td>
+          </tr>
+          <tr>
+            <td className={sheetCell}>Profit in %</td>
+            <td className={sheetInputCell}><SheetNum label="Profit" value={sheet.profit_pct} onChange={(v) => set({ profit_pct: v })} /></td>
+          </tr>
+          {result('FOB')}
+          <tr>
+            <td className={sheetCell}>Ocean freight in {cur}/other currency <span className="text-[11px] text-slate-500">(per container)</span></td>
+            <td className={sheetInputCell}><SheetNum label="Ocean freight per container" value={sheet.costs?.freight_per_container} onChange={(v) => setIn('costs', { freight_per_container: v })} /></td>
+          </tr>
+          {result('CFR')}
+          <tr>
+            <td className={sheetCell}>Insurance <span className="text-[11px] text-slate-500">({loc} per container)</span></td>
+            <td className={sheetInputCell}><SheetNum label="Insurance per container" value={sheet.costs?.insurance_per_container} onChange={(v) => setIn('costs', { insurance_per_container: v })} /></td>
+          </tr>
+          {result('CIF')}
+        </tbody>
+      </table>
+      <p className="text-[10px] text-slate-400 mt-2">Blue boxes: type your numbers. Green boxes: the price to quote. FOB = on the ship at your port, CFR = + sea freight, CIF = + insurance.</p>
     </div>
   );
 }
@@ -423,13 +437,13 @@ export function QuickCalculator({ isOpen, onClose, onOpenAsSheet }) {
       onClose={onClose}
       title="Export price calculator"
       subtitle="FOB, CFR and CIF price for your buyer, per ton or per kg"
-      maxWidth="max-w-6xl"
-      bodyClassName="p-4 sm:p-5 overflow-y-auto"
+      maxWidth="max-w-2xl"
+      bodyClassName="p-3 sm:p-4 overflow-y-auto"
       footer={onOpenAsSheet ? (
         <button type="button" onClick={() => onOpenAsSheet(sheet)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"><FileText size={14} /> Save as a cost sheet</button>
       ) : null}
     >
-      <BigCalculator sheet={sheet} setSheet={setSheet} r={r} />
+      <SheetCalculator sheet={sheet} setSheet={setSheet} r={r} />
     </Modal>
   );
 }
