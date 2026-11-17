@@ -82,19 +82,19 @@ function CurrencySelect({ value, onChange, label, className, short = false }) {
 /** A result line (FOB / CFR / CIF): the price in the quote currency, and the same in the local currency. */
 function PriceRow({ term, r, cur, loc, active, onPick, how }) {
   const key = term.toLowerCase();
-  const digits = r.unit === 'kg' ? 4 : 2;
-  const localValue = r.hidden ? null : (r.unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
+  const digits = r.digits;
+  const localValue = r.hidden ? null : r.quote[key] * r.rate;
   return (
     <button type="button" onClick={onPick} data-price-row={term}
       className={`w-full text-left grid grid-cols-[22px_minmax(0,1fr)_auto] items-center gap-3 px-4 py-3.5 border-b border-emerald-200/70 dark:border-emerald-900 cursor-pointer transition-colors ${active ? 'bg-emerald-100/80 dark:bg-emerald-900/40' : 'bg-emerald-50/60 dark:bg-emerald-950/20 hover:bg-emerald-100/50'}`}>
       <span className={`w-3.5 h-3.5 rounded-full border-2 justify-self-center ${active ? 'border-emerald-600 bg-emerald-600' : 'border-slate-300'}`} />
       <div className="min-w-0">
-        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{term} <span className="text-xs font-semibold text-slate-500">{r.unit === 'kg' ? 'price per kg' : 'price per ton'}</span></div>
+        <div className="text-base sm:text-lg font-black text-slate-900 dark:text-white">{term} <span className="text-xs font-semibold text-slate-500">price per {r.unitLabel}</span></div>
         {how && <div className="text-[11px] text-slate-500 leading-tight">{how}</div>}
       </div>
       <div className="text-right">
         <div className="text-xl sm:text-2xl font-black text-emerald-700 dark:text-emerald-400 tabular-nums">{money(r.quote[key], cur, digits)}</div>
-        {localValue !== null && Number.isFinite(localValue) && <div className="text-[11px] font-semibold text-slate-500 tabular-nums">= {money(localValue, loc, r.unit === 'kg' ? 2 : 0)}</div>}
+        {localValue !== null && Number.isFinite(localValue) && <div className="text-[11px] font-semibold text-slate-500 tabular-nums">= {money(localValue, loc, r.digits === 4 ? 2 : 0)}</div>}
       </div>
     </button>
   );
@@ -128,8 +128,8 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
         <div className="text-xs font-bold text-slate-600 dark:text-slate-300">Show the price</div>
         <div className="flex bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-lg p-0.5 text-[11px] font-bold" role="radiogroup" aria-label="Quote per ton or per kg">
           {QUOTE_UNITS.map((u) => (
-            <button key={u.id} type="button" role="radio" aria-checked={(sheet.quote_unit || 'ton') === u.id} onClick={() => set({ quote_unit: u.id })}
-              className={`px-3 py-1.5 rounded-md cursor-pointer ${(sheet.quote_unit || 'ton') === u.id ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>
+            <button key={u.id} type="button" role="radio" aria-checked={r.unit === u.id} onClick={() => set({ quote_unit: u.id, quote_kg: u.id === 'kg' ? 1 : 1000 })}
+              className={`px-3 py-1.5 rounded-md cursor-pointer ${r.unit === u.id ? 'bg-emerald-600 text-white' : 'text-slate-500'}`}>
               {u.label}
             </button>
           ))}
@@ -341,15 +341,15 @@ function SheetCalculator({ sheet, setSheet, r }) {
   const setIn = (key, patch) => setSheet((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
   const cur = sheet.currency?.foreign || 'USD';
   const loc = sheet.currency?.local || 'INR';
-  const unit = sheet.quote_unit === 'kg' ? 'kg' : 'ton';
-  const digits = unit === 'kg' ? 4 : 2;
+  const unit = r.unitLabel;
+  const digits = r.digits;
   const result = (term) => {
     const key = term.toLowerCase();
-    const local = (unit === 'kg' ? r.perKg[key] : r.perTon[key]) * r.rate;
+    const local = r.quote[key] * r.rate;
     return (
       <tr data-price-row={term}>
         <td className={`${sheetCell} font-bold`}>
-          {term} <span className="font-normal text-[11px] text-slate-500">({cur} per {unit}{Number.isFinite(local) ? ` · = ${money(local, loc, unit === 'kg' ? 2 : 0)}` : ''})</span>
+          {term} <span className="font-normal text-[11px] text-slate-500">({cur} per {unit}{Number.isFinite(local) ? ` · = ${money(local, loc, digits === 4 ? 2 : 0)}` : ''})</span>
         </td>
         <td className={sheetResultCell}>{money(r.quote[key], cur, digits).replace(`${cur} `, '')}</td>
       </tr>
@@ -370,7 +370,7 @@ function SheetCalculator({ sheet, setSheet, r }) {
             <td className={sheetInputCell}><SheetNum label="Tons in a container" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} /></td>
           </tr>
           <tr>
-            <td className={sheetCell}>Share quote in which currency USD/other currency <span className="text-[11px] text-slate-500">(1 {cur} = ? {loc})</span></td>
+            <td className={sheetCell}>share quote in which currency USD/other currency <span className="text-[11px] text-slate-500">(rate: 1 {cur} = ? {loc})</span></td>
             <td className={sheetInputCell}>
               <div className="flex items-center">
                 <CurrencySelect value={cur} onChange={(v) => setIn('currency', { foreign: v })} label="Quote currency" className={`${sheetSelect} w-[68px] shrink-0`} short />
@@ -381,16 +381,16 @@ function SheetCalculator({ sheet, setSheet, r }) {
           <tr>
             <td className={sheetCell}>Local value in currency</td>
             <td className={sheetInputCell}>
-              <CurrencySelect value={loc} onChange={(v) => setIn('currency', { local: v })} label="Your local currency" className={`${sheetSelect} w-full text-right`} />
+              <div className="flex items-center">
+                <CurrencySelect value={loc} onChange={(v) => setIn('currency', { local: v })} label="Your local currency" className={`${sheetSelect} w-[68px] shrink-0`} short />
+                <SheetNum label="Local value" value={sheet.currency?.local_value} onChange={(v) => setIn('currency', { local_value: v })} />
+              </div>
             </td>
           </tr>
           <tr>
-            <td className={sheetCell}>Need quote in Ton/kg</td>
+            <td className={sheetCell}>Need quote in Ton/kg <span className="text-[11px] text-slate-500">(1000 = per ton, 1 = per kg)</span></td>
             <td className={sheetInputCell}>
-              <select value={unit} onChange={(e) => set({ quote_unit: e.target.value })} aria-label="Quote per ton or per kg" className={`${sheetSelect} w-full text-right`}>
-                <option value="ton">Ton</option>
-                <option value="kg">Kg</option>
-              </select>
+              <SheetNum label="Need quote in Ton/kg" value={sheet.quote_kg ?? 1000} onChange={(v) => set({ quote_kg: v, quote_unit: Number(v) === 1 ? 'kg' : 'ton' })} />
             </td>
           </tr>
           <tr>
@@ -614,7 +614,7 @@ export default function Shipping() {
                   </button>
                   <span className={`shrink-0 px-2 py-0.5 rounded-full text-[10px] font-bold border ${s.mode === 'quotation' ? 'bg-blue-50 text-blue-700 border-blue-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'}`}>{s.mode === 'quotation' ? 'Quotation' : 'Shipment'}</span>
                 </div>
-                <div className="text-[11px] text-slate-600 dark:text-slate-300">{r.containers} × {s.container?.type} · {r.tons.toLocaleString()} MT · {r.term} {money(r.quote[r.term.toLowerCase()], s.currency?.foreign, r.unit === 'kg' ? 4 : 2)}/{r.unit === 'kg' ? 'kg' : 'MT'}</div>
+                <div className="text-[11px] text-slate-600 dark:text-slate-300">{r.containers} × {s.container?.type} · {r.tons.toLocaleString()} MT · {r.term} {money(r.quote[r.term.toLowerCase()], s.currency?.foreign, r.digits)}/{r.unit === 'ton' ? 'MT' : r.unitLabel}</div>
                 {!r.hidden && <div className={`text-xs font-extrabold ${r.net >= 0 ? 'text-emerald-700' : 'text-rose-600'}`}>Net profit {money(r.net, s.currency?.foreign)} <span className="font-semibold text-slate-400">({r.marginPct}%)</span></div>}
                 <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
                   <span className={`text-[10px] font-bold ${late ? 'text-rose-600' : 'text-slate-400'}`}>{openTasks ? `${openTasks} open task${openTasks === 1 ? '' : 's'}${late ? `, ${late} late` : ''}` : 'No open tasks'}</span>

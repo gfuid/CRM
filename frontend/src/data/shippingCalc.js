@@ -50,8 +50,9 @@ export const newSheet = (overrides = {}) => ({
   product: '',
   term: 'CIF',
   quote_unit: 'ton',
+  quote_kg: 1000, // "Need quote in Ton/kg" of the sheet: 1000 = price per ton, 1 = price per kg
   container: { type: '20 ft', tons_per: 25, count: 1, bags_per: 500 },
-  currency: { local: 'INR', foreign: 'USD', rate: 95 }, // rate = local currency for 1 foreign
+  currency: { local: 'INR', foreign: 'USD', rate: 95, local_value: '' }, // rate = local currency for 1 foreign
   price_per_kg: 0,
   transport_per_kg: 0,
   costs: { customs_per_container: 0, freight_per_container: 0, insurance_per_container: 0 },
@@ -68,6 +69,13 @@ const num = (v) => {
   return Number.isFinite(n) ? n : 0;
 };
 const round = (n, d = 2) => Math.round(n * 10 ** d) / 10 ** d;
+
+/** How many kg one quoted unit is: the sheet's "Need quote in Ton/kg" (1000 = per ton, 1 = per kg). */
+export const kgPerQuote = (s) => {
+  const n = num(s && s.quote_kg);
+  if (n > 0) return n;
+  return s && s.quote_unit === 'kg' ? 1 : 1000;
+};
 
 /** Sheets saved before 2026-11-16 used other fields: turn them into the new ones (nothing is lost). */
 export const upgradeSheet = (s) => {
@@ -99,9 +107,14 @@ export function calcSheet(input, { hidden = false } = {}) {
   const tons = tonsPer * num(c.count);
   const bags = num(c.bags_per) * num(c.count);
   const term = PRICE_TERMS.includes(s.term) ? s.term : 'CIF';
-  const unit = s.quote_unit === 'kg' ? 'kg' : 'ton';
-  const perUnit = (perTon) => (perTon === null || perTon === undefined ? null : round(unit === 'kg' ? perTon / 1000 : perTon, unit === 'kg' ? 4 : 2));
-  const base = { tons: round(tons, 3), bags: Math.round(bags), containers: num(c.count), term, unit };
+  // The quote is per "Need quote in Ton/kg" kg: 1000 = per ton (like the sheet), 1 = per kg, any other number = per that many kg.
+  // Per-container charges are spread per kg, so a per-kg quote is exactly the per-ton price / 1000.
+  const kgUnit = kgPerQuote(s);
+  const unit = kgUnit === 1000 ? 'ton' : kgUnit === 1 ? 'kg' : 'custom';
+  const unitLabel = unit === 'ton' ? 'ton' : unit === 'kg' ? 'kg' : `${kgUnit} kg`;
+  const digits = kgUnit < 100 ? 4 : 2;
+  const perUnit = (perTon) => (perTon === null || perTon === undefined ? null : round((perTon * kgUnit) / 1000, digits));
+  const base = { tons: round(tons, 3), bags: Math.round(bags), containers: num(c.count), term, unit, unitLabel, kgUnit, digits };
 
   if (hidden) {
     const q = s.quote || {};

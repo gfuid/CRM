@@ -30,7 +30,7 @@ rec('B-01', 'Cost up to port per ton in INR = 11,000 + 60,000 / 25', '13400', r.
 rec('B-02', 'Freight per ton = 400 / 25, without profit on it', '16', r.build.freight, r.build.freight === 16 && near(r.perTon.cfr - r.perTon.fob, 16));
 rec('B-03', 'Insurance only in CIF: 5,000 / 25 = 200 INR per ton', '200', r.build.insurance, r.build.insurance === 200);
 
-const kg = calcSheet({ ...sheetExample, quote_unit: 'kg' });
+const kg = calcSheet({ ...sheetExample, quote_unit: 'kg', quote_kg: 1 });
 rec('KG-01', 'Per kg quote = per ton / 1000 (the sheet’s per-kg mistake is fixed)', 'FOB 0.1453, CIF 0.1635', `${kg.quote.fob}, ${kg.quote.cif}`, near(kg.quote.fob, 0.1453, 0.0001) && near(kg.quote.cif, 0.1635, 0.0001));
 rec('KG-02', 'Per ton quote shows per ton numbers', '145.28', r.quote.fob, near(r.quote.fob, 145.28));
 
@@ -63,6 +63,17 @@ rec('UP-01', 'Sheets saved with the old fields are turned into the new ones', 'p
 
 const copy = copySheet({ ...sheetExample, id: 'ship_1', name: 'Saigon CIF', tasks: [{ id: 'a', title: 'Booking', done: true }] });
 rec('CP-01', 'Copy keeps every number but is a new sheet with open tasks', 'no id, (copy), task open', `${copy.id || 'no id'} | ${copy.name} | ${copy.tasks[0].done}`, copy.id === '' && copy.name === 'Saigon CIF (copy)' && copy.tasks[0].done === false && copy.price_per_kg === 10 && copy.tasks[0].id !== 'a');
+
+// The sheet's 'Need quote in Ton/kg' number (C5): 1000 = per ton, 1 = per kg (sheet of 17 Nov, profit 2%)
+{
+  const s2 = { ...sheetExample, profit_pct: 2 };
+  const t = calcSheet({ ...s2, quote_kg: 1000 });
+  const k = calcSheet({ ...s2, quote_kg: 1 });
+  const h = calcSheet({ ...s2, quote_kg: 500 });
+  rec('C5-01', 'Ton/kg = 1000 gives the sheet prices', '143.87 / 159.87 / 162.02', `${t.quote.fob} / ${t.quote.cfr} / ${t.quote.cif}`, t.quote.fob === 143.87 && t.quote.cfr === 159.87 && t.quote.cif === 162.02 && t.unitLabel === 'ton');
+  rec('C5-02', 'Ton/kg = 1 gives the price per kg (per ton / 1000)', '0.1439 / 0.1599 / 0.162', `${k.quote.fob} / ${k.quote.cfr} / ${k.quote.cif}`, k.quote.fob === 0.1439 && k.quote.cfr === 0.1599 && k.quote.cif === 0.162 && k.unitLabel === 'kg');
+  rec('C5-03', 'Any other number = price for that many kg', '500 kg: FOB 71.94', `${h.unitLabel}: ${h.quote.fob}`, h.unitLabel === '500 kg' && h.quote.fob === 71.94);
+}
 
 const fails = results.filter((x) => x.result === 'FAIL');
 console.table(results.map((x) => ({ ...x, scenario: x.scenario.slice(0, 62), expected: x.expected.slice(0, 36), actual: x.actual.slice(0, 40) })));

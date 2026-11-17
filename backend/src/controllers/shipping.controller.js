@@ -59,6 +59,8 @@ const clean = (b) => ({
   product: str(b.product, 80),
   term: ['FOB', 'CFR', 'CIF'].includes(b.term) ? b.term : 'CIF',
   quote_unit: b.quote_unit === 'kg' ? 'kg' : 'ton',
+  // the sheet's 'Need quote in Ton/kg': 1000 = per ton, 1 = per kg
+  quote_kg: nonNeg(b.quote_kg, 1e6) || (b.quote_unit === 'kg' ? 1 : 1000),
   container: {
     type: str(b.container?.type, 40) || '20 ft',
     tons_per: nonNeg(b.container?.tons_per, 1e6),
@@ -69,6 +71,7 @@ const clean = (b) => ({
     local: str(b.currency?.local, 6).toUpperCase() || 'INR',
     foreign: str(b.currency?.foreign, 6).toUpperCase() || 'USD',
     rate: nonNeg(b.currency?.rate, 1e7) || 1,
+    local_value: b.currency?.local_value === '' || b.currency?.local_value === undefined ? '' : nonNeg(b.currency?.local_value, 1e12),
   },
   price_per_kg: nonNeg(b.price_per_kg, 1e9),
   transport_per_kg: nonNeg(b.transport_per_kg, 1e9),
