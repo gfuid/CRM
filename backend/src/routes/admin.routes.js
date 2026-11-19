@@ -39,6 +39,13 @@ router.post('/help-videos', asyncHandler(helpVideos.createVideo));
 router.patch('/help-videos/:id', asyncHandler(helpVideos.updateVideo));
 router.delete('/help-videos/:id', asyncHandler(helpVideos.deleteVideo));
 
+// Calculators the admin builds (rows of boxes + formulas) that companies see in the CRM
+const calculators = require('../controllers/calculators.controller');
+router.get('/calculators', asyncHandler(calculators.listForAdmin));
+router.post('/calculators', asyncHandler(calculators.createCalculator));
+router.patch('/calculators/:id', asyncHandler(calculators.updateCalculator));
+router.delete('/calculators/:id', asyncHandler(calculators.deleteCalculator));
+
 // Support tickets inbox for the platform team
 router.get('/support/tickets', asyncHandler(support.listTickets));
 router.get('/support/tickets/:id', asyncHandler(support.getTicket));

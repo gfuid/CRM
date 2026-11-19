@@ -9,6 +9,7 @@ const ApiResponse = require('../utils/apiResponse');
 const { dataStore, generateId, dbSync } = require('../repositories/dataStore');
 const { isOwnerUser, isSuperAdmin } = require('../utils/access');
 const { upgradeSheet, quotePerTon } = require('../utils/shippingQuote');
+const { getRates } = require('../utils/fxRates');
 
 // Costs, profit and commissions (plus the fields of sheets saved before 2026-11-16)
 const MONEY_KEYS = ['price_per_kg', 'transport_per_kg', 'costs', 'profit_pct', 'commission', 'tax_pct',
@@ -164,4 +165,18 @@ const saveSettings = async (req, res) => {
   return ApiResponse.success(res, store.settings, 'Shipping settings saved');
 };
 
-module.exports = { MONEY_KEYS, listSheets, saveSheet, deleteSheet, saveSettings };
+/** Today's rate between two currencies for the calculator (any signed-in user). */
+const getFxRate = async (req, res) => {
+  const from = String(req.query.from || 'USD').toUpperCase();
+  const to = String(req.query.to || 'INR').toUpperCase();
+  try {
+    const data = await getRates(from);
+    const rate = data.rates[to];
+    if (!rate) return ApiResponse.error(res, `No rate for ${from} to ${to}`, 404);
+    return ApiResponse.success(res, { from, to, rate, updated_at: data.updated_at, stale: Boolean(data.stale), source: data.source, source_url: data.source_url });
+  } catch (err) {
+    return ApiResponse.error(res, 'Today’s rate could not be loaded. Type the rate yourself.', 503);
+  }
+};
+
+module.exports = { MONEY_KEYS, listSheets, saveSheet, deleteSheet, saveSettings, getFxRate };

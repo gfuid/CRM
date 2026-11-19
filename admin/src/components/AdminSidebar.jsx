@@ -10,6 +10,7 @@ import {
   LifeBuoy,
   Bot,
   Video,
+  Calculator,
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 
@@ -19,6 +20,7 @@ const adminNavItems = [
   { id: 'support', label: 'Support Tickets', icon: LifeBuoy },
   { id: 'ai', label: 'AI Assistant', icon: Bot },
   { id: 'videos', label: 'Help Videos', icon: Video },
+  { id: 'calculators', label: 'Calculators', icon: Calculator },
   { id: 'developer', label: 'Developer & Servers', icon: Terminal, badge: 'Live' },
   { id: 'settings', label: 'Settings', icon: Settings },
 ];

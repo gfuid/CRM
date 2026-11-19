@@ -57,8 +57,23 @@ export const formatLocation = (lead) => {
 export const chatLinks = (phone) => {
   const digits = String(phone || '').replace(/[^0-9]/g, '');
   if (digits.length < 6) return null;
-  return { whatsapp: `https://wa.me/${digits}`, zalo: `https://zalo.me/${digits}` };
+  return { whatsapp: `https://wa.me/${digits}`, zalo: `https://zalo.me/${digits}`, telegram: `https://t.me/+${digits}` };
 };
+
+/**
+ * The chat link a social platform can get straight from a phone number.
+ * WhatsApp, Zalo and Telegram open a chat by number; Line and WeChat use an ID, so they get none.
+ */
+export const linkFromPhone = (platform, phone) => {
+  const links = chatLinks(phone);
+  if (!links) return '';
+  if (platform === 'WhatsApp') return links.whatsapp;
+  if (platform === 'Zalo') return links.zalo;
+  if (platform === 'Telegram') return links.telegram;
+  return '';
+};
+/** True when a link was made from a phone number (so it may be replaced when the number changes). */
+export const isPhoneLink = (url) => /^https:\/\/(wa\.me\/|zalo\.me\/|t\.me\/\+)\d+$/.test(String(url || ''));
 
 /** A saved value that is not in the list any more (old leads) is still shown, so nothing looks blank. */
 export const withCurrent = (list, current) =>

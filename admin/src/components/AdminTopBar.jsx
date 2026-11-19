@@ -7,6 +7,7 @@ const SECTION_TITLES = {
   support: { title: 'Support Tickets', subtitle: 'Questions and problems raised by owners and staff' },
   ai: { title: 'AI Assistant', subtitle: 'Grok API key, model, limits and usage' },
   videos: { title: 'Help Videos', subtitle: "How-to videos shown in every company's Help & Support" },
+  calculators: { title: 'Calculators', subtitle: 'Build calculators with boxes and formulas; companies use them in the CRM' },
   developer: { title: 'Developer & Servers', subtitle: 'Atlas storage, API performance, memory profiler & server health' },
   settings: { title: 'Settings', subtitle: 'Platform configuration' },
 };

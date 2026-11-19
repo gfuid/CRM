@@ -8,6 +8,8 @@ const asyncHandler = require('../utils/asyncHandler');
 router.use(authenticate);
 
 router.get('/', asyncHandler(shipping.listSheets));
+router.get('/fx', asyncHandler(shipping.getFxRate));
+router.get('/calculators', asyncHandler(require('../controllers/calculators.controller').listForUsers));
 router.put('/settings', asyncHandler(shipping.saveSettings));
 router.put('/sheets/:id', enforceStorageQuota, asyncHandler(shipping.saveSheet));
 router.delete('/sheets/:id', asyncHandler(shipping.deleteSheet));

@@ -8,7 +8,7 @@ import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
-import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue, formatLocation, chatLinks } from '../data/leadOptions';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue, formatLocation, chatLinks, linkFromPhone, isPhoneLink } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -1118,6 +1118,13 @@ export default function Leads() {
     setForm((prev) => {
       const updated = [...(prev.social_links || [])];
       updated[index] = { ...updated[index], [field]: value };
+      if (field === 'platform') {
+        const number = prev.whatsapp || prev.contacts?.[0]?.phone || '';
+        const auto = linkFromPhone(value, number);
+        const current = updated[index].url;
+        if (auto && (!current || isPhoneLink(current))) updated[index].url = auto;
+        else if (!auto && isPhoneLink(current)) updated[index].url = '';
+      }
       return {
         ...prev,
         social_links: updated,
@@ -2845,10 +2852,15 @@ export default function Leads() {
                           countryCode={contact.country_code}
                           defaultCountry={form.country}
                           onChange={(fullPhone, dialCode) => {
-                            const updated = [...form.contacts];
-                            updated[cIdx].phone = fullPhone;
-                            updated[cIdx].country_code = dialCode;
-                            setForm({ ...form, contacts: updated });
+                            const before = form.contacts[cIdx]?.phone || '';
+                            const updated = form.contacts.map((c, j) => (j === cIdx ? { ...c, phone: fullPhone, country_code: dialCode } : c));
+                            const next = { ...form, contacts: updated };
+                            // First contact's phone = the WhatsApp / Zalo number, unless someone typed a different one
+                            if (cIdx === 0 && (!form.whatsapp || form.whatsapp === before)) {
+                              next.whatsapp = fullPhone;
+                              next.social_links = (form.social_links || []).map((l) => (l && (!l.url || isPhoneLink(l.url)) && linkFromPhone(l.platform, fullPhone) ? { ...l, url: linkFromPhone(l.platform, fullPhone) } : l));
+                            }
+                            setForm(next);
                           }}
                           placeholder="e.g. 11 268 8960"
                         />
@@ -3492,7 +3504,7 @@ export default function Leads() {
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Today's Interaction / Discussion Remarks {!editingLead && <span className="text-rose-500 font-extrabold">* (Mandatory)</span>}
+                      Today's Interaction / Discussion Remarks <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       id="lead-form-today-remark"
@@ -3508,7 +3520,7 @@ export default function Leads() {
 
                   <div>
                     <label className="block text-xs font-bold text-emerald-950 dark:text-emerald-200 mb-1">
-                      Planned Action for Next Follow-up Date {!editingLead && <span className="text-rose-500 font-extrabold">* (Mandatory)</span>}
+                      Planned Action for Next Follow-up Date <span className="text-rose-500 font-extrabold">* (Mandatory)</span>
                     </label>
                     <textarea
                       id="lead-form-planned-action"

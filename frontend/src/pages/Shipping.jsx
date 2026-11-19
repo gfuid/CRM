@@ -4,6 +4,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import { useLeadOptions } from '../data/leadOptions';
+import { evaluateCalculator } from '../data/formula';
 import { CONTAINER_TYPES, PRICE_TERMS, QUOTE_UNITS, CURRENCIES, OTHER_CURRENCIES, currencyLabel, newSheet, calcSheet, copySheet, upgradeSheet, money } from '../data/shippingCalc';
 
 const inputCls = 'w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
@@ -427,23 +428,96 @@ function SheetCalculator({ sheet, setSheet, r }) {
   );
 }
 
+/** A calculator the platform admin built: same sheet look, its own boxes and formulas. */
+function CustomCalculator({ calc }) {
+  const [inputs, setInputs] = useState({});
+  const { values, errors } = useMemo(() => evaluateCalculator(calc.rows, inputs), [calc.rows, inputs]);
+  const fmtNum = (v, d) => (v === null || v === undefined ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d }));
+  return (
+    <div data-custom-calculator={calc.name}>
+      {calc.description && <p className="text-xs text-slate-500 mb-2">{calc.description}</p>}
+      <table className="w-full border-collapse text-sm text-slate-900 dark:text-slate-100">
+        <thead>
+          <tr>
+            <th className={`${sheetCell} text-left text-base font-black`}>Particulars</th>
+            <th className={`${sheetCell} text-left text-base font-black w-[44%]`}>Input field</th>
+          </tr>
+        </thead>
+        <tbody>
+          {calc.rows.map((r) => {
+            if (r.kind === 'heading') return <tr key={r.key}><td colSpan={2} className={`${sheetCell} bg-slate-100 dark:bg-slate-800 font-black`}>{r.label}</td></tr>;
+            const note = [r.unit, r.hint].filter(Boolean).join(' · ');
+            const label = (
+              <td className={`${sheetCell} ${r.kind === 'formula' && r.highlight ? 'font-bold' : ''}`}>
+                {r.label}{note && <span className="font-normal text-[11px] text-slate-500"> ({note})</span>}
+              </td>
+            );
+            if (r.kind === 'formula') {
+              return (
+                <tr key={r.key} data-custom-result={r.key}>
+                  {label}
+                  <td className={errors[r.key] ? `${sheetCell} bg-rose-50 text-rose-600 text-right text-[11px]` : `${sheetResultCell} ${r.highlight ? 'text-base' : ''}`} title={errors[r.key] || ''}>
+                    {errors[r.key] ? errors[r.key] : fmtNum(values[r.key], r.decimals ?? 2)}
+                  </td>
+                </tr>
+              );
+            }
+            const val = Object.prototype.hasOwnProperty.call(inputs, r.key) ? inputs[r.key] : r.default;
+            return (
+              <tr key={r.key}>
+                {label}
+                <td className={sheetInputCell}>
+                  {r.kind === 'select' ? (
+                    <select value={val} aria-label={r.label} onChange={(e) => setInputs({ ...inputs, [r.key]: Number(e.target.value) })} className={`${sheetSelect} w-full text-right`}>
+                      {(r.options || []).map((o, i) => <option key={i} value={o.value}>{o.label}</option>)}
+                    </select>
+                  ) : (
+                    <input type="number" inputMode="decimal" step="any" aria-label={r.label} value={val ?? ''} onChange={(e) => setInputs({ ...inputs, [r.key]: e.target.value })} className={sheetInput} />
+                  )}
+                </td>
+              </tr>
+            );
+          })}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 /** The price calculator over any page; nothing is saved unless you save it as a cost sheet. */
 export function QuickCalculator({ isOpen, onClose, onOpenAsSheet }) {
   const [sheet, setSheet] = useState(() => newSheet({ name: 'Quick calculation', mode: 'quotation' }));
   const r = useMemo(() => calcSheet(sheet), [sheet]);
+  const [extra, setExtra] = useState([]); // calculators from the Admin Console
+  const [tab, setTab] = useState('builtin');
+  useEffect(() => {
+    if (!isOpen) return;
+    api.getCalculators().then((res) => setExtra(Array.isArray(res?.data) ? res.data : [])).catch(() => setExtra([]));
+  }, [isOpen]);
+  const current = extra.find((c) => c.id === tab);
   return (
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title="Export price calculator"
-      subtitle="FOB, CFR and CIF price for your buyer, per ton or per kg"
+      title={current ? current.name : 'Export price calculator'}
+      subtitle={current ? 'Calculator from your CRM team' : 'FOB, CFR and CIF price for your buyer, per ton or per kg'}
       maxWidth="max-w-2xl"
       bodyClassName="p-3 sm:p-4 overflow-y-auto"
-      footer={onOpenAsSheet ? (
+      footer={onOpenAsSheet && !current ? (
         <button type="button" onClick={() => onOpenAsSheet(sheet)} className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 cursor-pointer"><FileText size={14} /> Save as a cost sheet</button>
       ) : null}
     >
-      <SheetCalculator sheet={sheet} setSheet={setSheet} r={r} />
+      {extra.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-3" role="tablist" aria-label="Calculators" data-calc-tabs>
+          {[{ id: 'builtin', name: 'Export price' }, ...extra].map((c) => (
+            <button key={c.id} type="button" role="tab" aria-selected={tab === c.id} onClick={() => setTab(c.id)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold border cursor-pointer ${tab === c.id ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700'}`}>
+              {c.name}
+            </button>
+          ))}
+        </div>
+      )}
+      {current ? <CustomCalculator key={current.id} calc={current} /> : <SheetCalculator sheet={sheet} setSheet={setSheet} r={r} />}
     </Modal>
   );
 }

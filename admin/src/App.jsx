@@ -8,6 +8,7 @@ import DeveloperSection from './pages/DeveloperSection';
 import SupportTicketsSection from './pages/SupportTicketsSection';
 import AiAssistantSection from './pages/AiAssistantSection';
 import HelpVideosSection from './pages/HelpVideosSection';
+import CalculatorsSection from './pages/CalculatorsSection';
 import SettingsSection from './pages/SettingsSection';
 import BroadcastNotificationModal from './components/BroadcastNotificationModal';
 import { CheckCircle2, AlertCircle, RefreshCw } from 'lucide-react';
@@ -378,6 +379,10 @@ export default function App() {
 
               {activeSection === 'videos' && (
                 <HelpVideosSection apiBase={API_BASE} getHeaders={getHeaders} showToast={showToast} />
+              )}
+
+              {activeSection === 'calculators' && (
+                <CalculatorsSection apiBase={API_BASE} getHeaders={getHeaders} showToast={showToast} users={users} />
               )}
 
               {activeSection === 'developer' && (
