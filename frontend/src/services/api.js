@@ -397,6 +397,11 @@ class ApiClient {
     return this.request('/shipping');
   }
 
+  /** Today's exchange rate, e.g. getFxRate('USD', 'INR') -> { rate: 93.51, updated_at, source } */
+  getFxRate(from, to) {
+    return this.request(`/shipping/fx?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`);
+  }
+
   saveShippingSheet(id, sheet) {
     return this.request(`/shipping/sheets/${encodeURIComponent(id || 'new')}`, {
       method: 'PUT',

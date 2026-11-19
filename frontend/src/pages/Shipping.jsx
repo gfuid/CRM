@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Ship, Plus, Calculator, Copy, Trash2, ArrowLeft, Save, Search, FileText, Lock, ListChecks, Info, X } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
@@ -156,6 +156,18 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
             className="w-[88px] shrink-0 px-1.5 py-2.5 text-xs font-bold bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-lg focus:ring-2 focus:ring-emerald-500/30 focus:outline-none"
           />
         </div>
+        <button
+          type="button"
+          className="mt-1 text-[11px] font-bold text-emerald-700 dark:text-emerald-400 cursor-pointer"
+          onClick={async () => {
+            try {
+              const r = await api.getFxRate(cur, loc);
+              if (r?.data?.rate) setIn('currency', { rate: Math.round(Number(r.data.rate) * 10000) / 10000 });
+            } catch { /* keep the typed rate */ }
+          }}
+        >
+          Use today&apos;s rate
+        </button>
       </SheetRow>
 
       {canMoney ? (
@@ -337,6 +349,81 @@ function SheetNum({ label, value, onChange }) {
   );
 }
 
+/* Currency converter, like Google's: "1 [US Dollar]" on top, "93.51 [Indian Rupee]" below.
+   Picking a currency fills today's rate; typing either amount works and sets the rate the formulas use. */
+const round4 = (n) => Math.round(n * 10000) / 10000;
+const fxNote = (sheet) => {
+  const c = sheet.currency || {};
+  const rate = Number(c.rate) || 0;
+  const base = `1 ${c.foreign || 'USD'} = ${rate ? rate.toLocaleString('en-US', { maximumFractionDigits: 4 }) : '?'} ${c.local || 'INR'}`;
+  if (c.fx_status === 'loading') return `${base} · getting today's rate…`;
+  if (c.fx_status === 'error') return `${base} · today's rate could not be loaded, type it yourself`;
+  if (c.fx_updated_at && c.fx_rate === rate) return `${base} · today's rate (${c.fx_source || 'market'}, ${new Date(c.fx_updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })})`;
+  return `${base} · your own rate`;
+};
+
+function ConverterRows({ sheet, setSheet, autoRate = false }) {
+  const c = sheet.currency || {};
+  const cur = c.foreign || 'USD';
+  const loc = c.local || 'INR';
+  const amount = c.quote_amount === undefined || c.quote_amount === '' ? 1 : c.quote_amount;
+  const rate = Number(c.rate) || 0;
+  const localValue = c.local_value !== undefined && c.local_value !== '' && c._typing === 'local' ? c.local_value : (Number(amount) ? round4(Number(amount) * rate) : '');
+  const setCur = (patch) => setSheet((s) => ({ ...s, currency: { ...(s.currency || {}), ...patch } }));
+
+  const loadRate = useCallback(async (from, to) => {
+    if (from === to) { setCur({ rate: 1, fx_rate: 1, fx_status: '', fx_updated_at: new Date().toISOString(), fx_source: 'same currency' }); return; }
+    setCur({ fx_status: 'loading' });
+    try {
+      const r = await api.getFxRate(from, to);
+      const v = round4(Number(r?.data?.rate));
+      if (!v) throw new Error('no rate');
+      setSheet((s) => (s.currency?.foreign === from && s.currency?.local === to ? { ...s, currency: { ...s.currency, rate: v, fx_rate: v, fx_status: '', fx_updated_at: r.data.updated_at, fx_source: r.data.source, _typing: '' } } : s));
+    } catch {
+      setCur({ fx_status: 'error' });
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+  useEffect(() => { if (autoRate) loadRate(cur, loc); /* first open: today's rate */ // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  const pick = (key, value) => {
+    const next = { ...c, [key]: value };
+    setCur({ [key]: value });
+    loadRate(next.foreign || 'USD', next.local || 'INR');
+  };
+  const typeAmount = (v) => setCur({ quote_amount: v, _typing: '' });
+  const typeLocal = (v) => {
+    const a = Number(amount) || 1;
+    const n = Number(v);
+    setCur({ local_value: v, _typing: 'local', ...(Number.isFinite(n) && n > 0 ? { rate: round4(n / a) } : {}) });
+  };
+  const box = 'w-full min-w-0 bg-transparent px-2 py-1 text-sm font-semibold text-slate-900 dark:text-white tabular-nums focus:outline-none focus:bg-white/60 dark:focus:bg-slate-900/60';
+  const sel = `${sheetSelect} max-w-[58%] text-right`;
+  return (
+    <>
+      <tr data-fx-row="quote">
+        <td className={sheetCell}>share quote in which currency USD/other currency</td>
+        <td className={sheetInputCell}>
+          <div className="flex items-center gap-1">
+            <input type="number" inputMode="decimal" step="any" aria-label="Amount in quote currency" value={amount} onChange={(e) => typeAmount(e.target.value)} className={box} />
+            <CurrencySelect value={cur} onChange={(v) => pick('foreign', v)} label="Quote currency" className={sel} />
+          </div>
+        </td>
+      </tr>
+      <tr data-fx-row="local">
+        <td className={sheetCell}>Local value in currency</td>
+        <td className={sheetInputCell}>
+          <div className="flex items-center gap-1">
+            <input type="number" inputMode="decimal" step="any" aria-label="Local value" value={localValue} onChange={(e) => typeLocal(e.target.value)} className={box} />
+            <CurrencySelect value={loc} onChange={(v) => pick('local', v)} label="Your local currency" className={sel} />
+          </div>
+        </td>
+      </tr>
+    </>
+  );
+}
+
 function SheetCalculator({ sheet, setSheet, r }) {
   const set = (patch) => setSheet((s) => ({ ...s, ...patch }));
   const setIn = (key, patch) => setSheet((s) => ({ ...s, [key]: { ...(s[key] || {}), ...patch } }));
@@ -370,23 +457,9 @@ function SheetCalculator({ sheet, setSheet, r }) {
             <td className={sheetCell}>Total ton in a container</td>
             <td className={sheetInputCell}><SheetNum label="Tons in a container" value={sheet.container?.tons_per} onChange={(v) => setIn('container', { tons_per: v })} /></td>
           </tr>
+          <ConverterRows sheet={sheet} setSheet={setSheet} autoRate />
           <tr>
-            <td className={sheetCell}>share quote in which currency USD/other currency <span className="text-[11px] text-slate-500">(rate: 1 {cur} = ? {loc})</span></td>
-            <td className={sheetInputCell}>
-              <div className="flex items-center">
-                <CurrencySelect value={cur} onChange={(v) => setIn('currency', { foreign: v })} label="Quote currency" className={`${sheetSelect} w-[68px] shrink-0`} short />
-                <SheetNum label="Exchange rate" value={sheet.currency?.rate} onChange={(v) => setIn('currency', { rate: v })} />
-              </div>
-            </td>
-          </tr>
-          <tr>
-            <td className={sheetCell}>Local value in currency</td>
-            <td className={sheetInputCell}>
-              <div className="flex items-center">
-                <CurrencySelect value={loc} onChange={(v) => setIn('currency', { local: v })} label="Your local currency" className={`${sheetSelect} w-[68px] shrink-0`} short />
-                <SheetNum label="Local value" value={sheet.currency?.local_value} onChange={(v) => setIn('currency', { local_value: v })} />
-              </div>
-            </td>
+            <td colSpan={2} className={`${sheetCell} text-[11px] text-slate-500 bg-white dark:bg-slate-900`} data-fx-note>{fxNote(sheet)}</td>
           </tr>
           <tr>
             <td className={sheetCell}>Need quote in Ton/kg <span className="text-[11px] text-slate-500">(1000 = per ton, 1 = per kg)</span></td>
