@@ -391,6 +391,36 @@ const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
   const unblocked = await call('GET', '/leads', S1);
   rec('PERM-01', 'Permissions', 'Owner→Staff', 'Owner switches off "view leads" for a staff member, then back on', '403 then 200', `${blockedLeads.status} then ${unblocked.status}`, blockedLeads.status === 403 && unblocked.status === 200);
 
+  // "Edit full lead details": off by default, the owner can switch it on per staff member
+  const noPermEdit = await call('PATCH', `/leads/${LS1}`, S1, { products: ['Pepper'], quantity: 40, price: 900 });
+  rec('PERM-02', 'Permissions', 'Staff', 'Staff without "Edit full lead details" changes products/price', '403', noPermEdit.status, noPermEdit.status === 403);
+  await call('PATCH', `/leads/${LS1}`, A, { export_requirements: { incoterm: 'FOB', payment_days: '60 Days' } });
+  const basicProd = await call('PATCH', `/leads/${LS1}`, S1, { products: ['Ginger', 'Turmeric'], product: 'Ginger, Turmeric', quantity: 12, quantity_unit: 'MT', export_requirements: { product_notes: 'Dry, 25 kg bags', quantity_unit: 'MT', incoterm: 'EXW' } });
+  const afterBasic = (await call('GET', `/leads/${LS1}`, A)).data?.data || {};
+  rec('PERM-02b', 'Permissions', 'Staff', 'Staff without the permission still picks products and quantity in Edit; owner\'s shipping terms stay', '200, products saved, incoterm FOB', `${basicProd.status} ${JSON.stringify(afterBasic.products)} qty=${afterBasic.quantity} incoterm=${afterBasic.export_requirements?.incoterm}`, basicProd.status === 200 && afterBasic.products?.join() === 'Ginger,Turmeric' && afterBasic.quantity === 12 && afterBasic.export_requirements?.incoterm === 'FOB' && afterBasic.export_requirements?.product_notes === 'Dry, 25 kg bags');
+  const swapProd = await call('PATCH', `/leads/${LS1}`, S1, { products: ['Ginger', 'Maize'], product: 'Ginger, Maize' });
+  const removeProd = await call('PATCH', `/leads/${LS1}`, S1, { products: ['Ginger'], product: 'Ginger' });
+  const clearProd = await call('PATCH', `/leads/${LS1}`, S1, { products: [], product: '' });
+  const afterSwap = (await call('GET', `/leads/${LS1}`, A)).data?.data || {};
+  rec('PERM-02c', 'Permissions', 'Staff', 'Staff can swap a product (Turmeric → Maize) but cannot remove or clear products', '200, 403, 403', `${swapProd.status}, ${removeProd.status}, ${clearProd.status} → ${JSON.stringify(afterSwap.products)}`, swapProd.status === 200 && removeProd.status === 403 && clearProd.status === 403 && afterSwap.products?.join() === 'Ginger,Maize');
+  const ownerRemove = await call('PATCH', `/leads/${LS1}`, A, { products: ['Ginger'], product: 'Ginger' });
+  rec('PERM-02d', 'Permissions', 'Owner', 'Owner can still remove a product', '200', ownerRemove.status, ownerRemove.status === 200);
+  await call('PATCH', `/admin/users/${S1id}`, A, { permissions: { edit_lead_details: true } });
+  const permEdit = await call('PATCH', `/leads/${LS1}`, S1, { products: ['Pepper'], product: 'Pepper', quantity: 40, price: 900, value: 900, type: 'Import', export_requirements: { incoterm: 'CIF', payment_days: '30 Days' }, company_name: 'Lanka Spice Co' });
+  const afterPermEdit = (await call('GET', `/leads/${LS1}`, A)).data?.data || {};
+  rec('PERM-03', 'Permissions', 'Owner→Staff', 'With "Edit full lead details" on, staff edits products, quantity, price, trade type, shipping terms', '200 and saved', `${permEdit.status} ${afterPermEdit.product} ${afterPermEdit.quantity} ${afterPermEdit.price} ${afterPermEdit.type}`, permEdit.status === 200 && afterPermEdit.product === 'Pepper' && afterPermEdit.quantity === 40 && afterPermEdit.price === 900 && afterPermEdit.type === 'Import' && afterPermEdit.export_requirements?.incoterm === 'CIF');
+  const permReassign = await call('PATCH', `/leads/${LS1}`, S1, { assigned_to: S2id });
+  const permWon = await call('PATCH', `/leads/${LS1}`, S1, { stage: 'Closed Won' });
+  rec('PERM-04', 'Permissions', 'Staff', 'Even with the permission, staff cannot re-assign a lead or mark it Won', '403 and 403', `${permReassign.status} and ${permWon.status}`, permReassign.status === 403 && permWon.status === 403);
+  const permOther = await call('PATCH', `/leads/${LA}`, S1, { products: ['Rice'] });
+  rec('PERM-05', 'Permissions', 'Staff', 'With the permission, staff still cannot edit a lead assigned to someone else', '403/404', permOther.status, permOther.status === 403 || permOther.status === 404);
+  const permCreate = await call('POST', '/leads', S1, { company_name: `Perm Create ${uniq}`, country: 'Vietnam', contacts: [{ name: 'Lan', email: `lan${uniq}@t.com`, phone: '+84 900 000 111' }], products: ['Rice'], quantity: 5, price: 500, type: 'Import', follow_up_date: today, today_remarks: 'Met at fair', next_follow_up_action: 'Send quote' });
+  rec('PERM-06', 'Permissions', 'Staff', 'With the permission, staff can set price and trade type when adding a lead', '201 with price', `${permCreate.status} price=${permCreate.data?.data?.price} type=${permCreate.data?.data?.type}`, permCreate.status === 201 && permCreate.data.data.price === 500 && permCreate.data.data.type === 'Import' && permCreate.data.data.assigned_to === S1id);
+  await call('PATCH', `/admin/users/${S1id}`, A, { permissions: { edit_lead_details: false } });
+  const permOff = await call('PATCH', `/leads/${LS1}`, S1, { price: 1 });
+  rec('PERM-07', 'Permissions', 'Owner→Staff', 'Owner switches the permission off again: staff is blocked at once', '403', permOff.status, permOff.status === 403);
+  if (permCreate.data?.data?.id) await call('DELETE', `/leads/${permCreate.data.data.id}`, A);
+
   const me = await call('GET', '/auth/me', S1);
   const meTokenWorks = me.data?.data?.token ? (await call('GET', '/leads', me.data.data.token)).status : 0;
   rec('AUTH-01', 'Session', 'Staff', 'Opening the app hands back a fresh session token (no surprise logouts)', 'token works', `${me.status}, fresh token → ${meTokenWorks}`, me.status === 200 && meTokenWorks === 200);

@@ -61,6 +61,7 @@ const DEFAULT_PERMISSIONS = {
   can_read: true,
   can_create: true,
   can_update: true,
+  edit_lead_details: false, // Owner can allow full lead editing per staff
   can_delete: false, // Prevent deleting other staff's or company records
   can_export: false,
   admin_access: false, // Strict: Never give staff admin panel
@@ -83,6 +84,7 @@ const PRESETS = {
       can_read: true,
       can_create: true,
       can_update: true,
+      edit_lead_details: false,
       can_delete: false,
       can_export: false,
       admin_access: false,
@@ -104,6 +106,7 @@ const PRESETS = {
       can_read: true,
       can_create: false,
       can_update: false,
+      edit_lead_details: false,
       can_delete: false,
       can_export: false,
       admin_access: false,
@@ -125,6 +128,7 @@ const PRESETS = {
       can_read: true,
       can_create: true,
       can_update: true,
+      edit_lead_details: true,
       can_delete: false,
       can_export: true,
       admin_access: false,
@@ -1141,12 +1145,27 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     />
                     <div className="min-w-0">
                       <span className="font-bold block">✏️ Add updates</span>
-                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done. Cannot change lead details.</span>
+                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done.</span>
+                    </div>
+                  </label>
+                  <label className="p-2.5 rounded-lg border bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/60 flex items-start gap-2 cursor-pointer" data-perm="edit_lead_details">
+                    <input
+                      type="checkbox"
+                      checked={form.permissions?.edit_lead_details === true}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, edit_lead_details: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block">🛠️ Edit full lead details</span>
+                      <span className="text-[10px] text-slate-500 block">Change products, quantity, price / deal value, trade type, industry, shipping terms and contact details of their leads.</span>
                     </div>
                   </label>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Editing lead details, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
+                  Lead details can be edited only with "Edit full lead details". Re-assigning a lead, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
                 </p>
               </div>
             </div>
@@ -1578,12 +1597,27 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     />
                     <div className="min-w-0">
                       <span className="font-bold block">✏️ Add updates</span>
-                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done. Cannot change lead details.</span>
+                      <span className="text-[10px] text-slate-500 block">Write remarks, set the next follow-up date, mark tasks and follow-ups done.</span>
+                    </div>
+                  </label>
+                  <label className="p-2.5 rounded-lg border bg-amber-50/60 dark:bg-amber-950/20 border-amber-200 dark:border-amber-900/60 flex items-start gap-2 cursor-pointer" data-perm="edit_lead_details">
+                    <input
+                      type="checkbox"
+                      checked={editingStaff.permissions?.edit_lead_details === true}
+                      onChange={(e) => setEditingStaff({
+                        ...editingStaff,
+                        permissions: { ...editingStaff.permissions, edit_lead_details: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500 mt-0.5"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block">🛠️ Edit full lead details</span>
+                      <span className="text-[10px] text-slate-500 block">Change products, quantity, price / deal value, trade type, industry, shipping terms and contact details of their leads.</span>
                     </div>
                   </label>
                 </div>
                 <p className="text-[10px] text-slate-500 mt-1">
-                  Editing lead details, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
+                  Lead details can be edited only with "Edit full lead details". Re-assigning a lead, marking a deal Won/Lost, cancelling tasks and deleting anything are always owner-only.
                 </p>
             </div>
 

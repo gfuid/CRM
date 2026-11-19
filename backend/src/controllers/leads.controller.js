@@ -55,6 +55,10 @@ const LEAD_OWNERSHIP_FIELDS = [
   'created_at',
 ];
 const { isOwnerUser, isSuperAdmin, sameValue, viewBlocked } = require('../utils/access');
+
+// Staff the owner allowed to edit the full lead (products, deal, trade details). Assignment and Won/Lost stay with the owner.
+const STAFF_NEVER_FIELDS = ['assigned_to', 'agent_name'];
+const canEditLeadDetails = (user) => Boolean(user && user.permissions && user.permissions.edit_lead_details === true);
 const { buildContactIndex, contactInfo } = require('../utils/contact');
 
 // Fields the server manages itself. Clients may send them back (e.g. a whole lead object) and they are ignored.
@@ -179,11 +183,12 @@ const getLeadById = async (req, res) => {
  */
 const createLead = async (req, res) => {
   const isOwner = canManageAll(req.user);
+  const fullEdit = isOwner || canEditLeadDetails(req.user);
   if (!isOwner && req.user?.permissions?.can_create === false) {
     return ApiResponse.error(res, 'Access denied: You do not have permission to create leads.', 403);
   }
   const protectedFields = [
-    ...(!isOwner ? OWNER_ONLY_LEAD_FIELDS.filter((f) => !STAFF_CREATE_FIELDS.includes(f)) : []),
+    ...(!fullEdit ? OWNER_ONLY_LEAD_FIELDS.filter((f) => !STAFF_CREATE_FIELDS.includes(f)) : []),
     ...LEAD_OWNERSHIP_FIELDS,
   ].filter((field) => {
     if (!Object.prototype.hasOwnProperty.call(req.body, field)) return false;
@@ -322,7 +327,7 @@ const createLead = async (req, res) => {
     owner_id: ownerId,
     name: leadName,
     company_name: leadName,
-    type: isOwner ? (type || 'Export') : 'Export',
+    type: fullEdit ? (type || 'Export') : 'Export',
     contacts: Array.isArray(contacts) ? contacts : [],
     contact_person: contact_person || (primaryContact ? primaryContact.name : ''),
     email: email || (primaryContact ? primaryContact.email : ''),
@@ -336,19 +341,19 @@ const createLead = async (req, res) => {
     state: String(state || '').trim().slice(0, 80),
     city: String(city || '').trim().slice(0, 80),
     pincode: String(pincode || '').trim().slice(0, 12),
-    credit_rating: isOwner ? (credit_rating || 'Not Rated') : 'Not Rated',
-    turnover: isOwner ? (turnover || '') : '',
-    sourcing_region: isOwner ? (sourcing_region || '') : '',
-    legacy_industry_type: isOwner ? (legacy_industry_type || '') : '',
+    credit_rating: fullEdit ? (credit_rating || 'Not Rated') : 'Not Rated',
+    turnover: fullEdit ? (turnover || '') : '',
+    sourcing_region: fullEdit ? (sourcing_region || '') : '',
+    legacy_industry_type: fullEdit ? (legacy_industry_type || '') : '',
     products: productList,
     product: productList.join(', '),
     quantity: Number(quantity) || 0,
     quantity_unit: quantity_unit || req.body.unit || (Number(quantity) >= 1000 ? 'kg' : 'MT'),
-    price: isOwner ? (Number(price || price_usd) || 0) : 0,
-    value: isOwner ? ((Number(value) || (Number(quantity || 0) * Number(price || price_usd || 0))) || 0) : 0,
+    price: fullEdit ? (Number(price || price_usd) || 0) : 0,
+    value: fullEdit ? ((Number(value) || (Number(quantity || 0) * Number(price || price_usd || 0))) || 0) : 0,
     stage: stage || 'Lead Generation',
     priority: priority || 'Medium',
-    export_requirements: isOwner ? (export_requirements || {}) : staffRequirements,
+    export_requirements: fullEdit ? (export_requirements || {}) : staffRequirements,
     assigned_to: isOwner ? (assigned_to || req.user.id) : req.user.id,
     created_by_id: req.user.id,
     created_by_name: req.user.name || req.user.full_name || 'User',
@@ -439,12 +444,23 @@ const updateLead = async (req, res) => {
   delete body.lead_stage;
   SERVER_MANAGED_FIELDS.forEach((f) => delete body[f]);
   if (body.tags !== undefined) body.tags = normalizeTags(body.tags);
+  // Staff without "Edit full lead details" may update the commodity block only (notes / unit / specs);
+  // shipping terms the owner set stay as they are.
+  const staffBasic = !isOwner && !canEditLeadDetails(req.user);
+  if (staffBasic && body.export_requirements !== undefined) {
+    const reqIn = body.export_requirements && typeof body.export_requirements === 'object' && !Array.isArray(body.export_requirements) ? body.export_requirements : {};
+    const merged = { ...(current.export_requirements || {}) };
+    STAFF_REQUIREMENT_KEYS.forEach((k) => { if (reqIn[k] !== undefined) merged[k] = reqIn[k]; });
+    body.export_requirements = merged;
+  }
 
   // Only keep fields whose value actually changes
   const changed = Object.keys(body).filter((field) => !sameValue(body[field], current[field]));
 
   if (!isOwner) {
-    const notAllowed = changed.filter((field) => !STAFF_APPEND_FIELDS.includes(field));
+    const notAllowed = canEditLeadDetails(req.user)
+      ? changed.filter((field) => STAFF_NEVER_FIELDS.includes(field))
+      : changed.filter((field) => !STAFF_APPEND_FIELDS.includes(field) && !STAFF_CREATE_FIELDS.includes(field));
     if (notAllowed.length) {
       return ApiResponse.error(
         res,
@@ -454,6 +470,16 @@ const updateLead = async (req, res) => {
     }
     if (changed.includes('stage') && isFinalStage(body.stage)) {
       return ApiResponse.error(res, 'Only the company owner can mark a deal as Won or Lost.', 403);
+    }
+    // Staff may swap a product for another or add more, but not remove products from a lead
+    if (staffBasic && (changed.includes('products') || changed.includes('product'))) {
+      const toList = (arr, str) => (Array.isArray(arr) ? arr : String(str || '').split(','))
+        .map((p) => String(p || '').trim()).filter(Boolean);
+      const before = toList(current.products, current.product).length;
+      const after = toList(body.products, body.product !== undefined ? body.product : current.product).length;
+      if (after < before) {
+        return ApiResponse.error(res, `You can replace a product with another one, but not remove it. This lead needs at least ${before} product${before > 1 ? 's' : ''}. Ask your company owner to remove products.`, 403);
+      }
     }
   }
 

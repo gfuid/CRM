@@ -568,6 +568,8 @@ function SearchableCountrySelect({ value, onChange, className = '' }) {
 
 export default function Leads() {
   const { profile, isOwner, isStaff, getTeamMembers } = useAuth();
+  // Owner, or staff the owner allowed to edit the full lead (Team → staff → "Edit full lead details")
+  const fullEdit = isOwner || profile?.permissions?.edit_lead_details === true;
   const [leads, setLeads] = useState(INITIAL_LEADS);
   const [loading, setLoading] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
@@ -1319,6 +1321,16 @@ export default function Leads() {
       alert('Follow-up date is mandatory! Please select a next follow-up date.');
       return;
     }
+    // Staff can swap a product for another, but not remove products from a lead
+    if (editingLead && !fullEdit) {
+      const before = (Array.isArray(editingLead.products) ? editingLead.products : String(editingLead.product || '').split(','))
+        .map((p) => String(p || '').trim()).filter(Boolean).length;
+      if (form.products.length < before) {
+        alert(`You can replace a product with another one, but not remove it. Please keep at least ${before} product${before > 1 ? 's' : ''} selected (ask your company owner to remove one).`);
+        document.getElementById('form-sec-products')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    }
     // A new lead needs its first remark + planned action. An existing lead already has them (new ones are optional).
     if (!editingLead && (!form.today_remarks || !form.today_remarks.trim())) {
       alert("Today's Interaction / Discussion Remarks is mandatory! Please enter remarks.");
@@ -1381,7 +1393,7 @@ export default function Leads() {
           form.next_follow_up_action ? `[Planned Action on ${form.follow_up_date}]: ${form.next_follow_up_action}` : null,
           form.notes || null,
         ].filter(Boolean).join('\n') || form.notes || '',
-        ...(isOwner ? {
+        ...(fullEdit ? {
           type: form.type,
           industry_type: form.industry_type,
           credit_rating: form.credit_rating,
@@ -1402,12 +1414,14 @@ export default function Leads() {
             product_notes: form.product_notes,
             quantity_unit: form.quantity_unit || 'MT',
           },
+        } : {}),
+        ...(isOwner ? {
           assigned_to: finalAssignedTo,
           agent_name: finalAgentName,
         } : {}),
         // Staff choose the commodity and quantity when they add a lead (price stays with the owner).
         // Sent only when something was filled in, so a lead without a product still saves as before.
-        ...(!isOwner && !editingLead && (form.products.length > 0 || Number(form.quantity) > 0 || String(form.product_notes || '').trim()) ? {
+        ...(!fullEdit && (editingLead || form.products.length > 0 || Number(form.quantity) > 0 || String(form.product_notes || '').trim()) ? {
           products: form.products,
           product: form.products.join(', '),
           quantity: Number(form.quantity) || 0,
@@ -1423,6 +1437,32 @@ export default function Leads() {
         // Empty remark boxes must not wipe the remark already saved on the lead
         if (!String(leadPayload.today_remarks || '').trim()) delete leadPayload.today_remarks;
         if (!String(leadPayload.next_follow_up_action || '').trim()) delete leadPayload.next_follow_up_action;
+        if (!fullEdit) {
+          // The form fills in a few things by itself (contact country code, WhatsApp from the first
+          // phone, an empty social row). Staff can't change contact details, so don't send what they didn't touch.
+          const STAFF_FIELDS = ['today_remarks', 'next_follow_up_action', 'follow_up_date', 'follow_up_time', 'notes', 'stage', 'status', 'lead_stage',
+            'products', 'product', 'quantity', 'quantity_unit', 'export_requirements'];
+          const tidy = (v) => {
+            if (Array.isArray(v)) { const a = v.map(tidy).filter((x) => x !== undefined); return a.length ? a : undefined; }
+            if (v && typeof v === 'object') {
+              const o = {};
+              Object.keys(v).sort().forEach((k) => { if (k === 'country_code') return; const t = tidy(v[k]); if (t !== undefined) o[k] = t; });
+              return Object.keys(o).length ? o : undefined;
+            }
+            if (v === null || v === undefined) return undefined;
+            const s = String(v).trim();
+            return s === '' ? undefined : s;
+          };
+          const firstPhone = String(editingLead.contacts?.[0]?.phone || editingLead.phone || '').replace(/[^0-9]/g, '');
+          const linksOnly = (v) => (Array.isArray(v) ? v.filter((x) => String(x?.url || '').trim()) : v);
+          leadPayload.social_links = linksOnly(leadPayload.social_links);
+          Object.keys(leadPayload).forEach((k) => {
+            if (STAFF_FIELDS.includes(k)) return;
+            const autoWhatsApp = k === 'whatsapp' && !String(editingLead.whatsapp || '').trim()
+              && String(leadPayload.whatsapp || '').replace(/[^0-9]/g, '') === firstPhone;
+            if (autoWhatsApp || JSON.stringify(tidy(leadPayload[k])) === JSON.stringify(tidy(editingLead[k]))) delete leadPayload[k];
+          });
+        }
         const res = await api.updateLead(editingLead.id, leadPayload);
         updateAndPersistLeads((prev) =>
           prev.map((l) => (l.id === editingLead.id ? { ...l, ...(res?.data || leadPayload) } : l))
@@ -2502,7 +2542,7 @@ export default function Leads() {
               </div>
 
               {/* Type Selection — International or Domestic only */}
-              {isOwner && <div>
+              {fullEdit && <div>
                 <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1.5">
                   Trade Type <span className="text-rose-500 font-bold">*</span>
                 </label>
@@ -2557,7 +2597,7 @@ export default function Leads() {
               </div>
 
               {/* Industry Type & Custom Industry Creation */}
-              {isOwner && <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
+              {fullEdit && <div className="bg-slate-50/90 dark:bg-slate-800/40 p-3.5 rounded-xl border border-slate-200 dark:border-slate-700/60 space-y-2">
                 <div className="flex items-center justify-between">
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
                     <Factory size={13} className="text-emerald-600" />
@@ -3087,7 +3127,7 @@ export default function Leads() {
             </div>
 
             {/* SECTION 3: PRODUCTS & DEAL */}
-            {(isOwner || !editingLead) && <div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
+            {<div id="form-sec-products" className="p-4 sm:p-5 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200/90 dark:border-slate-800 space-y-4 shadow-xs">
               <div className="flex items-center gap-2 pb-3 border-b border-slate-100 dark:border-slate-800">
                 <div className="w-7 h-7 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-800 dark:text-amber-300 flex items-center justify-center font-black text-xs">
                   3
@@ -3118,6 +3158,11 @@ export default function Leads() {
                     </span>
                   )}
                 </div>
+                {editingLead && !fullEdit && (
+                  <p className="text-[11px] text-amber-700 dark:text-amber-300 -mt-1" data-staff-product-note>
+                    You can swap a product for another one or add more, but not remove products. To swap, pick the new one, then untick the old one.
+                  </p>
+                )}
 
                 {/* Inline Custom Commodity / Product Creator */}
                 {showCustomProductInput && (
@@ -3241,7 +3286,7 @@ export default function Leads() {
                   </span>
                 </div>
 
-                {isOwner && <div>
+                {fullEdit && <div>
                   <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1">
                     Deal Value / Price ($ USD)
                   </label>
@@ -3287,7 +3332,7 @@ export default function Leads() {
               </div>
 
               {/* Shipping & Trade Terms */}
-              {isOwner && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {fullEdit && <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 {/* Incoterms / Shipping Terms with Custom Input */}
                 <div>
                   <div className="flex items-center justify-between mb-1">
