@@ -3,7 +3,10 @@
  * which open in a new tab, and which are refused.
  * Run:  npm --prefix frontend run test:videos
  */
+import fs from 'node:fs';
 import { toPlayable } from '../src/data/videoEmbed.js';
+import { BUILTIN_HELP_VIDEOS } from '../src/data/builtinHelpVideos.js';
+import { HELP_GUIDES_PDF } from '../src/data/helpGuidesPdf.js';
 
 const results = [];
 const rec = (id, scenario, expected, actual, pass) => results.push({ id, scenario, expected, actual: String(actual), result: pass ? 'PASS' : 'FAIL' });
@@ -31,6 +34,18 @@ check('VID-16', 'Text that is not a link is refused', 'watch this video', 'none'
 {
   const p = toPlayable('https://youtu.be/abc123XYZ_-');
   rec('VID-17', 'YouTube videos get a thumbnail picture', 'i.ytimg.com/vi/<id>', p.thumb, String(p.thumb).includes('i.ytimg.com/vi/abc123XYZ_-/'));
+}
+
+// Every built-in video and PDF guide in the Help section has its file in public/
+{
+  const pub = new URL('../public', import.meta.url);
+  const missing = [
+    ...BUILTIN_HELP_VIDEOS.flatMap((v) => [v.url, v.poster]),
+    ...HELP_GUIDES_PDF.map((g) => g.url),
+  ].filter((u) => !fs.existsSync(new URL('.' + u, pub + '/')));
+  rec('VID-18', 'Every built-in help video, poster and PDF guide file exists', 'none missing', missing.join(', ') || 'none missing', missing.length === 0);
+  const pdfOk = HELP_GUIDES_PDF.every((g) => { try { return fs.readFileSync(new URL('.' + g.url, pub + '/')).subarray(0, 5).toString() === '%PDF-'; } catch { return false; } });
+  rec('VID-19', 'The PDF guides are real PDF files', '%PDF-', pdfOk ? '%PDF-' : 'not a PDF', pdfOk);
 }
 
 const fails = results.filter((x) => x.result === 'FAIL');

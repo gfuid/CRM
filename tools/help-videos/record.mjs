@@ -15,6 +15,8 @@ import { fileURLToPath, pathToFileURL } from 'node:url';
 import { spawn } from 'node:child_process';
 import { seedDemoCompany } from './seed.mjs';
 import { startSmtpSink } from './smtp-sink.mjs';
+import { startFakeMeta } from './fake-meta.mjs';
+import { startFakeElevenLabs } from './fake-elevenlabs.mjs';
 import { SCENES } from './scenes.mjs';
 
 const require = createRequire(import.meta.url);
@@ -348,6 +350,9 @@ for (const meta of convertOnly ? [] : BUILTIN_HELP_VIDEOS) {
   const scene = SCENES[meta.file];
   if (!scene) { console.log(`skip ${meta.file}: no scene`); continue; }
   if (scene.seed && scene.seed.email === 'campaign' && !globalThis.__sink) globalThis.__sink = await startSmtpSink(Number(process.env.SINK_PORT || 2525));
+  // WhatsApp / AI Calling videos talk to local fakes (the backend must run with WA_GRAPH_BASE / ELEVENLABS_API_URL pointing here)
+  if (scene.seed && scene.seed.wa && !globalThis.__meta) globalThis.__meta = await startFakeMeta(Number(process.env.FAKE_META_PORT || 5099));
+  if (scene.seed && scene.seed.ai && !globalThis.__eleven) globalThis.__eleven = await startFakeElevenLabs(Number(process.env.FAKE_ELEVEN_PORT || 5098));
   const demo = await seedDemoCompany(API, { ...(scene.seed || {}), sink: globalThis.__sink || null });
   const ctx = await browser.newContext({ viewport: SIZE, recordVideo: { dir: TMP, size: SIZE }, acceptDownloads: true });
   await ctx.addInitScript((t) => {
@@ -399,6 +404,8 @@ for (const meta of convertOnly ? [] : BUILTIN_HELP_VIDEOS) {
 await browser.close();
 if (tts) tts.close();
 if (globalThis.__sink) globalThis.__sink.close();
+if (globalThis.__meta) globalThis.__meta.close();
+if (globalThis.__eleven) globalThis.__eleven.close();
 
 // Poster (first frame after the title card) + MP4
 for (const r of (process.env.NO_MP4 ? [] : results)) {

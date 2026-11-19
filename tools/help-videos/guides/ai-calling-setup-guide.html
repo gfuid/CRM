@@ -1,0 +1,123 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>AI Calling – setup guide</title><style>/*CSS*/</style></head>
+<body>
+<div class="cover">
+  <h1>AI Calling — full setup guide</h1>
+  <div class="sub">An AI sales agent (ElevenLabs) calls your buyers in any country from your own phone number, in their office hours, and writes the result into the CRM.</div>
+  <span class="tag">For company owners · about 1–2 hours the first time (plus KYC time at the phone company)</span>
+</div>
+
+<div class="box need">
+  <h3 style="margin-top:0">You need two accounts</h3>
+  <table>
+    <tr><th>What</th><th>Where</th><th>Why</th></tr>
+    <tr><td><b>AI voice agent</b></td><td><b>ElevenLabs</b> (elevenlabs.io), a plan with Agents minutes</td><td>The voice that talks to the buyer, understands the answers and writes a summary.</td></tr>
+    <tr><td><b>Phone number</b></td><td><b>India:</b> Vobiz (console.vobiz.ai)<br><b>Other countries:</b> Twilio, Telnyx or Plivo</td><td>The number the buyer sees. It must allow <b>international outbound</b> calls to your buyers’ countries.</td></tr>
+  </table>
+  <p>Also keep ready: company KYC documents (GST / registration, ID and address proof of the director) for the phone company, and a card for both accounts. WhatsApp-style tags on your leads (e.g. <code>turmeric-buyer</code>) help you choose whom to call. AI Calling must be switched on for your company by the platform admin.</p>
+</div>
+
+<h2>Part A — ElevenLabs: agent and API key</h2>
+<ol class="steps">
+  <li>Sign up at <b>elevenlabs.io</b> and choose a plan that includes <b>Agents</b> minutes (the free plan has only a few minutes for testing).</li>
+  <li>Open <b class="menu">Agents</b> (Agents Platform) → <b class="menu">New agent</b> → <b class="menu">Blank template</b>. Name it, e.g. “Nova sales agent”. You do not need to write the prompt here — the CRM fills it from your script (Part D).</li>
+  <li>Pick a <b>voice</b> and the main <b>language</b> of your buyers. Save.</li>
+  <li>Copy the <b>Agent ID</b> (shown on the agent page, starts with <code>agent_</code>).</li>
+  <li>Click your profile (bottom left) → <b class="menu">API keys</b> → <b class="menu">Create API key</b>. Give it a name (“CRM”), allow Agents / Conversational AI access, and copy the key (starts with <code>sk_</code>). It is shown only once.</li>
+</ol>
+
+<h2>Part B — Phone number</h2>
+<h3>India: Vobiz</h3>
+<ol class="steps">
+  <li>Sign up at <b>console.vobiz.ai</b> and finish <b>KYC</b> with your company documents. Calls start only after KYC is approved.</li>
+  <li>Buy a <b>number</b> (DID) and add balance to the wallet.</li>
+  <li>Create an <b>outbound SIP trunk</b>. Note the <b>SIP address / domain</b>, and set a <b>username and password</b> for it. Link your number to the trunk.</li>
+  <li>Ask Vobiz support to switch on <b>international outbound calling</b> for the countries you need (e.g. UAE, Vietnam, Netherlands), and confirm the per-minute price.</li>
+</ol>
+<h3>Other countries: Twilio (similar for Telnyx / Plivo)</h3>
+<ol class="steps">
+  <li>Sign up at twilio.com, upgrade the account, and buy a number in the country you want (some countries ask for an address or documents).</li>
+  <li>In <b class="menu">Voice</b> → <b class="menu">Settings</b> → <b class="menu">Geo permissions</b>, tick the countries you will call.</li>
+  <li>Copy the <b>Account SID</b> and <b>Auth token</b> from the Twilio console home page.</li>
+</ol>
+
+<h3>Import the number into ElevenLabs</h3>
+<ol class="steps">
+  <li>In ElevenLabs → <b class="menu">Agents</b> → <b class="menu">Phone numbers</b> → <b class="menu">Import number</b>.</li>
+  <li><b>Vobiz / any SIP:</b> choose <b class="menu">From SIP trunk</b>. Label, your number with country code (<code>+91…</code>), outbound address = the Vobiz SIP domain, transport <b>TCP</b>, and the trunk username + password.<br><b>Twilio:</b> choose <b class="menu">From Twilio</b>, paste the number, Account SID and Auth token.</li>
+  <li>Assign your agent to the number and save. Use ElevenLabs’ own “test call” once to check the line.</li>
+</ol>
+<div class="box tip"><b>Buyers in many countries?</b> You can import several numbers (e.g. an Indian number for most buyers and a US number for +1 buyers). The CRM lets you choose a number per country code.</div>
+
+<h2 class="pb">Part C — Connect in the CRM</h2>
+<ol class="steps">
+  <li>Open <b class="menu">AI Calling</b> in the left menu → <b class="menu">Setup</b>.</li>
+  <li>Paste the <b>ElevenLabs API key</b> and the <b>Agent ID</b> and press <b class="menu">Save &amp; read my numbers</b>. The CRM reads your agent and lists the numbers of your ElevenLabs account.</li>
+</ol>
+<figure><img src="{{shot:ai-setup-empty}}"><figcaption>Step 1 of Setup: the API key and Agent ID.</figcaption></figure>
+<figure><img src="{{shot:ai-setup-connected}}"><figcaption>After saving: connected, with the agent’s name.</figcaption></figure>
+
+<h3>Numbers, calling hours, retries and costs</h3>
+<ul>
+  <li><b>Call from (default)</b>: the number used for most buyers. <b>+ Add country</b>: another number for a dial code (e.g. <code>1</code> → your US number).</li>
+  <li><b>Call from / Until</b> are in the <b>buyer’s own time</b>. A buyer in Dubai is called in Dubai office hours, a buyer in Vietnam in Vietnam hours. Choose the working days too.</li>
+  <li><b>Tries if no answer</b> and <b>Try again after (hours)</b>; <b>Calls at the same time</b> (start with 2–3).</li>
+  <li><b>Cost per minute</b>: type the ElevenLabs price and your phone price (per country if you know it). The CRM then shows the cost of every call and campaign.</li>
+</ul>
+<figure><img src="{{shot:ai-numbers}}"><figcaption>Numbers, calling hours in the buyer’s time, retries and per-minute costs.</figcaption></figure>
+
+<h2>Part D — The sales script</h2>
+<ol class="steps">
+  <li>In <b>3. Sales script</b> write, in simple words: <b>about your company</b>, <b>products, specs and prices it may say</b>, the <b>goal of the call</b> (e.g. “find out if they buy turmeric, the monthly quantity, and the email for the price list”), the <b>language</b> and the <b>first sentence</b>.</li>
+  <li>Words like <code>{{buyer_name}}</code>, <code>{{company_name}}</code>, <code>{{country}}</code>, <code>{{product}}</code> are filled for each buyer.</li>
+  <li>Press <b class="menu">Save script to my agent</b>. The CRM writes the full instructions to your ElevenLabs agent, including what to collect: interested yes/no, quantity, email, call-back time, and “do not call”.</li>
+  <li>Type your own mobile number and press <b class="menu">Test call to me</b>. Talk to it like a buyer and listen. Change the script until you like it.</li>
+</ol>
+<figure><img src="{{shot:ai-script}}"><figcaption>The script form. The agent always says it is an AI assistant and never invents prices.</figcaption></figure>
+
+<h2 class="pb">Part E — Run a campaign</h2>
+<ol class="steps">
+  <li>Make sure your leads have a <b>phone number with country code</b> and useful <b>tags</b>.</li>
+  <li><b class="menu">Campaigns</b> → <b class="menu">New campaign</b>: a name, an optional start time, and the buyers — by tags, all leads, or pasted numbers. The CRM shows how many buyers and the estimated cost (2 minutes per call).</li>
+  <li>Press <b class="menu">Start calling</b>. The CRM calls in each buyer’s office hours, a few at a time, and tries again later if nobody answers. You can <b class="menu">Pause</b> and <b class="menu">Resume</b>.</li>
+</ol>
+<figure><img src="{{shot:ai-new-campaign}}"><figcaption>New campaign by tag, with the number of buyers and the estimated cost.</figcaption></figure>
+<figure><img src="{{shot:ai-campaigns}}"><figcaption>A finished campaign: interested, call back, not interested, no answer, minutes and cost.</figcaption></figure>
+
+<h2>Part F — Results</h2>
+<ul>
+  <li><b class="menu">Calls</b>: every call with its result — <b>Interested</b>, <b>Call back</b>, <b>Not interested</b>, <b>Do not call</b>, <b>No answer</b>.</li>
+  <li>Open a call to read the <b>summary</b>, the <b>details collected</b> (quantity, email, call-back time), the full <b>conversation</b>, and to <b>listen to the recording</b>.</li>
+  <li>The result is also written on the <b>lead</b>: a remark, and for interested or call-back buyers a follow-up date, so your team calls them next. Open the lead → <b>AI calls</b> to see them there.</li>
+  <li>Buyers who say “do not call me” are never called again by the CRM.</li>
+</ul>
+<figure><img src="{{shot:ai-calls}}"><figcaption>All calls with their results.</figcaption></figure>
+<figure><img src="{{shot:ai-call-detail}}"><figcaption>One call: summary, collected details, transcript and recording.</figcaption></figure>
+
+<h2 class="pb">Costs (rough, check today’s prices)</h2>
+<table>
+  <tr><th>Part</th><th>Who bills you</th><th>About</th></tr>
+  <tr><td>AI voice agent</td><td>ElevenLabs (monthly plan with minutes)</td><td>roughly US$0.08–0.12 per minute, depending on the plan</td></tr>
+  <tr><td>Phone line</td><td>Vobiz / Twilio / Telnyx</td><td>depends on the buyer’s country: from about ₹1/min inside India to US$0.05–0.40/min for international calls</td></tr>
+  <tr><td>CRM</td><td>—</td><td>no extra charge per call</td></tr>
+</table>
+<p>A typical sales call lasts 1–3 minutes; unanswered calls cost nothing or very little.</p>
+
+<h2>Rules and good practice</h2>
+<ul>
+  <li>Call business buyers who can expect a call from an exporter. Respect “do not call” requests and the telemarketing rules of the buyer’s country (in India, TRAI rules for commercial calls).</li>
+  <li>Keep the script short and honest. Prices should come from your team by email or WhatsApp after the call.</li>
+  <li>Start with 10–20 buyers, read the results, improve the script, then call more.</li>
+</ul>
+
+<h2>If something does not work</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>“Invalid API key” when saving</td><td>Copy the key again; make sure it has Agents / Conversational AI access.</td></tr>
+  <tr><td>No numbers shown in the CRM</td><td>The number is not imported in ElevenLabs → Agents → Phone numbers (Part B).</td></tr>
+  <tr><td>Calls fail at once</td><td>International calling not enabled at Vobiz / Twilio for that country, wrong SIP username/password, or no balance.</td></tr>
+  <tr><td>Calls not starting</td><td>Outside the buyer’s calling hours or working days you set — the CRM waits and calls in the next window.</td></tr>
+  <tr><td>Agent says wrong things</td><td>Improve the script, press “Save script to my agent” again, and make a test call.</td></tr>
+</table>
+<p class="small">ElevenLabs, Vobiz and Twilio change their menus from time to time; the steps stay the same. Help &amp; Support → videos “Set up AI Calling” and “Run an AI call campaign” show the CRM side.</p>
+</body></html>

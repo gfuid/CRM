@@ -1,0 +1,27 @@
+* { box-sizing: border-box; }
+body { font-family: "Segoe UI", Arial, sans-serif; color: #0f172a; font-size: 11.5px; line-height: 1.55; margin: 0; }
+h1 { font-size: 26px; margin: 0 0 4px; letter-spacing: -0.3px; }
+h2 { font-size: 16px; margin: 22px 0 6px; padding: 6px 10px; background: #ecfdf5; border-left: 4px solid #059669; border-radius: 4px; break-after: avoid; }
+h3 { font-size: 12.5px; margin: 14px 0 4px; break-after: avoid; }
+p { margin: 4px 0 8px; }
+.cover { padding: 26px 26px 20px; border-radius: 14px; background: linear-gradient(135deg, #064e3b, #059669); color: #fff; margin-bottom: 14px; }
+.cover .sub { opacity: .9; font-size: 13px; }
+.cover .tag { display: inline-block; margin-top: 10px; padding: 3px 10px; border-radius: 999px; background: rgba(255,255,255,.18); font-size: 10.5px; }
+.box { border: 1px solid #e2e8f0; border-radius: 10px; padding: 10px 12px; margin: 8px 0 10px; break-inside: avoid; }
+.need { background: #f8fafc; }
+.warn { background: #fffbeb; border-color: #fcd34d; }
+.tip { background: #eff6ff; border-color: #bfdbfe; }
+.ok { background: #f0fdf4; border-color: #86efac; }
+ol.steps { counter-reset: s; list-style: none; padding: 0; margin: 6px 0 10px; }
+ol.steps > li { counter-increment: s; position: relative; padding: 2px 0 6px 30px; break-inside: avoid; }
+ol.steps > li::before { content: counter(s); position: absolute; left: 0; top: 1px; width: 20px; height: 20px; border-radius: 50%; background: #059669; color: #fff; font-weight: 700; font-size: 10.5px; text-align: center; line-height: 20px; }
+b.menu { background: #f1f5f9; border: 1px solid #e2e8f0; border-radius: 4px; padding: 0 4px; font-weight: 600; white-space: nowrap; }
+code { font-family: Consolas, monospace; background: #f1f5f9; padding: 0 4px; border-radius: 3px; font-size: 10.5px; }
+figure { margin: 8px 0 12px; break-inside: avoid; text-align: center; }
+figure img { max-width: 100%; max-height: 330px; border: 1px solid #cbd5e1; border-radius: 8px; box-shadow: 0 2px 8px rgba(15,23,42,.08); }
+figcaption { font-size: 10px; color: #64748b; margin-top: 3px; }
+table { width: 100%; border-collapse: collapse; margin: 6px 0 10px; break-inside: avoid; }
+th, td { border: 1px solid #e2e8f0; padding: 5px 7px; text-align: left; vertical-align: top; font-size: 10.8px; }
+th { background: #f8fafc; }
+.pb { break-before: page; }
+.small { font-size: 10px; color: #64748b; }

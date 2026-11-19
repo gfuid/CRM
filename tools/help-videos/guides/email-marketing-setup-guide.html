@@ -1,0 +1,86 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Email Marketing – setup guide</title><style>/*CSS*/</style></head>
+<body>
+<div class="cover">
+  <h1>Email Marketing — full setup guide</h1>
+  <div class="sub">Send campaigns from your own mailbox (Gmail, Outlook, Zoho or your company mail), see who opened and clicked, and keep it all on the lead.</div>
+  <span class="tag">For company owners · about 10 minutes</span>
+</div>
+
+<div class="box need">
+  <h3 style="margin-top:0">Before you start</h3>
+  <ul>
+    <li>The email address you want to send from, and access to its account settings.</li>
+    <li>For Gmail / Google Workspace and Outlook / Microsoft 365: <b>2-Step Verification</b> switched on (needed to make an app password).</li>
+    <li>Email Marketing switched on for your company (ask the platform admin if the menu shows a lock).</li>
+  </ul>
+</div>
+<div class="box tip"><b>Why your own mailbox?</b> Buyers see your real address and reply straight to you. The CRM never uses your normal password — only a special “app password” that you can delete any time.</div>
+
+<h2>Part A — Make an app password</h2>
+<h3>Gmail / Google Workspace</h3>
+<ol class="steps">
+  <li>Open <b>myaccount.google.com</b> → <b class="menu">Security</b>. Turn on <b>2-Step Verification</b> if it is off.</li>
+  <li>Open <b>myaccount.google.com/apppasswords</b> (or search “App passwords” in the account search box).</li>
+  <li>Type a name such as “Travel-Trade CRM” and press <b class="menu">Create</b>.</li>
+  <li>Copy the <b>16-letter password</b> Google shows. Spaces do not matter.</li>
+</ol>
+<p class="small">Google Workspace: if “App passwords” is missing, your Workspace admin must allow 2-Step Verification for users.</p>
+<h3>Outlook / Microsoft 365</h3>
+<ol class="steps">
+  <li>Open <b>account.microsoft.com</b> → <b class="menu">Security</b> → <b class="menu">Advanced security options</b>, turn on two-step verification.</li>
+  <li>Under <b class="menu">App passwords</b> press <b class="menu">Create a new app password</b> and copy it.</li>
+</ol>
+<p class="small">Microsoft 365 business: your admin may need to allow “Authenticated SMTP” for the mailbox.</p>
+<h3>Zoho Mail</h3>
+<ol class="steps">
+  <li>Zoho Mail → <b class="menu">My Account</b> → <b class="menu">Security</b> → <b class="menu">App passwords</b> → <b class="menu">Generate new password</b>, name “CRM”, copy it.</li>
+</ol>
+<h3>Other company mail (cPanel, GoDaddy, Hostinger…)</h3>
+<p>Ask your email host for the <b>SMTP server</b>, <b>port</b> (465 or 587) and use the mailbox password. Choose <b>Other / company mail</b> in the CRM and fill these.</p>
+
+<h2 class="pb">Part B — Connect in the CRM</h2>
+<ol class="steps">
+  <li>Open <b class="menu">Email Marketing</b> in the left menu.</li>
+  <li>Type your email address. The CRM picks Gmail, Outlook, Yahoo or Zoho by itself.</li>
+  <li>Paste the app password and press <b class="menu">Save &amp; send test email</b>. When you see <b>Connected!</b> and the test email arrives, you are ready.</li>
+  <li>Optional: under <b class="menu">Advanced</b>, set the <b>daily limit</b>. Leave it blank for the safe default (about 450 a day for Gmail). The CRM stops at the limit and continues the next day by itself.</li>
+</ol>
+<figure><img src="{{shot:email-setup}}"><figcaption>Email setup: your address, provider, app password and the test email.</figcaption></figure>
+<div class="box warn"><b>Do not go above your provider’s limit.</b> Gmail allows about 500 emails a day (Workspace about 2,000). Going over can block sending from the mailbox for a day.</div>
+
+<h2>Part C — Choose buyers with tags</h2>
+<ul>
+  <li>Add <b>tags</b> on the lead form (e.g. <code>turmeric-buyer</code>, <code>dubai</code>) or for a whole file in <b>Bulk Import</b> (Tags column, or one tag for the file).</li>
+  <li>In <b>Leads</b>, the tag filter shows exactly the buyers in a list.</li>
+  <li>Extra emails of a contact (“Add another email”) are included in campaigns.</li>
+</ul>
+
+<h2>Part D — Send a campaign</h2>
+<ol class="steps">
+  <li><b class="menu">Templates</b>: save emails you send often (subject + body). Words like <code>{{company_name}}</code> and <code>{{contact_name}}</code> are filled for each buyer.</li>
+  <li><b class="menu">New Campaign</b>: start from a template or write a new email, give it a name.</li>
+  <li>Choose buyers: <b>by tags</b>, all leads, or paste a list / CSV of email addresses. Buyers who unsubscribed are left out.</li>
+  <li>Press <b class="menu">Test to me</b> to check how it looks, then <b class="menu">Send now</b> or schedule it.</li>
+</ol>
+
+<h2>Part E — Results</h2>
+<ul>
+  <li>The <b>Dashboard</b> shows today’s limit used, and sent, opened, clicked, failed and unsubscribed.</li>
+  <li><b>Recent activity</b> shows which buyer opened or clicked — call them while they are interested.</li>
+  <li>Each <b>campaign</b> lists every recipient with opened / clicked.</li>
+  <li>Inside each <b>lead</b>, “Marketing emails” shows every campaign email it got and what the buyer did.</li>
+  <li>Every email has an <b>unsubscribe</b> link; the CRM never emails that buyer again.</li>
+</ul>
+<p class="small">“Opened” is counted when the buyer’s email app loads pictures; some apps block this, so real opens can be higher.</p>
+
+<h2>If something does not work</h2>
+<table>
+  <tr><th>Problem</th><th>What to do</th></tr>
+  <tr><td>Username and password not accepted</td><td>Use the app password, not your normal password. Make a new one if unsure.</td></tr>
+  <tr><td>No “App passwords” option</td><td>Turn on 2-Step Verification first; in Workspace / Microsoft 365 ask your admin.</td></tr>
+  <tr><td>Emails go to spam</td><td>Send fewer at a time, avoid all-capital subjects and many links, and ask your IT to set SPF / DKIM for your domain.</td></tr>
+  <tr><td>Campaign shows “waiting for limit”</td><td>The daily limit is reached; it continues by itself.</td></tr>
+</table>
+<p class="small">Help &amp; Support → videos “Connect your email” and “Send a bulk email and see who opened it” show each step in the CRM.</p>
+</body></html>

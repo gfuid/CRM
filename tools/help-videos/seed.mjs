@@ -11,7 +11,10 @@ const day = (offset) => {
 // oneStaff: only Priya (new companies may have 2 staff, so the "create staff" video needs a free seat)
 // email: 'setup' = Email Marketing switched on, not connected yet;
 //        'campaign' = connected to the local SMTP sink (smtp-sink.mjs) with one campaign already sent, opened and clicked
-export async function seedDemoCompany(api, { oneStaff = false, email = '', sink = null } = {}) {
+// wa: 'setup' = WhatsApp Marketing on, not connected; 'full' = connected (fake Meta), approved template,
+//     one broadcast with delivered/read ticks, buyer replies and auto-reply rules
+// ai: 'setup' = AI Calling on, not connected; 'full' = connected (fake ElevenLabs), script saved, one finished campaign
+export async function seedDemoCompany(api, { oneStaff = false, email = '', sink = null, wa = '', ai = '' } = {}) {
   if (!/^http:\/\/(localhost|127\.0\.0\.1)(:\d+)?\//.test(api)) throw new Error('Seeding is only allowed against a local backend');
   const call = async (path, method, body, token) => {
     const res = await fetch(api + path, {
@@ -72,6 +75,8 @@ export async function seedDemoCompany(api, { oneStaff = false, email = '', sink 
   await call('/activity', 'POST', { type: 'note', title: 'Sample sent', description: 'DHL waybill shared on WhatsApp.', lead_id: created[3].id }, owner);
 
   if (email) await seedEmail(api, call, owner, reg.user.id, email, sink, stamp);
+  if (wa) await seedWhatsApp(api, call, owner, reg.user.id, wa);
+  if (ai) await seedAiCalls(call, owner, reg.user.id, ai);
 
   return { owner, staff: priyaLogin.token, priyaId: priya.id, arjunId: arjun.id, leads: created };
 }
@@ -98,4 +103,65 @@ async function seedEmail(api, call, owner, ownerId, mode, sink, stamp) {
   const links = html.map((h) => ((h.match(/href="([^"]+\/email\/t\/c\/[^"]+)"/) || [])[1] || '').replace(/&amp;/g, '&')).filter(Boolean);
   for (const p of pixels.slice(0, 4)) await fetch(p);
   for (const l of links.slice(1, 3)) await fetch(l, { redirect: 'manual' });
+}
+
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+async function switchOn(call, ownerId, flag) {
+  const admin = await call('/auth/admin-login', 'POST', { username: process.env.HV_ADMIN_USER || 'admin', password: process.env.HV_ADMIN_PASS || 'admin123' });
+  await call(`/admin/users/${ownerId}/features`, 'PATCH', { [flag]: true }, admin.token);
+}
+
+async function seedWhatsApp(api, call, owner, ownerId, mode) {
+  await switchOn(call, ownerId, 'whatsapp_marketing');
+  if (mode !== 'full') return;
+  const { readFileSync } = await import('node:fs');
+  const { createHmac } = await import('node:crypto');
+  const SECRET = 'demo-app-secret';
+  await call('/whatsapp/settings', 'PUT', { phone_number_id: '109876543210987', waba_id: '102345678901234', access_token: 'EAAG-demo-token', app_id: '123456789012345', app_secret: SECRET }, owner);
+  const pic = readFileSync(new URL('./assets/turmeric-offer.jpg', import.meta.url)).toString('base64');
+  const media = await call('/whatsapp/media', 'POST', { data_url: `data:image/jpeg;base64,${pic}` }, owner);
+  const tpl = await call('/whatsapp/templates', 'POST', {
+    name: 'turmeric_offer', category: 'MARKETING', language: 'en', header_type: 'image', header_media_id: media.id,
+    body: 'Hello {{1}}, new crop {{2}} is ready to ship (curcumin 3%+, 25 kg bags). Reply PRICE for today\'s CIF price.', body_examples: ['Ahmed', 'turmeric'],
+    footer: 'Nova Agro Exports', buttons: [{ type: 'QUICK_REPLY', text: 'Send price' }, { type: 'URL', text: 'Catalogue', url: 'https://example.com/catalogue' }],
+  }, owner);
+  await call('/whatsapp/templates', 'POST', { name: 'sample_dispatched', category: 'UTILITY', language: 'en', header_type: 'none', body: 'Dear {{1}}, your sample has been dispatched. Tracking: {{2}}.', body_examples: ['Ahmed', 'DHL 1234567890'] }, owner);
+  await call('/whatsapp/templates/sync', 'POST', {}, owner);
+  await call('/whatsapp/rules', 'POST', { name: 'Welcome', trigger: 'welcome', reply: 'Thanks for writing to Nova Agro Exports! Rahul will reply within one hour.' }, owner);
+  await call('/whatsapp/rules', 'POST', { name: 'Price', trigger: 'keyword', keywords: 'price, rate', match: 'contains', reply: 'Today\'s CIF price list: https://example.com/prices' }, owner);
+  const c = await call('/whatsapp/campaigns', 'POST', { name: 'Turmeric offer – November', template_id: tpl.id, audience: { mode: 'tags', tags: ['turmeric-buyer'] }, send_now: true, variables: [{ source: 'field', field: 'contact_name', fallback: 'Sir' }, { source: 'text', text: 'turmeric' }] }, owner);
+  let camp = null;
+  for (let i = 0; i < 60; i++) { camp = await call(`/whatsapp/campaigns/${c.id}`, 'GET', null, owner); if (camp.status !== 'sending' && camp.status !== 'draft') break; await sleep(200); }
+  const settings = await call('/whatsapp/settings', 'GET', null, owner);
+  const key = String(settings.webhook_url || '').split('/').pop();
+  const hook = async (value) => {
+    const payload = { object: 'whatsapp_business_account', entry: [{ id: '102345678901234', changes: [{ field: 'messages', value }] }] };
+    const body = JSON.stringify(payload);
+    await fetch(`${api}/whatsapp/webhook/${key}`, { method: 'POST', headers: { 'Content-Type': 'application/json', 'X-Hub-Signature-256': `sha256=${createHmac('sha256', SECRET).update(body).digest('hex')}` }, body });
+    await sleep(120);
+  };
+  const recips = (camp.recipients || []).filter((r) => r.wamid);
+  for (const [i, r] of recips.entries()) {
+    await hook({ statuses: [{ id: r.wamid, status: 'delivered', pricing: { category: 'marketing' } }] });
+    if (i < 2) await hook({ statuses: [{ id: r.wamid, status: 'read' }] });
+  }
+  const ts = () => String(Math.floor(Date.now() / 1000));
+  await hook({ contacts: [{ wa_id: '971501112222', profile: { name: 'Ahmed Al-Mansoor' } }], messages: [{ from: '971501112222', id: 'wamid.demo.in1', timestamp: ts(), type: 'text', text: { body: 'Hello, we need 20 MT turmeric every month.' } }] });
+  await hook({ messages: [{ from: '971501112222', id: 'wamid.demo.in2', timestamp: ts(), type: 'text', text: { body: 'What is the price CIF Jebel Ali?' } }] });
+  await hook({ contacts: [{ wa_id: '31205554321', profile: { name: 'Lars Janssen' } }], messages: [{ from: '31205554321', id: 'wamid.demo.in3', timestamp: ts(), type: 'text', text: { body: 'Send price' } }] });
+}
+
+async function seedAiCalls(call, owner, ownerId, mode) {
+  await switchOn(call, ownerId, 'ai_calling');
+  if (mode !== 'full') return;
+  await call('/ai-calls/settings', 'PUT', { api_key: 'sk_demo_key', agent_id: 'agent_demo_nova' }, owner);
+  await call('/ai-calls/settings/options', 'PUT', { default_number_id: 'pn_vobiz', country_numbers: [{ prefix: '1', number_id: 'pn_twilio' }], window: { from_hour: 0, to_hour: 24, days: [0, 1, 2, 3, 4, 5, 6] }, max_attempts: 1, retry_hours: 4, concurrency: 3, rates: { currency: 'USD', ai_per_min: 0.09, phone_default_per_min: 0.15, countries: [{ prefix: '91', name: 'India', per_min: 0.01 }] } }, owner);
+  await call('/ai-calls/settings/script', 'PUT', { company_intro: 'Nova Agro Exports, an Indian exporter of turmeric, maize and DDGS.', product_info: 'Turmeric finger, curcumin 3%+, 25 kg PP bags, 20 MT per container. Price on request.', goal: 'Find out if they buy turmeric, the monthly quantity and the email for our price list.', language: 'en', first_message: 'Hello {{buyer_name}}, this is the AI assistant of Nova Agro Exports. Do you have one minute?' }, owner);
+  const c = await call('/ai-calls/campaigns', 'POST', { name: 'Turmeric buyers – round 1', audience: { mode: 'tags', tags: ['turmeric-buyer'] } }, owner);
+  // The local scheduler (AI_CALL_TICK_MS=3000) places the calls; the fake ElevenLabs finishes each one after 4 s
+  for (let i = 0; i < 45; i++) {
+    const s = (await call(`/ai-calls/campaigns/${c.id}`, 'GET', null, owner)).stats || {};
+    if (s.total && s.interested + s.not_interested + s.no_answer + s.callback >= s.total) break;
+    await sleep(1000);
+  }
 }

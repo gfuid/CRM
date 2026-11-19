@@ -313,9 +313,130 @@ export const SCENES = {
     await k.click(page.getByText('Al-Zahra Trading LLC').first(), 1800);
     await k.spot(page.locator('[data-lead-email-history]'), 'Inside a lead you see every marketing email it got, and whether it was opened or clicked.');
   },
+
+  /* ---------------- WhatsApp Marketing (local fake Meta API) ---------------- */
+  'whatsapp-setup': async (k) => {
+    const { page } = k;
+    await k.nav('whatsapp');
+    await page.waitForSelector('[data-wa-setup]');
+    await k.say('WhatsApp Marketing uses the official WhatsApp Business API from Meta. You connect your own business number once.');
+    await k.spot(page.locator('[data-wa-setup] ol').first(), 'Do these steps on Meta’s website first. The PDF guide in Help & Support shows every click with pictures.');
+    await k.say('Step 1: in business.facebook.com, open WhatsApp Manager and add a number that is NOT used in the normal WhatsApp app.');
+    await k.say('Step 2: in developers.facebook.com, create an app of type Business and add the WhatsApp product.');
+    await k.type(page.getByLabel('Phone number ID'), '109876543210987');
+    await k.type(page.getByLabel('WhatsApp Business Account ID'), '102345678901234');
+    await k.say('Step 3: from WhatsApp, API Setup, copy the Phone number ID and the WhatsApp Business Account ID, and paste them here.');
+    await k.type(page.getByLabel('Access token'), 'EAAG-demo-permanent-token');
+    await k.say('Step 4: in Business Settings, System users, make a permanent access token with the two WhatsApp permissions. Paste it here. It is stored encrypted.');
+    await k.type(page.getByPlaceholder('optional').first(), '123456789012345');
+    await k.type(page.locator('[data-wa-setup] input[type="password"]').nth(1), 'demo-app-secret');
+    await k.say('The App ID is needed for templates with a picture. The App secret, from App settings, Basic, proves that updates really come from Meta.');
+    await k.click(page.getByRole('button', { name: /Save & check connection/ }), 2200);
+    await k.spot(page.locator('[data-wa-setup] span', { hasText: 'Connected' }).first(), 'The CRM checks the number with Meta. Connected shows your number and business name.');
+    const hook = page.getByText('Webhook (delivery ticks and buyers\' replies)').locator('..');
+    await k.spot(hook, 'Step 5: copy this Callback URL and Verify token into your Meta app, WhatsApp, Configuration. Press Verify and save, then subscribe to “messages”.');
+    await k.say('Without the webhook you can still send, but you will not see delivered and read ticks or the buyers’ replies.');
+    await k.spot(page.locator('[data-wa-rates]'), 'Step 6: add a payment method in WhatsApp Manager. Meta bills you directly. Type Meta’s price per message here, so the CRM can estimate each broadcast.');
+  },
+
+  'whatsapp-broadcast': async (k) => {
+    const { page } = k;
+    await k.nav('whatsapp');
+    await page.waitForSelector('[data-wa-dashboard]');
+    await k.spot(page.locator('[data-wa-dashboard]'), 'The dashboard shows today’s messages, your daily limit from Meta, and how many were delivered, read and replied.');
+    await k.click(page.getByRole('tab', { name: /Templates/ }), 1200);
+    await k.say('WhatsApp lets a business start a chat only with an approved template. Here are yours.');
+    await k.click(page.getByRole('button', { name: /New template/ }), 1200);
+    const ed = page.locator('[data-wa-template-editor]');
+    await k.type(ed.getByLabel('Template name'), 'maize_offer');
+    await k.type(ed.getByLabel('Template message'), 'Hello {{1}}, we have fresh {{2}} for loading this month. Reply PRICE for our CIF price.');
+    await k.say('Write the message. {{1}} and {{2}} are filled for each buyer, for example the contact name and the product.');
+    await k.spot(ed, 'Add a title or a picture, a footer, and up to three buttons. The preview shows how it looks on the phone.');
+    await k.say('Press Send for approval. Meta usually approves in a few minutes. Then press Sync from WhatsApp to update the status.');
+    await k.click(ed.getByRole('button', { name: /Cancel/ }).first(), 900);
+    await k.click(page.getByRole('tab', { name: /New broadcast/ }), 1400);
+    const nb = page.locator('[data-wa-new-broadcast]');
+    await k.type(nb.locator('input').first(), 'Turmeric offer – December');
+    await k.spot(nb.getByLabel('Template'), 'Choose an approved template. This one has a picture and two buttons.');
+    await k.say('For each {{ }} choose what goes in: the buyer’s contact name, company, product, or the same text for everyone.');
+    await k.click(nb.getByRole('button', { name: /turmeric-buyer/ }).first(), 1200);
+    await k.spot(nb.locator('[data-wa-audience-count]'), 'Pick buyers by tag, all leads, or paste numbers. The CRM counts the numbers and estimates the cost from your rates.');
+    await k.spot(page.locator('[data-wa-preview]').first(), 'This is exactly what the buyers will see.');
+    await k.say('Send now, or Schedule for a time that suits the buyers. Buyers who replied STOP are left out by themselves.');
+    await k.click(page.getByRole('tab', { name: /Broadcasts/ }), 1400);
+    await k.spot(page.locator('[data-wa-campaign]').first(), 'Every broadcast shows sent, delivered, read, replied and failed. Open Numbers to see each buyer and the reason a message failed.');
+  },
+
+  'whatsapp-chats': async (k) => {
+    const { page } = k;
+    await k.nav('whatsapp');
+    await k.click(page.getByRole('tab', { name: /Chats/ }), 1500);
+    await k.say('When buyers reply, their messages come here, linked to the lead with the same number.');
+    await k.click(page.locator('[data-wa-chat]').first(), 1500);
+    await k.spot(page.locator('[data-wa-thread]'), 'You see the whole conversation: your template, the buyer’s replies and the automatic replies.');
+    await k.type(page.getByLabel('Message'), 'Hello Ahmed, CIF Jebel Ali is USD 1,450 per MT. Shall I send a sample?');
+    await k.say('Within 24 hours of the buyer’s last message you can type freely. After that, WhatsApp only allows a template again.');
+    await k.click(page.getByLabel('Send'), 1500);
+    await k.click(page.getByRole('tab', { name: /Automation/ }), 1500);
+    await k.spot(page.locator('[data-wa-automation]'), 'Automation answers for you: a welcome message for a new chat, and replies to keywords like price or catalogue.');
+    await k.spot(page.locator('[data-wa-rule]').nth(1), 'This rule sends the price list link whenever a buyer writes “price” or “rate”.');
+    await k.say('If a buyer writes STOP, the CRM marks them opted out and never sends them a broadcast again.');
+  },
+
+  /* ---------------- AI Calling (local fake ElevenLabs) ---------------- */
+  'ai-calling-setup': async (k) => {
+    const { page } = k;
+    await k.nav('aicalls');
+    await page.waitForSelector('[data-ai-setup]');
+    await k.say('AI Calling: an AI sales agent from ElevenLabs calls your buyers from your own phone number and writes the result into the CRM.');
+    await k.spot(page.locator('[data-ai-setup] ol').first(), 'You need two accounts: ElevenLabs for the AI voice, and a phone number from Vobiz in India, or Twilio, Telnyx or Plivo abroad.');
+    await k.say('In ElevenLabs, create an agent and copy its Agent ID. Then, under Profile, API keys, create a key.');
+    await k.say('In Vobiz, buy a number and make an outbound SIP trunk. In ElevenLabs, Phone numbers, import that number from the SIP trunk.');
+    await k.type(page.getByLabel('ElevenLabs API key'), 'sk_demo_key_1234567890');
+    await k.type(page.getByLabel('Agent ID'), 'agent_demo_nova');
+    await k.click(page.locator('[data-ai-setup]').getByRole('button', { name: /Save/ }).first(), 2200);
+    await k.spot(page.locator('[data-ai-numbers]'), 'After saving, the numbers in your ElevenLabs account appear. Choose the number to call from, and a different one for some countries if you like.');
+    await k.say('Calling hours are in each buyer’s own time, so a buyer in Dubai is called in Dubai office hours. Set tries and the gap between tries.');
+    await k.spot(page.locator('[data-ai-rates]'), 'Type the per-minute prices of ElevenLabs and your phone provider. The CRM shows the cost of every call and campaign.');
+    await k.click(page.locator('[data-ai-numbers]').getByRole('button', { name: /Save/ }).last(), 1500);
+    const sc = page.locator('[data-ai-script]');
+    await k.type(sc.locator('input').first(), 'Nova Agro Exports, an Indian exporter of turmeric and maize.');
+    await k.type(sc.locator('textarea').first(), 'Turmeric finger, curcumin 3%+, 25 kg bags, 20 MT per container.');
+    await k.spot(sc, 'Write the sales script in simple words: who you are, what you sell, and the goal of the call. The CRM writes the full instructions for the agent.');
+    await k.say('The agent always says it is an AI assistant, never invents prices, and stops if the buyer asks not to be called.');
+    await k.click(sc.getByRole('button', { name: /Save script/ }), 2000);
+    await k.say('Before calling buyers, use Test call to me to hear the agent on your own phone.');
+  },
+
+  'ai-calling-campaign': async (k) => {
+    const { page } = k;
+    await k.nav('aicalls');
+    await page.waitForSelector('[data-ai-dashboard]');
+    await k.spot(page.locator('[data-ai-dashboard]'), 'The dashboard shows calls made, answered, interested buyers, minutes and cost.');
+    await k.click(page.getByRole('tab', { name: /Campaigns/ }), 1400);
+    await k.click(page.getByRole('button', { name: /New campaign/ }), 1200);
+    const nc = page.locator('[data-ai-new-campaign]');
+    await k.type(nc.getByLabel('Campaign name'), 'Kenya and Bangladesh – follow up');
+    await k.click(nc.getByRole('button', { name: /old-list/ }).first(), 1200);
+    await k.spot(nc.locator('[data-ai-audience]'), 'Pick buyers by tag, all leads, or paste numbers. You see how many will be called and the estimated cost.');
+    await k.say('Press Start calling. The CRM calls each buyer in their office hours and tries again if nobody answers.');
+    await k.click(nc.getByLabel('Close'), 900);
+    await k.spot(page.locator('[data-ai-campaign]').first(), 'This campaign has finished: one buyer is interested, one is not, one did not answer.');
+    await k.click(page.getByRole('tab', { name: /Calls/ }), 1500);
+    await k.spot(page.locator('[data-ai-calls]'), 'Every call with its result: interested, call back, not interested or no answer.');
+    await k.click(page.locator('[data-ai-call]', { hasText: 'Interested' }).first(), 1800);
+    await k.spot(page.locator('[data-ai-call-detail]').first(), 'Open a call to read the summary, the details the AI collected, like quantity and email, and the full conversation.');
+    await k.spot(page.getByRole('button', { name: /Play recording/ }).first(), 'Press Play recording to listen to the whole call.');
+    await k.say('The result is written on the lead too: interested buyers get a remark and a follow-up, so your team calls them next.');
+  },
 };
 
 // A new company may have only 2 staff seats: record "create staff" with one staff member so a seat is free
 SCENES['create-staff'].seed = { oneStaff: true };
 SCENES['email-setup'].seed = { email: 'setup' };
 SCENES['email-campaign'].seed = { email: 'campaign' };
+SCENES['whatsapp-setup'].seed = { wa: 'setup' };
+SCENES['whatsapp-broadcast'].seed = { wa: 'full' };
+SCENES['whatsapp-chats'].seed = { wa: 'full' };
+SCENES['ai-calling-setup'].seed = { ai: 'setup' };
+SCENES['ai-calling-campaign'].seed = { ai: 'full' };

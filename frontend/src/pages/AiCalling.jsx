@@ -71,7 +71,7 @@ export function CallDetail({ id, onClose }) {
       {c.summary && <div className="rounded-lg bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900 px-3 py-2 text-xs text-slate-800 dark:text-slate-100"><b>Summary:</b> {c.summary}</div>}
       {Object.keys(data).length > 0 && (
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-[11px]">
-          {Object.entries(data).map(([k, v]) => <div key={k} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 px-2 py-1.5"><div className="text-slate-400 uppercase text-[9px] font-bold">{k.replace(/_/g, ' ')}</div><div className="font-semibold text-slate-800 dark:text-slate-100 break-words">{String(v)}</div></div>)}
+          {Object.entries(data).map(([k, v]) => <div key={k} className="rounded-lg bg-slate-50 dark:bg-slate-800/60 px-2 py-1.5"><div className="text-slate-400 uppercase text-[9px] font-bold">{k.replace(/_/g, ' ')}</div><div className="font-semibold text-slate-800 dark:text-slate-100 break-words">{v === true || v === 'true' ? 'Yes' : v === false || v === 'false' ? 'No' : String(v)}</div></div>)}
         </div>
       )}
       {c.duration_secs > 0 && <Recording callId={c.id} />}

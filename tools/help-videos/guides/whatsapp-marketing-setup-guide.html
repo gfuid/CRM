@@ -1,0 +1,127 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>WhatsApp Marketing – setup guide</title><style>/*CSS*/</style></head>
+<body>
+<div class="cover">
+  <h1>WhatsApp Marketing — full setup guide</h1>
+  <div class="sub">Connect your own WhatsApp Business number to the CRM, get templates approved, send broadcasts, chat with buyers and set auto replies.</div>
+  <span class="tag">For company owners · about 45–60 minutes the first time</span>
+</div>
+
+<div class="box need">
+  <h3 style="margin-top:0">Before you start, keep these ready</h3>
+  <ul>
+    <li><b>A Facebook account</b> of the owner (used to log in to Meta Business).</li>
+    <li><b>A phone number for WhatsApp Business API</b> that is <b>not</b> logged in to the normal WhatsApp or WhatsApp Business app. It must receive one SMS or call for the code. (If the number is in the app now, delete that WhatsApp account first.)</li>
+    <li><b>Company details</b>: legal name, address, website, and a document like GST certificate / company registration (for Meta business verification).</li>
+    <li><b>A debit / credit card</b> for Meta’s message charges. Meta bills you directly; the CRM adds no fee.</li>
+    <li>WhatsApp Marketing must be switched on for your company. If the menu shows a lock, ask the platform admin.</li>
+  </ul>
+</div>
+
+<div class="box tip"><b>How it works:</b> the CRM uses Meta’s official <b>WhatsApp Cloud API</b> (the same API that AiSensy, Wati and Interakt use). Your number, your Meta account, your bill. Messages go from your number; buyers’ replies come back into the CRM.</div>
+
+<h2>Part A — Meta Business account and your number</h2>
+<ol class="steps">
+  <li>Open <b>business.facebook.com</b> and log in with Facebook. If you have no business portfolio yet, click <b class="menu">Create an account</b>, type your company name, your name and work email.</li>
+  <li>Go to <b class="menu">Settings</b> → <b class="menu">Business info</b> and fill legal name, address, phone and website. Then <b class="menu">Security Centre</b> → <b class="menu">Start verification</b> and upload your GST / registration document. (Verification can take 1–3 days. You can continue the setup meanwhile; until verified, Meta allows about 250 new buyers a day.)</li>
+  <li>Open <b>developers.facebook.com</b> → <b class="menu">My Apps</b> → <b class="menu">Create app</b>. Choose use case <b class="menu">Other</b> → type <b class="menu">Business</b>, give a name such as “Nova Agro CRM”, and pick your business portfolio.</li>
+  <li>In the new app, find <b class="menu">WhatsApp</b> and press <b class="menu">Set up</b>. Meta creates a <b>WhatsApp Business Account</b> and a free test number.</li>
+  <li>In <b class="menu">WhatsApp</b> → <b class="menu">API Setup</b>, press <b class="menu">Add phone number</b>. Fill the display name (your company name, Meta checks it), category and description, then your number. Verify with the SMS or voice code.</li>
+  <li>Still in <b class="menu">API Setup</b>, choose <b>your</b> number in the “From” list. Copy the <b>Phone number ID</b> and the <b>WhatsApp Business Account ID</b> into a notepad.</li>
+</ol>
+<div class="box warn"><b>Common mistake:</b> copying the IDs of the <i>test number</i>. Make sure your own number is selected in the “From” list before you copy the Phone number ID.</div>
+
+<h2>Part B — Permanent access token (very important)</h2>
+<p>The token shown on the API Setup page expires in 24 hours. The CRM needs a <b>permanent</b> token from a “system user”.</p>
+<ol class="steps">
+  <li>In <b>business.facebook.com</b> → <b class="menu">Settings</b> → <b class="menu">Users</b> → <b class="menu">System users</b> → <b class="menu">Add</b>. Name it “CRM”, role <b>Admin</b>.</li>
+  <li>Select the new system user → <b class="menu">Assign assets</b>. Add your <b>app</b> (Full control) and your <b>WhatsApp account</b> (Full control).</li>
+  <li>Press <b class="menu">Generate new token</b>. Choose your app, expiry <b>Never</b>, and tick the permissions <code>whatsapp_business_messaging</code> and <code>whatsapp_business_management</code>.</li>
+  <li>Copy the token (it starts with <code>EAA…</code>). Meta shows it only once — paste it into the CRM straight away.</li>
+  <li>Also copy two values from <b>developers.facebook.com</b> → your app → <b class="menu">App settings</b> → <b class="menu">Basic</b>: the <b>App ID</b> and the <b>App secret</b> (press Show).</li>
+</ol>
+
+<h2 class="pb">Part C — Connect in the CRM</h2>
+<ol class="steps">
+  <li>In the CRM open <b class="menu">WhatsApp Marketing</b> in the left menu. The <b class="menu">Setup</b> tab opens by itself.</li>
+  <li>Paste the <b>Phone number ID</b>, <b>WhatsApp Business Account ID</b>, <b>permanent access token</b>, <b>App ID</b> and <b>App secret</b>.</li>
+  <li>Press <b class="menu">Save &amp; check connection</b>. The CRM asks Meta about the number. You should see <b>Connected · your number · your business name</b>.</li>
+</ol>
+<figure><img src="{{shot:wa-setup-empty}}"><figcaption>Setup tab before connecting: the five values from Meta go here.</figcaption></figure>
+<figure><img src="{{shot:wa-setup-connected}}"><figcaption>After “Save &amp; check connection”: the green Connected label shows your number and name.</figcaption></figure>
+<div class="box tip">The token and app secret are stored encrypted and are never shown again. To change them, paste new ones and save.</div>
+
+<h2>Part D — Webhook (delivered / read ticks and buyers’ replies)</h2>
+<ol class="steps">
+  <li>In the CRM, Setup tab, copy the <b>Callback URL</b> and the <b>Verify token</b> (click a box to select it).</li>
+  <li>In <b>developers.facebook.com</b> → your app → <b class="menu">WhatsApp</b> → <b class="menu">Configuration</b> → <b class="menu">Webhook</b> → <b class="menu">Edit</b>. Paste both values and press <b class="menu">Verify and save</b>.</li>
+  <li>Below, in <b class="menu">Webhook fields</b>, press <b class="menu">Subscribe</b> next to <b>messages</b>.</li>
+  <li>In <b class="menu">App settings</b> → <b class="menu">Basic</b>, add a Privacy policy URL (your website) and switch the app from <b>Development</b> to <b>Live</b> at the top. In Development mode Meta does not send real updates.</li>
+  <li>Send “Hi” from your personal WhatsApp to the business number. In the CRM Setup tab the line <b>Last update from WhatsApp</b> shows the time — the webhook works.</li>
+</ol>
+<figure><img src="{{shot:wa-webhook}}"><figcaption>The two values to paste in Meta → WhatsApp → Configuration.</figcaption></figure>
+
+<h2>Part E — Payment and message prices</h2>
+<ol class="steps">
+  <li>In <b>business.facebook.com</b> → <b class="menu">WhatsApp Manager</b> → <b class="menu">Overview</b> (or Settings) → <b class="menu">Payment methods</b>, add your card. Without it, template messages fail.</li>
+  <li>Meta charges per template message, by the buyer’s country and the type (Marketing or Utility). Replies within 24 hours of the buyer’s message are free.</li>
+  <li>Open Meta’s rate card (search “WhatsApp pricing rate card”), and type the prices for your main countries in the CRM <b>Message cost</b> box, then <b class="menu">Save rates</b>. The CRM uses them only to estimate the cost of each broadcast.</li>
+</ol>
+<figure><img src="{{shot:wa-rates}}"><figcaption>Message cost table: one line per country dial code.</figcaption></figure>
+
+<h2 class="pb">Part F — Templates (needed to start a chat)</h2>
+<p>WhatsApp lets a business message a buyer first <b>only with a template Meta has approved</b>.</p>
+<ol class="steps">
+  <li><b class="menu">Templates</b> tab → <b class="menu">New template</b>.</li>
+  <li><b>Name</b>: small letters and _ only, e.g. <code>turmeric_offer</code>. <b>Type</b>: Marketing (offers) or Utility (order / sample updates). <b>Language</b>.</li>
+  <li><b>Title</b>: none, text, or a <b>picture</b> (JPG/PNG). <b>Message</b>: use <code>{{1}}</code>, <code>{{2}}</code> for words that change per buyer, and give an example for each.</li>
+  <li>Optional <b>footer</b> and up to 3 <b>buttons</b>: quick reply (“Send price”), website link, or phone call.</li>
+  <li>Press <b class="menu">Send for approval</b>. Meta usually answers within minutes (sometimes up to 24 hours). Press <b class="menu">Sync from WhatsApp</b> to update the status to <b>Approved</b>.</li>
+</ol>
+<figure><img src="{{shot:wa-template-editor}}"><figcaption>Template editor with the phone preview on the right.</figcaption></figure>
+<div class="box warn"><b>Why templates get rejected:</b> only a variable with no text around it, a missing example, words like “free”/“guaranteed” in a Utility template, or a link shortener. Write a clear business message.</div>
+
+<h2>Part G — Send a broadcast</h2>
+<ol class="steps">
+  <li>Add a <b>WhatsApp / Zalo number</b> and <b>tags</b> (e.g. <code>turmeric-buyer</code>, <code>dubai</code>) on your leads, or in Bulk Import.</li>
+  <li><b class="menu">New broadcast</b> tab: give a name, choose an approved template, and for each <code>{{ }}</code> choose what goes in (contact name, company, product, or a fixed text).</li>
+  <li><b>Send to</b>: by tags, all leads, or paste numbers with country code. The CRM shows how many numbers and the estimated cost. Buyers who wrote STOP are left out.</li>
+  <li><b class="menu">Send now</b> or <b class="menu">Schedule</b> for a time in the buyers’ day.</li>
+</ol>
+<figure><img src="{{shot:wa-new-broadcast}}"><figcaption>New broadcast: template, variables, buyers by tag, cost and preview.</figcaption></figure>
+<p>In <b class="menu">Broadcasts</b> each one shows <b>sent, delivered, read, replied, failed</b>. <b class="menu">Numbers</b> lists each buyer and the reason when a message failed. <b class="menu">Retry</b> sends again only to the failed numbers. If your daily limit is reached, the rest continue by themselves later.</p>
+<figure><img src="{{shot:wa-broadcasts}}"><figcaption>Broadcast history with delivery and read counts.</figcaption></figure>
+
+<h2 class="pb">Part H — Chats and auto replies</h2>
+<ul>
+  <li><b class="menu">Chats</b>: every buyer who replies, linked to the lead with the same number. Inside 24 hours of the buyer’s last message you can type freely. After 24 hours, choose a template to restart.</li>
+  <li><b class="menu">Automation</b>: a <b>welcome message</b> for a new chat and <b>keyword replies</b> (e.g. “price, rate” → your price list link). Anyone who writes <b>STOP</b> or <b>UNSUBSCRIBE</b> is opted out of broadcasts automatically.</li>
+</ul>
+<figure><img src="{{shot:wa-chats}}"><figcaption>Chats: the conversation with the buyer and the reply box.</figcaption></figure>
+<figure><img src="{{shot:wa-automation}}"><figcaption>Automation rules.</figcaption></figure>
+
+<h2>Daily limits and good practice</h2>
+<table>
+  <tr><th>Meta level</th><th>New buyers you can message per 24 hours</th><th>How to get there</th></tr>
+  <tr><td>Starting</td><td>about 250</td><td>New number, business not verified</td></tr>
+  <tr><td>Tier 1</td><td>1,000</td><td>Business verified + good quality</td></tr>
+  <tr><td>Tier 2 / 3 / unlimited</td><td>10,000 / 100,000 / no limit</td><td>Meta raises it by itself when you use most of your limit with good quality</td></tr>
+</table>
+<ul>
+  <li>Message only buyers who expect to hear from you. Many “block” or “report” clicks lower your quality rating (shown on the Dashboard) and Meta can limit the number.</li>
+  <li>Keep the same template for similar buyers, and use the buyer’s name and product.</li>
+  <li>Zalo, WeChat, Line and Telegram are separate apps and are not part of WhatsApp broadcasts. Use the WhatsApp / Zalo / Telegram links on each lead for those.</li>
+</ul>
+
+<h2>If something does not work</h2>
+<table>
+  <tr><th>Message in the CRM</th><th>What to do</th></tr>
+  <tr><td>Invalid OAuth / token expired</td><td>You used the 24-hour token. Make the permanent system-user token (Part B).</td></tr>
+  <tr><td>Phone number not found</td><td>The Phone number ID is from the test number or a different app. Copy it again with your number selected.</td></tr>
+  <tr><td>No delivery ticks, no replies in Chats</td><td>Webhook not saved, “messages” not subscribed, or the app is still in Development (Part D).</td></tr>
+  <tr><td>Template not approved</td><td>Edit the wording (see Part F) and send again with a new name.</td></tr>
+  <tr><td>Message failed: payment / account issue</td><td>Add or fix the card in WhatsApp Manager (Part E).</td></tr>
+  <tr><td>Recipient not on the allowed list</td><td>You are still sending from the test number. Select your own number.</td></tr>
+</table>
+<p class="small">Meta’s screens and menu names change from time to time; the steps stay the same. Help &amp; Support → videos “Connect your WhatsApp Business number”, “WhatsApp templates and bulk broadcast” and “WhatsApp chats and auto replies” show the CRM side.</p>
+</body></html>

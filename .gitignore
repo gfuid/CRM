@@ -49,3 +49,6 @@ admin-credentials.js
 
 # Local safety copies made before fixes
 .claude/pre-fix-backup-*/
+
+# Help video / guide working files (recordings, screenshots)
+tools/help-videos/__rec/

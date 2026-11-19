@@ -3,6 +3,7 @@ import { Search, PlayCircle, Compass, ChevronDown, ArrowRight, Wrench, ListCheck
 import { HELP_SECTIONS, HELP_VIDEO_URL, HELP_VIDEO_POSTER } from '../../data/helpGuide';
 import { startTour } from './OnboardingTour';
 import HelpVideoLibrary from './HelpVideoLibrary';
+import HelpGuidesPdf from './HelpGuidesPdf';
 
 const go = (tab) => window.dispatchEvent(new CustomEvent('crm_navigate', { detail: { tab } }));
 
@@ -71,6 +72,9 @@ export default function HelpCenter({ isOwner, canSee = () => true, onAskAI, onNe
 
       {/* "How to" videos (filtered by the same search box) */}
       <HelpVideoLibrary query={q} isOwner={isOwner} />
+
+      {/* Step-by-step PDF guides (WhatsApp, AI Calling, Email) */}
+      <HelpGuidesPdf query={q} isOwner={isOwner} />
 
       {/* Sections */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-100 dark:divide-slate-800">
