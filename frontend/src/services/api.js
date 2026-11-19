@@ -379,6 +379,19 @@ class ApiClient {
     return this.request(`/admin/my-usage${withMembers ? '?members=1' : ''}`);
   }
 
+  // WhatsApp marketing: wa('/templates'), wa('/campaigns', 'POST', {...})
+  wa(path, method = 'GET', data) {
+    return this.request(`/whatsapp${path}`, {
+      method,
+      ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+    });
+  }
+
+  // Calculators built by the platform admin (rows of boxes and formulas)
+  getCalculators() {
+    return this.request('/shipping/calculators');
+  }
+
   // Shipping: cost sheets and quotations (one list per company)
   getShippingSheets() {
     return this.request('/shipping');

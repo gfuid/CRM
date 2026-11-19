@@ -189,6 +189,34 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   const shipDel = await call('DELETE', `/shipping/sheets/${sid}`, OTH);
   rec('SH-07', 'Owner', 'Owner deletes the sheet', '200', shipDel.status, shipDel.status === 200);
 
+  // 6c. Calculators the platform admin builds (boxes + formulas) shown in the CRM
+  const calcRows = [
+    { key: 'tons', label: 'Tons', kind: 'number', default: 25 },
+    { key: 'unit', label: 'Ton/kg', kind: 'select', options: [{ label: 'Ton', value: 1000 }, { label: 'Kg', value: 1 }] },
+    { key: 'total', label: 'Total', kind: 'formula', formula: 'tons * unit', highlight: true, decimals: 2, evil: '<script>' },
+  ];
+  const calcAll = await call('POST', '/admin/calculators', SA, { name: 'CI calc for all', rows: calcRows });
+  const calcOne = await call('POST', '/admin/calculators', SA, { name: 'CI calc only Other', rows: calcRows, audience: 'companies', company_ids: [other.data.data.user.id] });
+  const savedRow = calcAll.data?.data?.rows?.[2] || {};
+  rec('CA-01', 'Super Admin', 'Admin creates calculators (unknown fields dropped)', '201 + 201, no evil', `${calcAll.status} ${calcOne.status} ${savedRow.evil}`, calcAll.status === 201 && calcOne.status === 201 && savedRow.evil === undefined && savedRow.formula === 'tons * unit');
+  const calc_othList = ((await call('GET', '/shipping/calculators', OTH)).data?.data || []).map((c) => c.name);
+  const calc_newList = ((await call('GET', '/shipping/calculators', NEW)).data?.data || []).map((c) => c.name);
+  const calc_staffList = ((await call('GET', '/shipping/calculators', OTHSTAFF)).data?.data || []).map((c) => c.name);
+  rec('CA-02', 'Owner / Staff / Other company', 'Picked company and its staff see both; another company sees only the "all" one', 'Other 2, staff 2, New 1', `${calc_othList.filter((n) => n.startsWith('CI calc')).length} ${calc_staffList.filter((n) => n.startsWith('CI calc')).length} ${calc_newList.filter((n) => n.startsWith('CI calc')).length}`, calc_othList.includes('CI calc only Other') && calc_staffList.includes('CI calc only Other') && calc_newList.includes('CI calc for all') && !calc_newList.includes('CI calc only Other'));
+  const calc_leak = ((await call('GET', '/shipping/calculators', OTH)).data?.data || []).find((c) => c.name === 'CI calc only Other') || {};
+  rec('CA-03', 'Owner', 'Companies do not get the list of other companies a calculator is for', 'no company_ids', 'company_ids' in calc_leak ? 'leaked' : 'hidden', !('company_ids' in calc_leak));
+  const calc_ownerTry = await call('POST', '/admin/calculators', OTH, { name: 'x', rows: calcRows });
+  const calc_badRows = await call('POST', '/admin/calculators', SA, { name: 'Bad', rows: [{ key: 'a', label: 'A', kind: 'number' }, { key: 'a', label: 'B', kind: 'number' }] });
+  const calc_noRows = await call('POST', '/admin/calculators', SA, { name: 'Empty', rows: [] });
+  const calc_noCompany = await call('POST', '/admin/calculators', SA, { name: 'Nobody', rows: calcRows, audience: 'companies', company_ids: [] });
+  rec('CA-04', 'Owner / Super Admin', 'Owners cannot build calculators; duplicate box names, no rows, no company picked are refused', '403 400 400 400', `${calc_ownerTry.status} ${calc_badRows.status} ${calc_noRows.status} ${calc_noCompany.status}`, calc_ownerTry.status === 403 && calc_badRows.status === 400 && calc_noRows.status === 400 && calc_noCompany.status === 400);
+  const calc_hide = await call('PATCH', `/admin/calculators/${calcAll.data.data.id}`, SA, { active: false });
+  const calc_afterHide = ((await call('GET', '/shipping/calculators', NEW)).data?.data || []).map((c) => c.name);
+  rec('CA-05', 'Super Admin', 'A hidden calculator disappears from the CRM', 'hidden', `${calc_hide.status} ${calc_afterHide.includes('CI calc for all') ? 'still shown' : 'hidden'}`, calc_hide.status === 200 && !calc_afterHide.includes('CI calc for all'));
+  const calc_delA = await call('DELETE', `/admin/calculators/${calcAll.data.data.id}`, SA);
+  const calc_delB = await call('DELETE', `/admin/calculators/${calcOne.data.data.id}`, SA);
+  rec('CA-06', 'Super Admin', 'Admin deletes calculators', '200 200', `${calc_delA.status} ${calc_delB.status}`, calc_delA.status === 200 && calc_delB.status === 200);
+
   // 6b. Admin announcements: popup choice, late joiners, privacy of the read list
   const annHigh = await call('POST', '/admin/notifications', SA, { target: 'all_owners', title: `CI notice ${u}`, message: 'Prices change on 1 Dec.', type: 'info', priority: 'high' });
   const annBell = await call('POST', '/admin/notifications', SA, { target: 'all_owners', title: `CI bell ${u}`, message: 'Bell only.', type: 'info', priority: 'normal' });

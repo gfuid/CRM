@@ -6,6 +6,7 @@ const MAX_STRING = 20000; // ~ 6-7 pages of text in one field
 const MAX_ARRAY = 500;
 const MAX_DEPTH = 8;
 const EMAIL_MAX_STRING = 300000; // email campaign HTML may be long
+const WA_MEDIA_MAX_STRING = 1500000; // a WhatsApp template picture (up to 1 MB, base64)
 
 const tooBig = (value, maxString, depth = 0) => {
   if (depth > MAX_DEPTH) return 'data is nested too deeply';
@@ -27,7 +28,9 @@ const tooBig = (value, maxString, depth = 0) => {
 
 const limitBodySizes = (req, res, next) => {
   if (!req.body || typeof req.body !== 'object') return next();
-  const max = req.originalUrl.startsWith('/api/v1/email') ? EMAIL_MAX_STRING : MAX_STRING;
+  // Meta's WhatsApp webhook: its own (signed) format, nested deeper than CRM forms
+  if (req.originalUrl.startsWith('/api/v1/whatsapp/webhook/')) return next();
+  const max = req.originalUrl.startsWith('/api/v1/whatsapp/media') ? WA_MEDIA_MAX_STRING : req.originalUrl.startsWith('/api/v1/email') ? EMAIL_MAX_STRING : MAX_STRING;
   const problem = tooBig(req.body, max);
   if (problem === 'SCRIPT_LINK') {
     return res.status(400).json({ success: false, code: 'SCRIPT_LINK', message: 'A field contains a script link (javascript:), which is not allowed.' });

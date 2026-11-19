@@ -15,8 +15,10 @@ const AppSetting = require('./AppSetting');
 const Avatar = require('./Avatar');
 const EmailTemplate = require('./EmailTemplate');
 const EmailImage = require('./EmailImage');
+const WaRecord = require('./WaRecord');
 
 module.exports = {
+  WaRecord,
   User,
   Lead,
   Task,

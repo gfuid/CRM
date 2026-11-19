@@ -530,7 +530,7 @@ const deleteUser = async (req, res) => {
     dataStore.notifications = dataStore.notifications.filter((record) =>
       !belongsToTenant(record, ['target_user_id', 'owner_id'])
     );
-    for (const collectionName of ['emailSettings', 'emailCampaigns', 'emailTemplates', 'emailImages', 'avatars', 'tenants', 'tickets']) {
+    for (const collectionName of ['emailSettings', 'emailCampaigns', 'emailTemplates', 'emailImages', 'waRecords', 'avatars', 'tenants', 'tickets']) {
       if (Array.isArray(dataStore[collectionName])) {
         dataStore[collectionName] = dataStore[collectionName].filter((record) =>
           !belongsToTenant(record, ['owner_id', 'created_by', 'created_by_id', 'id'])
@@ -925,7 +925,7 @@ const updateStaffLimit = async (req, res) => {
  */
 const updateUserFeatures = async (req, res) => {
   const { id } = req.params;
-  const allowed = ['email_marketing'];
+  const allowed = ['email_marketing', 'whatsapp_marketing'];
   const updates = {};
   for (const key of allowed) {
     if (req.body && req.body[key] !== undefined) updates[key] = Boolean(req.body[key]);

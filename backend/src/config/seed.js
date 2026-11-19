@@ -30,6 +30,7 @@ const hydrateFromSnapshot = () => {
       if (Array.isArray(snapshot.avatars)) dataStore.avatars = snapshot.avatars;
       if (Array.isArray(snapshot.emailTemplates)) dataStore.emailTemplates = snapshot.emailTemplates;
       if (Array.isArray(snapshot.emailImages)) dataStore.emailImages = snapshot.emailImages;
+      if (Array.isArray(snapshot.waRecords)) dataStore.waRecords = snapshot.waRecords;
       console.log(`⚡ Instant local snapshot hydrated (${(snapshot.leads || []).length} leads, ${(snapshot.users || []).length} users)`);
       return true;
     }
@@ -44,7 +45,7 @@ const hydrateFromSnapshot = () => {
  */
 const syncFromDB = async () => {
   try {
-    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications, tickets, appSettings, avatars, emailTemplates, emailImages] =
+    const [users, company, leads, tasks, activities, followUps, myDays, outreach, auditLogs, emailSettings, emailCampaigns, notifications, tickets, appSettings, avatars, emailTemplates, emailImages, waRecords] =
       await Promise.all([
         models.User.find().lean(),
         models.Company.findOne().lean(),
@@ -63,6 +64,7 @@ const syncFromDB = async () => {
         models.Avatar ? models.Avatar.find().lean() : Promise.resolve([]),
         models.EmailTemplate ? models.EmailTemplate.find().lean() : Promise.resolve([]),
         models.EmailImage ? models.EmailImage.find().lean() : Promise.resolve([]),
+        models.WaRecord ? models.WaRecord.find().lean() : Promise.resolve([]),
       ]);
 
     if (users && users.length > 0) {
@@ -95,6 +97,14 @@ const syncFromDB = async () => {
     if (Array.isArray(avatars)) dataStore.avatars = avatars;
     if (Array.isArray(emailTemplates)) dataStore.emailTemplates = emailTemplates;
     if (Array.isArray(emailImages)) dataStore.emailImages = emailImages;
+    if (Array.isArray(waRecords)) dataStore.waRecords = waRecords;
+    // A broadcast cannot still be sending right after a restart
+    (dataStore.waRecords || []).forEach((r) => {
+      if (r.kind === 'campaign' && r.status === 'sending') {
+        r.status = 'paused';
+        r.error = 'Sending was interrupted by a server restart. Press Send to continue with the rest.';
+      }
+    });
 
     console.log(
       `🔄 In-memory cache successfully synchronized with MongoDB Atlas (${leads.length} leads, ${users.length} users, ${tasks.length} tasks).`
@@ -120,6 +130,7 @@ const syncFromDB = async () => {
         emailCampaigns: dataStore.emailCampaigns,
         emailTemplates: dataStore.emailTemplates,
         emailImages: dataStore.emailImages,
+        waRecords: dataStore.waRecords,
         company: dataStore.company,
         timestamp: new Date().toISOString(),
       };

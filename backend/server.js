@@ -38,6 +38,7 @@ const startServer = async () => {
   // Sends email campaigns at the time the owner scheduled them
   if (process.env.EMAIL_SCHEDULER_DISABLED !== 'true') {
     require('./src/controllers/email.controller').startEmailScheduler();
+    require('./src/controllers/whatsapp.controller').startWhatsAppScheduler();
   }
 };
 

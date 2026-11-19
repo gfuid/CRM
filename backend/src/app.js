@@ -67,7 +67,11 @@ app.use(
 );
 
 // Request body parsers with payload size limits to avoid memory bloat
-app.use(express.json({ limit: '2mb' }));
+// Meta signs its WhatsApp webhooks over the raw body, so keep a copy of it for those requests only
+app.use(express.json({
+  limit: '2mb',
+  verify: (req, _res, buf) => { if (req.originalUrl.startsWith('/api/v1/whatsapp/webhook/')) req.rawBody = Buffer.from(buf); },
+}));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use('/api', require('./middlewares/bodyLimits.middleware').limitBodySizes);
 
@@ -81,6 +85,15 @@ if (config.nodeEnv === 'development') {
 app.get('/api/v1/avatars/:id', require('./controllers/avatar.controller').getAvatar);
 // Pictures inside marketing emails: loaded by Gmail/Outlook image proxies, so also public and outside the limiter
 app.get('/api/v1/email/images/:id', require('./controllers/email.controller').getImage);
+
+// WhatsApp: Meta's webhook (status updates and buyers' replies) and template pictures are public,
+// outside the limiter (Meta may send many updates at once)
+{
+  const wa = require('./controllers/whatsapp.controller');
+  app.get('/api/v1/whatsapp/webhook/:key', wa.verifyWebhook);
+  app.post('/api/v1/whatsapp/webhook/:key', (req, res, next) => Promise.resolve(wa.receiveWebhook(req, res)).catch(next));
+  app.get('/api/v1/whatsapp/media/:id', wa.getMedia);
+}
 
 // Global API rate limiting
 app.use('/api', apiIpLimiter, apiLimiter);

@@ -21,6 +21,7 @@ import {
   HardDrive,
   ArrowRightLeft,
   AtSign,
+  MessageCircle,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -410,6 +411,21 @@ export default function OwnerStaffHierarchyView({
                       >
                         <Mail size={12} />
                         <span>Email {owner.features?.email_marketing ? 'ON' : 'OFF'}</span>
+                      </button>
+                    )}
+                    {onToggleFeature && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFeature(owner.id, 'whatsapp_marketing', !owner.features?.whatsapp_marketing)}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                          owner.features?.whatsapp_marketing
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        title="Premium: WhatsApp Marketing on/off for this owner"
+                      >
+                        <MessageCircle size={12} />
+                        <span>WhatsApp {owner.features?.whatsapp_marketing ? 'ON' : 'OFF'}</span>
                       </button>
                     )}
                     {onResetPassword && (

@@ -85,6 +85,7 @@ const dataStore = {
   avatars: [],
   emailTemplates: [],
   emailImages: [],
+  waRecords: [], // WhatsApp marketing (see models/WaRecord.js)
   outreach: [],
 
   // No demo data: every company starts empty and only sees what its own people create.
@@ -134,6 +135,7 @@ const writeSnapshotNow = () => {
       emailCampaigns: dataStore.emailCampaigns,
       emailTemplates: dataStore.emailTemplates,
       emailImages: dataStore.emailImages,
+      waRecords: dataStore.waRecords,
       company: dataStore.company,
     };
     // Compact JSON (no pretty spaces) is smaller and much faster to write
@@ -297,6 +299,7 @@ const dbSync = {
             Avatar: recordFilter(['owner_id', 'user_id']),
             EmailTemplate: recordFilter(['owner_id']),
             EmailImage: recordFilter(['owner_id']),
+            WaRecord: recordFilter(['owner_id']),
           };
 
           if (companyIds.length) {
@@ -499,6 +502,28 @@ const dbSync = {
       } catch (e) {
         console.warn('[DB AppSetting Sync]:', e.message);
       }
+    }
+  },
+  saveWaRecord: async (rec) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.WaRecord) {
+      try {
+        const toSave = { ...rec };
+        delete toSave._id;
+        await models.WaRecord.findOneAndUpdate({ id: rec.id }, toSave, { upsert: true, new: true });
+      } catch (e) {
+        console.warn('[DB WaRecord Sync]:', e.message);
+      }
+    }
+  },
+  deleteWaRecord: async (id) => {
+    saveSnapshot();
+    const { isConnected, models } = getDb();
+    if (isConnected && models && models.WaRecord) {
+      try {
+        await models.WaRecord.findOneAndDelete({ id });
+      } catch (e) {}
     }
   },
   saveEmailCampaign: async (campaign) => {

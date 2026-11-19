@@ -49,6 +49,7 @@ const FollowUp = lazyWithRetry(() => import('./pages/FollowUp'));
 const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
+const WhatsAppMarketing = lazyWithRetry(() => import('./pages/WhatsAppMarketing'));
 const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
 const Shipping = lazyWithRetry(() => import('./pages/Shipping'));
@@ -62,6 +63,7 @@ const tabNames = {
   mydays: 'My Days',
   followup: 'Follow up',
   email: 'Email Marketing',
+  whatsapp: 'WhatsApp Marketing',
   review: 'Team Review',
   support: 'Help & Support',
   shipping: 'Shipping & Costing',
@@ -121,6 +123,7 @@ function AppContent() {
         if (tab === 'mydays') return Boolean(perms.view_mydays);
         if (tab === 'followup') return Boolean(perms.view_followup);
         if (tab === 'email') return false; // owner-only premium feature
+        if (tab === 'whatsapp') return false; // owner-only premium feature
         return true;
       };
 
@@ -311,6 +314,8 @@ function AppContent() {
         return <MyDays />;
       case 'followup':
         return <FollowUp />;
+      case 'whatsapp':
+        return isOwner ? <WhatsAppMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
       case 'email':
         return isOwner ? <EmailMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
       case 'review':

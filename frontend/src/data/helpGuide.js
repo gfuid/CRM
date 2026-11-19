@@ -16,6 +16,7 @@ export const canSeeTab = (isStaff, perms, tab) => {
   if (tab === 'mydays') return Boolean(p.view_mydays);
   if (tab === 'followup') return Boolean(p.view_followup);
   if (tab === 'email') return false;
+  if (tab === 'whatsapp') return false;
   return true;
 };
 
