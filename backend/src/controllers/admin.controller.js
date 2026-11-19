@@ -925,7 +925,7 @@ const updateStaffLimit = async (req, res) => {
  */
 const updateUserFeatures = async (req, res) => {
   const { id } = req.params;
-  const allowed = ['email_marketing', 'whatsapp_marketing'];
+  const allowed = ['email_marketing', 'whatsapp_marketing', 'ai_calling'];
   const updates = {};
   for (const key of allowed) {
     if (req.body && req.body[key] !== undefined) updates[key] = Boolean(req.body[key]);

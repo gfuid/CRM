@@ -31,6 +31,7 @@ router.use('/reminders', remindersRoutes);
 router.use('/support', require('./support.routes'));
 router.use('/shipping', require('./shipping.routes'));
 router.use('/whatsapp', require('./whatsapp.routes'));
+router.use('/ai-calls', require('./aiCalls.routes'));
 router.use('/avatars', require('./avatar.routes'));
 router.use('/docs', docsRoutes);
 

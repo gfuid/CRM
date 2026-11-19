@@ -39,6 +39,7 @@ const startServer = async () => {
   if (process.env.EMAIL_SCHEDULER_DISABLED !== 'true') {
     require('./src/controllers/email.controller').startEmailScheduler();
     require('./src/controllers/whatsapp.controller').startWhatsAppScheduler();
+    require('./src/controllers/aiCalls.controller').startAiCallScheduler();
   }
 };
 

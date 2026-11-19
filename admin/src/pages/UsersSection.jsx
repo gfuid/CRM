@@ -24,6 +24,7 @@ import {
   List,
   Trash2,
   MessageCircle,
+  PhoneCall,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import OwnerStaffHierarchyView from '../components/OwnerStaffHierarchyView';
@@ -454,6 +455,26 @@ export default function UsersSection({
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${u.features?.whatsapp_marketing ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                         {u.features?.whatsapp_marketing ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={() => onToggleFeature && onToggleFeature(u.id, 'ai_calling', !u.features?.ai_calling)}
+                      data-ai-toggle={u.email}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
+                        u.features?.ai_calling
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                      title="Premium: AI voice calls to buyers (ElevenLabs) for this owner"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <PhoneCall size={13} />
+                        <span>AI Calling</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${u.features?.ai_calling ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                        {u.features?.ai_calling ? 'ON' : 'OFF'}
                       </span>
                     </button>
                   )}

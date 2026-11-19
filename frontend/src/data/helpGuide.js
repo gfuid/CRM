@@ -17,6 +17,7 @@ export const canSeeTab = (isStaff, perms, tab) => {
   if (tab === 'followup') return Boolean(p.view_followup);
   if (tab === 'email') return false;
   if (tab === 'whatsapp') return false;
+  if (tab === 'aicalls') return false;
   return true;
 };
 

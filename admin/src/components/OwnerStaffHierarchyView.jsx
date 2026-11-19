@@ -22,6 +22,7 @@ import {
   ArrowRightLeft,
   AtSign,
   MessageCircle,
+  PhoneCall,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -426,6 +427,21 @@ export default function OwnerStaffHierarchyView({
                       >
                         <MessageCircle size={12} />
                         <span>WhatsApp {owner.features?.whatsapp_marketing ? 'ON' : 'OFF'}</span>
+                      </button>
+                    )}
+                  {onToggleFeature && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFeature(owner.id, 'ai_calling', !owner.features?.ai_calling)}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                          owner.features?.ai_calling
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        title="Premium: AI voice calls to buyers (ElevenLabs) for this owner"
+                      >
+                        <PhoneCall size={12} />
+                        <span>AI Calls {owner.features?.ai_calling ? 'ON' : 'OFF'}</span>
                       </button>
                     )}
                     {onResetPassword && (
