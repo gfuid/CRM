@@ -19,6 +19,7 @@ export const canSeeTab = (isStaff, perms, tab) => {
   if (tab === 'whatsapp') return false;
   if (tab === 'aicalls') return false;
   if (tab === 'social') return p.social_media === true;
+  if (tab === 'quotes') return p.quotations === true;
   return true;
 };
 

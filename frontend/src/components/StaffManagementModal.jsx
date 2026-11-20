@@ -63,6 +63,7 @@ const DEFAULT_PERMISSIONS = {
   can_update: true,
   edit_lead_details: false, // Owner can allow full lead editing per staff
   social_media: false, // Premium Social Media: write posts for approval
+  quotations: false, // Quotation / proforma PDFs for their own leads
   can_delete: false, // Prevent deleting other staff's or company records
   can_export: false,
   admin_access: false, // Strict: Never give staff admin panel
@@ -1100,6 +1101,22 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                       <span className="text-[10px] text-slate-400 block">Write posts; the owner approves</span>
                     </div>
                   </label>
+                  {/* Quotations + proforma invoices */}
+                  <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer" data-perm="quotations">
+                    <input
+                      type="checkbox"
+                      checked={form.permissions?.quotations === true}
+                      onChange={(e) => setForm({
+                        ...form,
+                        permissions: { ...form.permissions, quotations: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block truncate">🧾 Quotations</span>
+                      <span className="text-[10px] text-slate-400 block">Quotation & proforma PDF for own leads</span>
+                    </div>
+                  </label>
 
                   {/* Activity Toggle */}
                   <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer">
@@ -1576,6 +1593,22 @@ export default function StaffManagementModal({ isOpen, onClose, initialEditStaff
                     <div className="min-w-0">
                       <span className="font-bold block truncate">📣 Social Media</span>
                       <span className="text-[10px] text-slate-400 block">Write posts; the owner approves</span>
+                    </div>
+                  </label>
+                  {/* Quotations + proforma invoices */}
+                  <label className="p-2.5 rounded-xl border bg-slate-50 dark:bg-slate-900 border-slate-200 dark:border-slate-800 flex items-center gap-2 cursor-pointer" data-perm="quotations">
+                    <input
+                      type="checkbox"
+                      checked={editingStaff.permissions?.quotations === true}
+                      onChange={(e) => setEditingStaff({
+                        ...editingStaff,
+                        permissions: { ...editingStaff.permissions, quotations: e.target.checked }
+                      })}
+                      className="rounded text-emerald-600 focus:ring-emerald-500"
+                    />
+                    <div className="min-w-0">
+                      <span className="font-bold block truncate">🧾 Quotations</span>
+                      <span className="text-[10px] text-slate-400 block">Quotation & proforma PDF for own leads</span>
                     </div>
                   </label>
 

@@ -286,6 +286,7 @@ const createUser = async (req, res) => {
     can_update: true,
       edit_lead_details: false,
       social_media: false,
+      quotations: false,
     can_delete: false, // Prevent deleting other staff's or company data
     admin_access: false, // Strict: staff NEVER has main admin access
   };

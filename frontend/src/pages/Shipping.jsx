@@ -201,11 +201,27 @@ function QuoteTable({ sheet, setSheet, r, canMoney }) {
         </>
       )}
       <div className="px-4 py-2.5 text-[11px] text-slate-500 flex items-start gap-1.5"><Info size={12} className="shrink-0 mt-px" /> Same formula as your company’s Quotation Calculator sheet. Tap FOB, CFR or CIF to use that price for this shipment.</div>
+      <div className="px-4 pb-3"><MakeQuotationButton sheet={sheet} r={r} /></div>
     </div>
   );
 }
 
 /** The summary on the right: the shipment and the profit. */
+/** Opens Quotations with this product, quantity and the chosen FOB / CFR / CIF price per ton. */
+function MakeQuotationButton({ sheet, r }) {
+  const { isOwner, profile } = useAuth();
+  if (!(isOwner || profile?.permissions?.quotations === true) || !(r.quotePerTon > 0)) return null;
+  const makeQuotation = () => {
+    sessionStorage.setItem('crm_doc_prefill', JSON.stringify({ type: 'quotation', shipping: { product: sheet.product || '', currency: sheet.currency?.foreign || 'USD', incoterm: r.term, qty: r.tons, unit: 'MT', rate: Math.round(Number(r.quotePerTon || 0) * 100) / 100 } }));
+    window.dispatchEvent(new CustomEvent('crm_navigate', { detail: { tab: 'quotes' } }));
+  };
+  return (
+    <button type="button" onClick={makeQuotation} className="mt-2 w-full inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold cursor-pointer" data-make-quotation>
+      <FileText size={13} /> Make quotation with this {r.term} price
+    </button>
+  );
+}
+
 function Results({ sheet, r }) {
   const cur = sheet.currency?.foreign || 'USD';
   const loc = sheet.currency?.local || 'INR';
@@ -217,6 +233,7 @@ function Results({ sheet, r }) {
         <Row label="Total quantity" value={`${r.tons.toLocaleString()} MT`} />
         <Row label={`Price per ton (${r.term})`} value={money(r.quotePerTon, cur)} />
         <Row label="Shipment value" value={money(r.saleValue, cur)} strong />
+        <MakeQuotationButton sheet={sheet} r={r} />
         {!r.hidden && <Row label={`In ${loc}`} value={money(r.saleLocal, loc, 0)} />}
       </div>
       {!r.hidden && (
@@ -497,6 +514,30 @@ function SheetCalculator({ sheet, setSheet, r }) {
         </tbody>
       </table>
       <p className="text-[10px] text-slate-400 mt-2">Blue boxes: type your numbers. Green boxes: the price to quote. FOB = on the ship at your port, CFR = + sea freight, CIF = + insurance.</p>
+      <QuoteTermButtons sheet={sheet} r={r} />
+    </div>
+  );
+}
+
+/** "Quotation with FOB / CFR / CIF": opens Quotations with that price per quote unit. */
+function QuoteTermButtons({ sheet, r }) {
+  const { isOwner, profile } = useAuth();
+  if (!(isOwner || profile?.permissions?.quotations === true) || r.hidden) return null;
+  const go = (term) => {
+    const rate = Math.round(Number(r.quote[term.toLowerCase()] || 0) * 100) / 100;
+    const perTon = r.unit === 'ton';
+    const kgPer = Number(sheet.quote_kg) || (perTon ? 1000 : 1);
+    sessionStorage.setItem('crm_doc_prefill', JSON.stringify({ type: 'quotation', shipping: { product: sheet.product || '', currency: sheet.currency?.foreign || 'USD', incoterm: term, rate, unit: perTon ? 'MT' : kgPer === 1 ? 'kg' : `${kgPer} kg`, qty: r.tons ? Math.round((perTon ? r.tons : (r.tons * 1000) / kgPer) * 1000) / 1000 : 0 } }));
+    window.dispatchEvent(new CustomEvent('crm_navigate', { detail: { tab: 'quotes' } }));
+  };
+  return (
+    <div className="mt-2 flex flex-wrap items-center gap-1.5" data-make-quotation-terms>
+      <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-300">Make a quotation with:</span>
+      {['FOB', 'CFR', 'CIF'].map((t) => (
+        <button key={t} type="button" disabled={!(r.quote[t.toLowerCase()] > 0)} onClick={() => go(t)} className="px-2.5 py-1 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-bold cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed" data-make-quotation={t}>
+          <FileText size={11} className="inline -mt-0.5 mr-1" />{t} price
+        </button>
+      ))}
     </div>
   );
 }
@@ -563,6 +604,13 @@ export function QuickCalculator({ isOpen, onClose, onOpenAsSheet }) {
   const r = useMemo(() => calcSheet(sheet), [sheet]);
   const [extra, setExtra] = useState([]); // calculators from the Admin Console
   const [tab, setTab] = useState('builtin');
+  // "Make quotation" opens another page: close this popup
+  useEffect(() => {
+    if (!isOpen) return undefined;
+    const close = () => onClose && onClose();
+    window.addEventListener('crm_navigate', close);
+    return () => window.removeEventListener('crm_navigate', close);
+  }, [isOpen, onClose]);
   useEffect(() => {
     if (!isOpen) return;
     api.getCalculators().then((res) => setExtra(Array.isArray(res?.data) ? res.data : [])).catch(() => setExtra([]));

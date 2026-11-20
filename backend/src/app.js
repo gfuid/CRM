@@ -103,6 +103,8 @@ app.get('/api/v1/email/images/:id', require('./controllers/email.controller').ge
   app.get('/api/v1/social/media/:id', sm.getMedia);
   app.get('/api/v1/social/oauth/callback', (req, res, next) => Promise.resolve(sm.oauthCallback(req, res)).catch(next));
 }
+// Quotation / Proforma PDF share link: the buyer opens it from WhatsApp or email without logging in
+app.get('/api/v1/documents/share/:token', (req, res, next) => Promise.resolve(require('./controllers/documents.controller').sharedPdf(req, res)).catch(next));
 
 // Global API rate limiting
 app.use('/api', apiIpLimiter, apiLimiter);

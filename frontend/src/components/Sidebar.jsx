@@ -15,7 +15,7 @@ import {
   Mail,
   ClipboardCheck,
   LifeBuoy,
-  Ship, MessageCircle, PhoneCall, Share2
+  Ship, MessageCircle, PhoneCall, Share2, FileText
 } from 'lucide-react';
 import BrandLogo from './BrandLogo';
 import StorageMeter from './StorageMeter';
@@ -74,6 +74,7 @@ export default function Sidebar({ activeTab, setActiveTab, companyName, taskBadg
     { id: 'mydays', label: 'My Days', icon: Calendar, visible: canViewMyDays },
     { id: 'followup', label: 'Follow up', icon: CalendarClock, visible: canViewFollowUp },
     { id: 'shipping', label: 'Shipping', icon: Ship },
+    { id: 'quotes', label: 'Quotations', icon: FileText, visible: isOwner || userPerms.quotations === true },
     { id: 'review', label: isStaff ? 'My Performance' : 'Team Review', icon: ClipboardCheck },
     { id: 'email', label: 'Email Marketing', icon: Mail, visible: isOwner, pro: true },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageCircle, visible: isOwner, pro: true },

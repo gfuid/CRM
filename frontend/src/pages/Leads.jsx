@@ -5,6 +5,7 @@ import Modal from '../components/Modal';
 import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
 import LeadEmailHistory from '../components/email/LeadEmailHistory';
 import { LeadAiCalls } from './AiCalling';
+import { LeadDocuments } from './Quotations';
 import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
@@ -4092,6 +4093,7 @@ export default function Leads() {
               {/* Campaign mails sent to this lead (owner only; hidden when there are none) */}
               {isOwner && <LeadEmailHistory leadId={activeDetailLead.id} />}
               {isOwner && <LeadAiCalls leadId={activeDetailLead.id} />}
+              {(isOwner || profile?.permissions?.quotations === true) && <LeadDocuments leadId={activeDetailLead.id} />}
 
               {/* Activity History Timeline */}
               {activeDetailLead.activity_history && activeDetailLead.activity_history.length > 0 && (

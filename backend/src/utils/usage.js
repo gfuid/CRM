@@ -74,7 +74,7 @@ const tenantFootprint = (owner) => {
     emailTemplates: (dataStore.emailTemplates || []).filter((r) => belongsToOwner(r, ['owner_id'])),
     emailImages: (dataStore.emailImages || []).filter((r) => belongsToOwner(r, ['owner_id'])),
     // WhatsApp template pictures and Social Media pictures count towards the company's storage
-    marketingMedia: (dataStore.waRecords || []).filter((r) => (r.kind === 'media' || r.kind === 'social_media') && belongsToOwner(r, ['owner_id'])),
+    marketingMedia: (dataStore.waRecords || []).filter((r) => ['media', 'social_media', 'doc_profile', 'sales_doc'].includes(r.kind) && belongsToOwner(r, ['owner_id'])),
   };
 
   // Who "owns" each record: the person who created it (or the person it is for)

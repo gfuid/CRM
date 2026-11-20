@@ -51,6 +51,7 @@ const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
 const WhatsAppMarketing = lazyWithRetry(() => import('./pages/WhatsAppMarketing'));
 const SocialMedia = lazyWithRetry(() => import('./pages/SocialMedia'));
+const Quotations = lazyWithRetry(() => import('./pages/Quotations'));
 const AiCalling = lazyWithRetry(() => import('./pages/AiCalling'));
 const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
@@ -68,6 +69,7 @@ const tabNames = {
   whatsapp: 'WhatsApp Marketing',
   aicalls: 'AI Calling',
   social: 'Social Media',
+  quotes: 'Quotations',
   review: 'Team Review',
   support: 'Help & Support',
   shipping: 'Shipping & Costing',
@@ -131,6 +133,7 @@ function AppContent() {
         if (tab === 'whatsapp') return false; // owner-only premium feature
         if (tab === 'aicalls') return false; // owner-only premium feature
         if (tab === 'social') return perms.social_media === true; // staff the owner gave access
+        if (tab === 'quotes') return perms.quotations === true;
         return true;
       };
 
@@ -323,6 +326,8 @@ function AppContent() {
         return <FollowUp />;
       case 'aicalls':
         return isOwner ? <AiCalling /> : <Analytics />;
+      case 'quotes':
+        return isOwner || profile?.permissions?.quotations === true ? <Quotations isOwner={isOwner} /> : <Analytics />;
       case 'social':
         return isOwner || profile?.permissions?.social_media === true ? <SocialMedia /> : <Analytics />;
       case 'whatsapp':
