@@ -25,6 +25,7 @@ import {
   Trash2,
   MessageCircle,
   PhoneCall,
+  Share2,
 } from 'lucide-react';
 import Modal from '../components/Modal';
 import OwnerStaffHierarchyView from '../components/OwnerStaffHierarchyView';
@@ -475,6 +476,26 @@ export default function UsersSection({
                       </span>
                       <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${u.features?.ai_calling ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
                         {u.features?.ai_calling ? 'ON' : 'OFF'}
+                      </span>
+                    </button>
+                  )}
+                  {isOwner && (
+                    <button
+                      onClick={() => onToggleFeature && onToggleFeature(u.id, 'social_media', !u.features?.social_media)}
+                      data-social-toggle={u.email}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-full text-xs font-bold border transition-colors cursor-pointer ${
+                        u.features?.social_media
+                          ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                          : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'
+                      }`}
+                      title="Premium: plan and schedule Facebook / Instagram posts for this owner"
+                    >
+                      <span className="flex items-center gap-1.5">
+                        <Share2 size={13} />
+                        <span>Social Media</span>
+                      </span>
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-extrabold ${u.features?.social_media ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-600'}`}>
+                        {u.features?.social_media ? 'ON' : 'OFF'}
                       </span>
                     </button>
                   )}

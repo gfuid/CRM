@@ -23,6 +23,7 @@ import {
   AtSign,
   MessageCircle,
   PhoneCall,
+  Share2,
 } from 'lucide-react';
 
 export default function OwnerStaffHierarchyView({
@@ -442,6 +443,21 @@ export default function OwnerStaffHierarchyView({
                       >
                         <PhoneCall size={12} />
                         <span>AI Calls {owner.features?.ai_calling ? 'ON' : 'OFF'}</span>
+                      </button>
+                    )}
+                  {onToggleFeature && (
+                      <button
+                        type="button"
+                        onClick={() => onToggleFeature(owner.id, 'social_media', !owner.features?.social_media)}
+                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
+                          owner.features?.social_media
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
+                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
+                        }`}
+                        title="Premium: plan and schedule Facebook / Instagram posts for this owner"
+                      >
+                        <Share2 size={12} />
+                        <span>Social {owner.features?.social_media ? 'ON' : 'OFF'}</span>
                       </button>
                     )}
                     {onResetPassword && (

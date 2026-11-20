@@ -15,7 +15,7 @@ import {
   Mail,
   ClipboardCheck,
   LifeBuoy,
-  Ship, MessageCircle, PhoneCall
+  Ship, MessageCircle, PhoneCall, Share2
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
@@ -51,10 +51,11 @@ export default function MobileTabBar({
     { id: 'email', label: 'Email Marketing', icon: Mail, desc: 'Premium: campaigns to tagged leads', visible: isOwner },
     { id: 'whatsapp', label: 'WhatsApp Marketing', icon: MessageCircle, desc: 'Premium: templates, broadcasts and chats', visible: isOwner },
     { id: 'aicalls', label: 'AI Calling', icon: PhoneCall, desc: 'Premium: AI sales calls to buyers', visible: isOwner },
+    { id: 'social', label: 'Social Media', icon: Share2, desc: 'Premium: plan and schedule Facebook / Instagram posts', visible: isOwner || userPerms.social_media === true },
     { id: 'support', label: 'Help & Support', icon: LifeBuoy, desc: 'Ask the AI assistant or raise a ticket' },
   ].filter((t) => t.visible !== false);
 
-  const isMoreActive = ['activity', 'outreach', 'mydays', 'email', 'whatsapp', 'aicalls', 'shipping'].includes(activeTab);
+  const isMoreActive = ['activity', 'outreach', 'mydays', 'email', 'whatsapp', 'aicalls', 'social', 'shipping'].includes(activeTab);
 
   return (
     <>

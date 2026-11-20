@@ -285,6 +285,7 @@ const createUser = async (req, res) => {
     can_create: true,
     can_update: true,
       edit_lead_details: false,
+      social_media: false,
     can_delete: false, // Prevent deleting other staff's or company data
     admin_access: false, // Strict: staff NEVER has main admin access
   };
@@ -926,7 +927,7 @@ const updateStaffLimit = async (req, res) => {
  */
 const updateUserFeatures = async (req, res) => {
   const { id } = req.params;
-  const allowed = ['email_marketing', 'whatsapp_marketing', 'ai_calling'];
+  const allowed = ['email_marketing', 'whatsapp_marketing', 'ai_calling', 'social_media'];
   const updates = {};
   for (const key of allowed) {
     if (req.body && req.body[key] !== undefined) updates[key] = Boolean(req.body[key]);

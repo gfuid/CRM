@@ -50,6 +50,7 @@ const LoginPage = lazyWithRetry(() => import('./pages/LoginPage'));
 const RegisterPage = lazyWithRetry(() => import('./pages/RegisterPage'));
 const EmailMarketing = lazyWithRetry(() => import('./pages/EmailMarketing'));
 const WhatsAppMarketing = lazyWithRetry(() => import('./pages/WhatsAppMarketing'));
+const SocialMedia = lazyWithRetry(() => import('./pages/SocialMedia'));
 const AiCalling = lazyWithRetry(() => import('./pages/AiCalling'));
 const TeamReview = lazyWithRetry(() => import('./pages/TeamReview'));
 const Support = lazyWithRetry(() => import('./pages/Support'));
@@ -66,6 +67,7 @@ const tabNames = {
   email: 'Email Marketing',
   whatsapp: 'WhatsApp Marketing',
   aicalls: 'AI Calling',
+  social: 'Social Media',
   review: 'Team Review',
   support: 'Help & Support',
   shipping: 'Shipping & Costing',
@@ -73,7 +75,8 @@ const tabNames = {
 
 function AppContent() {
   const { user, profile, company, loading, isOwner, isStaff } = useAuth();
-  const [activeTab, setActiveTabState] = useState(() => localStorage.getItem('crm_active_tab') || 'analytics');
+  // A return from Facebook login lands on /?tab=social
+  const [activeTab, setActiveTabState] = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'social' ? 'social' : localStorage.getItem('crm_active_tab') || 'analytics'));
 
   const setActiveTab = useCallback((tab) => {
     try { localStorage.setItem('crm_active_tab', tab); } catch { /* ignore */ }
@@ -127,6 +130,7 @@ function AppContent() {
         if (tab === 'email') return false; // owner-only premium feature
         if (tab === 'whatsapp') return false; // owner-only premium feature
         if (tab === 'aicalls') return false; // owner-only premium feature
+        if (tab === 'social') return perms.social_media === true; // staff the owner gave access
         return true;
       };
 
@@ -319,6 +323,8 @@ function AppContent() {
         return <FollowUp />;
       case 'aicalls':
         return isOwner ? <AiCalling /> : <Analytics />;
+      case 'social':
+        return isOwner || profile?.permissions?.social_media === true ? <SocialMedia /> : <Analytics />;
       case 'whatsapp':
         return isOwner ? <WhatsAppMarketing onNavigateToLeads={() => setActiveTab('leads')} /> : <Analytics />;
       case 'email':

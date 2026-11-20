@@ -66,6 +66,9 @@ app.use(
   })
 );
 
+// Social Media pictures (up to 4 MB) need a larger body than other requests
+app.use('/api/v1/social/media', express.json({ limit: '6mb' }));
+
 // Request body parsers with payload size limits to avoid memory bloat
 // Meta signs its WhatsApp webhooks over the raw body, so keep a copy of it for those requests only
 app.use(express.json({
@@ -93,6 +96,12 @@ app.get('/api/v1/email/images/:id', require('./controllers/email.controller').ge
   app.get('/api/v1/whatsapp/webhook/:key', wa.verifyWebhook);
   app.post('/api/v1/whatsapp/webhook/:key', (req, res, next) => Promise.resolve(wa.receiveWebhook(req, res)).catch(next));
   app.get('/api/v1/whatsapp/media/:id', wa.getMedia);
+}
+// Social Media: post pictures (Facebook / Instagram download them) and the Facebook login return page are public
+{
+  const sm = require('./controllers/social.controller');
+  app.get('/api/v1/social/media/:id', sm.getMedia);
+  app.get('/api/v1/social/oauth/callback', (req, res, next) => Promise.resolve(sm.oauthCallback(req, res)).catch(next));
 }
 
 // Global API rate limiting
