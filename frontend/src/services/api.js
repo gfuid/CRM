@@ -123,9 +123,17 @@ class ApiClient {
             window.dispatchEvent(new CustomEvent('crm_session_expired', { detail: { message: errMsg } }));
           }
         }
+        // A change that only the company owner may make: explain it in the "owner only" popup (every page).
+        // Not for page loads (GET) and not for premium features that are simply switched off.
+        const msgText = String(data?.message || '');
+        if (response.status === 403 && method !== 'GET' && data?.code !== 'FEATURE_DISABLED'
+          && (data?.code === 'OWNER_ONLY' || data?.code === 'NO_PERMISSION' || /only (your |the )?(company )?owner|owner can|company owner|only company owners|not given you access|do not have permission/i.test(msgText))) {
+          window.dispatchEvent(new CustomEvent('crm_owner_only', { detail: { message: msgText } }));
+        }
         const httpErr = new Error(data?.message || `HTTP error! status: ${response.status}`);
         httpErr.status = response.status;
         httpErr.code = data?.code;
+        httpErr.ownerOnly = response.status === 403;
         throw httpErr;
       }
 

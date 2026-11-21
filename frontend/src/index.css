@@ -190,3 +190,10 @@
 .email-editor-content img:hover { outline: 2px solid rgba(16, 185, 129, 0.5); outline-offset: 2px; }
 .email-editor-content hr { border: none; border-top: 1px solid #e2e8f0; margin: 1rem 0; }
 .email-editor-content table[data-btn] a { color: #ffffff; text-decoration: none; }
+
+/* Lead form: a saved value staff may not change (they can still add new things). A click explains why. */
+.owner-locked { position: relative; }
+.owner-locked input, .owner-locked select, .owner-locked textarea, .owner-locked button { cursor: not-allowed !important; }
+.owner-locked input, .owner-locked select, .owner-locked textarea { background-color: #f8fafc !important; color: #475569 !important; }
+.dark .owner-locked input, .dark .owner-locked select, .dark .owner-locked textarea { background-color: #1e293b !important; color: #94a3b8 !important; }
+.owner-locked::after { content: '🔒'; position: absolute; right: 30px; top: 50%; transform: translateY(-50%); font-size: 11px; pointer-events: none; opacity: .75; }

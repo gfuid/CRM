@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { api } from '../services/api';
+import { ownerOnly } from '../components/OwnerOnlyPopup';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import PhoneInputWithCountry from '../components/PhoneInputWithCountry';
@@ -578,6 +579,24 @@ export default function Leads() {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [activeDetailLead, setActiveDetailLead] = useState(null);
   const [editingLead, setEditingLead] = useState(null);
+  // Staff without "Edit full lead details", editing a lead: boxes that already hold a saved value are locked.
+  // They may ADD (tags, numbers, contacts, products, remarks) but not change what is saved; a click explains why.
+  const staffLocked = Boolean(editingLead) && !fullEdit;
+  const lockIf = (saved, label, always = false) => (staffLocked && (always || String(saved ?? '').trim() !== '')
+    ? { 'data-owner-only': label, className: 'owner-locked' } : {});
+  const guardOwnerOnly = (e) => {
+    const box = e.target && e.target.closest ? e.target.closest('[data-owner-only]') : null;
+    if (!box) return;
+    if (e.type === 'keydown' && ['Tab', 'Shift', 'Escape'].includes(e.key)) return;
+    e.preventDefault();
+    e.stopPropagation();
+    if (document.activeElement && box.contains(document.activeElement)) document.activeElement.blur();
+    ownerOnly({
+      title: `${box.dataset.ownerOnly}: only the owner can change this`,
+      message: 'This is already saved on the lead. Staff can add new information, but cannot change or remove what is saved.',
+      canDo: 'add tags, more WhatsApp numbers, a new contact person or an alternate number, products and quantity, and write remarks.',
+    });
+  };
   const [teamList, setTeamList] = useState([]);
   const [filterStaff, setFilterStaff] = useState('');
   const [filterNoContact, setFilterNoContact] = useState(false);
@@ -1036,7 +1055,7 @@ export default function Leads() {
   // Add custom commodity handler (Owner only)
   const handleAddCustomCommodity = async () => {
     if (!isOwner) {
-      showNotification('Permission Denied: Only Company Owners/Admins can add new commodities or products.', 'error');
+      ownerOnly({ message: 'Only the owner can add a new commodity or product to the company list.', canDo: 'pick any commodity that is already in the list.' });
       return;
     }
     const trimmed = customProductText.trim();
@@ -1060,7 +1079,7 @@ export default function Leads() {
   // Remove commodity category handler (Owner only)
   const handleRemoveCommodity = async (prodToRemove) => {
     if (!isOwner || isStaff) {
-      showNotification('Permission Denied: Only Company Owners/Admins can delete commodity categories.', 'error');
+      ownerOnly({ message: 'Only the owner can remove a commodity from the company list.' });
       return;
     }
     if (companyCommodities.includes(prodToRemove)) {
@@ -1085,7 +1104,7 @@ export default function Leads() {
   // Add custom payment term handler - OWNER ONLY
   const handleAddCustomPaymentTerm = () => {
     if (!isOwner) {
-      showNotification('Permission Denied: Only company owners can add new payment terms.', 'error');
+      ownerOnly({ message: 'Only the owner can add a new payment term to the list.', canDo: 'choose one of the payment terms in the list.' });
       return;
     }
     const trimmed = customPaymentText.trim();
@@ -1121,7 +1140,7 @@ export default function Leads() {
   // Add custom industry handler (Owner only)
   const handleAddCustomIndustry = () => {
     if (!isOwner) {
-      showNotification('Permission Denied: Only Company Owners/Admins can add new industry types.', 'error');
+      ownerOnly({ message: 'Only the owner can add a new industry type.', canDo: 'choose one from the list.' });
       return;
     }
     const trimmed = customIndustryText.trim();
@@ -1185,7 +1204,7 @@ export default function Leads() {
     } catch (err) {
       console.warn('Failed to update stage on server:', err.message);
       if (before) setLeads((prev) => prev.map((l) => (l.id === leadId ? before : l)));
-      showNotification(err?.message || 'Stage could not be changed.', 'error');
+      if (err?.status !== 403) showNotification(err?.message || 'Stage could not be changed.', 'error');
     }
   };
 
@@ -1223,7 +1242,7 @@ export default function Leads() {
         lead.agent_name === profile?.name ||
         lead.agent_id === profile?.id;
       if (!isMine) {
-        alert('Permission Denied: Staff members can only edit their own assigned leads.');
+        ownerOnly({ title: 'You can edit only your own leads', message: 'This lead is assigned to another person.', hint: 'Ask your company owner to assign it to you.' });
         return;
       }
     }
@@ -1515,7 +1534,7 @@ export default function Leads() {
       setModalOpen(false);
     } catch (err) {
       console.error('Error saving lead:', err);
-      showNotification(err?.message || 'Error saving lead. Please try again.', 'error');
+      if (err?.status !== 403) showNotification(err?.message || 'Error saving lead. Please try again.', 'error'); // 403: the owner-only popup explains it
     } finally {
       setIsSubmitting(false);
     }
@@ -1551,7 +1570,7 @@ export default function Leads() {
       setForm((prev) => ({ ...prev, today_remarks: '', next_follow_up_action: '' }));
       showNotification('Remark saved.', 'success');
     } catch (err) {
-      showNotification(err?.message || 'The remark could not be saved. Please try again.', 'error');
+      if (err?.status !== 403) showNotification(err?.message || 'The remark could not be saved. Please try again.', 'error');
     } finally {
       setIsSavingRemark(false);
     }
@@ -1667,7 +1686,7 @@ export default function Leads() {
   // Delete Lead - Owner only
   const handleDelete = async (id) => {
     if (!isOwner) {
-      alert('Permission Denied: Only Company Owners can delete trade leads.');
+      ownerOnly({ message: 'Only the owner can delete a lead.', canDo: 'change its stage, or write a remark saying why it should be deleted.' });
       return;
     }
     if (window.confirm('Are you sure you want to delete this export trade lead?')) {
@@ -1686,7 +1705,7 @@ export default function Leads() {
   // Export current leads as CSV (Company Owner Security Protection)
   const handleExportCSV = () => {
     if (!isOwner) {
-      showNotification('Access Denied: Only Company Owner has authority to export lead data.', 'error');
+      ownerOnly({ message: 'Only the owner can export (download) lead data.' });
       return;
     }
     const exportData = filteredLeads.length > 0 ? filteredLeads : leads;
@@ -2628,7 +2647,7 @@ export default function Leads() {
         maxWidth="max-w-4xl"
         bodyClassName="p-4 sm:p-6 overflow-y-auto"
       >
-        <form onSubmit={handleSave} className="space-y-5">
+        <form onSubmit={handleSave} className="space-y-5" onMouseDownCapture={guardOwnerOnly} onKeyDownCapture={guardOwnerOnly} onPasteCapture={guardOwnerOnly}>
           {/* QUICK-JUMP SECTION ANCHORS (SMOOTH SCROLL) */}
           <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-900/95 backdrop-blur-xs py-2 px-1 border-b border-slate-200 dark:border-slate-800 flex items-center gap-1.5 overflow-x-auto text-xs font-bold scrollbar-none">
             <span className="text-[10px] text-slate-400 uppercase tracking-wider font-extrabold mr-1 shrink-0">Sections:</span>
@@ -2724,24 +2743,28 @@ export default function Leads() {
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Company Name <span className="text-rose-500">*</span>
                   </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder="e.g. Al-Barakah Global Agro Foods LLC"
-                    value={form.company_name}
-                    onChange={(e) => setForm({ ...form, company_name: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
+                  <div {...lockIf(editingLead?.company_name || editingLead?.name, 'Company name')}>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Al-Barakah Global Agro Foods LLC"
+                      value={form.company_name}
+                      onChange={(e) => setForm({ ...form, company_name: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">
                     Country <span className="text-rose-500">*</span>
                   </label>
-                  <SearchableCountrySelect
-                    value={form.country}
-                    onChange={(selectedCountry) => setForm({ ...form, country: selectedCountry })}
-                  />
+                  <div {...lockIf(editingLead?.country, 'Country')}>
+                    <SearchableCountrySelect
+                      value={form.country}
+                      onChange={(selectedCountry) => setForm({ ...form, country: selectedCountry })}
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2761,7 +2784,7 @@ export default function Leads() {
                       <Plus size={13} /> {showCustomIndustryInput ? 'Select from standard list' : '+ Add Custom Industry'}
                     </button>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1" title="Only Company Owners/Admins can add industry types">
+                    <span role="button" tabIndex={0} onClick={() => ownerOnly({ message: 'Only the owner can add a new industry type.', canDo: 'choose one from the list.' })} className="text-[10px] text-slate-400 font-semibold flex items-center gap-1 cursor-pointer hover:text-amber-600" title="Only Company Owners/Admins can add industry types">
                       <Lock size={11} className="text-slate-400" />
                       <span>Owner only</span>
                     </span>
@@ -2823,26 +2846,30 @@ export default function Leads() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Lead Source</label>
-                  <select
-                    value={form.lead_source}
-                    onChange={(e) => setForm({ ...form, lead_source: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {withCurrent(LEAD_SOURCES, form.lead_source).map((s) => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
-                  </select>
+                  <div {...lockIf(editingLead?.source, 'Lead source')}>
+                    <select
+                      value={form.lead_source}
+                      onChange={(e) => setForm({ ...form, lead_source: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    >
+                      {withCurrent(LEAD_SOURCES, form.lead_source).map((s) => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Website</label>
-                  <input
-                    type="url"
-                    placeholder="https://company.com"
-                    value={form.website}
-                    onChange={(e) => setForm({ ...form, website: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
+                  <div {...lockIf(editingLead?.website, 'Website')}>
+                    <input
+                      type="url"
+                      placeholder="https://company.com"
+                      value={form.website}
+                      onChange={(e) => setForm({ ...form, website: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
@@ -2902,39 +2929,45 @@ export default function Leads() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Credit Rating</label>
-                  <select
-                    value={form.credit_rating}
-                    onChange={(e) => setForm({ ...form, credit_rating: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  >
-                    {CREDIT_RATINGS.map((r) => (
-                      <option key={r} value={r}>{r}</option>
-                    ))}
-                  </select>
+                  <div {...lockIf(null, 'Credit rating', true)}>
+                    <select
+                      value={form.credit_rating}
+                      onChange={(e) => setForm({ ...form, credit_rating: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    >
+                      {CREDIT_RATINGS.map((r) => (
+                        <option key={r} value={r}>{r}</option>
+                      ))}
+                    </select>
+                  </div>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 mb-1">Annual Turnover (cr)</label>
-                  <input
-                    type="text"
-                    placeholder="e.g. 50 cr"
-                    value={form.turnover}
-                    onChange={(e) => setForm({ ...form, turnover: e.target.value })}
-                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                  />
+                  <div {...lockIf(null, 'Annual turnover', true)}>
+                    <input
+                      type="text"
+                      placeholder="e.g. 50 cr"
+                      value={form.turnover}
+                      onChange={(e) => setForm({ ...form, turnover: e.target.value })}
+                      className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                    />
+                  </div>
                 </div>
               </div>
 
               {/* Address */}
               <div>
                 <label className="block text-xs font-bold text-slate-700 mb-1">Warehouse / Corporate Address</label>
-                <textarea
-                  rows={2}
-                  placeholder="e.g. Warehouse #14, Al Quoz Industrial Area 3, Dubai, UAE"
-                  value={form.address}
-                  onChange={(e) => setForm({ ...form, address: e.target.value })}
-                  className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                />
+                <div {...lockIf(editingLead?.address, 'Address')}>
+                  <textarea
+                    rows={2}
+                    placeholder="e.g. Warehouse #14, Al Quoz Industrial Area 3, Dubai, UAE"
+                    value={form.address}
+                    onChange={(e) => setForm({ ...form, address: e.target.value })}
+                    className="w-full px-3.5 py-2 text-xs bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                  />
+                </div>
               </div>
 
               {/* State / City / Pin code: three across when there is room, wrapping on narrow screens */}
@@ -3024,36 +3057,40 @@ export default function Leads() {
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">
                           Full Name
                         </label>
-                        <input
-                          type="text"
-                          placeholder="e.g. Tariq Mansoor"
-                          value={contact.name}
-                          onChange={(e) => handleContactChange(cIdx, 'name', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                        />
+                        <div {...lockIf(editingLead?.contacts?.[cIdx]?.name, 'Contact name')}>
+                          <input
+                            type="text"
+                            placeholder="e.g. Tariq Mansoor"
+                            value={contact.name}
+                            onChange={(e) => handleContactChange(cIdx, 'name', e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                           Phone Number
                         </label>
-                        <PhoneInputWithCountry
-                          value={contact.phone}
-                          countryCode={contact.country_code}
-                          defaultCountry={form.country}
-                          onChange={(fullPhone, dialCode) => {
-                            const before = form.contacts[cIdx]?.phone || '';
-                            const updated = form.contacts.map((c, j) => (j === cIdx ? { ...c, phone: fullPhone, country_code: dialCode } : c));
-                            const next = { ...form, contacts: updated };
-                            // First contact's phone = the WhatsApp / Zalo number, unless someone typed a different one
-                            if (cIdx === 0 && (!form.whatsapp || form.whatsapp === before)) {
-                              next.whatsapp = fullPhone;
-                              next.social_links = (form.social_links || []).map((l) => (l && (!l.url || isPhoneLink(l.url)) && linkFromPhone(l.platform, fullPhone) ? { ...l, url: linkFromPhone(l.platform, fullPhone) } : l));
-                            }
-                            setForm(next);
-                          }}
-                          placeholder="e.g. 11 268 8960"
-                        />
+                        <div {...lockIf(editingLead?.contacts?.[cIdx]?.phone, 'Contact phone number')}>
+                          <PhoneInputWithCountry
+                            value={contact.phone}
+                            countryCode={contact.country_code}
+                            defaultCountry={form.country}
+                            onChange={(fullPhone, dialCode) => {
+                              const before = form.contacts[cIdx]?.phone || '';
+                              const updated = form.contacts.map((c, j) => (j === cIdx ? { ...c, phone: fullPhone, country_code: dialCode } : c));
+                              const next = { ...form, contacts: updated };
+                              // First contact's phone = the WhatsApp / Zalo number, unless someone typed a different one
+                              if (cIdx === 0 && (!form.whatsapp || form.whatsapp === before)) {
+                                next.whatsapp = fullPhone;
+                                next.social_links = (form.social_links || []).map((l) => (l && (!l.url || isPhoneLink(l.url)) && linkFromPhone(l.platform, fullPhone) ? { ...l, url: linkFromPhone(l.platform, fullPhone) } : l));
+                              }
+                              setForm(next);
+                            }}
+                            placeholder="e.g. 11 268 8960"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -3090,35 +3127,41 @@ export default function Leads() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Work Email</label>
-                        <input
-                          type="email"
-                          placeholder="tmansoor@company.com"
-                          value={contact.email}
-                          onChange={(e) => handleContactChange(cIdx, 'email', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                        />
+                        <div {...lockIf(editingLead?.contacts?.[cIdx]?.email, 'Work email')}>
+                          <input
+                            type="email"
+                            placeholder="tmansoor@company.com"
+                            value={contact.email}
+                            onChange={(e) => handleContactChange(cIdx, 'email', e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">Designation</label>
-                        <input
-                          type="text"
-                          placeholder="e.g. VP Procurement"
-                          value={contact.designation}
-                          onChange={(e) => handleContactChange(cIdx, 'designation', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                        />
+                        <div {...lockIf(editingLead?.contacts?.[cIdx]?.designation, 'Designation')}>
+                          <input
+                            type="text"
+                            placeholder="e.g. VP Procurement"
+                            value={contact.designation}
+                            onChange={(e) => handleContactChange(cIdx, 'designation', e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-600 mb-1">LinkedIn Profile</label>
-                        <input
-                          type="url"
-                          placeholder="https://linkedin.com/in/..."
-                          value={contact.linkedin}
-                          onChange={(e) => handleContactChange(cIdx, 'linkedin', e.target.value)}
-                          className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
-                        />
+                        <div {...lockIf(editingLead?.contacts?.[cIdx]?.linkedin, 'LinkedIn profile')}>
+                          <input
+                            type="url"
+                            placeholder="https://linkedin.com/in/..."
+                            value={contact.linkedin}
+                            onChange={(e) => handleContactChange(cIdx, 'linkedin', e.target.value)}
+                            className="w-full px-3 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500/20 focus:border-emerald-500 focus:outline-none"
+                          />
+                        </div>
                       </div>
                     </div>
 
@@ -3166,12 +3209,14 @@ export default function Leads() {
                   <span className="text-[10px] text-slate-400 font-normal">(With country code)</span>
                 </label>
                 <div className="w-full sm:max-w-md">
-                  <PhoneInputWithCountry
-                    value={form.whatsapp}
-                    defaultCountry={form.country}
-                    onChange={(fullPhone) => setForm({ ...form, whatsapp: fullPhone })}
-                    placeholder="e.g. 50 892 4110"
-                  />
+                  <div {...lockIf(editingLead?.whatsapp, 'WhatsApp number')}>
+                    <PhoneInputWithCountry
+                      value={form.whatsapp}
+                      defaultCountry={form.country}
+                      onChange={(fullPhone) => setForm({ ...form, whatsapp: fullPhone })}
+                      placeholder="e.g. 50 892 4110"
+                    />
+                  </div>
                 </div>
                 {(form.extra_whatsapp || []).map((num, wIdx) => (
                   <div key={wIdx} className="flex items-center gap-2 mt-2 w-full sm:max-w-md" data-extra-whatsapp>
@@ -3301,7 +3346,7 @@ export default function Leads() {
                       <Plus size={13} /> {showCustomProductInput ? 'Cancel custom' : '+ Add Other Commodity / Product'}
                     </button>
                   ) : (
-                    <span className="text-[10px] text-slate-400 font-semibold flex items-center gap-1" title="Only Company Owners/Admins can add new commodities">
+                    <span role="button" tabIndex={0} onClick={() => ownerOnly({ message: 'Only the owner can add a new commodity or product to the company list.', canDo: 'pick any commodity that is already in the list.' })} className="text-[10px] text-slate-400 font-semibold flex items-center gap-1 cursor-pointer hover:text-amber-600" title="Only Company Owners/Admins can add new commodities">
                       <Lock size={11} className="text-slate-400" />
                       <span>Owner only</span>
                     </span>

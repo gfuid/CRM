@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { api } from '../services/api';
+import { ownerOnly } from '../components/OwnerOnlyPopup';
 import Modal from '../components/Modal';
 import {
   Plus,
@@ -239,7 +240,7 @@ export default function TaskManagement() {
 
   const openCreateTask = () => {
     if (isStaff && !profile?.permissions?.tasks_assign) {
-      showNotification('Permission Denied: Only Company Owners can assign new tasks.', 'error');
+      ownerOnly({ message: 'Only the owner (or staff the owner allowed) can give tasks to other people.', canDo: 'write remarks and follow-ups on your own leads.' });
       return;
     }
     setEditingTask(null);

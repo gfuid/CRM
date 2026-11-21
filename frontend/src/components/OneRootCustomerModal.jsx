@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import PhoneInputWithCountry from './PhoneInputWithCountry';
 import { api } from '../services/api';
+import { ownerOnly } from './OwnerOnlyPopup';
 import {
   X,
   Clock,
@@ -488,7 +489,7 @@ function OneRootCustomerModalContent({ isOpen, onClose, lead, onSave, onDelete, 
 
   const handleDelete = () => {
     if (!isOwner) {
-      alert('Permission Denied: Only Company Owners/Admins can delete leads.');
+      ownerOnly({ message: 'Only the owner can delete a lead.' });
       return;
     }
     if (window.confirm(`Are you sure you want to delete ${companyName}? This cannot be undone.`)) {

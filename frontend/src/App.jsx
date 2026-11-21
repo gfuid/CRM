@@ -13,6 +13,7 @@ import MobileTabBar from './components/MobileTabBar';
 import StaffManagementModal from './components/StaffManagementModal';
 import PageSkeleton from './components/PageSkeleton';
 import ErrorBoundary from './components/ErrorBoundary';
+import OwnerOnlyPopup from './components/OwnerOnlyPopup';
 import './index.css';
 
 // Performance Optimization: React Lazy Loading with Automatic Chunk-Retry
@@ -405,6 +406,9 @@ function AppContent() {
 
       {/* Floating AI help assistant (every page) */}
       <AssistantWidget activeTab={activeTab} setActiveTab={setActiveTab} />
+
+      {/* "Only the company owner can do this" (opened from any page, or when the server refuses a change) */}
+      <OwnerOnlyPopup />
 
       {/* Owner Staff Management Modal */}
       {isOwner && (
