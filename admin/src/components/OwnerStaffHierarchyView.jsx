@@ -380,127 +380,73 @@ export default function OwnerStaffHierarchyView({
             {/* 2. EXPANDED SECTION NICHE (Underneath this Owner: Staff Details) */}
             {expanded && (
               <div className="border-t border-slate-100 bg-slate-50/70 p-4 sm:p-5 space-y-3 animate-fadeIn">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-700 uppercase tracking-wider">
-                      Staff Members under {owner.name}
-                    </span>
-                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-200/80 text-slate-700">
-                      {staff.length} of {staffLimit} seats assigned
-                    </span>
+                {/* Row 1: staff seats + the two main actions */}
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-xs font-black text-slate-700 uppercase tracking-wider truncate">Staff of {owner.name}</span>
+                    <span className="text-[10px] px-2 py-0.5 rounded-full font-bold bg-slate-200/80 text-slate-700 shrink-0">{staff.length} of {staffLimit} seats</span>
                   </div>
-
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
                       onClick={() => handleIncreaseQuota(owner)}
-                      className="px-2.5 py-1 rounded-xl bg-amber-100 hover:bg-amber-200 text-amber-900 text-[11px] font-bold border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-amber-50 text-amber-800 text-[11px] font-bold border border-amber-300 transition-colors flex items-center gap-1 cursor-pointer"
+                      title="Give this owner one more staff seat"
                     >
-                      <Plus size={11} />
-                      <span>Increase Quota (+1)</span>
+                      <Plus size={11} /> 1 seat
                     </button>
-
-                    {onToggleFeature && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleFeature(owner.id, 'email_marketing', !owner.features?.email_marketing)}
-                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                          owner.features?.email_marketing
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                        title="Premium: Email Marketing on/off for this owner"
-                      >
-                        <Mail size={12} />
-                        <span>Email {owner.features?.email_marketing ? 'ON' : 'OFF'}</span>
-                      </button>
-                    )}
-                    {onToggleFeature && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleFeature(owner.id, 'whatsapp_marketing', !owner.features?.whatsapp_marketing)}
-                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                          owner.features?.whatsapp_marketing
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                        title="Premium: WhatsApp Marketing on/off for this owner"
-                      >
-                        <MessageCircle size={12} />
-                        <span>WhatsApp {owner.features?.whatsapp_marketing ? 'ON' : 'OFF'}</span>
-                      </button>
-                    )}
-                  {onToggleFeature && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleFeature(owner.id, 'ai_calling', !owner.features?.ai_calling)}
-                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                          owner.features?.ai_calling
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                        title="Premium: AI voice calls to buyers (ElevenLabs) for this owner"
-                      >
-                        <PhoneCall size={12} />
-                        <span>AI Calls {owner.features?.ai_calling ? 'ON' : 'OFF'}</span>
-                      </button>
-                    )}
-                  {onToggleFeature && (
-                      <button
-                        type="button"
-                        onClick={() => onToggleFeature(owner.id, 'social_media', !owner.features?.social_media)}
-                        className={`px-3 py-1 rounded-xl text-[11px] font-bold border transition-colors flex items-center gap-1 cursor-pointer ${
-                          owner.features?.social_media
-                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100'
-                            : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'
-                        }`}
-                        title="Premium: plan and schedule Facebook / Instagram posts for this owner"
-                      >
-                        <Share2 size={12} />
-                        <span>Social {owner.features?.social_media ? 'ON' : 'OFF'}</span>
-                      </button>
-                    )}
-                    {onResetPassword && (
-                      <button
-                        type="button"
-                        onClick={() => onResetPassword(owner)}
-                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Set a new password for this owner"
-                      >
-                        <Lock size={12} />
-                        <span>Password</span>
-                      </button>
-                    )}
-                    {onChangeEmail && (
-                      <button
-                        type="button"
-                        onClick={() => changeEmail(owner)}
-                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Change this owner's login email"
-                      >
-                        <AtSign size={12} />
-                        <span>Email</span>
-                      </button>
-                    )}
-                    {onMoveOwner && (
-                      <button
-                        type="button"
-                        onClick={() => { setMoving(owner); setMoveTarget(''); setFreeEmail(true); }}
-                        className="px-3 py-1 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
-                        title="Move this whole account (leads, staff, tasks) under another owner"
-                      >
-                        <ArrowRightLeft size={12} />
-                        <span>Move under…</span>
-                      </button>
-                    )}
                     <button
                       type="button"
                       onClick={() => onAddStaffForOwner(owner)}
-                      className="px-3 py-1 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-[11px] font-bold transition-colors flex items-center gap-1 cursor-pointer"
                     >
-                      <UserPlus size={12} />
-                      <span>Add Staff</span>
+                      <UserPlus size={12} /> Add Staff
                     </button>
+                  </div>
+                </div>
+
+                {/* Row 2: premium features as on / off switches, Row 3: account actions */}
+                <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 rounded-xl bg-white border border-slate-200 px-3 py-2">
+                  {onToggleFeature && (
+                    <div className="flex flex-wrap items-center gap-1.5" data-premium-switches>
+                      <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 mr-1">Premium</span>
+                      {[
+                        ['email_marketing', 'Email', Mail, 'Email Marketing'],
+                        ['whatsapp_marketing', 'WhatsApp', MessageCircle, 'WhatsApp Marketing'],
+                        ['ai_calling', 'AI Calls', PhoneCall, 'AI voice calls to buyers (ElevenLabs)'],
+                        ['social_media', 'Social', Share2, 'Social Media: plan and schedule Facebook / Instagram posts'],
+                      ].map(([key, label, Icon, title]) => {
+                        const on = Boolean(owner.features?.[key]);
+                        return (
+                          <button
+                            key={key}
+                            type="button"
+                            role="switch"
+                            aria-checked={on}
+                            onClick={() => onToggleFeature(owner.id, key, !on)}
+                            title={`${title}: ${on ? 'ON – click to switch off' : 'OFF – click to switch on'}`}
+                            className={`pl-2 pr-1.5 py-1 rounded-full text-[11px] font-bold border transition-colors flex items-center gap-1.5 cursor-pointer ${on ? 'bg-emerald-50 text-emerald-800 border-emerald-300 hover:bg-emerald-100' : 'bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100'}`}
+                          >
+                            <Icon size={12} />
+                            <span>{label}</span>
+                            <span className={`relative w-6 h-3.5 rounded-full transition-colors ${on ? 'bg-emerald-500' : 'bg-slate-300'}`}>
+                              <span className={`absolute top-0.5 w-2.5 h-2.5 rounded-full bg-white shadow transition-all ${on ? 'left-3' : 'left-0.5'}`} />
+                            </span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                  <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-slate-600" data-owner-actions>
+                    {onResetPassword && (
+                      <button type="button" onClick={() => onResetPassword(owner)} className="flex items-center gap-1 hover:text-slate-900 cursor-pointer" title="Set a new password for this owner"><Lock size={12} /> Password</button>
+                    )}
+                    {onChangeEmail && (
+                      <button type="button" onClick={() => changeEmail(owner)} className="flex items-center gap-1 hover:text-slate-900 cursor-pointer" title="Change this owner's login email"><AtSign size={12} /> Login email</button>
+                    )}
+                    {onMoveOwner && (
+                      <button type="button" onClick={() => { setMoving(owner); setMoveTarget(''); setFreeEmail(true); }} className="flex items-center gap-1 hover:text-slate-900 cursor-pointer" title="Move this whole account (leads, staff, tasks) under another owner"><ArrowRightLeft size={12} /> Move under…</button>
+                    )}
                   </div>
                 </div>
 
