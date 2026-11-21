@@ -379,7 +379,7 @@ function AppContent() {
         </div>
 
         {/* Main Content Area - with bottom padding on mobile so bottom bar never obscures content */}
-        <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-24 md:pb-8">
+        <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-36 md:pb-24">
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
               <div key={activeTab} className="page-enter">

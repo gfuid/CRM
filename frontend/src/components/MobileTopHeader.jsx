@@ -85,11 +85,12 @@ export default function MobileTopHeader({ companyName, onOpenStaffModal }) {
 
             <button
               onClick={signOut}
-              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
+              className="flex items-center justify-center gap-1 min-w-9 min-h-9 px-2.5 py-1.5 rounded-lg text-[11px] font-semibold text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:bg-rose-100 dark:hover:bg-rose-900/50 transition-colors cursor-pointer"
               title="Sign Out"
+              aria-label="Logout"
             >
-              <LogOut size={13} />
-              <span>Logout</span>
+              <LogOut size={14} />
+              <span className="hidden min-[420px]:inline">Logout</span>
             </button>
           </div>
         </div>

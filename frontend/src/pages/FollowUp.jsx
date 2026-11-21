@@ -31,8 +31,21 @@ import { useAuth } from '../context/AuthContext';
 const STAGES = PIPELINE_STAGES;
 
 export default function FollowUp() {
-  const { isOwner } = useAuth();
+  const { isOwner, profile, getTeamMembers } = useAuth();
   const [leads, setLeads] = useState([]);
+  // Leads keep the staff member's id; show the person's name instead
+  const [team, setTeam] = useState([]);
+  useEffect(() => {
+    if (!getTeamMembers) return;
+    getTeamMembers().then((m) => Array.isArray(m) && setTeam(m)).catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once; the function is new on every render
+  }, []);
+  const personName = (v) => {
+    if (!v) return '';
+    const hit = team.find((t) => t?.id === v) || (profile?.id === v ? profile : null);
+    if (hit?.name) return hit.name;
+    return String(v).startsWith('usr_') ? 'Team member' : v;
+  };
   const [search, setSearch] = useState('');
   const [responsibleFilter, setResponsibleFilter] = useState('All responsible');
   const [activeTab, setActiveTab] = useState('overdue'); // 'overdue' | 'all'
@@ -143,7 +156,7 @@ export default function FollowUp() {
   const filteredLeads = sortedLeads.filter((l) => {
     const compName = (l.name || l.company_name || '').toLowerCase();
     const contact = (l.contact_person || '').toLowerCase();
-    const assigned = (l.assigned_to || l.agent_name || '').toLowerCase();
+    const assigned = personName(l.assigned_to || l.agent_name).toLowerCase();
     const planned = (l.next_follow_up_action || '').toLowerCase();
     const current = (l.today_remarks || '').toLowerCase();
 
@@ -170,7 +183,7 @@ export default function FollowUp() {
   // Unique list of responsible reps
   const distinctResponsible = [
     'All responsible',
-    ...new Set(sortedLeads.map((l) => l.assigned_to || l.agent_name).filter(Boolean))
+    ...new Set(sortedLeads.map((l) => personName(l.assigned_to || l.agent_name)).filter(Boolean))
   ];
 
   // Open full edit modal
@@ -500,7 +513,7 @@ export default function FollowUp() {
 
                       {/* RESPONSIBLE */}
                       <td className="py-3.5 px-4 font-semibold text-slate-800 whitespace-nowrap">
-                        {lead.assigned_to || lead.agent_name || 'Unassigned'}
+                        {personName(lead.assigned_to || lead.agent_name) || 'Unassigned'}
                       </td>
 
                       {/* FOLLOW-UP DATE & OVERDUE DAYS */}

@@ -2255,7 +2255,7 @@ export default function Leads() {
       <div className="bg-white rounded-2xl border border-slate-200/80 shadow-card overflow-hidden">
         {/* Desktop View Table */}
         <div className="hidden md:block overflow-x-auto w-full">
-          <table className="w-full text-left border-collapse text-xs">
+          <table className="w-full text-left border-collapse text-xs [&_th]:px-3 [&_td]:px-3">
             <thead>
               <tr className="border-b border-slate-200/80 bg-slate-50/70 text-[10.5px] font-semibold uppercase tracking-wider text-slate-500">
                 <th className="py-3.5 px-4">Company & Country</th>
@@ -2462,16 +2462,18 @@ export default function Leads() {
                             onClick={() => openDetails(lead)}
                             className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 hover:bg-slate-50 border border-slate-200 dark:border-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                             title="View Full Lead Specifications & Dossier"
+                            aria-label="View lead"
                           >
-                            <Eye size={12} /> View
+                            <Eye size={12} /> <span className="hidden 2xl:inline">View</span>
                           </button>
                           <button
                             type="button"
                             onClick={() => openEdit(lead)}
                             className="px-2.5 py-1.5 rounded-lg text-xs font-medium text-white bg-slate-900 hover:bg-slate-700 dark:bg-slate-700 transition-colors flex items-center gap-1 cursor-pointer"
                             title="Edit Lead Details"
+                            aria-label="Edit lead"
                           >
-                            <Edit3 size={12} /> Edit
+                            <Edit3 size={12} /> <span className="hidden 2xl:inline">Edit</span>
                           </button>
                           {isOwner && (
                             <button
@@ -2526,7 +2528,7 @@ export default function Leads() {
                       value={lead.stage || lead.status || 'Requirement Understood'}
                       onClick={(e) => e.stopPropagation()}
                       onChange={(e) => handleQuickStageChange(lead.id, e.target.value)}
-                      className={`px-2 py-0.5 rounded-full font-bold text-[10px] border cursor-pointer outline-none transition-all ${getStatusBadge(
+                      className={`px-2.5 py-1.5 min-h-8 rounded-full font-bold text-[11px] border cursor-pointer outline-none transition-all ${getStatusBadge(
                         lead.stage || lead.status
                       )}`}
                     >
@@ -2623,8 +2625,9 @@ export default function Leads() {
                         <button
                           type="button"
                           onClick={() => handleDelete(lead.id)}
-                          className="p-1 text-rose-500 hover:text-rose-700 cursor-pointer"
+                          className="p-2 -m-1 rounded-lg text-rose-500 hover:text-rose-700 hover:bg-rose-50 cursor-pointer"
                           title="Delete Lead (Owner Only)"
+                          aria-label="Delete lead"
                         >
                           <Trash2 size={15} />
                         </button>
