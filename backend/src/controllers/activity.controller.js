@@ -73,6 +73,7 @@ const createActivity = async (req, res) => {
     description: description || '',
     lead_id: lead_id || null,
     user_id: req.user.id,
+    user_name: req.user.name || req.user.full_name || '',
     duration_minutes: duration_minutes ? Number(duration_minutes) : null,
     timestamp: new Date().toISOString(),
     created_at: new Date().toISOString(),

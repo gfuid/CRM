@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
@@ -594,7 +594,7 @@ export default function Leads() {
     setNotification({ message, type });
     setTimeout(() => {
       setNotification((curr) => (curr?.message === message ? null : curr));
-    }, 4000);
+    }, type === 'success' ? 4000 : 8000);
   };
 
   // Filter Bar state
@@ -716,6 +716,26 @@ export default function Leads() {
   // Lead Dossier interactive activity, follow-up remark, & document state
   const [dossierActivityType, setDossierActivityType] = useState('Call initiated');
   const [dossierActivityNote, setDossierActivityNote] = useState('');
+  // Activities saved on the server for each lead (the same list in the View window, the Edit form and on every device)
+  const [leadActivities, setLeadActivities] = useState({});
+  const loadLeadActivities = useCallback((leadId) => {
+    if (!leadId) return;
+    api.getActivities({ lead_id: leadId })
+      .then((r) => { const list = Array.isArray(r) ? r : r?.data; if (Array.isArray(list)) setLeadActivities((m) => ({ ...m, [leadId]: list })); })
+      .catch(() => { /* no access to Activity: the panel shows what this browser has */ });
+  }, []);
+  useEffect(() => { loadLeadActivities(activeDetailLead?.id); }, [activeDetailLead?.id, loadLeadActivities]);
+  useEffect(() => { loadLeadActivities(editingLead?.id); }, [editingLead?.id, loadLeadActivities]);
+  const activityEntries = (lead) => {
+    const server = lead && leadActivities[lead.id];
+    if (!server) return lead?.activity_history || [];
+    return server.map((a) => ({
+      activity: a.title,
+      note: a.description || '',
+      date: a.created_at ? new Date(a.created_at).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date(a.created_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }) : '',
+      author: a.user_name ? `by ${a.user_name}` : '',
+    }));
+  };
   const [dossierFollowUpDate, setDossierFollowUpDate] = useState('');
   const [dossierFollowUpTime, setDossierFollowUpTime] = useState('10:00');
   const [dossierTodayRemark, setDossierTodayRemark] = useState('');
@@ -797,8 +817,10 @@ export default function Leads() {
   }, [profile?.id, isOwner]);
 
   // Dossier Action Handlers
-  const handleLogDossierActivity = async () => {
-    if (!activeDetailLead || !dossierActivityType) return;
+  const handleLogDossierActivity = async (leadArg) => {
+    // Called from the View window (activeDetailLead) or the Edit form (the lead being edited)
+    const target = leadArg && leadArg.id ? leadArg : activeDetailLead;
+    if (!target || !dossierActivityType) return;
     const newEntry = {
       activity: dossierActivityType,
       note: dossierActivityNote.trim() || 'Activity logged',
@@ -808,28 +830,32 @@ export default function Leads() {
 
     // Save it on the server so the owner and other devices see it too
     try {
-      await api.createActivity({
+      const saved = await api.createActivity({
         type: 'note',
         title: dossierActivityType,
         description: newEntry.note,
-        lead_id: activeDetailLead.id,
+        lead_id: target.id,
       });
+      const rec = saved?.data || saved;
+      if (rec && rec.id) setLeadActivities((m) => (m[target.id] ? { ...m, [target.id]: [{ ...rec, user_name: rec.user_name || profile?.name || '' }, ...m[target.id]] } : m));
     } catch (err) {
       showNotification(err?.message || 'Activity could not be saved.', 'error');
       return;
     }
 
-    const updatedHistory = [newEntry, ...(activeDetailLead.activity_history || [])];
+    const updatedHistory = [newEntry, ...(target.activity_history || [])];
     const updatedLead = {
-      ...activeDetailLead,
+      ...target,
       activity_history: updatedHistory,
-      notes: dossierActivityNote.trim() || activeDetailLead.notes,
+      notes: dossierActivityNote.trim() || target.notes,
     };
 
-    setActiveDetailLead(updatedLead);
+    if (activeDetailLead && activeDetailLead.id === target.id) setActiveDetailLead(updatedLead);
+    if (editingLead && editingLead.id === target.id) setEditingLead((prev) => (prev ? { ...prev, activity_history: updatedHistory } : prev));
     setDossierActivityNote('');
+    // Only the activity list changes (the lead may be half-edited in the form)
     updateAndPersistLeads((prev) =>
-      prev.map((l) => (l.id === updatedLead.id ? updatedLead : l))
+      prev.map((l) => (l.id === updatedLead.id ? { ...l, activity_history: updatedHistory, notes: updatedLead.notes } : l))
     );
     showNotification(`Activity "${dossierActivityType}" logged successfully!`, 'success');
   };
@@ -959,28 +985,27 @@ export default function Leads() {
   };
 
   // Contact person dynamic helpers
+  // Contacts are copied, never changed in place: the lead being edited keeps its saved values,
+  // and older / imported contacts may have no extra_phones list yet.
+  const withContact = (index, change) => setForm((f) => ({
+    ...f,
+    contacts: f.contacts.map((c, i) => (i === index ? change({ ...c, extra_phones: Array.isArray(c.extra_phones) ? [...c.extra_phones] : [] }) : c)),
+  }));
+
   const handleContactChange = (index, field, value) => {
-    const updated = [...form.contacts];
-    updated[index][field] = value;
-    setForm({ ...form, contacts: updated });
+    withContact(index, (c) => ({ ...c, [field]: value }));
   };
 
   const addExtraPhone = (contactIndex) => {
-    const updated = [...form.contacts];
-    updated[contactIndex].extra_phones.push('');
-    setForm({ ...form, contacts: updated });
+    withContact(contactIndex, (c) => ({ ...c, extra_phones: [...c.extra_phones, ''] }));
   };
 
   const handleExtraPhoneChange = (contactIndex, phoneIndex, value) => {
-    const updated = [...form.contacts];
-    updated[contactIndex].extra_phones[phoneIndex] = value;
-    setForm({ ...form, contacts: updated });
+    withContact(contactIndex, (c) => ({ ...c, extra_phones: c.extra_phones.map((p, j) => (j === phoneIndex ? value : p)) }));
   };
 
   const removeExtraPhone = (contactIndex, phoneIndex) => {
-    const updated = [...form.contacts];
-    updated[contactIndex].extra_phones.splice(phoneIndex, 1);
-    setForm({ ...form, contacts: updated });
+    withContact(contactIndex, (c) => ({ ...c, extra_phones: c.extra_phones.filter((_, j) => j !== phoneIndex) }));
   };
 
   const addAnotherContact = () => {
@@ -1364,7 +1389,11 @@ export default function Leads() {
         company_name: form.company_name,
         name: form.company_name,
         // Extra emails are sent only when the contact has (or had) them, so nothing changes for older leads
-        contacts: (form.contacts || []).map((c) => (c.extra_emails === undefined ? c : { ...c, extra_emails: c.extra_emails.map((e) => String(e || '').trim()).filter(Boolean) })),
+        contacts: (form.contacts || []).map((c) => {
+          const out = c.extra_emails === undefined ? { ...c } : { ...c, extra_emails: c.extra_emails.map((e) => String(e || '').trim()).filter(Boolean) };
+          if (Array.isArray(c.extra_phones)) out.extra_phones = c.extra_phones.map((p) => String(p || '').trim()).filter((p) => p.replace(/[^0-9]/g, '').length > 4);
+          return out;
+        }),
         contact_person: primary.name,
         email: primary.email,
         phone: primary.phone,
@@ -1438,6 +1467,9 @@ export default function Leads() {
         // Empty remark boxes must not wipe the remark already saved on the lead
         if (!String(leadPayload.today_remarks || '').trim()) delete leadPayload.today_remarks;
         if (!String(leadPayload.next_follow_up_action || '').trim()) delete leadPayload.next_follow_up_action;
+        // A social row without a link is only a blank box in the form: never save it
+        const linksOnly = (v) => (Array.isArray(v) ? v.filter((x) => String(x?.url || '').trim()) : v);
+        leadPayload.social_links = linksOnly(leadPayload.social_links);
         if (!fullEdit) {
           // The form fills in a few things by itself (contact country code, WhatsApp from the first
           // phone, an empty social row). Staff can't change contact details, so don't send what they didn't touch.
@@ -1455,13 +1487,12 @@ export default function Leads() {
             return s === '' ? undefined : s;
           };
           const firstPhone = String(editingLead.contacts?.[0]?.phone || editingLead.phone || '').replace(/[^0-9]/g, '');
-          const linksOnly = (v) => (Array.isArray(v) ? v.filter((x) => String(x?.url || '').trim()) : v);
-          leadPayload.social_links = linksOnly(leadPayload.social_links);
           Object.keys(leadPayload).forEach((k) => {
             if (STAFF_FIELDS.includes(k)) return;
             const autoWhatsApp = k === 'whatsapp' && !String(editingLead.whatsapp || '').trim()
               && String(leadPayload.whatsapp || '').replace(/[^0-9]/g, '') === firstPhone;
-            if (autoWhatsApp || JSON.stringify(tidy(leadPayload[k])) === JSON.stringify(tidy(editingLead[k]))) delete leadPayload[k];
+            const before = k === 'social_links' ? linksOnly(editingLead[k]) : editingLead[k];
+            if (autoWhatsApp || JSON.stringify(tidy(leadPayload[k])) === JSON.stringify(tidy(before))) delete leadPayload[k];
           });
         }
         const res = await api.updateLead(editingLead.id, leadPayload);
@@ -1527,6 +1558,111 @@ export default function Leads() {
   };
   // Add Lead form: Enter moves to the next box (nothing is saved until the Save button)
   const focusNextOnEnter = (nextId) => runOnEnter(() => document.getElementById(nextId)?.focus());
+
+  // "Daily Activity & Interactions": the same panel in the View window and in the Edit form
+  const renderActivityPanel = (lead) => { const history = activityEntries(lead); return (
+    <div className="p-4 rounded-2xl bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 space-y-3.5">
+      <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+        <div className="flex items-center gap-2">
+          <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
+            ⚡
+          </div>
+          <div>
+            <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Daily Activity & Interactions</h4>
+            <p className="text-[10px] text-slate-400">Log calls, discussions, samples, and sent quotations</p>
+          </div>
+        </div>
+        <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
+          {history.length} logged activities
+        </span>
+      </div>
+
+      {/* Select Activities checklist pills */}
+      <div>
+        <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+          Select activity:
+        </label>
+        <div className="flex flex-wrap gap-1.5">
+          {AVAILABLE_ACTIVITIES.map((act) => {
+            const isSelected = dossierActivityType === act;
+            return (
+              <button
+                type="button"
+                key={act}
+                onClick={() => setDossierActivityType(act)}
+                className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
+                  isSelected
+                    ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                    : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
+                }`}
+              >
+                {isSelected ? '✓ ' : ''}{act}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Activity Note & Submit */}
+      <div className="space-y-2">
+        <textarea
+          rows={2}
+          placeholder="Write what happened with this lead… (e.g. today their purchasers don't stay at office, requested protein > 45%)..."
+          value={dossierActivityNote}
+          onChange={(e) => setDossierActivityNote(e.target.value)}
+          onKeyDown={runOnEnter(() => handleLogDossierActivity(lead))}
+          className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none"
+        />
+        <div className="flex items-center justify-between">
+          <span className="text-[10px] text-slate-400">
+            Tick an activity above — a note on its own is not saved.
+          </span>
+          <button
+            type="button"
+            onClick={() => handleLogDossierActivity(lead)}
+            className="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
+          >
+            <Send size={12} /> Log Activity
+          </button>
+        </div>
+      </div>
+
+      {/* Campaign mails sent to this lead (owner only; hidden when there are none) */}
+      {isOwner && <LeadEmailHistory leadId={lead.id} />}
+      {isOwner && <LeadAiCalls leadId={lead.id} />}
+      {(isOwner || profile?.permissions?.quotations === true) && <LeadDocuments leadId={lead.id} />}
+
+      {/* Activity History Timeline */}
+      {history.length > 0 && (
+        <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+          <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+            <History size={13} className="text-slate-400" />
+            <span>Activity history ({history.length})</span>
+          </div>
+          <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+            {history.map((hist, hIdx) => (
+              <div key={hIdx} className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 text-[11px] space-y-1">
+                <div className="flex items-center justify-between">
+                  <span className="font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800 text-[10px]">
+                    {hist.activity}
+                  </span>
+                  <span className="text-[10px] text-slate-400">
+                    {hist.date}
+                  </span>
+                </div>
+                <div className="text-slate-700 dark:text-slate-200 font-medium">
+                  {hist.note}
+                </div>
+                <div className="text-[10px] text-slate-400 text-right font-semibold">
+                  {hist.author}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  ); };
 
   // Delete Lead - Owner only
   const handleDelete = async (id) => {
@@ -1805,7 +1941,9 @@ export default function Leads() {
       {/* Dynamic Notification Toast */}
       {notification && (
         <div
-          className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold animate-fadeIn ${
+          role={notification.type === 'success' ? 'status' : 'alert'}
+          data-lead-toast={notification.type}
+          className={`fixed top-4 left-1/2 -translate-x-1/2 z-[80] w-[calc(100%-2rem)] max-w-xl shadow-lg p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold animate-fadeIn ${
             notification.type === 'success'
               ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
               : 'bg-rose-50 text-rose-800 border-rose-200'
@@ -2526,6 +2664,16 @@ export default function Leads() {
               <Ship size={13} className="text-emerald-600" />
               <span>4. Shipping & Assignment</span>
             </button>
+            {editingLead && (
+              <button
+                type="button"
+                onClick={() => document.getElementById('form-sec-activity')?.scrollIntoView({ behavior: 'smooth', block: 'start' })}
+                className="px-3 py-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-slate-700 dark:text-slate-200 hover:text-indigo-700 text-xs font-bold transition-colors cursor-pointer flex items-center gap-1.5 shrink-0"
+              >
+                <History size={13} className="text-indigo-600" />
+                <span>5. Activity</span>
+              </button>
+            )}
           </div>
 
           {/* ALL 4 SECTIONS RENDERED SEQUENTIALLY FOR CONTINUOUS SCROLLING */}
@@ -3629,6 +3777,9 @@ export default function Leads() {
             </div>
           </div>
 
+          {/* Same activity log as the View window */}
+          {editingLead && <div id="form-sec-activity" className="mt-5">{renderActivityPanel(editingLead)}</div>}
+
           {/* ACTION BUTTONS: STICKY AT BOTTOM FOR IMMEDIATE ACCESS */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 mt-6 bg-white dark:bg-slate-900 sticky bottom-0 z-20 pb-1">
             <button
@@ -4024,107 +4175,7 @@ export default function Leads() {
             </div>
 
             {/* DAILY ACTIVITY SECTION - EXACT SPECIFICATION MATCH */}
-            <div className="p-4 rounded-2xl bg-white dark:bg-slate-855 border border-slate-200 dark:border-slate-800 space-y-3.5">
-              <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
-                <div className="flex items-center gap-2">
-                  <div className="w-6 h-6 rounded-lg bg-indigo-100 text-indigo-700 flex items-center justify-center font-black text-xs">
-                    ⚡
-                  </div>
-                  <div>
-                    <h4 className="font-extrabold text-slate-900 dark:text-white text-xs">Daily Activity & Interactions</h4>
-                    <p className="text-[10px] text-slate-400">Log calls, discussions, samples, and sent quotations</p>
-                  </div>
-                </div>
-                <span className="text-[10px] font-bold text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-lg">
-                  {activeDetailLead.activity_history?.length || 0} logged activities
-                </span>
-              </div>
-
-              {/* Select Activities checklist pills */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Select activity:
-                </label>
-                <div className="flex flex-wrap gap-1.5">
-                  {AVAILABLE_ACTIVITIES.map((act) => {
-                    const isSelected = dossierActivityType === act;
-                    return (
-                      <button
-                        type="button"
-                        key={act}
-                        onClick={() => setDossierActivityType(act)}
-                        className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
-                          isSelected
-                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                            : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50'
-                        }`}
-                      >
-                        {isSelected ? '✓ ' : ''}{act}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Activity Note & Submit */}
-              <div className="space-y-2">
-                <textarea
-                  rows={2}
-                  placeholder="Write what happened with this lead… (e.g. today their purchasers don't stay at office, requested protein > 45%)..."
-                  value={dossierActivityNote}
-                  onChange={(e) => setDossierActivityNote(e.target.value)}
-                  onKeyDown={runOnEnter(handleLogDossierActivity)}
-                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none"
-                />
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-slate-400">
-                    Tick an activity above — a note on its own is not saved.
-                  </span>
-                  <button
-                    type="button"
-                    onClick={handleLogDossierActivity}
-                    className="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
-                  >
-                    <Send size={12} /> Log Activity
-                  </button>
-                </div>
-              </div>
-
-              {/* Campaign mails sent to this lead (owner only; hidden when there are none) */}
-              {isOwner && <LeadEmailHistory leadId={activeDetailLead.id} />}
-              {isOwner && <LeadAiCalls leadId={activeDetailLead.id} />}
-              {(isOwner || profile?.permissions?.quotations === true) && <LeadDocuments leadId={activeDetailLead.id} />}
-
-              {/* Activity History Timeline */}
-              {activeDetailLead.activity_history && activeDetailLead.activity_history.length > 0 && (
-                <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
-                  <div className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
-                    <History size={13} className="text-slate-400" />
-                    <span>Activity history ({activeDetailLead.activity_history.length})</span>
-                  </div>
-                  <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
-                    {activeDetailLead.activity_history.map((hist, hIdx) => (
-                      <div key={hIdx} className="p-2.5 rounded-xl bg-slate-50/80 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-700/60 text-[11px] space-y-1">
-                        <div className="flex items-center justify-between">
-                          <span className="font-extrabold text-indigo-700 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-md border border-indigo-200 dark:border-indigo-800 text-[10px]">
-                            {hist.activity}
-                          </span>
-                          <span className="text-[10px] text-slate-400">
-                            {hist.date}
-                          </span>
-                        </div>
-                        <div className="text-slate-700 dark:text-slate-200 font-medium">
-                          {hist.note}
-                        </div>
-                        <div className="text-[10px] text-slate-400 text-right font-semibold">
-                          {hist.author}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
+            {renderActivityPanel(activeDetailLead)}
 
             {/* FOLLOW-UP & REMARKS SECTION - EXACT SPECIFICATION MATCH */}
             <div className="p-4 rounded-2xl bg-white dark:bg-slate-850 border border-slate-200 dark:border-slate-800 space-y-3">

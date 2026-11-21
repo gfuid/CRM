@@ -59,6 +59,42 @@ const { isOwnerUser, isSuperAdmin, sameValue, viewBlocked } = require('../utils/
 // Staff the owner allowed to edit the full lead (products, deal, trade details). Assignment and Won/Lost stay with the owner.
 const STAFF_NEVER_FIELDS = ['assigned_to', 'agent_name'];
 const canEditLeadDetails = (user) => Boolean(user && user.permissions && user.permissions.edit_lead_details === true);
+
+/*
+ * Staff without "Edit full lead details" may still ADD to a lead: tags, more WhatsApp numbers, a new contact
+ * person, an alternate number or email, or fill a box that was empty. They may not change or remove what is there.
+ */
+const STAFF_FREE_FIELDS = ['tags', 'extra_whatsapp'];
+const STAFF_FILL_FIELDS = ['whatsapp', 'email', 'phone', 'contact_person', 'website', 'address', 'city', 'state', 'pincode', 'social_media'];
+const blank = (v) => v === undefined || v === null || (typeof v === 'string' && v.trim() === '') || (Array.isArray(v) && v.length === 0);
+const norm = (v) => {
+  const s = String(v ?? '').trim().toLowerCase();
+  const d = s.replace(/[^0-9]/g, '');
+  return d.length >= 6 && /^[+\d\s().-]+$/.test(s) ? d : s; // phone numbers: digits only
+};
+/** Every non-empty value of `before` is still in `after` (new values and new list items are fine). */
+const keepsAll = (before, after) => {
+  if (blank(before)) return true;
+  if (Array.isArray(before)) {
+    if (!Array.isArray(after)) return false;
+    if (before.every((b) => b === null || typeof b !== 'object')) {
+      const have = new Set(after.map(norm));
+      return before.filter((b) => !blank(b)).every((b) => have.has(norm(b)));
+    }
+    return before.every((b, i) => keepsAll(b, after[i]));
+  }
+  if (typeof before === 'object') {
+    if (!after || typeof after !== 'object') return false;
+    return Object.keys(before).filter((k) => k !== 'country_code').every((k) => keepsAll(before[k], after[k]));
+  }
+  return norm(before) === norm(after);
+};
+const staffMayAdd = (field, before, after) => {
+  if (STAFF_FREE_FIELDS.includes(field)) return true;
+  if (field === 'contacts' || field === 'social_links') return keepsAll(before, after);
+  if (STAFF_FILL_FIELDS.includes(field)) return blank(before);
+  return false;
+};
 const { buildContactIndex, contactInfo } = require('../utils/contact');
 
 // Fields the server manages itself. Clients may send them back (e.g. a whole lead object) and they are ignored.
@@ -460,7 +496,7 @@ const updateLead = async (req, res) => {
   if (!isOwner) {
     const notAllowed = canEditLeadDetails(req.user)
       ? changed.filter((field) => STAFF_NEVER_FIELDS.includes(field))
-      : changed.filter((field) => !STAFF_APPEND_FIELDS.includes(field) && !STAFF_CREATE_FIELDS.includes(field));
+      : changed.filter((field) => !STAFF_APPEND_FIELDS.includes(field) && !STAFF_CREATE_FIELDS.includes(field) && !staffMayAdd(field, current[field], body[field]));
     if (notAllowed.length) {
       return ApiResponse.error(
         res,
