@@ -41,6 +41,7 @@ const startServer = async () => {
     require('./src/controllers/whatsapp.controller').startWhatsAppScheduler();
     require('./src/controllers/aiCalls.controller').startAiCallScheduler();
     require('./src/controllers/social.controller').startSocialScheduler();
+    require('./src/controllers/social.controller').startSocialResults();
   }
 };
 

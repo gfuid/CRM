@@ -30,6 +30,40 @@ const POST = {
   image_idea: 'Golden turmeric fingers spilling from a jute sack on a wooden table, warm daylight',
 };
 
+const BRAND = {
+  company: 'Nova Agro Exports Pvt Ltd', website: 'www.novaagro.example', about: 'Indian exporter of turmeric, maize and rice DDGS with its own cleaning and grading unit in Kerala.',
+  products: 'Turmeric finger (curcumin 3%+), Maize (feed grade), Rice DDGS (protein 45%+)', certifications: 'APEDA, Spices Board, FSSAI',
+  countries: 'UAE, Saudi Arabia, Vietnam, Bangladesh', buyers: 'Importers, spice traders and feed mills', usp: 'Own processing unit and a lab report with every lot',
+  competitors: 'Vietnam and Myanmar suppliers', tone: 'professional and friendly', language: 'English', goal: 'Get enquiries from importers',
+  cta: 'WhatsApp us for today\'s CIF price', avoid: 'No prices in posts', photos: 'Product close-ups, packing, container loading',
+};
+// Posts on Tue / Thu / Sat of the month, rotating four pillars
+function monthPlan(month) {
+  const [y, m] = month.split('-').map(Number);
+  const days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const today = new Date().toISOString().slice(0, 10);
+  const topics = [
+    ['Product', 'photo', 'New crop turmeric is ready', 'Close-up of turmeric fingers, curcumin 3%+, invite importers to ask for the CIF price.', ['facebook', 'instagram']],
+    ['Quality', 'carousel', 'How we clean and grade every lot', 'Steps in our unit: cleaning, polishing, grading, lab test.', ['facebook', 'instagram']],
+    ['Shipments', 'photo', 'Another container on its way to Dubai', 'Loading photo, thank the buyer without naming them.', ['facebook']],
+    ['Market', 'text', 'Turmeric market this week', 'Short note on crop arrivals and demand, no prices.', ['facebook']],
+  ];
+  const items = [];
+  for (let d = 1; d <= days; d++) {
+    const date = `${month}-${String(d).padStart(2, '0')}`;
+    const wd = new Date(`${date}T00:00:00Z`).getUTCDay();
+    if (![2, 4, 6].includes(wd) || date < today) continue;
+    const t = topics[items.length % topics.length];
+    items.push({ date, time: wd === 6 ? '11:00' : '10:30', platforms: t[4], pillar: t[0], format: t[1], title: t[2], brief: t[3] });
+  }
+  return {
+    summary: 'This month we show the new crop and our quality process, and prove reliability with shipments. Posts go out on Gulf and Asian business mornings.',
+    pillars: [{ name: 'Product', share: 35, why: 'Buyers first want to see the goods' }, { name: 'Quality', share: 25, why: 'Lab reports and process build trust' }, { name: 'Shipments', share: 25, why: 'Proof that we deliver' }, { name: 'Market', share: 15, why: 'Shows expertise, starts conversations' }],
+    best_times: [{ day: 'Tuesday', time: '10:30', why: 'Gulf buyers start their week early' }, { day: 'Thursday', time: '10:30', why: 'Before the Gulf weekend' }, { day: 'Saturday', time: '11:00', why: 'Working day in the Gulf and Asia' }],
+    items,
+  };
+}
+
 export function startFakeAi(port = 5097) {
   const picture = png();
   const server = http.createServer((req, res) => {
@@ -48,7 +82,14 @@ export function startFakeAi(port = 5097) {
           { date: '', title: 'Inside our cleaning and grading unit', brief: 'Short behind-the-scenes post about quality checks.', platforms: ['facebook', 'instagram'] },
           { date: '', title: 'Container loaded for Dubai', brief: 'Shipment photo, thank the buyer (no names).', platforms: ['facebook'] },
           { date: '', title: 'Meet us at Gulfood', brief: 'Trade fair stand number and dates.', platforms: ['facebook', 'instagram'] },
-        ] }) : JSON.stringify(POST);
+        ] }) : /Review last month/.test(String(b.system)) ? JSON.stringify({
+          summary: 'Shipment and product photos got the most likes and the only buyer enquiries. Text-only market notes were seen but few people reacted. Tuesday mornings did best.',
+          worked: ['Container loading photos (proof that we deliver)', 'Product close-ups on Tuesday mornings', 'Instagram for reach, Facebook for enquiries'],
+          not_worked: ['Text-only market notes', 'Saturday posts'],
+          next_month: ['More Shipments posts (30% → 40%)', 'Replace text notes with a photo or carousel', 'Post Tuesday and Thursday 10:30', 'Reply to every comment within a day'],
+        }) : /prepare the brand profile/.test(String(b.system)) ? JSON.stringify(BRAND)
+          : /Plan one month of posts/.test(String(b.system)) ? JSON.stringify(monthPlan((/Month: (\d{4}-\d{2})/.exec(JSON.stringify(b.messages)) || [])[1] || '2030-01'))
+          : JSON.stringify(POST);
         return send(200, { id: 'msg_fake', type: 'message', role: 'assistant', model: b.model, content: [{ type: 'text', text }], stop_reason: 'end_turn', stop_sequence: null, usage: { input_tokens: 50, output_tokens: 120 } });
       }
       if (req.url === '/openai/chat/completions') {

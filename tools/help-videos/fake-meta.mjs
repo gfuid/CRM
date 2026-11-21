@@ -25,6 +25,24 @@ export function startFakeMeta(port = 5099) {
       if (p === '/me/accounts') return send(200, { data: [{ id: '5001', name: 'Nova Agro Exports', access_token: 'DEMO_PAGE_TOKEN', instagram_business_account: { id: '1784', username: 'novaagro.exports' } }] });
       if (req.method === 'POST' && p === '/5001/feed') { state.social.push({ kind: 'feed', ...form }); return send(200, { id: `5001_${state.social.length}` }); }
       if (req.method === 'POST' && p === '/5001/photos') { state.social.push({ kind: 'photo', ...form }); return send(200, { id: 'ph1', post_id: `5001_${state.social.length}` }); }
+      // Results + comments of published posts (numbers vary by post so the report can rank them)
+      const fbm = /^\/5001_(\d+)(\/insights|\/comments)?$/.exec(p);
+      const igm = /^\/igm(\d+)(\/insights|\/comments)?$/.exec(p);
+      if (req.method === 'GET' && fbm && (fbm[2] || /reactions/.test(q.get('fields') || ''))) {
+        const k = Number(fbm[1]);
+        const pop = [40, 12, 95, 7, 30, 60][k % 6];
+        if (fbm[2] === '/insights') return send(200, { data: [{ name: 'post_impressions_unique', values: [{ value: pop * 23 }] }, { name: 'post_clicks', values: [{ value: Math.round(pop / 4) }] }] });
+        if (fbm[2] === '/comments') return send(200, { data: k % 3 === 1 ? [{ id: `c_5001_${k}_1`, from: { id: '901', name: 'Ahmed Al-Mansoor' }, message: 'Please send CIF Jebel Ali price for 20 MT', created_time: new Date().toISOString() }] : [] });
+        return send(200, { reactions: { summary: { total_count: pop } }, comments: { summary: { total_count: k % 3 === 1 ? 1 : 0 } }, shares: { count: Math.round(pop / 10) } });
+      }
+      if (req.method === 'GET' && igm && (igm[2] || /like_count/.test(q.get('fields') || ''))) {
+        const k = Number(igm[1]);
+        const pop = [70, 25, 140, 15][k % 4];
+        if (igm[2] === '/insights') return send(200, { data: [{ name: 'reach', values: [{ value: pop * 18 }] }, { name: 'saved', values: [{ value: Math.round(pop / 7) }] }, { name: 'shares', values: [{ value: Math.round(pop / 20) }] }] });
+        if (igm[2] === '/comments') return send(200, { data: k % 2 ? [{ id: `igc_${k}`, username: 'saigon_feed_mill', text: 'Interested in maize, what is your MOQ?', timestamp: new Date().toISOString() }] : [] });
+        return send(200, { like_count: pop, comments_count: k % 2 });
+      }
+      if (req.method === 'POST' && /^\/(c_5001_\d+_\d+|igc_\d+)\/(comments|replies)$/.test(p)) { state.replies = [...(state.replies || []), { path: p, ...form }]; return send(200, { id: `reply${(state.replies || []).length}` }); }
       if (req.method === 'GET' && /^\/5001_\d+$/.test(p)) return send(200, { permalink_url: `https://www.facebook.com/novaagro/posts${p}` });
       if (req.method === 'POST' && p === '/1784/media') { state.containers.push(form); return send(200, { id: `cont${state.containers.length}` }); }
       if (req.method === 'GET' && /^\/cont\d+$/.test(p)) return send(200, { status_code: 'FINISHED' });

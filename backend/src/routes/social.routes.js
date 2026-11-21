@@ -24,6 +24,28 @@ router.post('/ai/write', asyncHandler(sm.writeWithAi));
 router.post('/ai/ideas', asyncHandler(sm.ideasWithAi));
 router.post('/ai/image', enforceStorageQuota, asyncHandler(sm.imageWithAi));
 
+// AI Social Media Manager: Brand Profile -> month plan -> posts written from it -> scheduled
+router.get('/brand', asyncHandler(sm.getBrand));
+router.put('/brand', sm.ownerOnly, asyncHandler(sm.saveBrand));
+router.post('/brand/draft', sm.ownerOnly, asyncHandler(sm.draftBrand));
+router.get('/plan', asyncHandler(sm.getPlan));
+router.post('/plan', sm.ownerOnly, asyncHandler(sm.makePlan));
+router.put('/plan/:id', sm.ownerOnly, asyncHandler(sm.updatePlan));
+router.delete('/plan/:id', sm.ownerOnly, asyncHandler(sm.deletePlan));
+router.post('/plan/:id/write', sm.ownerOnly, asyncHandler(sm.writePlanPosts));
+router.post('/plan/:id/schedule', sm.ownerOnly, asyncHandler(sm.schedulePlan));
+router.post('/plan/:id/pictures', sm.ownerOnly, enforceStorageQuota, asyncHandler(sm.planPictures));
+router.post('/plan/:id/facebook-only', sm.ownerOnly, asyncHandler(sm.planFacebookOnly));
+
+// Part 2: results, monthly report + AI review, comments inbox (reply, make a lead)
+router.post('/results/refresh', asyncHandler(sm.refreshResultsNow));
+router.get('/report', asyncHandler(sm.getReport));
+router.post('/report/review', sm.ownerOnly, asyncHandler(sm.reviewWithAi));
+router.get('/comments', asyncHandler(sm.listComments));
+router.post('/comments/:id/reply', asyncHandler(sm.replyComment));
+router.put('/comments/:id', asyncHandler(sm.markComment));
+router.post('/comments/:id/lead', asyncHandler(sm.commentToLead));
+
 // Pictures
 router.post('/media', enforceStorageQuota, asyncHandler(sm.uploadMedia));
 

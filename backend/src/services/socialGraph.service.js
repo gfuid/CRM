@@ -107,4 +107,50 @@ const publishInstagram = async (igId, token, { caption, imageUrl }, { waitMs = 1
   return { id: p.id, permalink };
 };
 
-module.exports = { ready, appId, loginUrl, exchangeAndList, publishFacebook, publishInstagram, call, SCOPES };
+/* ---------------- Results and comments ---------------- */
+
+const insightValues = (data) => Object.fromEntries((data || []).map((m) => [m.name, Number(((m.values || [])[0] || {}).value ?? m.total_value?.value ?? 0) || 0]));
+
+/** Likes, comments, shares, saves, reach and clicks of one published post. Missing numbers stay 0. */
+const fetchMetrics = async (platform, extId, token) => {
+  const out = { likes: 0, comments: 0, shares: 0, saves: 0, reach: 0, clicks: 0 };
+  if (platform === 'facebook') {
+    const p = await call('GET', extId, { token, query: { fields: 'shares,reactions.summary(total_count).limit(0),comments.summary(total_count).limit(0)' } });
+    out.likes = Number(p.reactions && p.reactions.summary && p.reactions.summary.total_count) || 0;
+    out.comments = Number(p.comments && p.comments.summary && p.comments.summary.total_count) || 0;
+    out.shares = Number(p.shares && p.shares.count) || 0;
+    try {
+      const ins = insightValues((await call('GET', `${extId}/insights`, { token, query: { metric: 'post_impressions_unique,post_clicks' } })).data);
+      out.reach = ins.post_impressions_unique || 0;
+      out.clicks = ins.post_clicks || 0;
+    } catch { /* reach needs read_insights; likes etc. are still useful */ }
+  } else {
+    const m = await call('GET', extId, { token, query: { fields: 'like_count,comments_count' } });
+    out.likes = Number(m.like_count) || 0;
+    out.comments = Number(m.comments_count) || 0;
+    try {
+      const ins = insightValues((await call('GET', `${extId}/insights`, { token, query: { metric: 'reach,saved,shares' } })).data);
+      out.reach = ins.reach || 0;
+      out.saves = ins.saved || 0;
+      out.shares = ins.shares || 0;
+    } catch { /* see above */ }
+  }
+  return out;
+};
+
+/** Newest comments on a post: [{ ext_id, author, author_id, text, created_time }]. */
+const fetchComments = async (platform, extId, token) => {
+  if (platform === 'facebook') {
+    const r = await call('GET', `${extId}/comments`, { token, query: { fields: 'id,from{id,name},message,created_time', order: 'reverse_chronological', limit: 50 } });
+    return (r.data || []).map((c) => ({ ext_id: c.id, author: (c.from && c.from.name) || 'Facebook user', author_id: (c.from && c.from.id) || '', text: c.message || '', created_time: c.created_time || '' }));
+  }
+  const r = await call('GET', `${extId}/comments`, { token, query: { fields: 'id,username,text,timestamp', limit: 50 } });
+  return (r.data || []).map((c) => ({ ext_id: c.id, author: c.username ? `@${c.username}` : 'Instagram user', author_id: c.username || '', text: c.text || '', created_time: c.timestamp || '' }));
+};
+
+/** Reply under a comment (public). */
+const replyToComment = async (platform, commentId, token, message) => (platform === 'facebook'
+  ? call('POST', `${commentId}/comments`, { token, form: { message } })
+  : call('POST', `${commentId}/replies`, { token, form: { message } }));
+
+module.exports = { ready, appId, loginUrl, exchangeAndList, publishFacebook, publishInstagram, fetchMetrics, fetchComments, replyToComment, call, SCOPES };

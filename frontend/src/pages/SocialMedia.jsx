@@ -1,10 +1,13 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  Share2, Lock, Loader2, Plus, CalendarDays, List, Settings, Sparkles, Image as ImageIcon, Upload, X, Trash2, RefreshCw,
+  TrendingUp, MessageSquare, Share2, Lock, Loader2, Plus, CalendarDays, List, Settings, Sparkles, Image as ImageIcon, Upload, X, Trash2, RefreshCw,
   CheckCircle2, AlertCircle, Clock, Send, ChevronLeft, ChevronRight, ExternalLink, KeyRound, Wand2, Check, Lightbulb, Pencil,
 } from 'lucide-react';
 import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
+import AiManager from '../components/social/AiManager';
+import SocialResults from '../components/social/SocialResults';
+import SocialComments from '../components/social/SocialComments';
 
 /* Simple brand marks (the icon set has none) */
 const Facebook = ({ size = 14, className = '' }) => (<svg width={size} height={size} viewBox='0 0 24 24' fill='currentColor' className={className} aria-hidden='true'><path d='M14 8.5V6.8c0-.8.5-1 .9-1H17V2.1L14 2c-3.3 0-4 2.4-4 4v2.5H8V12h2v10h4V12h2.8l.4-3.5H14z' /></svg>);
@@ -466,6 +469,7 @@ function AiSettings({ reload }) {
 export default function SocialMedia() {
   const [status, setStatus] = useState(null);
   const [tab, setTab] = useState('calendar');
+  const [newComments, setNewComments] = useState(0);
   const [posts, setPosts] = useState([]);
   const [month, setMonth] = useState(() => { const d = new Date(); return new Date(d.getFullYear(), d.getMonth(), 1); });
   const [composer, setComposer] = useState(null);
@@ -481,6 +485,9 @@ export default function SocialMedia() {
     return sm(`/posts?from=${ymd(from)}&to=${ymd(to)}`).then((r) => setPosts(r.data || [])).catch(() => {});
   }, [month]);
   useEffect(() => { loadStatus(); }, [loadStatus]);
+  // First visit of an owner without a Brand Profile: start with the AI Manager
+  const [tabChosen, setTabChosen] = useState(false);
+  useEffect(() => { if (status?.can_use && !tabChosen) { setTabChosen(true); if (status.is_owner && !status.brand_saved && !new URLSearchParams(window.location.search).get('social')) setTab('manager'); } }, [status, tabChosen]);
   useEffect(() => { if (status?.can_use) loadPosts(); }, [status?.can_use, loadPosts]);
   // Back from Facebook login: ?social=connected | error&msg=…
   useEffect(() => {
@@ -515,8 +522,11 @@ export default function SocialMedia() {
     try { await sm(`/posts/${id}`, 'PUT', { scheduled_at: next.toISOString(), action: 'keep' }); setBanner({ type: 'success', text: `Moved to ${fmt(next)}` }); loadPosts(); } catch (e) { setBanner({ type: 'error', text: e.message }); }
   };
   const tabs = [
+    { id: 'manager', label: 'AI Manager', icon: Sparkles, dot: status.is_owner && !status.brand_saved },
     { id: 'calendar', label: 'Calendar', icon: CalendarDays },
     { id: 'posts', label: 'Posts', icon: List, count: status.pending_approval ? `${status.pending_approval} to approve` : undefined },
+    { id: 'results', label: 'Results', icon: TrendingUp },
+    { id: 'comments', label: 'Comments', icon: MessageSquare, count: (newComments || status.new_comments) ? `${newComments || status.new_comments} new` : undefined },
     { id: 'accounts', label: 'Accounts', icon: Share2, dot: !accounts.length },
     ...(status.is_owner ? [{ id: 'ai', label: 'AI settings', icon: Settings, dot: !status.ai?.text }] : []),
   ];
@@ -548,12 +558,25 @@ export default function SocialMedia() {
                 <Icon size={14} /><span>{t.label}</span>{t.count && <span className="px-1.5 rounded bg-amber-100 text-amber-800 text-[10px]">{t.count}</span>}{t.dot && <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />}
               </button>); })}
           </div>
+          {tab === 'manager' && (
+            <AiManager status={status} isOwner={status.is_owner} accounts={accounts}
+              onStatusChanged={loadStatus}
+              onPostsChanged={() => { loadPosts(); loadStatus(); }}
+              onOpenPost={async (id, edit) => {
+                let p = posts.find((x) => x.id === id);
+                if (!p) { try { const r = await sm('/posts'); p = (r.data || []).find((x) => x.id === id); } catch { p = null; } }
+                if (!p) return;
+                if (edit) setComposer(p); else setOpen(p);
+              }} />
+          )}
           {tab === 'calendar' && (
             <div className="space-y-4">
               {ideasOpen && <IdeasPanel month={month} onClose={() => setIdeasOpen(false)} onUse={(i) => { setIdeasOpen(false); setComposer({ topic: `${i.title}. ${i.brief}`, scheduled_at: i.date ? new Date(`${i.date}T10:00`).toISOString() : null }); }} />}
               <Calendar posts={posts} accounts={accounts} month={month} setMonth={setMonth} onOpen={setOpen} onNewOn={(day) => setComposer({ scheduled_at: new Date(`${day}T10:00`).toISOString() })} onMove={move} />
             </div>
           )}
+          {tab === 'results' && <SocialResults isOwner={status.is_owner} aiReady={Boolean(status.ai?.text)} />}
+          {tab === 'comments' && <SocialComments onCount={setNewComments} />}
           {tab === 'posts' && <PostList posts={posts} accounts={accounts} onOpen={setOpen} />}
           {tab === 'accounts' && <Accounts status={status} isOwner={status.is_owner} reload={loadStatus} setBanner={(t) => setBanner({ type: 'success', text: t })} />}
           {tab === 'ai' && status.is_owner && <AiSettings reload={loadStatus} />}
