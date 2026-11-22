@@ -3711,6 +3711,9 @@ export default function Leads() {
                   </div>
               </div>
 
+              {/* Daily activity (same log as the View window): after shipping & assignment, before the next follow-up */}
+              {editingLead && <div id="form-sec-activity" className="scroll-mt-16">{renderActivityPanel(editingLead)}</div>}
+
               {/* Next Follow-up + Remarks Card (two columns in both rows) */}
               <div className="bg-emerald-50/70 dark:bg-emerald-950/40 p-4 rounded-xl border border-emerald-200 dark:border-emerald-800/60 space-y-3">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -3824,9 +3827,6 @@ export default function Leads() {
               </div>
             </div>
           </div>
-
-          {/* Same activity log as the View window */}
-          {editingLead && <div id="form-sec-activity" className="mt-5">{renderActivityPanel(editingLead)}</div>}
 
           {/* ACTION BUTTONS: STICKY AT BOTTOM FOR IMMEDIATE ACCESS */}
           <div className="flex items-center justify-between pt-4 border-t border-slate-200 dark:border-slate-800 mt-6 bg-white dark:bg-slate-900 sticky bottom-0 z-20 pb-1">
