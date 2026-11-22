@@ -4,7 +4,7 @@ import { api } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import Modal from '../components/Modal';
 import { useLeadOptions } from '../data/leadOptions';
-import { evaluateCalculator } from '../data/formula';
+import { evaluateCalculator, currencyOf, unitText } from '../data/formula';
 import { CONTAINER_TYPES, PRICE_TERMS, QUOTE_UNITS, CURRENCIES, OTHER_CURRENCIES, currencyLabel, newSheet, calcSheet, copySheet, upgradeSheet, money } from '../data/shippingCalc';
 
 const inputCls = 'w-full px-3 py-2 text-xs bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500/30 focus:border-emerald-500 focus:outline-none';
@@ -545,7 +545,21 @@ function QuoteTermButtons({ sheet, r }) {
 /** A calculator the platform admin built: same sheet look, its own boxes and formulas. */
 function CustomCalculator({ calc }) {
   const [inputs, setInputs] = useState({});
-  const { values, errors } = useMemo(() => evaluateCalculator(calc.rows, inputs), [calc.rows, inputs]);
+  // Currency boxes: today's rate between the chosen local and quote currency (the user may type another rate)
+  const cur = currencyOf(calc.rows, inputs);
+  const [fx, setFx] = useState({ rate: 0, typed: '', status: '', updated_at: '', source: '' });
+  useEffect(() => {
+    if (!cur.local || !cur.quote) return undefined;
+    if (cur.local === cur.quote) { setFx({ rate: 1, typed: '', status: '', updated_at: '', source: 'same currency' }); return undefined; }
+    let gone = false;
+    setFx((f) => ({ ...f, typed: '', status: 'loading' }));
+    api.getFxRate(cur.quote, cur.local)
+      .then((r) => { if (!gone) setFx({ rate: Number(r?.data?.rate) || 0, typed: '', status: Number(r?.data?.rate) ? '' : 'error', updated_at: r?.data?.updated_at || '', source: r?.data?.source || '' }); })
+      .catch(() => { if (!gone) setFx({ rate: 0, typed: '', status: 'error', updated_at: '', source: '' }); });
+    return () => { gone = true; };
+  }, [cur.local, cur.quote]);
+  const rate = fx.typed !== '' && Number(fx.typed) > 0 ? Number(fx.typed) : fx.rate;
+  const { values, errors } = useMemo(() => evaluateCalculator(calc.rows, inputs, { fx: rate }), [calc.rows, inputs, rate]);
   const fmtNum = (v, d) => (v === null || v === undefined ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d }));
   return (
     <div data-custom-calculator={calc.name}>
@@ -560,7 +574,7 @@ function CustomCalculator({ calc }) {
         <tbody>
           {calc.rows.map((r) => {
             if (r.kind === 'heading') return <tr key={r.key}><td colSpan={2} className={`${sheetCell} bg-slate-100 dark:bg-slate-800 font-black`}>{r.label}</td></tr>;
-            const note = [r.unit, r.hint].filter(Boolean).join(' · ');
+            const note = [unitText(r.unit, cur), r.hint].filter(Boolean).join(' · ');
             const label = (
               <td className={`${sheetCell} ${r.kind === 'formula' && r.highlight ? 'font-bold' : ''}`}>
                 {r.label}{note && <span className="font-normal text-[11px] text-slate-500"> ({note})</span>}
@@ -577,6 +591,38 @@ function CustomCalculator({ calc }) {
               );
             }
             const val = Object.prototype.hasOwnProperty.call(inputs, r.key) ? inputs[r.key] : r.default;
+            if (r.kind === 'currency') {
+              const showRate = r.role === 'quote' && cur.local && cur.quote && cur.local !== cur.quote;
+              return (
+                <React.Fragment key={r.key}>
+                  <tr data-custom-currency={r.role || 'local'}>
+                    {label}
+                    <td className={sheetInputCell}>
+                      <CurrencySelect value={val} onChange={(v) => setInputs({ ...inputs, [r.key]: v })} label={r.label} className={`${sheetSelect} w-full text-right`} />
+                    </td>
+                  </tr>
+                  {showRate && (
+                    <tr data-custom-fx>
+                      <td className={`${sheetCell} text-[11px] text-slate-500`}>
+                        {fx.status === 'loading' ? "Getting today's rate…"
+                          : fx.status === 'error' && fx.typed === '' ? "Today's rate could not be loaded. Type the rate."
+                          : fx.typed !== '' ? 'Your rate'
+                          : `Today's rate${fx.source ? ` (${fx.source}${fx.updated_at ? `, ${new Date(fx.updated_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short' })}` : ''})` : ''}`}
+                        {fx.typed !== '' && fx.rate > 0 && <button type="button" onClick={() => setFx((f) => ({ ...f, typed: '' }))} className="ml-1 font-semibold text-emerald-700 cursor-pointer">use today&apos;s rate</button>}
+                      </td>
+                      <td className={sheetInputCell}>
+                        <div className="flex items-center gap-1 text-xs font-semibold text-slate-600 dark:text-slate-300 pl-2">
+                          <span className="shrink-0">1 {cur.quote} =</span>
+                          <input type="number" inputMode="decimal" step="any" aria-label={`Exchange rate, ${cur.local} for 1 ${cur.quote}`} value={fx.typed !== '' ? fx.typed : (fx.rate ? Math.round(fx.rate * 10000) / 10000 : '')}
+                            onChange={(e) => setFx((f) => ({ ...f, typed: e.target.value }))} className={sheetInput} />
+                          <span className="shrink-0 pr-2">{cur.local}</span>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </React.Fragment>
+              );
+            }
             return (
               <tr key={r.key}>
                 {label}

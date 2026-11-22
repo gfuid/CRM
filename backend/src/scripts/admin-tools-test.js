@@ -215,6 +215,21 @@ const login = async (email, password) => (await call('POST', '/auth/login', null
   rec('CA-05', 'Super Admin', 'A hidden calculator disappears from the CRM', 'hidden', `${calc_hide.status} ${calc_afterHide.includes('CI calc for all') ? 'still shown' : 'hidden'}`, calc_hide.status === 200 && !calc_afterHide.includes('CI calc for all'));
   const calc_delA = await call('DELETE', `/admin/calculators/${calcAll.data.data.id}`, SA);
   const calc_delB = await call('DELETE', `/admin/calculators/${calcOne.data.data.id}`, SA);
+  const calcCur = await call('POST', '/admin/calculators', SA, { name: 'CI currency calc', rows: [
+    { key: 'local_currency', label: 'Local value in currency', kind: 'currency', role: 'local', default: 'aed', unit: 'x' },
+    { key: 'quote_currency', label: 'Share quote in currency', kind: 'currency', role: 'quote', default: 'EURO' },
+    { key: 'amt', label: 'Amount', kind: 'number', default: 100 },
+    { key: 'res', label: 'Result', kind: 'formula', formula: 'amt / fx', unit: '{quote}/MT' },
+  ] });
+  const cr = calcCur.data?.data?.rows || [];
+  const calcTwoLocal = await call('POST', '/admin/calculators', SA, { name: 'Two locals', rows: [
+    { key: 'a', label: 'A', kind: 'currency', role: 'local', default: 'INR' }, { key: 'b', label: 'B', kind: 'currency', role: 'local', default: 'AED' },
+  ] });
+  const calcFxName = await call('POST', '/admin/calculators', SA, { name: 'fx name', rows: [{ key: 'fx', label: 'Fx', kind: 'number', default: 1 }] });
+  rec('CA-07', 'Super Admin', 'Currency boxes are saved (role, 3-letter code); two Local boxes or a box named fx are refused', '201 local:AED quote:EUR {quote}/MT, 400 400',
+    `${calcCur.status} ${cr[0]?.role}:${cr[0]?.default} ${cr[1]?.role}:${cr[1]?.default} ${cr[3]?.unit}, ${calcTwoLocal.status} ${calcFxName.status}`,
+    calcCur.status === 201 && cr[0]?.role === 'local' && cr[0]?.default === 'AED' && cr[1]?.role === 'quote' && cr[1]?.default === 'EUR' && cr[3]?.unit === '{quote}/MT' && calcTwoLocal.status === 400 && calcFxName.status === 400);
+  if (calcCur.data?.data?.id) await call('DELETE', `/admin/calculators/${calcCur.data.data.id}`, SA);
   rec('CA-06', 'Super Admin', 'Admin deletes calculators', '200 200', `${calc_delA.status} ${calc_delB.status}`, calc_delA.status === 200 && calc_delB.status === 200);
 
   // 6b. Admin announcements: popup choice, late joiners, privacy of the read list

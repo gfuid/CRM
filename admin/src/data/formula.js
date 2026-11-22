@@ -7,6 +7,8 @@
  *   Operators:               + - * / ^  and  x%  (= x / 100)
  *   Compare:                 > < >= <= = == != <>      (true = 1, false = 0)
  *   Functions:               SUM MIN MAX AVERAGE ROUND ROUNDUP ROUNDDOWN ABS SQRT IF
+ *   Exchange rate:           fx = how much local currency for 1 quote currency (today's rate), e.g. 93.5 for 1 USD = 93.5 INR
+ *                            (needs a "Local currency" and a "Quote currency" box; the page gives the rate)
  *
  * THE SAME FILE is kept in admin/src/data/formula.js (frontend/scripts/formula-test.mjs checks they match).
  */
@@ -172,12 +174,34 @@ const evalTree = (n, get) => {
 /** "Price per kg (INR)" -> "price_per_kg_inr" (unique among `taken`). */
 export const makeKey = (label, taken = []) => {
   const base = String(label || 'box').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').replace(/^(\d)/, 'n_$1').slice(0, 40) || 'box';
-  const safe = /^r\d+$/.test(base) ? `${base}_box` : base;
+  const safe = /^r\d+$/.test(base) || base === FX ? `${base}_box` : base;
   let key = safe;
   let i = 2;
   while (taken.includes(key)) { key = `${safe}_${i}`; i += 1; }
   return key;
 };
+
+/* ---------------- currency boxes ---------------- */
+// A "currency" row only picks a currency (no number): role 'local' = the values typed are in it,
+// role 'quote' = the results are shown in it. `fx` in a formula is the rate between the two.
+export const FX = 'fx';
+const code = (v, fallback) => {
+  const c = String(v || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 3);
+  return c.length === 3 ? c : fallback;
+};
+/** The local and quote currency chosen in a calculator: { local, quote } (null when there is no such box). */
+export const currencyOf = (rows = [], inputs = {}) => {
+  const pick = (role, fallback) => {
+    const r = (rows || []).find((x) => x.kind === 'currency' && (x.role || 'local') === role);
+    if (!r) return null;
+    return code(Object.prototype.hasOwnProperty.call(inputs, r.key) ? inputs[r.key] : r.default, fallback);
+  };
+  return { local: pick('local', 'INR'), quote: pick('quote', 'USD') };
+};
+/** "{quote}/MT" -> "USD/MT", "{local}/kg" -> "INR/kg" */
+export const unitText = (unit, cur = {}) => String(unit || '')
+  .replace(/\{quote\}/gi, cur.quote || 'quote currency')
+  .replace(/\{local\}/gi, cur.local || 'local currency');
 
 const toNumber = (v) => {
   if (v === '' || v === null || v === undefined) return 0;
@@ -187,24 +211,36 @@ const toNumber = (v) => {
 
 /**
  * Work out every row of a calculator.
- * rows: [{ key, kind: 'number' | 'select' | 'formula' | 'heading', default, options: [{ label, value }], formula }]
- * inputs: { key: typed value }
- * -> { values: { key: number | null }, errors: { key: message } }
+ * rows: [{ key, kind: 'number' | 'select' | 'formula' | 'heading' | 'currency', default, options: [{ label, value }], formula, role }]
+ * inputs: { key: typed value (a currency code for a currency box) }
+ * ctx:    { fx: today's rate, local currency for 1 quote currency } (the page loads it)
+ * -> { values: { key: number | null }, errors: { key: message }, currency: { local, quote, fx } }
  */
-export const evaluateCalculator = (rows = [], inputs = {}) => {
+export const evaluateCalculator = (rows = [], inputs = {}, ctx = {}) => {
   const list = Array.isArray(rows) ? rows : [];
   const byKey = new Map(list.map((r, i) => [r.key, { r, i }]));
   const values = {};
   const errors = {};
   const state = {}; // key -> 'busy' | 'done'
 
+  const currency = currencyOf(list, inputs);
+  const givenFx = Number(ctx && ctx.fx);
+  const fx = currency.local && currency.quote
+    ? (currency.local === currency.quote ? 1 : (Number.isFinite(givenFx) && givenFx > 0 ? givenFx : null))
+    : null;
   const resolve = (name) => {
     let entry = byKey.get(name);
+    if (!entry && name.toLowerCase() === FX) {
+      if (!currency.local || !currency.quote) throw new Error('Add a "Local currency" and a "Quote currency" box to use fx');
+      if (fx === null) throw new Error("Today's exchange rate is not loaded yet");
+      return fx;
+    }
     if (!entry) {
       const m = /^r(\d+)$/i.exec(name);
       if (m) entry = list[Number(m[1]) - 1] ? { r: list[Number(m[1]) - 1] } : null;
     }
     if (!entry) throw new Error(`Unknown box "${name}"`);
+    if (entry.r.kind === 'currency') throw new Error(`"${entry.r.label || entry.r.key}" only picks a currency; use fx for the exchange rate`);
     const v = compute(entry.r);
     if (v === null) throw new Error(`"${entry.r.label || entry.r.key}" has no value`);
     return v;
@@ -215,7 +251,7 @@ export const evaluateCalculator = (rows = [], inputs = {}) => {
     state[r.key] = 'busy';
     let v = null;
     try {
-      if (r.kind === 'heading') v = null;
+      if (r.kind === 'heading' || r.kind === 'currency') v = null;
       else if (r.kind === 'formula') {
         v = evalTree(parseFormula(r.formula), resolve);
         if (!Number.isFinite(v)) throw new Error('The result is not a number');
@@ -232,7 +268,7 @@ export const evaluateCalculator = (rows = [], inputs = {}) => {
     return v;
   };
   list.forEach(compute);
-  return { values, errors };
+  return { values, errors, currency: { ...currency, fx } };
 };
 
 /** Checks a whole calculator before it is saved. Returns a list of plain messages (empty = fine). */
@@ -246,11 +282,17 @@ export const checkCalculator = (rows = []) => {
     else if (keys.has(r.key)) problems.push(`${where}: the box name "${r.key}" is used twice`);
     keys.add(r.key);
     if (r.kind === 'select' && !(r.options || []).length) problems.push(`${where}: add at least one choice`);
+    if (r.key === FX) problems.push(`${where}: "fx" is the exchange rate name; give this box another name`);
     if (r.kind === 'formula') {
       try { parseFormula(r.formula); } catch (err) { problems.push(`${where}: ${err.message}`); }
     }
   });
-  const { errors } = evaluateCalculator(rows, {});
+  ['local', 'quote'].forEach((role) => {
+    if ((rows || []).filter((r) => r.kind === 'currency' && (r.role || 'local') === role).length > 1) {
+      problems.push(`Only one "${role === 'local' ? 'Local' : 'Quote'} currency" box is allowed`);
+    }
+  });
+  const { errors } = evaluateCalculator(rows, {}, { fx: 1 }); // any rate will do for checking
   Object.entries(errors).forEach(([key, msg]) => {
     if (/divide by 0|has no value/i.test(msg)) return; // fine while the boxes are still empty
     const i = (rows || []).findIndex((r) => r.key === key);

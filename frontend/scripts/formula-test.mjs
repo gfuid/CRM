@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluateCalculator, checkCalculator, parseFormula, makeKey, EXAMPLE_ROWS } from '../src/data/formula.js';
+import { evaluateCalculator, checkCalculator, parseFormula, makeKey, currencyOf, unitText, EXAMPLE_ROWS } from '../src/data/formula.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const results = [];
@@ -63,6 +63,37 @@ rec('C-04', 'An empty formula is refused', 'The formula is empty', threw, threw 
 
 // The Admin Console runs the same engine
 const a = fs.readFileSync(path.join(here, '../src/data/formula.js'), 'utf8');
+// Currency boxes: pick a local and a quote currency, fx = today's rate (local for 1 quote)
+const CUR_ROWS = [
+  { key: 'tons', label: 'Total ton in a container', kind: 'number', default: 25 },
+  { key: 'local_currency', label: 'Local value in currency', kind: 'currency', role: 'local', default: 'INR' },
+  { key: 'quote_currency', label: 'Share quote in currency', kind: 'currency', role: 'quote', default: 'USD' },
+  { key: 'unit_kg', label: 'Need quote in Ton/kg', kind: 'select', default: 1000, options: [{ label: 'Ton', value: 1000 }, { label: 'Kg', value: 1 }] },
+  { key: 'price_kg', label: 'Per kg price', kind: 'number', default: 10 },
+  { key: 'transport_kg', label: 'Local transport', kind: 'number', default: 1 },
+  { key: 'customs', label: 'Customs', kind: 'number', default: 60000 },
+  { key: 'profit', label: 'Profit %', kind: 'number', default: 2 },
+  { key: 'fob', label: 'FOB', kind: 'formula', unit: '{quote}/MT', formula: '((price_kg + transport_kg) * unit_kg + customs / tons * unit_kg / 1000) * (1 + profit%) / fx' },
+];
+const BAD_ROWS = [...CUR_ROWS, { key: 'bad', label: 'Bad', kind: 'formula', formula: 'local_currency * 2' }];
+const cur95 = evaluateCalculator(CUR_ROWS, {}, { fx: 95 });
+rec('X-01', 'fx = the rate the page gives: same FOB as the old sheet with rate 95', '143.87', cur95.values.fob?.toFixed(2), near(cur95.values.fob, 143.87));
+const noRate = evaluateCalculator(CUR_ROWS, {}).errors.fob || '';
+rec('X-02', 'Without a rate the result says the rate is not loaded', 'not loaded', noRate, /not loaded/.test(noRate));
+const same = evaluateCalculator(CUR_ROWS, { quote_currency: 'INR' });
+rec('X-03', 'Same local and quote currency: fx = 1 (no rate needed)', '13668.0', same.values.fob?.toFixed(1), near(same.values.fob, 13668, 0.05));
+const aed = currencyOf(CUR_ROWS, { local_currency: 'AED', quote_currency: 'eur' });
+rec('X-04', 'Chosen currencies are read (any case), units use them', 'AED EUR EUR/MT', `${aed.local} ${aed.quote} ${unitText('{quote}/MT', aed)}`, aed.local === 'AED' && aed.quote === 'EUR' && unitText('{quote}/MT', aed) === 'EUR/MT');
+const curBad = evaluateCalculator(BAD_ROWS, {}, { fx: 95 }).errors.bad || '';
+rec('X-05', 'A currency box has no number; using its name in a formula points to fx', 'use fx', curBad, /use fx/.test(curBad));
+const noBoxes = checkCalculator([{ key: 'a', label: 'A', kind: 'number', default: 1 }, { key: 'b', label: 'B', kind: 'formula', formula: 'a / fx' }]);
+rec('X-06', 'fx without the two currency boxes is refused before saving', 'Add a "Local currency"', noBoxes[0] || 'none', /Local currency/.test(noBoxes[0] || ''));
+const twoLocal = checkCalculator([...CUR_ROWS, { key: 'local2', label: 'Local 2', kind: 'currency', role: 'local', default: 'AED' }]);
+const twoLocalRefused = twoLocal.some((x) => /Only one "Local/.test(x));
+rec('X-07', 'Only one Local currency box; the full example checks clean', 'refused / 0 problems', `${twoLocalRefused ? 'refused' : 'allowed'} / ${checkCalculator(CUR_ROWS).length} problems`, twoLocalRefused && checkCalculator(CUR_ROWS).length === 0);
+const fxNamed = checkCalculator([{ key: 'fx', label: 'Fx', kind: 'number', default: 1 }]).length > 0;
+rec('X-08', 'A box may not be called fx (it is the rate)', 'fx_box + refused', `${makeKey('FX')} + ${fxNamed ? 'refused' : 'allowed'}`, makeKey('FX') === 'fx_box' && fxNamed);
+
 const b = fs.readFileSync(path.join(here, '../../admin/src/data/formula.js'), 'utf8');
 rec('S-01', 'Admin Console and CRM use the same formula file', 'identical', a === b ? 'identical' : 'different — copy frontend/src/data/formula.js to admin/src/data/', a === b);
 

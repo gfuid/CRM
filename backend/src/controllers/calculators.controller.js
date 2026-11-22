@@ -10,7 +10,7 @@ const { isOwnerUser, isSuperAdmin } = require('../utils/access');
 const STORE_ID = 'calculators';
 const MAX_CALCULATORS = 100;
 const MAX_ROWS = 60;
-const KINDS = ['number', 'select', 'formula', 'heading'];
+const KINDS = ['number', 'select', 'formula', 'heading', 'currency'];
 
 const str = (v, max) => (typeof v === 'string' ? v.replace(/\s+/g, ' ').trim().slice(0, max) : '');
 const num = (v) => { const n = Number(v); return Number.isFinite(n) ? n : 0; };
@@ -44,6 +44,12 @@ const cleanRow = (r) => {
       .filter((o) => o.label);
     row.default = r.default === '' || r.default === undefined ? (row.options[0] ? row.options[0].value : 0) : num(r.default);
   }
+  if (kind === 'currency') {
+    // Only picks a currency: 'local' = typed values are in it, 'quote' = results are shown in it (formulas use fx)
+    row.role = r && r.role === 'quote' ? 'quote' : 'local';
+    const c = str(r && r.default, 3).toUpperCase().replace(/[^A-Z]/g, '');
+    row.default = c.length === 3 ? c : (row.role === 'quote' ? 'USD' : 'INR');
+  }
   if (kind === 'formula') {
     row.formula = str(r && r.formula, 1000);
     row.highlight = Boolean(r && r.highlight);
@@ -66,6 +72,10 @@ const fromBody = (b = {}) => {
     keys.add(r.key);
     if (r.kind === 'formula' && !r.formula) return { error: `Row ${i + 1}: write the formula` };
     if (r.kind === 'select' && !r.options.length) return { error: `Row ${i + 1}: add at least one choice` };
+    if (r.key === 'fx') return { error: `Row ${i + 1}: "fx" is the exchange rate name; give this box another name` };
+  }
+  for (const role of ['local', 'quote']) {
+    if (rows.filter((r) => r.kind === 'currency' && r.role === role).length > 1) return { error: `Only one "${role === 'local' ? 'Local' : 'Quote'} currency" box is allowed` };
   }
   const audience = b.audience === 'companies' ? 'companies' : 'all';
   const companyIds = audience === 'companies'

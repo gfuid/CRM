@@ -1,16 +1,54 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calculator, Plus, Pencil, Trash2, Save, X, ArrowUp, ArrowDown, Copy, Eye, EyeOff, Search, Info } from 'lucide-react';
-import { evaluateCalculator, checkCalculator, makeKey, EXAMPLE_ROWS, FUNCTION_NAMES } from '../data/formula';
+import { evaluateCalculator, checkCalculator, makeKey, currencyOf, unitText, EXAMPLE_ROWS, FUNCTION_NAMES } from '../data/formula';
 
-const KIND_LABELS = { number: 'Input box (number)', select: 'Dropdown (choices)', formula: 'Formula (result)', heading: 'Heading (title only)' };
+const KIND_LABELS = { number: 'Input box (number)', select: 'Dropdown (choices)', formula: 'Formula (result)', heading: 'Heading (title only)', currency: 'Currency (pick only)' };
+
+// Every currency (the usual export ones first)
+const COMMON_CURRENCIES = ['INR', 'USD', 'EUR', 'AED', 'GBP', 'SAR', 'VND', 'LKR', 'BDT', 'NGN', 'KES', 'CNY', 'IDR', 'THB', 'MYR'];
+const ALL_CURRENCIES = (() => {
+  try { const l = Intl.supportedValuesOf('currency'); if (l && l.length) return l.filter((c) => !COMMON_CURRENCIES.includes(c)); } catch { /* older browser */ }
+  return [];
+})();
+const currencyName = (() => { try { const d = new Intl.DisplayNames(['en'], { type: 'currency' }); return (c) => { const n = d.of(c); return n && n !== c ? `${c} – ${n}` : c; }; } catch { return (c) => c; } })();
+function CurrencyPick({ value, onChange, label, className }) {
+  const known = COMMON_CURRENCIES.includes(value) || ALL_CURRENCIES.includes(value);
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value)} aria-label={label} title={currencyName(value)} className={className}>
+      {!known && value && <option value={value}>{value}</option>}
+      <optgroup label="Common">{COMMON_CURRENCIES.map((c) => <option key={c} value={c}>{currencyName(c)}</option>)}</optgroup>
+      {ALL_CURRENCIES.length > 0 && <optgroup label="All currencies">{ALL_CURRENCIES.map((c) => <option key={c} value={c}>{currencyName(c)}</option>)}</optgroup>}
+    </select>
+  );
+}
+
+/** Today's rate for the preview: local currency for 1 quote currency (same service the CRM uses). */
+function useFx(apiBase, getHeaders, cur) {
+  const [fx, setFx] = useState({ rate: 0, status: '', updated_at: '' });
+  useEffect(() => {
+    if (!cur.local || !cur.quote) return undefined;
+    if (cur.local === cur.quote) { setFx({ rate: 1, status: '', updated_at: '' }); return undefined; }
+    let gone = false;
+    setFx((f) => ({ ...f, status: 'loading' }));
+    fetch(`${String(apiBase).replace(/\/admin\/?$/, '')}/shipping/fx?from=${cur.quote}&to=${cur.local}`, { headers: getHeaders() })
+      .then((r) => r.json())
+      .then((r) => { if (!gone) setFx(r.success && r.data?.rate ? { rate: Number(r.data.rate), status: '', updated_at: r.data.updated_at } : { rate: 0, status: 'error', updated_at: '' }); })
+      .catch(() => { if (!gone) setFx({ rate: 0, status: 'error', updated_at: '' }); });
+    return () => { gone = true; };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cur.local, cur.quote]);
+  return fx;
+}
 const EMPTY = { name: '', description: '', active: true, audience: 'all', company_ids: [], rows: [] };
 const inputCls = 'w-full px-2.5 py-1.5 text-xs bg-white border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500/30 focus:border-indigo-500';
 const fmt = (v, d = 2) => (v === null || v === undefined ? '—' : Number(v).toLocaleString('en-US', { maximumFractionDigits: d }));
 
 /** The calculator as the CRM shows it (sheet style), with test values typed here. */
-function Preview({ calc }) {
+function Preview({ calc, apiBase, getHeaders }) {
   const [test, setTest] = useState({});
-  const { values, errors } = useMemo(() => evaluateCalculator(calc.rows, test), [calc.rows, test]);
+  const cur = currencyOf(calc.rows, test);
+  const fx = useFx(apiBase, getHeaders, cur);
+  const { values, errors } = useMemo(() => evaluateCalculator(calc.rows, test, { fx: fx.rate }), [calc.rows, test, fx.rate]);
   const cell = 'border border-slate-400 px-2 py-1';
   return (
     <div className="space-y-2" data-calc-preview>
@@ -22,7 +60,21 @@ function Preview({ calc }) {
         <tbody>
           {calc.rows.map((r) => {
             if (r.kind === 'heading') return <tr key={r.key}><td colSpan={2} className={`${cell} bg-slate-100 font-black`}>{r.label}</td></tr>;
-            const unit = r.unit ? <span className="text-[10px] text-slate-500"> ({r.unit})</span> : null;
+            const unit = r.unit ? <span className="text-[10px] text-slate-500"> ({unitText(r.unit, cur)})</span> : null;
+            if (r.kind === 'currency') {
+              const val = Object.prototype.hasOwnProperty.call(test, r.key) ? test[r.key] : r.default;
+              const fxText = fx.status === 'loading' ? "Getting today's rate…" : fx.status === 'error' ? "Today's rate could not be loaded" : fx.rate ? `1 ${cur.quote} = ${fmt(fx.rate, 4)} ${cur.local} · today's rate` : '';
+              return (
+                <tr key={r.key} data-preview-currency={r.role || 'local'}>
+                  <td className={cell}>{r.label}
+                    {r.role === 'quote' && cur.local && cur.quote && <div className="text-[10px] text-slate-500" data-preview-fx>{fxText}</div>}
+                  </td>
+                  <td className={`${cell} bg-[#a4c2f4] p-0`}>
+                    <CurrencyPick value={val} label={r.label} onChange={(v) => setTest({ ...test, [r.key]: v })} className="w-full bg-transparent px-2 py-1 text-right font-semibold focus:outline-none" />
+                  </td>
+                </tr>
+              );
+            }
             if (r.kind === 'formula') {
               return (
                 <tr key={r.key} data-preview-row={r.key}>
@@ -58,7 +110,8 @@ function Preview({ calc }) {
 
 function RowEditor({ row, index, total, rows, onChange, onMove, onRemove }) {
   const set = (patch) => onChange({ ...row, ...patch });
-  const others = rows.filter((r) => r.key !== row.key && r.kind !== 'heading');
+  const others = rows.filter((r) => r.key !== row.key && r.kind !== 'heading' && r.kind !== 'currency');
+  const hasCurrency = rows.some((r) => r.kind === 'currency');
   const [focused, setFocused] = useState(false);
   const insert = (text) => set({ formula: `${row.formula || ''}${row.formula && !/[\s(+\-*/^,]$/.test(row.formula) ? ' ' : ''}${text}` });
   return (
@@ -71,7 +124,7 @@ function RowEditor({ row, index, total, rows, onChange, onMove, onRemove }) {
             const autoKey = row._autoKey !== false;
             set({ label, ...(autoKey ? { key: makeKey(label, rows.filter((r) => r !== row).map((r) => r.key)) } : {}) });
           }} />
-        <select aria-label={`Row ${index + 1} type`} value={row.kind} onChange={(e) => set({ kind: e.target.value, ...(e.target.value === 'select' && !(row.options || []).length ? { options: [{ label: 'Option 1', value: 1 }] } : {}) })} className={`${inputCls} w-auto`}>
+        <select aria-label={`Row ${index + 1} type`} value={row.kind} onChange={(e) => set({ kind: e.target.value, ...(e.target.value === 'select' && !(row.options || []).length ? { options: [{ label: 'Option 1', value: 1 }] } : {}), ...(e.target.value === 'currency' ? (rows.some((r) => r !== row && r.kind === 'currency' && (r.role || 'local') === 'local') ? { role: 'quote', default: 'USD' } : { role: 'local', default: 'INR' }) : {}) })} className={`${inputCls} w-auto`}>
           {Object.entries(KIND_LABELS).map(([k, l]) => <option key={k} value={k}>{l}</option>)}
         </select>
         <div className="flex items-center gap-1 ml-auto">
@@ -105,15 +158,30 @@ function RowEditor({ row, index, total, rows, onChange, onMove, onRemove }) {
               <button type="button" onClick={() => set({ options: [...(row.options || []), { label: `Option ${(row.options || []).length + 1}`, value: (row.options || []).length + 1 }] })} className="text-indigo-600 cursor-pointer">+ Add choice</button>
             </div>
           )}
+          {row.kind === 'currency' && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+              <label className="text-[10px] font-bold text-slate-500">This box is the
+                <select value={row.role || 'local'} onChange={(e) => set({ role: e.target.value, default: e.target.value === 'quote' ? 'USD' : 'INR' })} className={inputCls} aria-label={`Row ${index + 1} currency role`}>
+                  <option value="local">Local currency (the values typed are in it)</option>
+                  <option value="quote">Quote currency (results are shown in it)</option>
+                </select>
+              </label>
+              <label className="text-[10px] font-bold text-slate-500">Starting currency
+                <CurrencyPick value={row.default || (row.role === 'quote' ? 'USD' : 'INR')} onChange={(v) => set({ default: v })} label={`Row ${index + 1} starting currency`} className={inputCls} />
+              </label>
+            </div>
+          )}
           {row.kind === 'formula' && (
             <label className="text-[10px] font-bold text-slate-500">Formula (like Excel, without cell letters)
               <input value={row.formula || ''} onFocus={() => setFocused(true)} onBlur={() => setTimeout(() => setFocused(false), 200)}
                 onChange={(e) => set({ formula: e.target.value })} placeholder="e.g. (price_kg + transport_kg) * 1000 / rate" className={`${inputCls} font-mono`} aria-label={`Row ${index + 1} formula`} />
             </label>
           )}
-          <label className="text-[10px] font-bold text-slate-500">Unit (optional)
-            <input value={row.unit || ''} onChange={(e) => set({ unit: e.target.value })} placeholder="e.g. INR/kg" className={inputCls} />
-          </label>
+          {row.kind !== 'currency' && (
+            <label className="text-[10px] font-bold text-slate-500" title="{local} and {quote} become the chosen currencies, e.g. {quote}/MT -> USD/MT">Unit (optional)
+              <input value={row.unit || ''} onChange={(e) => set({ unit: e.target.value })} placeholder={hasCurrency ? 'e.g. {quote}/MT or {local}/kg' : 'e.g. INR/kg'} className={inputCls} />
+            </label>
+          )}
         </div>
       )}
       {row.kind === 'formula' && (
@@ -124,6 +192,7 @@ function RowEditor({ row, index, total, rows, onChange, onMove, onRemove }) {
               {others.map((o) => (
                 <button key={o.key} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(o.key)} className="px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 text-[10px] font-mono cursor-pointer" title={o.label}>{o.key}</button>
               ))}
+              {hasCurrency && <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert('fx')} className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-800 text-[10px] font-mono font-bold cursor-pointer" title="Today's exchange rate: local currency for 1 quote currency. Divide by fx to turn a local amount into the quote currency.">fx</button>}
               {['+', '-', '*', '/', '(', ')', '%'].map((op) => (
                 <button key={op} type="button" onMouseDown={(e) => e.preventDefault()} onClick={() => insert(op)} className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-700 text-[10px] font-mono cursor-pointer">{op}</button>
               ))}
@@ -195,9 +264,11 @@ export default function CalculatorsSection({ apiBase, getHeaders, showToast, use
   };
 
   const addRow = (kind) => setForm((f) => {
-    const label = kind === 'formula' ? `Result ${f.rows.filter((r) => r.kind === 'formula').length + 1}` : kind === 'heading' ? 'Section title' : `Box ${f.rows.length + 1}`;
-    const key = makeKey(label, f.rows.map((r) => r.key));
-    const row = { key, label, kind, unit: '', hint: '', ...(kind === 'number' ? { default: '' } : {}), ...(kind === 'formula' ? { formula: '', highlight: true, decimals: 2 } : {}), ...(kind === 'select' ? { options: [{ label: 'Option 1', value: 1 }], default: 1 } : {}) };
+    const role = kind === 'currency' ? (f.rows.some((r) => r.kind === 'currency' && (r.role || 'local') === 'local') ? 'quote' : 'local') : '';
+    const label = kind === 'formula' ? `Result ${f.rows.filter((r) => r.kind === 'formula').length + 1}` : kind === 'heading' ? 'Section title'
+      : kind === 'currency' ? (role === 'quote' ? 'Share quote in currency' : 'Local value in currency') : `Box ${f.rows.length + 1}`;
+    const key = makeKey(kind === 'currency' ? `${role} currency` : label, f.rows.map((r) => r.key));
+    const row = { key, label, kind, unit: '', hint: '', ...(kind === 'number' ? { default: '' } : {}), ...(kind === 'formula' ? { formula: '', highlight: true, decimals: 2 } : {}), ...(kind === 'select' ? { options: [{ label: 'Option 1', value: 1 }], default: 1 } : {}), ...(kind === 'currency' ? { role, default: role === 'quote' ? 'USD' : 'INR' } : {}) };
     return { ...f, rows: [...f.rows, row] };
   });
 
@@ -250,6 +321,7 @@ export default function CalculatorsSection({ apiBase, getHeaders, showToast, use
               <div>Use the <b>box names</b> (or row numbers like <b>R5</b>) with <b>+ − * / ^</b> and brackets. <b>2%</b> means 0.02.</div>
               <div>Example: <code className="bg-white px-1 rounded">((price_kg + transport_kg) * 1000 + customs / tons) * (1 + profit%) / rate</code></div>
               <div>Functions: {FUNCTION_NAMES.join(', ')} — e.g. <code className="bg-white px-1 rounded">IF(qty &gt; 100, 5, 2)</code>, <code className="bg-white px-1 rounded">ROUND(fob, 2)</code></div>
+              <div><b>Currency:</b> add a <b>Local currency</b> box (values typed are in it) and a <b>Quote currency</b> box (results are shown in it). Then <b>fx</b> is today&apos;s rate (local for 1 quote), e.g. <code className="bg-white px-1 rounded">(price_kg * 1000 + customs / tons) / fx</code>. In a unit, <b>{'{quote}'}</b> and <b>{'{local}'}</b> become the chosen currencies.</div>
             </div>
 
             {form.rows.map((row, i) => (
@@ -263,6 +335,7 @@ export default function CalculatorsSection({ apiBase, getHeaders, showToast, use
               <button type="button" onClick={() => addRow('select')} className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer flex items-center gap-1"><Plus size={13} /> Dropdown</button>
               <button type="button" onClick={() => addRow('formula')} className="px-3 py-2 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs font-bold cursor-pointer flex items-center gap-1"><Plus size={13} /> Formula</button>
               <button type="button" onClick={() => addRow('heading')} className="px-3 py-2 rounded-lg bg-slate-50 border border-slate-200 text-slate-700 text-xs font-bold cursor-pointer flex items-center gap-1"><Plus size={13} /> Heading</button>
+              <button type="button" onClick={() => addRow('currency')} className="px-3 py-2 rounded-lg bg-amber-50 border border-amber-200 text-amber-800 text-xs font-bold cursor-pointer flex items-center gap-1" title="A box that only picks a currency. Add a Local and a Quote currency box, then use fx in formulas."><Plus size={13} /> Currency</button>
             </div>
             {problems.length > 0 && (
               <div className="rounded-xl border border-rose-200 bg-rose-50 p-3 text-xs text-rose-700 space-y-0.5" data-calc-problems>
@@ -270,7 +343,7 @@ export default function CalculatorsSection({ apiBase, getHeaders, showToast, use
               </div>
             )}
           </div>
-          <div className="rounded-xl border border-slate-200 bg-white p-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto"><Preview calc={form} /></div>
+          <div className="rounded-xl border border-slate-200 bg-white p-3 xl:max-h-[calc(100vh-170px)] xl:overflow-y-auto"><Preview calc={form} apiBase={apiBase} getHeaders={getHeaders} /></div>
         </div>
       </div>
     );
