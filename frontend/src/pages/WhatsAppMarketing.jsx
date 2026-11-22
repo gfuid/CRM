@@ -561,6 +561,11 @@ function Setup({ onChanged }) {
     setBusy('save'); setMsg(null);
     try { const r = await api.wa('/settings', 'PUT', f); setMsg({ type: 'success', text: r.message }); setF((x) => ({ ...x, access_token: '', app_secret: '' })); load(); onChanged(); } catch (e) { setMsg({ type: 'error', text: e.message }); } finally { setBusy(''); }
   };
+  const disconnect = async () => {
+    if (!window.confirm('Disconnect this WhatsApp number? The saved access token is deleted and the CRM stops sending from it.')) return;
+    setBusy('disconnect'); setMsg(null);
+    try { const r = await api.wa('/settings/disconnect', 'POST'); setMsg({ type: 'success', text: r.message }); load(); onChanged(); } catch (e) { setMsg({ type: 'error', text: e.message }); } finally { setBusy(''); }
+  };
   const saveRates = async () => {
     setBusy('rates');
     try { await api.wa('/settings/rates', 'PUT', rates); setMsg({ type: 'success', text: 'Rates saved' }); } catch (e) { setMsg({ type: 'error', text: e.message }); } finally { setBusy(''); }
@@ -589,7 +594,10 @@ function Setup({ onChanged }) {
           <div><label className={label}>App secret (checks that updates really come from Meta)</label><input className={input} type="password" value={f.app_secret} onChange={(e) => setF({ ...f, app_secret: e.target.value })} placeholder={s.has_app_secret ? '•••• saved' : 'recommended'} autoComplete="new-password" /></div>
         </div>
         {msg && <Notice type={msg.type}>{msg.text}</Notice>}
-        <button className={primary} onClick={connect} disabled={busy !== ''}>{busy === 'save' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save & check connection</button>
+        <div className="flex flex-wrap gap-2">
+          <button className={primary} onClick={connect} disabled={busy !== ''}>{busy === 'save' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle2 size={14} />} Save & check connection</button>
+          {(s.connected_at || s.has_token) && <button className={`${secondary} text-rose-600`} onClick={disconnect} disabled={busy !== ''} data-wa-disconnect>{busy === 'disconnect' ? <Loader2 size={14} className="animate-spin" /> : <X size={14} />} Disconnect number</button>}
+        </div>
       </div>
 
       <div className={`${card} p-4 sm:p-5 space-y-2`}>

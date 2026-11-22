@@ -585,11 +585,12 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
             <span className="font-bold text-sm text-slate-900">Travel-Trade CRM Platform</span>
           </div>
           <p className="text-xs text-slate-400">
-            &copy; {new Date().getFullYear()} Travel-Trade CRM Inc. All rights reserved. Enterprise-grade Security & RBAC.
+            &copy; {new Date().getFullYear()} Travel-Trade. All rights reserved. Enterprise-grade Security & RBAC.
           </p>
           <div className="flex items-center gap-4 text-xs font-medium text-slate-500">
-            <a href="#privacy" className="hover:text-slate-900">Privacy Policy</a>
-            <a href="#terms" className="hover:text-slate-900">Terms of Service</a>
+            <a href="/privacy" className="hover:text-slate-900">Privacy Policy</a>
+            <a href="/terms" className="hover:text-slate-900">Terms of Service</a>
+            <a href="/data-deletion" className="hover:text-slate-900">Data Deletion</a>
           </div>
         </div>
       </footer>
