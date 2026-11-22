@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Calculator, Plus, Pencil, Trash2, Save, X, ArrowUp, ArrowDown, Copy, Eye, EyeOff, Search, Info } from 'lucide-react';
-import { evaluateCalculator, checkCalculator, makeKey, currencyOf, unitText, EXAMPLE_ROWS, FUNCTION_NAMES } from '../data/formula';
+import { evaluateCalculator, checkCalculator, makeKey, currencyOf, unitText, upgradeToCurrency, EXAMPLE_ROWS, FUNCTION_NAMES } from '../data/formula';
 
 const KIND_LABELS = { number: 'Input box (number)', select: 'Dropdown (choices)', formula: 'Formula (result)', heading: 'Heading (title only)', currency: 'Currency (pick only)' };
 
@@ -316,10 +316,16 @@ export default function CalculatorsSection({ apiBase, getHeaders, showToast, use
               )}
             </div>
 
+            {upgradeToCurrency(form.rows) && (
+              <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 flex flex-wrap items-center justify-between gap-2" data-calc-upgrade>
+                <span>This calculator asks people to <b>type the rate</b> (1 USD = ? INR). Switch to <b>currency dropdowns</b> with today&apos;s rate?</span>
+                <button type="button" onClick={() => setForm((f) => ({ ...f, rows: upgradeToCurrency(f.rows).map((r) => ({ ...r, _autoKey: false })) }))} className="px-3 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold cursor-pointer">Use currency dropdowns</button>
+              </div>
+            )}
             <div className="rounded-xl border border-indigo-100 bg-indigo-50/60 p-3 text-[11px] text-slate-600 space-y-1">
               <div className="font-bold text-slate-800 flex items-center gap-1"><Info size={12} /> How formulas work</div>
               <div>Use the <b>box names</b> (or row numbers like <b>R5</b>) with <b>+ − * / ^</b> and brackets. <b>2%</b> means 0.02.</div>
-              <div>Example: <code className="bg-white px-1 rounded">((price_kg + transport_kg) * 1000 + customs / tons) * (1 + profit%) / rate</code></div>
+              <div>Example: <code className="bg-white px-1 rounded">((price_kg + transport_kg) * 1000 + customs / tons) * (1 + profit%) / fx</code></div>
               <div>Functions: {FUNCTION_NAMES.join(', ')} — e.g. <code className="bg-white px-1 rounded">IF(qty &gt; 100, 5, 2)</code>, <code className="bg-white px-1 rounded">ROUND(fob, 2)</code></div>
               <div><b>Currency:</b> add a <b>Local currency</b> box (values typed are in it) and a <b>Quote currency</b> box (results are shown in it). Then <b>fx</b> is today&apos;s rate (local for 1 quote), e.g. <code className="bg-white px-1 rounded">(price_kg * 1000 + customs / tons) / fx</code>. In a unit, <b>{'{quote}'}</b> and <b>{'{local}'}</b> become the chosen currencies.</div>
             </div>

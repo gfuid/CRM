@@ -302,18 +302,48 @@ export const checkCalculator = (rows = []) => {
   return problems;
 };
 
-/** The export price calculator of the company sheet, as an example to start from. */
+/**
+ * An older calculator with a typed rate box ("1 USD = ? INR", used as `rate` in formulas) -> the same
+ * calculator with a Local and a Quote currency dropdown and today's rate (fx). null when nothing to change.
+ */
+export const upgradeToCurrency = (rows = []) => {
+  const list = Array.isArray(rows) ? rows : [];
+  if (list.some((r) => r.kind === 'currency')) return null;
+  const rateRow = list.find((r) => r.kind === 'number' && (r.key === 'rate' || /1\s*[A-Z]{3}\s*=\s*\?/i.test(r.label || '')));
+  if (!rateRow) return null;
+  const word = new RegExp(`\\b${rateRow.key}\\b`, 'g');
+  const codes = /([A-Z]{3})\s*=\s*\?\s*([A-Z]{3})/.exec(rateRow.label || '') || [];
+  const quote = codes[1] || 'USD';
+  const local = codes[2] || (/^[A-Z]{3}$/.test(rateRow.unit || '') ? rateRow.unit : 'INR');
+  const taken = list.map((r) => r.key);
+  const localKey = makeKey('local currency', taken);
+  const quoteKey = makeKey('quote currency', [...taken, localKey]);
+  const unitOf = (u) => String(u || '').replace(new RegExp(`\\b${local}\\b`, 'g'), '{local}').replace(new RegExp(`\\b${quote}\\b`, 'g'), '{quote}');
+  const out = [];
+  list.forEach((r) => {
+    if (r === rateRow) {
+      out.push({ key: localKey, label: 'Local value in currency', kind: 'currency', role: 'local', default: local, unit: '', hint: '' });
+      out.push({ key: quoteKey, label: 'Share quote in currency', kind: 'currency', role: 'quote', default: quote, unit: '', hint: '' });
+      return;
+    }
+    out.push({ ...r, unit: unitOf(r.unit), ...(r.kind === 'formula' ? { formula: String(r.formula || '').replace(word, FX) } : {}) });
+  });
+  return out;
+};
+
+/** The export price calculator of the company sheet, as an example to start from (today's rate via fx). */
 export const EXAMPLE_ROWS = [
   { key: 'tons', label: 'Total ton in a container', kind: 'number', default: 25, unit: 'MT' },
-  { key: 'rate', label: 'Share quote in which currency (1 USD = ? INR)', kind: 'number', default: 95, unit: 'INR' },
+  { key: 'local_currency', label: 'Local value in currency', kind: 'currency', role: 'local', default: 'INR' },
+  { key: 'quote_currency', label: 'Share quote in currency (USD / EUR / other)', kind: 'currency', role: 'quote', default: 'USD' },
   { key: 'unit_kg', label: 'Need quote in Ton/kg', kind: 'select', default: 1000, options: [{ label: 'Ton', value: 1000 }, { label: 'Kg', value: 1 }] },
-  { key: 'price_kg', label: 'Per Kg Price ex plant incl. packaging and loading', kind: 'number', default: 10, unit: 'INR/kg' },
-  { key: 'transport_kg', label: 'Local transportation up to port', kind: 'number', default: 1, unit: 'INR/kg' },
-  { key: 'customs', label: 'Customs clearance including local charges', kind: 'number', default: 60000, unit: 'INR/container' },
+  { key: 'price_kg', label: 'Per Kg Price ex plant incl. packaging and loading', kind: 'number', default: 10, unit: '{local}/kg' },
+  { key: 'transport_kg', label: 'Local transportation up to port', kind: 'number', default: 1, unit: '{local}/kg' },
+  { key: 'customs', label: 'Customs clearance including local charges', kind: 'number', default: 60000, unit: '{local}/container' },
   { key: 'profit', label: 'Profit in %', kind: 'number', default: 2, unit: '%' },
-  { key: 'fob', label: 'FOB', kind: 'formula', formula: '((price_kg + transport_kg) * unit_kg + customs / tons * unit_kg / 1000) * (1 + profit%) / rate', highlight: true, decimals: 2, unit: 'USD' },
-  { key: 'freight', label: 'Ocean freight in USD', kind: 'number', default: 400, unit: 'USD/container' },
-  { key: 'cfr', label: 'CFR', kind: 'formula', formula: 'fob + freight / tons * unit_kg / 1000', highlight: true, decimals: 2, unit: 'USD' },
-  { key: 'insurance', label: 'Insurance', kind: 'number', default: 5000, unit: 'INR/container' },
-  { key: 'cif', label: 'CIF', kind: 'formula', formula: '((price_kg + transport_kg) * unit_kg + (customs + insurance) / tons * unit_kg / 1000) * (1 + profit%) / rate + freight / tons * unit_kg / 1000', highlight: true, decimals: 2, unit: 'USD' },
+  { key: 'fob', label: 'FOB', kind: 'formula', formula: '((price_kg + transport_kg) * unit_kg + customs / tons * unit_kg / 1000) * (1 + profit%) / fx', highlight: true, decimals: 2, unit: '{quote}' },
+  { key: 'freight', label: 'Ocean freight', kind: 'number', default: 400, unit: '{quote}/container' },
+  { key: 'cfr', label: 'CFR', kind: 'formula', formula: 'fob + freight / tons * unit_kg / 1000', highlight: true, decimals: 2, unit: '{quote}' },
+  { key: 'insurance', label: 'Insurance', kind: 'number', default: 5000, unit: '{local}/container' },
+  { key: 'cif', label: 'CIF', kind: 'formula', formula: '((price_kg + transport_kg) * unit_kg + (customs + insurance) / tons * unit_kg / 1000) * (1 + profit%) / fx + freight / tons * unit_kg / 1000', highlight: true, decimals: 2, unit: '{quote}' },
 ];

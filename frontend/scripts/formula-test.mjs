@@ -5,7 +5,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { evaluateCalculator, checkCalculator, parseFormula, makeKey, currencyOf, unitText, EXAMPLE_ROWS } from '../src/data/formula.js';
+import { evaluateCalculator, checkCalculator, parseFormula, makeKey, currencyOf, unitText, upgradeToCurrency, EXAMPLE_ROWS } from '../src/data/formula.js';
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const results = [];
@@ -18,11 +18,11 @@ const one = (formula, boxes = {}) => {
 };
 
 // The company sheet, built with the engine
-const sheet = evaluateCalculator(EXAMPLE_ROWS, {});
+const sheet = evaluateCalculator(EXAMPLE_ROWS, {}, { fx: 95 });
 rec('F-01', 'Example calculator = the company sheet (FOB / CFR / CIF)', '143.87 / 159.87 / 162.02', `${sheet.values.fob?.toFixed(2)} / ${sheet.values.cfr?.toFixed(2)} / ${sheet.values.cif?.toFixed(2)}`, near(sheet.values.fob, 143.87) && near(sheet.values.cfr, 159.87) && near(sheet.values.cif, 162.02));
-const perKg = evaluateCalculator(EXAMPLE_ROWS, { unit_kg: 1 });
+const perKg = evaluateCalculator(EXAMPLE_ROWS, { unit_kg: 1 }, { fx: 95 });
 rec('F-02', 'Choosing "Kg" in the dropdown gives the price per kg', 'FOB 0.1439', perKg.values.fob?.toFixed(4), near(perKg.values.fob, 0.1439, 0.00005));
-rec('F-03', 'Typed values replace the starting values', 'profit 3% -> FOB 145.28', evaluateCalculator(EXAMPLE_ROWS, { profit: 3 }).values.fob?.toFixed(2), near(evaluateCalculator(EXAMPLE_ROWS, { profit: 3 }).values.fob, 145.28));
+rec('F-03', 'Typed values replace the starting values', 'profit 3% -> FOB 145.28', evaluateCalculator(EXAMPLE_ROWS, { profit: 3 }, { fx: 95 }).values.fob?.toFixed(2), near(evaluateCalculator(EXAMPLE_ROWS, { profit: 3 }, { fx: 95 }).values.fob, 145.28));
 
 // Maths
 const cases = [
@@ -93,6 +93,21 @@ const twoLocalRefused = twoLocal.some((x) => /Only one "Local/.test(x));
 rec('X-07', 'Only one Local currency box; the full example checks clean', 'refused / 0 problems', `${twoLocalRefused ? 'refused' : 'allowed'} / ${checkCalculator(CUR_ROWS).length} problems`, twoLocalRefused && checkCalculator(CUR_ROWS).length === 0);
 const fxNamed = checkCalculator([{ key: 'fx', label: 'Fx', kind: 'number', default: 1 }]).length > 0;
 rec('X-08', 'A box may not be called fx (it is the rate)', 'fx_box + refused', `${makeKey('FX')} + ${fxNamed ? 'refused' : 'allowed'}`, makeKey('FX') === 'fx_box' && fxNamed);
+const OLD_EXAMPLE = [
+  { key: 'tons', label: 'Total ton in a container', kind: 'number', default: 25, unit: 'MT' },
+  { key: 'rate', label: 'Share quote in which currency (1 USD = ? INR)', kind: 'number', default: 95, unit: 'INR' },
+  { key: 'unit_kg', label: 'Need quote in Ton/kg', kind: 'select', default: 1000, options: [{ label: 'Ton', value: 1000 }, { label: 'Kg', value: 1 }] },
+  { key: 'price_kg', label: 'Per Kg Price', kind: 'number', default: 10, unit: 'INR/kg' },
+  { key: 'transport_kg', label: 'Local transport', kind: 'number', default: 1, unit: 'INR/kg' },
+  { key: 'customs', label: 'Customs', kind: 'number', default: 60000, unit: 'INR/container' },
+  { key: 'profit', label: 'Profit in %', kind: 'number', default: 2, unit: '%' },
+  { key: 'fob', label: 'FOB', kind: 'formula', formula: '((price_kg + transport_kg) * unit_kg + customs / tons * unit_kg / 1000) * (1 + profit%) / rate', unit: 'USD' },
+];
+const up = upgradeToCurrency(OLD_EXAMPLE);
+const upRes = up ? evaluateCalculator(up, {}, { fx: 95 }) : { values: {} };
+rec('X-09', 'Old calculator with a typed rate -> currency dropdowns + fx, same FOB at the same rate', 'local INR, quote USD, {local}/kg, FOB 143.87, again: null',
+  `${up?.[1]?.kind}:${up?.[1]?.default} ${up?.[2]?.default} ${up?.[4]?.unit} FOB ${upRes.values.fob?.toFixed(2)} again: ${upgradeToCurrency(up)}`,
+  up && up[1].role === 'local' && up[1].default === 'INR' && up[2].role === 'quote' && up[2].default === 'USD' && up[4].unit === '{local}/kg' && up[8].formula.endsWith('/ fx') && near(upRes.values.fob, 143.87) && upgradeToCurrency(up) === null && upgradeToCurrency(EXAMPLE_ROWS) === null);
 
 const b = fs.readFileSync(path.join(here, '../../admin/src/data/formula.js'), 'utf8');
 rec('S-01', 'Admin Console and CRM use the same formula file', 'identical', a === b ? 'identical' : 'different — copy frontend/src/data/formula.js to admin/src/data/', a === b);
