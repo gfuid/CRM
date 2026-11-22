@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle, RefreshCw, Home, ShieldAlert } from 'lucide-react';
+import { isStaleChunkError, reloadForNewVersion } from '../staleChunk';
 
 export class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,28 +17,15 @@ export class ErrorBoundary extends React.Component {
     this.setState({ error, errorInfo });
 
     // Handle chunk loading failure (e.g. after a new deployment on Vercel)
-    const errorStr = (error?.message || '').toLowerCase();
-    if (
-      errorStr.includes('failed to fetch dynamically imported module') ||
-      errorStr.includes('loading chunk') ||
-      errorStr.includes('chunkloaderror')
-    ) {
-      console.warn('Detected stale chunk load error. Triggering automatic reload...');
-      try {
-        const hasReloaded = sessionStorage.getItem('crm_chunk_reload');
-        if (!hasReloaded) {
-          sessionStorage.setItem('crm_chunk_reload', 'true');
-          window.location.reload();
-        }
-      } catch {
-        window.location.reload();
-      }
+    if (isStaleChunkError(error)) {
+      console.warn('Detected stale chunk load error. Loading the new version...');
+      reloadForNewVersion();
     }
   }
 
   handleReload = () => {
     try {
-      sessionStorage.removeItem('crm_chunk_reload');
+      sessionStorage.removeItem('crm_chunk_reload_at');
     } catch {}
     window.location.reload();
   };

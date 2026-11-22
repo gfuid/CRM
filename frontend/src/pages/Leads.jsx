@@ -11,7 +11,7 @@ import BulkImportModal from '../components/BulkImportModal';
 import CountryFlag from '../components/CountryFlag';
 import { parsePhoneNumber } from '../data/countryCodes';
 import { SEED_LEADS } from '../data/seedLeads';
-import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue, formatLocation, chatLinks, linkFromPhone, isPhoneLink } from '../data/leadOptions';
+import { DEFAULT_COMMODITIES, PIPELINE_STAGES, LEAD_SOURCES, withCurrent, useLeadOptions, runOnEnter, toTimeInputValue, formatLocation, chatLinks, linkFromPhone, isPhoneLink, followNumber } from '../data/leadOptions';
 import {
   Plus,
   Search,
@@ -3087,7 +3087,7 @@ export default function Leads() {
                               // First contact's phone = the WhatsApp / Zalo number, unless someone typed a different one
                               if (cIdx === 0 && (!form.whatsapp || form.whatsapp === before)) {
                                 next.whatsapp = fullPhone;
-                                next.social_links = (form.social_links || []).map((l) => (l && (!l.url || isPhoneLink(l.url)) && linkFromPhone(l.platform, fullPhone) ? { ...l, url: linkFromPhone(l.platform, fullPhone) } : l));
+                                next.social_links = followNumber(form.social_links, fullPhone);
                               }
                               setForm(next);
                             }}
@@ -3208,15 +3208,15 @@ export default function Leads() {
               {/* Direct WhatsApp Field */}
               <div className="pt-2">
                 <label className="block text-xs font-bold text-slate-700 dark:text-slate-200 mb-1 flex items-center gap-1.5">
-                  <span>📱 Direct WhatsApp / Zalo Number</span>
-                  <span className="text-[10px] text-slate-400 font-normal">(With country code)</span>
+                  <span>📱 Direct WhatsApp / Zalo / Line / WeChat / Telegram Number</span>
+                  <span className="text-[10px] text-slate-400 font-normal">(With country code · one number for all these apps)</span>
                 </label>
                 <div className="w-full sm:max-w-md">
                   <div {...lockIf(editingLead?.whatsapp, 'WhatsApp number')}>
                     <PhoneInputWithCountry
                       value={form.whatsapp}
                       defaultCountry={form.country}
-                      onChange={(fullPhone) => setForm({ ...form, whatsapp: fullPhone })}
+                      onChange={(fullPhone) => setForm({ ...form, whatsapp: fullPhone, social_links: followNumber(form.social_links, fullPhone) })}
                       placeholder="e.g. 50 892 4110"
                     />
                   </div>
@@ -4017,6 +4017,14 @@ export default function Leads() {
                                 >
                                   <MessageCircle size={10} /> Zalo
                                 </a>
+                                <a
+                                  href={chatLinks(c.phone).telegram}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="text-[10px] font-bold text-sky-600 hover:underline flex items-center gap-0.5"
+                                >
+                                  <MessageCircle size={10} /> Telegram
+                                </a>
                               </span>
                             )}
                           </div>
@@ -4058,11 +4066,13 @@ export default function Leads() {
                   <div className="font-bold text-slate-800 dark:text-slate-200">Company Profile & Location</div>
                   {[activeDetailLead.whatsapp, ...(activeDetailLead.extra_whatsapp || [])].filter(Boolean).map((num, i) => (
                     <div key={`${num}-${i}`} className="text-slate-600 dark:text-slate-400 flex flex-wrap items-center gap-2">
-                      <span><span className="font-semibold text-slate-700 dark:text-slate-300">WhatsApp / Zalo{i ? ` #${i + 1}` : ''}: </span>{num}</span>
+                      <span><span className="font-semibold text-slate-700 dark:text-slate-300">WhatsApp / Zalo / Line / WeChat / Telegram{i ? ` #${i + 1}` : ''}: </span>{num}</span>
                       {chatLinks(num) && (
                         <>
                           <a href={chatLinks(num).whatsapp} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-emerald-600 hover:underline">WhatsApp</a>
                           <a href={chatLinks(num).zalo} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-blue-600 hover:underline">Zalo</a>
+                          <a href={chatLinks(num).telegram} target="_blank" rel="noreferrer" className="text-[10px] font-bold text-sky-600 hover:underline">Telegram</a>
+                          <button type="button" onClick={() => { try { navigator.clipboard.writeText(num); } catch { /* no clipboard */ } }} className="text-[10px] font-bold text-slate-500 hover:underline cursor-pointer" title="Line and WeChat find people by this number: copy it and search in the app">Copy for Line / WeChat</button>
                         </>
                       )}
                     </div>

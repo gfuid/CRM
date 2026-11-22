@@ -60,9 +60,13 @@ export const chatLinks = (phone) => {
   return { whatsapp: `https://wa.me/${digits}`, zalo: `https://zalo.me/${digits}`, telegram: `https://t.me/+${digits}` };
 };
 
+/** Chat apps the same mobile number works for (one number for all of them). */
+export const CHAT_APPS = ['WhatsApp', 'Zalo', 'Line', 'WeChat', 'Telegram'];
+
 /**
- * The chat link a social platform can get straight from a phone number.
- * WhatsApp, Zalo and Telegram open a chat by number; Line and WeChat use an ID, so they get none.
+ * What a social platform gets straight from a phone number.
+ * WhatsApp, Zalo and Telegram open a chat by number (a link); Line and WeChat find people by their
+ * number, so they get the number itself (+971501234567).
  */
 export const linkFromPhone = (platform, phone) => {
   const links = chatLinks(phone);
@@ -70,10 +74,17 @@ export const linkFromPhone = (platform, phone) => {
   if (platform === 'WhatsApp') return links.whatsapp;
   if (platform === 'Zalo') return links.zalo;
   if (platform === 'Telegram') return links.telegram;
+  if (platform === 'Line' || platform === 'WeChat') return `+${String(phone).replace(/[^0-9]/g, '')}`;
   return '';
 };
 /** True when a link was made from a phone number (so it may be replaced when the number changes). */
-export const isPhoneLink = (url) => /^https:\/\/(wa\.me\/|zalo\.me\/|t\.me\/\+)\d+$/.test(String(url || ''));
+export const isPhoneLink = (url) => /^https:\/\/(wa\.me\/|zalo\.me\/|t\.me\/\+)\d+$/.test(String(url || '')) || /^\+\d{6,15}$/.test(String(url || ''));
+/** Social links that came from the old number follow the new number (typed links and IDs stay). */
+export const followNumber = (links, phone) => (links || []).map((l) => {
+  if (!l || (l.url && !isPhoneLink(l.url))) return l;
+  const auto = linkFromPhone(l.platform, phone);
+  return auto ? { ...l, url: auto } : l;
+});
 
 /** A saved value that is not in the list any more (old leads) is still shown, so nothing looks blank. */
 export const withCurrent = (list, current) =>

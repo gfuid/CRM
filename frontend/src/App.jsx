@@ -15,6 +15,7 @@ import PageSkeleton from './components/PageSkeleton';
 import ErrorBoundary from './components/ErrorBoundary';
 import OwnerOnlyPopup from './components/OwnerOnlyPopup';
 import './index.css';
+import { reloadForNewVersion } from './staleChunk';
 
 // Performance Optimization: React Lazy Loading with Automatic Chunk-Retry
 const lazyWithRetry = (importFn) =>
@@ -22,19 +23,9 @@ const lazyWithRetry = (importFn) =>
     try {
       return await importFn();
     } catch (error) {
-      console.warn('Lazy chunk load failed, retrying once:', error);
-      try {
-        const key = 'chunk_reload_' + window.location.pathname;
-        const reloaded = sessionStorage.getItem(key);
-        if (!reloaded) {
-          sessionStorage.setItem(key, 'true');
-          window.location.reload();
-          return new Promise(() => {});
-        }
-      } catch {
-        window.location.reload();
-        return new Promise(() => {});
-      }
+      // An old tab after a new deploy: load the new version (see staleChunk.js)
+      console.warn('Lazy chunk load failed:', error);
+      if (reloadForNewVersion()) return new Promise(() => {});
       throw error;
     }
   });
