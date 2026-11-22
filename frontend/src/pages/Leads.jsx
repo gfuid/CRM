@@ -733,7 +733,9 @@ export default function Leads() {
   const [form, setForm] = useState(initForm);
 
   // Lead Dossier interactive activity, follow-up remark, & document state
-  const [dossierActivityType, setDossierActivityType] = useState('Call initiated');
+  // Activities ticked to log (nothing ticked to start; several can be ticked: call + email + WhatsApp)
+  const [dossierActivityTypes, setDossierActivityTypes] = useState([]);
+  const toggleActivityType = (act) => setDossierActivityTypes((list) => (list.includes(act) ? list.filter((x) => x !== act) : [...list, act]));
   const [dossierActivityNote, setDossierActivityNote] = useState('');
   // Activities saved on the server for each lead (the same list in the View window, the Edit form and on every device)
   const [leadActivities, setLeadActivities] = useState({});
@@ -839,30 +841,32 @@ export default function Leads() {
   const handleLogDossierActivity = async (leadArg) => {
     // Called from the View window (activeDetailLead) or the Edit form (the lead being edited)
     const target = leadArg && leadArg.id ? leadArg : activeDetailLead;
-    if (!target || !dossierActivityType) return;
-    const newEntry = {
-      activity: dossierActivityType,
-      note: dossierActivityNote.trim() || 'Activity logged',
-      date: new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }),
-      author: `by ${profile?.name || 'User'}`,
-    };
-
-    // Save it on the server so the owner and other devices see it too
-    try {
-      const saved = await api.createActivity({
-        type: 'note',
-        title: dossierActivityType,
-        description: newEntry.note,
-        lead_id: target.id,
-      });
-      const rec = saved?.data || saved;
-      if (rec && rec.id) setLeadActivities((m) => (m[target.id] ? { ...m, [target.id]: [{ ...rec, user_name: rec.user_name || profile?.name || '' }, ...m[target.id]] } : m));
-    } catch (err) {
-      showNotification(err?.message || 'Activity could not be saved.', 'error');
+    if (!target) return;
+    // Keep the order of the list (Call, Email, WhatsApp…)
+    const picked = AVAILABLE_ACTIVITIES.filter((a) => dossierActivityTypes.includes(a));
+    if (!picked.length) {
+      showNotification('Tick at least one activity (you can tick more than one).', 'error');
       return;
     }
+    const note = dossierActivityNote.trim() || 'Activity logged';
+    const when = new Date().toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' }) + ' · ' + new Date().toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+    const newEntries = [];
 
-    const updatedHistory = [newEntry, ...(target.activity_history || [])];
+    // Save each one on the server so the owner, Outreach and other devices see it too (each counts in its own column)
+    for (const activity of picked) {
+      try {
+        const saved = await api.createActivity({ type: 'note', title: activity, description: note, lead_id: target.id });
+        const rec = saved?.data || saved;
+        if (rec && rec.id) setLeadActivities((m) => (m[target.id] ? { ...m, [target.id]: [{ ...rec, user_name: rec.user_name || profile?.name || '' }, ...m[target.id]] } : m));
+        newEntries.unshift({ activity, note, date: when, author: `by ${profile?.name || 'User'}` });
+      } catch (err) {
+        showNotification(err?.message || `"${activity}" could not be saved.`, 'error');
+        if (!newEntries.length) return;
+        break;
+      }
+    }
+
+    const updatedHistory = [...newEntries, ...(target.activity_history || [])];
     const updatedLead = {
       ...target,
       activity_history: updatedHistory,
@@ -872,11 +876,12 @@ export default function Leads() {
     if (activeDetailLead && activeDetailLead.id === target.id) setActiveDetailLead(updatedLead);
     if (editingLead && editingLead.id === target.id) setEditingLead((prev) => (prev ? { ...prev, activity_history: updatedHistory } : prev));
     setDossierActivityNote('');
+    setDossierActivityTypes([]);
     // Only the activity list changes (the lead may be half-edited in the form)
     updateAndPersistLeads((prev) =>
       prev.map((l) => (l.id === updatedLead.id ? { ...l, activity_history: updatedHistory, notes: updatedLead.notes } : l))
     );
-    showNotification(`Activity "${dossierActivityType}" logged successfully!`, 'success');
+    showNotification(newEntries.length > 1 ? `${newEntries.length} activities logged: ${newEntries.map((e) => e.activity).reverse().join(', ')}` : `Activity "${newEntries[0].activity}" logged successfully!`, 'success');
   };
 
   const handleSaveDossierFollowUp = async () => {
@@ -1234,6 +1239,8 @@ export default function Leads() {
 
   // Open Edit Modal
   const openEdit = (lead) => {
+    setDossierActivityTypes([]);
+    setDossierActivityNote('');
     setIsSubmitting(false);
     if (isStaff) {
       const isMine =
@@ -1350,7 +1357,7 @@ export default function Leads() {
     setDossierTodayRemark(lead.today_remarks || '');
     setDossierFutureAction(lead.next_follow_up_action || '');
     setDossierActivityNote('');
-    setDossierActivityType(lead.activity_history?.[0]?.activity || 'Call initiated');
+    setDossierActivityTypes([]);
     setDetailModalOpen(true);
   };
 
@@ -1599,16 +1606,17 @@ export default function Leads() {
       {/* Select Activities checklist pills */}
       <div>
         <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-          Select activity:
+          Select activity: <span className="font-normal text-slate-400">(tick all you did, e.g. Call + Email + WhatsApp)</span>
         </label>
-        <div className="flex flex-wrap gap-1.5">
+        <div className="flex flex-wrap gap-1.5" role="group" aria-label="Activities to log">
           {AVAILABLE_ACTIVITIES.map((act) => {
-            const isSelected = dossierActivityType === act;
+            const isSelected = dossierActivityTypes.includes(act);
             return (
               <button
                 type="button"
                 key={act}
-                onClick={() => setDossierActivityType(act)}
+                aria-pressed={isSelected}
+                onClick={() => toggleActivityType(act)}
                 className={`px-2.5 py-1 rounded-xl text-[11px] font-bold border transition-all cursor-pointer ${
                   isSelected
                     ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
@@ -1634,14 +1642,14 @@ export default function Leads() {
         />
         <div className="flex items-center justify-between">
           <span className="text-[10px] text-slate-400">
-            Tick an activity above — a note on its own is not saved.
+            {dossierActivityTypes.length ? `${dossierActivityTypes.length} ticked — each one counts in Outreach.` : 'Tick one or more activities above — a note on its own is not saved.'}
           </span>
           <button
             type="button"
             onClick={() => handleLogDossierActivity(lead)}
             className="px-3.5 py-1.5 text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 rounded-xl transition-colors cursor-pointer shadow-xs flex items-center gap-1.5"
           >
-            <Send size={12} /> Log Activity
+            <Send size={12} /> {dossierActivityTypes.length > 1 ? `Log ${dossierActivityTypes.length} Activities` : 'Log Activity'}
           </button>
         </div>
       </div>

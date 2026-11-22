@@ -32,6 +32,12 @@ export const parseToIso = (d) => {
   if (!d) return null;
   const s = String(d).trim();
 
+  // 0. A full timestamp (2026-11-21T19:45:00Z): the day where the user is, not in London
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/.test(s)) {
+    const t = new Date(s);
+    if (!isNaN(t.getTime())) return `${t.getFullYear()}-${String(t.getMonth() + 1).padStart(2, '0')}-${String(t.getDate()).padStart(2, '0')}`;
+  }
+
   // 1. Matches YYYY-MM-DD
   const isoMatch = s.match(/^(\d{4})-(\d{2})-(\d{2})/);
   if (isoMatch) return `${isoMatch[1]}-${isoMatch[2]}-${isoMatch[3]}`;
@@ -47,6 +53,11 @@ export const parseToIso = (d) => {
     jan: '01', feb: '02', mar: '03', apr: '04', may: '05', jun: '06',
     jul: '07', aug: '08', sep: '09', oct: '10', nov: '11', dec: '12',
   };
+  // "Nov 21, 2026" (month first)
+  const monthFirst = s.match(/([a-zA-Z]{3,9})\s+(\d{1,2}),?\s+(\d{4})/);
+  if (monthFirst && monthNames[monthFirst[1].toLowerCase().slice(0, 3)]) {
+    return `${monthFirst[3]}-${monthNames[monthFirst[1].toLowerCase().slice(0, 3)]}-${monthFirst[2].padStart(2, '0')}`;
+  }
   const namedMatch = s.match(/(\d{1,2})[\s\-]+([a-zA-Z]{3,9})[\s\-]+(\d{4})/);
   if (namedMatch) {
     const day = namedMatch[1].padStart(2, '0');
@@ -108,28 +119,43 @@ export const extractTime = (d) => {
   return '11:00 AM';
 };
 
+// The activity a salesperson ticked (Daily Activity & Interactions) -> its Outreach column.
+// Only ticked activities count. A remark is not a call: remarks have their own "Remarks" column.
+const ACTIVITY_COLUMN = {
+  'call initiated': 'call_initiated',
+  'follow up calls': 'call_initiated',
+  email: 'email',
+  'whatsapp text/zalo': 'whatsapp',
+  response: 'response',
+  meeting: 'meeting',
+  'price discussion': 'price_discussion',
+  'payment discussion': 'payment_discussion',
+  'sample discussion': 'sample_discussion',
+  'sample sent': 'sample_sent',
+  negotiation: 'negotiation',
+  'sent quotations': 'sent_quotations',
+  'email reply': 'email_reply',
+};
+/** Column of a logged activity, or null when it is not one of the ticked activities (e.g. "Export Lead Created"). */
 export const classifyActivity = (actText) => {
-  if (!actText) return 'call_initiated';
-  const lower = String(actText).toLowerCase();
-  if (lower.includes('email reply') || (lower.includes('email') && lower.includes('repl'))) return 'email_reply';
-  if (lower.includes('email') || lower.includes('mail')) return 'email';
-  if (lower.includes('whatsapp') || lower.includes('zalo') || lower.includes('chat') || lower.includes('message')) return 'whatsapp';
-  if (lower.includes('meeting') || lower.includes('conference') || lower.includes('zoom') || lower.includes('google meet')) return 'meeting';
-  if (lower.includes('payment') || lower.includes('cad') || lower.includes('lc') || lower.includes('advance')) return 'payment_discussion';
-  if (lower.includes('price') || lower.includes('rate') || lower.includes('discount') || lower.includes('quote') || lower.includes('quotation')) {
-    if (lower.includes('sent quotation') || lower.includes('quote sent')) return 'sent_quotations';
-    return 'price_discussion';
-  }
-  if (lower.includes('sample sent') || lower.includes('dispatched sample') || lower.includes('courier')) return 'sample_sent';
-  if (lower.includes('sample')) return 'sample_discussion';
-  if (lower.includes('negotiat')) return 'negotiation';
-  if (lower.includes('response') || lower.includes('replied') || lower.includes('feedback')) return 'response';
-  if (lower.includes('call') || lower.includes('phone') || lower.includes('tele')) return 'call_initiated';
-  return 'call_initiated';
+  const key = String(actText || '').trim().toLowerCase();
+  return ACTIVITY_COLUMN[key] || null;
 };
 
-export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
+const cleanUser = (name, fallback) => {
+  const n = String(name || '').replace(/^by\s+/i, '').trim();
+  return n && !n.startsWith('usr_') ? n : fallback;
+};
+
+/**
+ * One row per day and person: how many leads they CREATED that day (stays even when the lead moves on),
+ * the activities they ticked that day (one lead can count in several columns), and their remarks.
+ * Activities come from the lead (this browser) and from the server's activity list (every device);
+ * the same activity in both is counted once.
+ */
+export const buildOutreachMatrix = (leads = [], serverActivities = []) => {
   const map = new Map();
+  const keys = OUTREACH_COLUMNS.map((c) => c.key);
 
   const getOrCreateRow = (dateIso, user) => {
     const key = `${dateIso}_${user}`;
@@ -139,149 +165,86 @@ export const buildOutreachMatrix = (leads = [], extraLogs = []) => {
         date: formatDMY('', dateIso),
         date_iso: dateIso,
         user,
-        counts: {
-          new_lead: 0,
-          call_initiated: 0,
-          email: 0,
-          whatsapp: 0,
-          response: 0,
-          meeting: 0,
-          price_discussion: 0,
-          payment_discussion: 0,
-          sample_discussion: 0,
-          sample_sent: 0,
-          negotiation: 0,
-          sent_quotations: 0,
-          email_reply: 0,
-        },
-        activities: {
-          new_lead: [],
-          call_initiated: [],
-          email: [],
-          whatsapp: [],
-          response: [],
-          meeting: [],
-          price_discussion: [],
-          payment_discussion: [],
-          sample_discussion: [],
-          sample_sent: [],
-          negotiation: [],
-          sent_quotations: [],
-          email_reply: [],
-        },
+        counts: Object.fromEntries(keys.map((k) => [k, 0])),
+        activities: Object.fromEntries(keys.map((k) => [k, []])),
       });
     }
     return map.get(key);
   };
+  const leadCard = (lead, extra) => ({
+    id: lead.id,
+    company_name: lead.company_name || lead.name || 'Unnamed Company',
+    contact_person: lead.contact_person || (lead.contacts && lead.contacts[0]?.name) || 'Contact Person',
+    product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || ''),
+    country: lead.country || 'International',
+    phone: lead.phone || '',
+    email: lead.email || '',
+    stage: lead.stage || 'Lead Generation',
+    quantity: lead.quantity || 0,
+    price: lead.price || lead.value || 0,
+    ...extra,
+  });
+  const byId = new Map(leads.map((l) => [l.id, l]));
 
-  // 1. Process all leads
+  // Ticked activities from both sources, grouped by lead + column + day + person
+  const groups = new Map(); // key -> { local: [], server: [] }
+  const addAct = (source, lead, col, dateIso, user, item) => {
+    const key = `${lead.id}|${col}|${dateIso}|${user}`;
+    if (!groups.has(key)) groups.set(key, { lead, col, dateIso, user, local: [], server: [] });
+    groups.get(key)[source].push(item);
+  };
+
   leads.forEach((lead) => {
+    // 1. New lead: the day it was created, under the person who created it
     const leadDateIso = parseToIso(lead.created_at || lead.created_date) || getTodayIso();
-    let leadUser = (lead.agent_name || lead.created_by_name || 'Unassigned').trim();
-    if (
-      !leadUser ||
-      leadUser.startsWith('usr_')
-    ) {
-      leadUser = 'Unassigned';
-    }
-
-    const row = getOrCreateRow(leadDateIso, leadUser);
+    const assigned = cleanUser(lead.agent_name, 'Unassigned');
+    const creator = cleanUser(lead.created_by_name, assigned);
+    const row = getOrCreateRow(leadDateIso, creator);
     row.counts.new_lead += 1;
-    row.activities.new_lead.push({
-      id: lead.id,
-      company_name: lead.company_name || lead.name || 'Unnamed Company',
-      contact_person: lead.contact_person || (lead.contacts && lead.contacts[0]?.name) || 'Contact Person',
+    row.activities.new_lead.push(leadCard(lead, {
       time: extractTime(lead.created_at) || '10:00 AM',
-      note: lead.notes || `Created trade lead for ${Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'a buyer')}`,
-      product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || ''),
-      country: lead.country || 'International',
-      phone: lead.phone || '',
-      email: lead.email || '',
-      stage: lead.stage || 'Lead Generation',
-      quantity: lead.quantity || 0,
-      price: lead.price || lead.value || 0,
+      note: `Created trade lead for ${Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'a buyer')}${assigned !== creator ? ` · assigned to ${assigned}` : ''}`,
+    }));
+
+    // 2. Activities saved with the lead
+    (Array.isArray(lead.activity_history) ? lead.activity_history : []).forEach((act) => {
+      const col = classifyActivity(act.activity);
+      if (!col) return;
+      const dateIso = parseToIso(act.date || act.created_at) || leadDateIso;
+      addAct('local', lead, col, dateIso, cleanUser(act.author, assigned), { time: extractTime(act.date) || act.time || '', note: act.note || `${act.activity} logged`, activity: act.activity });
     });
 
-    // 2. Process activity_history if present
-    if (Array.isArray(lead.activity_history) && lead.activity_history.length > 0) {
-      lead.activity_history.forEach((act) => {
-        const actDateIso = parseToIso(act.date || act.created_at) || leadDateIso;
-        let actUser = (act.author ? act.author.replace(/^by\s+/i, '') : leadUser) || leadUser;
-        if (
-          !actUser ||
-          actUser.startsWith('usr_')
-        ) {
-          actUser = leadUser;
-        }
-        const actType = classifyActivity(act.activity);
-
-        const actRow = getOrCreateRow(actDateIso, actUser.trim());
-        if (actRow.counts[actType] !== undefined) {
-          actRow.counts[actType] += 1;
-        } else {
-          actRow.counts.call_initiated += 1;
-        }
-
-        const bucket = actRow.activities[actType] || actRow.activities.call_initiated;
-        bucket.push({
-          id: lead.id,
-          company_name: lead.company_name || lead.name || 'Unnamed Company',
-          contact_person: lead.contact_person || 'Contact Person',
-          time: extractTime(act.date) || act.time || '11:00 AM',
-          note: act.note || `${act.activity} logged`,
-          product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Commodities'),
-          country: lead.country || 'International',
-          phone: lead.phone || '',
-          email: lead.email || '',
-          stage: lead.stage || 'Requirement Understood',
-          quantity: lead.quantity || 0,
-          price: lead.price || lead.value || 0,
-        });
-      });
-    }
-
-    // 3. Process previous_remarks if present
-    if (Array.isArray(lead.previous_remarks) && lead.previous_remarks.length > 0) {
-      lead.previous_remarks.forEach((rem) => {
-        const remDateIso = parseToIso(rem.date || rem.follow_up_date) || leadDateIso;
-        let remUser = (rem.author || leadUser).trim();
-        if (
-          !remUser ||
-          remUser.startsWith('usr_')
-        ) {
-          remUser = leadUser;
-        }
-        const remType = classifyActivity(rem.today_remark || rem.remark || 'call_initiated');
-
-        const remRow = getOrCreateRow(remDateIso, remUser);
-        if (remRow.counts[remType] !== undefined) {
-          remRow.counts[remType] += 1;
-        } else {
-          remRow.counts.response += 1;
-        }
-
-        const bucket = remRow.activities[remType] || remRow.activities.response;
-        bucket.push({
-          id: lead.id,
-          company_name: lead.company_name || lead.name || 'Unnamed Company',
-          contact_person: lead.contact_person || 'Contact Person',
-          time: extractTime(rem.date) || '12:00 PM',
-          note: rem.today_remark || rem.remark || 'Follow-up interaction recorded',
-          product: Array.isArray(lead.products) ? lead.products.join(', ') : (lead.product || 'Commodities'),
-          country: lead.country || 'International',
-          phone: lead.phone || '',
-          email: lead.email || '',
-          stage: lead.stage || 'Contact Established',
-          quantity: lead.quantity || 0,
-          price: lead.price || lead.value || 0,
-        });
-      });
-    }
+    // 3. Remarks (follow-up notes): their own column, never counted as a call
+    (Array.isArray(lead.previous_remarks) ? lead.previous_remarks : []).forEach((rem) => {
+      const text = rem.today_remark || rem.remark;
+      if (!text) return;
+      const dateIso = parseToIso(rem.date || rem.follow_up_date) || leadDateIso;
+      const remRow = getOrCreateRow(dateIso, cleanUser(rem.author, assigned));
+      remRow.counts.remarks += 1;
+      remRow.activities.remarks.push(leadCard(lead, { time: extractTime(rem.date) || '', note: text, stage: lead.stage || 'Contact Established' }));
+    });
   });
 
-  // 4. Convert to array and sort descending by date_iso
-  const result = Array.from(map.values()).sort((a, b) => b.date_iso.localeCompare(a.date_iso));
-  return result;
+  // 4. Activities saved on the server (logged on any device)
+  (Array.isArray(serverActivities) ? serverActivities : []).forEach((a) => {
+    if (!a || a.system || a.type === 'status_change') return;
+    const col = classifyActivity(a.title);
+    const lead = byId.get(a.lead_id);
+    if (!col || !lead) return;
+    const dateIso = parseToIso(a.created_at || a.timestamp);
+    if (!dateIso) return;
+    addAct('server', lead, col, dateIso, cleanUser(a.user_name, cleanUser(lead.agent_name, 'Unassigned')), { time: extractTime(a.created_at) || '', note: a.description || `${a.title} logged`, activity: a.title });
+  });
+
+  groups.forEach((g) => {
+    const items = g.server.length >= g.local.length ? g.server : g.local; // the same activity is in both: count it once
+    const row = getOrCreateRow(g.dateIso, g.user);
+    row.counts[g.col] += items.length;
+    items.forEach((it) => row.activities[g.col].push(leadCard(g.lead, it)));
+  });
+
+  // 5. Newest day first
+  return Array.from(map.values()).sort((a, b) => b.date_iso.localeCompare(a.date_iso));
 };
 
 export default function Outreach() {
@@ -323,10 +286,12 @@ export default function Outreach() {
 
     // Fetch fresh leads and team from remote API
     try {
-      const [leadsRes, usersRes] = await Promise.all([
+      const [leadsRes, usersRes, actsRes] = await Promise.all([
         api.getLeads().catch(() => null),
         api.getUsers().catch(() => null),
+        api.getActivities().catch(() => null), // no Activity access: only what is saved with the leads
       ]);
+      const serverActs = Array.isArray(actsRes) ? actsRes : (Array.isArray(actsRes?.data) ? actsRes.data : []);
 
       if (usersRes && usersRes.success && Array.isArray(usersRes.data)) {
         const cleanUsers = usersRes.data.filter(
@@ -340,7 +305,7 @@ export default function Outreach() {
         try {
           localStorage.setItem('oneroot_leads_v3', JSON.stringify(leadsRes.data));
         } catch {}
-        setLogs(buildOutreachMatrix(leadsRes.data));
+        setLogs(buildOutreachMatrix(leadsRes.data, serverActs));
       }
     } catch (err) {
       console.warn('Outreach data refresh warning:', err);
@@ -628,23 +593,14 @@ export default function Outreach() {
               <tr className="bg-slate-950 text-white font-extrabold uppercase text-[10px] tracking-wider whitespace-nowrap">
                 <th className="py-3 px-3.5">Date</th>
                 <th className="py-3 px-3.5">User</th>
-                <th className="py-3 px-3 text-center">New Lead</th>
-                <th className="py-3 px-3 text-center">Call Initiated</th>
-                <th className="py-3 px-3 text-center">Email</th>
-                <th className="py-3 px-3 text-center">WhatsApp Text/Zalo</th>
-                <th className="py-3 px-3 text-center">Response</th>
-                <th className="py-3 px-3 text-center">Meeting</th>
-                <th className="py-3 px-3 text-center">Price Discussion</th>
-                <th className="py-3 px-3 text-center">Payment Discussion</th>
-                <th className="py-3 px-3 text-center">Sample Discussion</th>
-                <th className="py-3 px-3 text-center">Sample Sent</th>
+                {OUTREACH_COLUMNS.map((c) => <th key={c.key} className="py-3 px-3 text-center">{c.label.toLowerCase().replace(/(^|[\s/])\S/g, (m) => m.toUpperCase())}</th>)}
                 <th className="py-3 px-3.5 text-center">Detail</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 font-medium">
               {filteredLogs.length === 0 ? (
                 <tr>
-                  <td colSpan="13" className="py-12 text-center text-slate-400 text-xs">
+                  <td colSpan={OUTREACH_COLUMNS.length + 3} className="py-12 text-center text-slate-400 text-xs">
                     No outreach activities recorded for this date range or user.
                   </td>
                 </tr>
@@ -673,86 +629,16 @@ export default function Outreach() {
                         </span>
                       </td>
 
-                      {/* Counts across 10 activities */}
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.new_lead > 0 ? (
-                          <span className="text-purple-700 dark:text-purple-400 font-extrabold">{row.counts.new_lead}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.call_initiated > 0 ? (
-                          <span className="text-cyan-700 dark:text-cyan-400 font-black">{row.counts.call_initiated}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.email > 0 ? (
-                          <span className="text-indigo-700 dark:text-indigo-400 font-extrabold">{row.counts.email}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.whatsapp > 0 ? (
-                          <span className="text-rose-600 dark:text-rose-400 font-extrabold">{row.counts.whatsapp}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.response > 0 ? (
-                          <span className="text-rose-700 dark:text-rose-400 font-extrabold">{row.counts.response}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.meeting > 0 ? (
-                          <span className="text-orange-700 dark:text-orange-400 font-extrabold">{row.counts.meeting}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.price_discussion > 0 ? (
-                          <span className="text-amber-700 dark:text-amber-400 font-extrabold">{row.counts.price_discussion}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.payment_discussion > 0 ? (
-                          <span className="text-teal-700 dark:text-teal-400 font-extrabold">{row.counts.payment_discussion}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.sample_discussion > 0 ? (
-                          <span className="text-cyan-800 dark:text-cyan-300 font-extrabold">{row.counts.sample_discussion}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
-
-                      <td className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold">
-                        {row.counts.sample_sent > 0 ? (
-                          <span className="text-purple-800 dark:text-purple-300 font-extrabold">{row.counts.sample_sent}</span>
-                        ) : (
-                          <span className="text-slate-400">—</span>
-                        )}
-                      </td>
+                      {/* One count per column */}
+                      {OUTREACH_COLUMNS.map((c) => (
+                        <td key={c.key} className="py-3.5 px-3 text-center text-slate-700 dark:text-slate-300 font-bold" data-outreach-count={c.key}>
+                          {row.counts[c.key] > 0 ? (
+                            <span className={`${c.countCls || 'text-slate-800'} font-extrabold`}>{row.counts[c.key]}</span>
+                          ) : (
+                            <span className="text-slate-400">—</span>
+                          )}
+                        </td>
+                      ))}
 
                       {/* Detail Button: purple pill matching OneRoot */}
                       <td className="py-3.5 px-3.5 text-center whitespace-nowrap">
