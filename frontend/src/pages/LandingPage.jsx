@@ -23,14 +23,17 @@ import BrandLogo from '../components/BrandLogo';
 import { HELP_VIDEO_URL, HELP_VIDEO_POSTER } from '../data/helpGuide';
 
 const DEMO_CHAPTERS = [
-  ['0:05', 'Website & sign-up'],
-  ['0:33', 'Guided tour on first login'],
-  ['0:47', 'Add your team & permissions'],
-  ['1:04', 'Add buyers (leads)'],
-  ['1:46', 'Follow-ups & tasks'],
-  ['2:10', 'Activity, analytics & daily report'],
-  ['2:30', 'Built-in help & AI assistant'],
-  ['2:45', 'Staff login & phone view'],
+  ['0:07', 'Website & sign-up'],
+  ['0:30', 'The menu'],
+  ['0:48', 'Add your team & permissions'],
+  ['1:01', 'Add buyers (leads)'],
+  ['2:12', 'Daily activity'],
+  ['2:45', 'Follow-ups & tasks'],
+  ['3:09', 'Outreach & team review'],
+  ['3:34', 'Price calculator & currency'],
+  ['4:18', 'Quotations & proforma'],
+  ['4:54', 'Email, WhatsApp & AI calling'],
+  ['5:36', 'Built-in help'],
 ];
 
 function DemoVideo() {
@@ -51,7 +54,7 @@ function DemoVideo() {
     <section id="demo" className="max-w-6xl mx-auto px-6 py-16 scroll-mt-20">
       <div className="text-center max-w-2xl mx-auto mb-10">
         <div className="text-xs font-bold text-emerald-600 uppercase tracking-wider mb-2">See it in action</div>
-        <h2 className="text-3xl font-extrabold text-slate-900">How the CRM works — in 3 minutes</h2>
+        <h2 className="text-3xl font-extrabold text-slate-900">How the CRM works — in 6 minutes</h2>
         <p className="mt-3 text-sm text-slate-500">From registering your company to your team’s daily routine: leads, follow-ups, tasks, the evening report and built-in help.</p>
       </div>
       <div className="grid lg:grid-cols-[1fr_260px] gap-6 items-start">
@@ -63,7 +66,7 @@ function DemoVideo() {
               <img src={HELP_VIDEO_POSTER} alt="Travel-Trade CRM walkthrough" className="absolute inset-0 w-full h-full object-cover" loading="lazy" />
               <span className="absolute inset-0 bg-slate-900/0 group-hover:bg-slate-900/5 transition-colors" />
               <span className="absolute left-1/2 bottom-3 sm:bottom-6 -translate-x-1/2 flex items-center gap-2 px-4 sm:px-5 py-2 sm:py-3 rounded-full bg-emerald-600 group-hover:bg-emerald-700 text-white text-xs sm:text-sm font-bold whitespace-nowrap shadow-lg shadow-emerald-600/30 transition-colors">
-                <PlayCircle size={18} /> Watch the walkthrough · 3:20
+                <PlayCircle size={18} /> Watch the walkthrough · 5:58
               </span>
             </button>
           )}
@@ -170,7 +173,7 @@ export default function LandingPage({ onLoginClick, onRegisterClick }) {
             className="px-5 py-3.5 rounded-xl text-slate-700 hover:text-slate-900 font-bold text-sm transition-colors flex items-center gap-2"
           >
             <PlayCircle size={18} className="text-emerald-600" />
-            <span>Watch 3-min demo</span>
+            <span>Watch 6-min demo</span>
           </a>
         </div>
 
