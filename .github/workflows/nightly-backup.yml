@@ -1,0 +1,76 @@
+name: Nightly database backup
+
+# Every night at 02:30 India time (21:00 UTC) the whole MongoDB database is saved,
+# encrypted with BACKUP_PASSPHRASE and kept as a workflow artifact for 30 days.
+# The repository is public, so the backup is NEVER uploaded without encryption.
+#
+# Needs two repository secrets (Settings -> Secrets and variables -> Actions):
+#   MONGODB_URI         the same value as on Render
+#   BACKUP_PASSPHRASE   a long password only the owner knows (needed to open a backup)
+# How to download, open and restore a backup: backend/BACKUPS.md
+
+on:
+  schedule:
+    - cron: '0 21 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: nightly-backup
+  cancel-in-progress: false
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Check secrets
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          if [ -z "$MONGODB_URI" ]; then echo "::error::Secret MONGODB_URI is missing"; exit 1; fi
+          if [ ${#BACKUP_PASSPHRASE} -lt 16 ]; then echo "::error::Secret BACKUP_PASSPHRASE is missing or shorter than 16 characters"; exit 1; fi
+
+      - run: npm ci --omit=dev --no-audit --no-fund
+
+      - name: Save the database
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
+        run: node src/scripts/nightly-backup.js "$RUNNER_TEMP/db-backup"
+
+      - name: Pack and encrypt
+        env:
+          BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+        run: |
+          STAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+          echo "STAMP=$STAMP" >> "$GITHUB_ENV"
+          tar -czf "$RUNNER_TEMP/db.tar.gz" -C "$RUNNER_TEMP" db-backup
+          openssl enc -aes-256-cbc -salt -pbkdf2 -iter 200000 \
+            -in "$RUNNER_TEMP/db.tar.gz" -out "$RUNNER_TEMP/crm-backup-$STAMP.tar.gz.enc" -pass env:BACKUP_PASSPHRASE
+          # Check the encrypted file really opens with the passphrase before keeping it
+          openssl enc -d -aes-256-cbc -pbkdf2 -iter 200000 \
+            -in "$RUNNER_TEMP/crm-backup-$STAMP.tar.gz.enc" -pass env:BACKUP_PASSPHRASE | tar -tzf - | grep -q "_meta.json"
+          # Never leave the readable copy behind
+          rm -rf "$RUNNER_TEMP/db.tar.gz" "$RUNNER_TEMP/db-backup"
+          ls -l "$RUNNER_TEMP"/crm-backup-*.enc
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: crm-backup-${{ env.STAMP }}
+          path: ${{ runner.temp }}/crm-backup-*.tar.gz.enc
+          retention-days: 30
+          if-no-files-found: error

@@ -387,6 +387,14 @@ class ApiClient {
     return this.request(`/admin/my-usage${withMembers ? '?members=1' : ''}`);
   }
 
+  // Phone / desktop notifications: push('') status, push('/subscribe', 'POST', {...})
+  push(path, method = 'GET', data) {
+    return this.request(`/push${path}`, {
+      method,
+      ...(data !== undefined ? { body: JSON.stringify(data) } : {}),
+    });
+  }
+
   // WhatsApp marketing: wa('/templates'), wa('/campaigns', 'POST', {...})
   wa(path, method = 'GET', data) {
     return this.request(`/whatsapp${path}`, {

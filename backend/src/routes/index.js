@@ -34,6 +34,7 @@ router.use('/whatsapp', require('./whatsapp.routes'));
 router.use('/ai-calls', require('./aiCalls.routes'));
 router.use('/social', require('./social.routes'));
 router.use('/documents', require('./documents.routes'));
+router.use('/push', require('./push.routes'));
 router.use('/avatars', require('./avatar.routes'));
 router.use('/docs', docsRoutes);
 

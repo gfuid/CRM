@@ -4,6 +4,7 @@ import { HELP_SECTIONS, HELP_VIDEO_URL, HELP_VIDEO_POSTER } from '../../data/hel
 import { startTour } from './OnboardingTour';
 import HelpVideoLibrary from './HelpVideoLibrary';
 import HelpGuidesPdf from './HelpGuidesPdf';
+import { PushSwitch } from '../PushToggle';
 
 const go = (tab) => window.dispatchEvent(new CustomEvent('crm_navigate', { detail: { tab } }));
 
@@ -55,6 +56,9 @@ export default function HelpCenter({ isOwner, canSee = () => true, onAskAI, onNe
             <button type="button" onClick={() => setShowVideo(true)} className="px-3.5 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center justify-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer">
               <PlayCircle size={14} /> Play video
             </button>
+            <div className="mt-1 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-2">
+              <PushSwitch />
+            </div>
           </div>
         </div>
       </div>

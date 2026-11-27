@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { api } from '../services/api';
 import { openTicket } from './support/SupportParts';
+import { PushSwitch } from './PushToggle';
 
 // No sample notifications: everything shown here comes from the server
 const DEFAULT_TRADE_NOTIFICATIONS = [];
@@ -187,6 +188,11 @@ export default function NotificationsPopover({ isOpen, onClose }) {
               <X size={14} />
             </button>
           </div>
+        </div>
+
+        {/* Phone / desktop notifications for this device */}
+        <div className="px-4 py-2.5 border-b border-slate-100 dark:border-slate-800">
+          <PushSwitch />
         </div>
 
         {/* Notification List */}

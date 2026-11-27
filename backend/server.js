@@ -43,6 +43,11 @@ const startServer = async () => {
     require('./src/controllers/social.controller').startSocialScheduler();
     require('./src/controllers/social.controller').startSocialResults();
   }
+
+  // Follow-up, task and bell reminders on staff phones / desktops (Web Push)
+  if (process.env.PUSH_DISABLED !== 'true') {
+    require('./src/services/push.service').startPushScheduler();
+  }
 };
 
 // Graceful shutdown handling

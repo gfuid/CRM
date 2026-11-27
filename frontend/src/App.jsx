@@ -16,6 +16,7 @@ import ErrorBoundary from './components/ErrorBoundary';
 import OwnerOnlyPopup from './components/OwnerOnlyPopup';
 import './index.css';
 import { reloadForNewVersion } from './staleChunk';
+import { PushBanner } from './components/PushToggle';
 
 // Performance Optimization: React Lazy Loading with Automatic Chunk-Retry
 const lazyWithRetry = (importFn) =>
@@ -70,7 +71,11 @@ const tabNames = {
 function AppContent() {
   const { user, profile, company, loading, isOwner, isStaff } = useAuth();
   // A return from Facebook login lands on /?tab=social
-  const [activeTab, setActiveTabState] = useState(() => (new URLSearchParams(window.location.search).get('tab') === 'social' ? 'social' : localStorage.getItem('crm_active_tab') || 'analytics'));
+  // A return from Facebook login (?tab=social) or a tap on a phone notification (?tab=followup) opens that section
+  const [activeTab, setActiveTabState] = useState(() => {
+    const fromUrl = new URLSearchParams(window.location.search).get('tab');
+    return (fromUrl && Object.prototype.hasOwnProperty.call(tabNames, fromUrl) ? fromUrl : null) || localStorage.getItem('crm_active_tab') || 'analytics';
+  });
 
   const setActiveTab = useCallback((tab) => {
     try { localStorage.setItem('crm_active_tab', tab); } catch { /* ignore */ }
@@ -371,6 +376,7 @@ function AppContent() {
 
         {/* Main Content Area - with bottom padding on mobile so bottom bar never obscures content */}
         <main className="flex-1 p-3 sm:p-4 md:p-8 max-w-7xl w-full mx-auto pb-36 md:pb-24">
+          <PushBanner />
           <ErrorBoundary>
             <Suspense fallback={<PageSkeleton />}>
               <div key={activeTab} className="page-enter">
