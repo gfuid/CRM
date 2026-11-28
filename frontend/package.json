@@ -16,9 +16,12 @@
   "dependencies": {
     "@supabase/supabase-js": "^2.116.0",
     "@tailwindcss/vite": "^4.3.3",
+    "gsap": "^3.12.5",
+    "lenis": "^1.1.18",
     "lucide-react": "^1.47.0",
     "react": "^19.2.8",
-    "react-dom": "^19.2.8"
+    "react-dom": "^19.2.8",
+    "three": "^0.170.0"
   },
   "devDependencies": {
     "@types/react": "^19.2.18",
