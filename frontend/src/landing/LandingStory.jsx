@@ -73,12 +73,23 @@ const CHIPS = [
   { icon: BellRing, tone: 'bg-rose-500', title: 'Follow-up now', sub: 'Global Agri Impex, Rotterdam', pos: 'right-[4%] bottom-[8%]' },
 ];
 
+const KIND_ICON = { wa: MessageCircle, email: Mail, ai: PhoneCall, quote: FileText, call: CalendarClock, won: CheckCircle2 };
+function KindIcon({ kind, size = 13 }) {
+  const I = KIND_ICON[kind] || Globe2;
+  return <I size={size} className="shrink-0" />;
+}
+// Quick buttons under the globe: [index in PORTS, label]
+const PORT_BUTTONS = [[0, 'Jebel Ali'], [1, 'Rotterdam'], [2, 'Lagos'], [3, 'Ho Chi Minh City'], [5, 'Mombasa'], [9, 'New York']];
+
 function Hero({ onRegisterClick }) {
   const canvasRef = useRef(null);
   const [globe, setGlobe] = useState('poster'); // 'poster' | 'live'
+  const [hover, setHover] = useState(null); // { port, x, y } while pointing at a port
+  const [picked, setPicked] = useState(null); // the port clicked last
+  const apiRef = useRef(null);
   useEffect(() => {
     const canvas = canvasRef.current;
-    if (!canvas || prefersReducedMotion()) return undefined;
+    if (!canvas) return undefined;
     // WebGL available?
     try {
       const test = document.createElement('canvas');
@@ -87,13 +98,23 @@ function Hero({ onRegisterClick }) {
     let api = null; let cancelled = false;
     const go = () => import('./globe').then(({ createGlobe }) => {
       if (cancelled) return;
-      return createGlobe(canvas, { onReady: () => !cancelled && setGlobe('live') }).then((g) => { if (cancelled) g.destroy(); else api = g; });
+      return createGlobe(canvas, {
+        calm: prefersReducedMotion(),
+        onReady: () => !cancelled && setGlobe('live'),
+        onHover: (h) => !cancelled && setHover(h),
+        onSelect: (p) => !cancelled && setPicked(p),
+      }).then((g) => { if (cancelled) g.destroy(); else { api = g; apiRef.current = g; } });
     }).catch(() => setGlobe('poster'));
     const idle = window.requestIdleCallback ? window.requestIdleCallback(go, { timeout: 1200 }) : setTimeout(go, 300);
     const onLost = () => setGlobe('poster');
     canvas.addEventListener('globe-lost', onLost);
+    // Scrolling spins the globe a little faster
+    let lastY = window.scrollY;
+    const onScroll = () => { const d = window.scrollY - lastY; lastY = window.scrollY; if (api) api.kick(d * 0.00004); };
+    window.addEventListener('scroll', onScroll, { passive: true });
     return () => {
       cancelled = true;
+      window.removeEventListener('scroll', onScroll);
       if (window.cancelIdleCallback && typeof idle === 'number') window.cancelIdleCallback(idle); else clearTimeout(idle);
       canvas.removeEventListener('globe-lost', onLost);
       if (api) api.destroy();
@@ -103,7 +124,7 @@ function Hero({ onRegisterClick }) {
   return (
     <section data-hero className="relative overflow-hidden bg-[radial-gradient(120%_80%_at_70%_40%,#0e3350_0%,#071a2b_45%,#040f1a_100%)] text-white">
       <div className="absolute inset-0 opacity-[0.07] [background-image:linear-gradient(rgba(255,255,255,.6)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.6)_1px,transparent_1px)] [background-size:56px_56px] [mask-image:radial-gradient(70%_60%_at_50%_40%,#000,transparent)]" aria-hidden="true" />
-      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16 lg:pt-20 pb-14 lg:pb-24 grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-6 items-center">
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 pt-12 sm:pt-16 lg:pt-20 pb-8 lg:pb-16 grid lg:grid-cols-[1.05fr_1fr] gap-8 lg:gap-6 items-center">
         <div className="relative z-10 text-center lg:text-left">
           <div data-hero-fade className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full border border-emerald-400/30 bg-emerald-400/10 text-emerald-300 text-[11px] sm:text-xs font-bold tracking-wide">
             <Ship size={14} /> The CRM built for export &amp; trade teams
@@ -146,6 +167,13 @@ function Hero({ onRegisterClick }) {
           <div className="absolute inset-[12%] rounded-full bg-[radial-gradient(circle_at_40%_35%,#14476b,#0a2236_60%,#06182a)] shadow-[0_0_120px_10px_rgba(52,211,153,0.18)]" aria-hidden="true" />
           <img src="/landing/globe-poster.png" alt="" aria-hidden="true" className={`absolute inset-0 w-full h-full object-contain transition-opacity duration-700 ${globe === 'live' ? 'opacity-0' : 'opacity-100'}`} />
           <canvas ref={canvasRef} className={`absolute inset-0 w-full h-full touch-pan-y cursor-grab active:cursor-grabbing transition-opacity duration-700 ${globe === 'live' ? 'opacity-100' : 'opacity-0'}`} role="img" aria-label="Globe with trade routes from India to buyers in Dubai, Rotterdam, Lagos, Vietnam, Sri Lanka, Kenya, Bangladesh, Singapore, Saudi Arabia, USA, Germany and Brazil" />
+          {hover && (
+            <div className="pointer-events-none absolute z-20 -translate-x-1/2 -translate-y-[calc(100%+14px)] rounded-xl bg-white text-slate-900 shadow-2xl px-3 py-2 min-w-[190px]" style={{ left: hover.x, top: hover.y }}>
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{hover.port.name}</div>
+              <div className="text-xs font-extrabold flex items-center gap-1.5 mt-0.5"><KindIcon kind={hover.port.kind} /> {hover.port.event}</div>
+              <div className="text-[11px] text-slate-500 mt-0.5">Click to open</div>
+            </div>
+          )}
           {CHIPS.map(({ icon: I, tone, title, sub, pos }, i) => (
             <div key={title} data-hero-chip className={`absolute ${pos} hidden sm:flex items-center gap-2.5 rounded-xl bg-white/95 text-slate-900 shadow-xl px-3 py-2 animate-[float_6s_ease-in-out_infinite] motion-reduce:animate-none`} style={{ animationDelay: `${i * 1.3}s` }}>
               <span className={`w-7 h-7 rounded-lg ${tone} text-white flex items-center justify-center`}><I size={14} /></span>
@@ -154,7 +182,28 @@ function Hero({ onRegisterClick }) {
           ))}
         </div>
       </div>
-      <style>{'@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}'}</style>
+      {/* The buyer behind the port that was clicked */}
+      <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-10 -mt-6 lg:-mt-14 pb-10 lg:pb-14" aria-live="polite">
+        <div className="flex flex-wrap items-center justify-center lg:justify-end gap-2">
+          <span className="text-[11px] font-bold text-slate-400 mr-1">{globe === 'live' ? 'Drag the globe or pick a port:' : 'Ports on the map:'}</span>
+          {PORT_BUTTONS.map(([idx, label]) => (
+            <button key={idx} type="button" onClick={() => apiRef.current && apiRef.current.select(idx)} disabled={globe !== 'live'}
+              className={`px-2.5 py-1 rounded-full text-[11px] font-bold border transition-colors cursor-pointer disabled:cursor-default ${picked && picked.name.startsWith(label) ? 'bg-emerald-400 text-[#04201a] border-emerald-300' : 'border-white/15 text-slate-200 hover:bg-white/10'}`}>{label}</button>
+          ))}
+        </div>
+        {picked && (
+          <div key={picked.name} className="mt-4 mx-auto lg:mr-0 max-w-md rounded-2xl bg-white text-slate-900 shadow-2xl p-4 flex gap-3 animate-[pop_.45s_ease-out]">
+            <span className="w-10 h-10 rounded-xl bg-slate-900 text-white flex items-center justify-center shrink-0"><KindIcon kind={picked.kind} size={18} /></span>
+            <div className="min-w-0">
+              <div className="text-[10px] font-bold uppercase tracking-wider text-slate-400">{picked.name}</div>
+              <div className="font-extrabold">{picked.event}</div>
+              <div className="text-xs text-slate-600 mt-0.5">{picked.detail}</div>
+              <div className="text-[10px] text-slate-400 mt-1.5">Every update lands on the buyer&apos;s lead in the CRM.</div>
+            </div>
+          </div>
+        )}
+      </div>
+      <style>{'@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}@keyframes pop{0%{opacity:0;transform:translateY(10px) scale(.96)}100%{opacity:1;transform:none}}'}</style>
     </section>
   );
 }
@@ -169,6 +218,46 @@ const STEPS = [
   { icon: ClipboardCheck, label: 'Review', title: 'The owner sees the whole day', text: 'Calls, remarks, follow-ups done and missed, per person. A daily report lands every evening.', img: '/landing/team-review.jpg', alt: 'Team review report of each staff member’s day' },
   { icon: Bot, label: 'Close', title: 'Interested buyers come back to you', text: 'AI calls and WhatsApp replies are written onto the lead with a follow-up, so your team calls them next.', img: '/landing/ai-calling.jpg', alt: 'AI call result: interested buyer with summary and recording' },
 ];
+
+/** Screens stacked in 3D; the deck follows the pointer. */
+function Deck({ active }) {
+  const ref = useRef(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el || !window.matchMedia('(pointer: fine)').matches) return undefined;
+    let raf = 0;
+    const onMove = (e) => {
+      const r = el.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5; const y = (e.clientY - r.top) / r.height - 0.5;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => { el.style.transform = `rotateY(${-14 + x * 12}deg) rotateX(${8 - y * 10}deg)`; });
+    };
+    const onLeave = () => { el.style.transform = ''; };
+    const host = el.parentElement;
+    host.addEventListener('pointermove', onMove);
+    host.addEventListener('pointerleave', onLeave);
+    return () => { cancelAnimationFrame(raf); host.removeEventListener('pointermove', onMove); host.removeEventListener('pointerleave', onLeave); };
+  }, []);
+  return (
+    <div className="relative w-full aspect-[1536/1104] [perspective:1800px]">
+      <div ref={ref} className="relative w-full h-full [transform-style:preserve-3d] [transform:rotateY(-14deg)_rotateX(8deg)] transition-transform duration-300 ease-out">
+        {STEPS.map((s, i) => {
+          const d = i - active;
+          const t = d < 0
+            ? 'translate3d(-8%, -30%, 160px) rotateX(-14deg)'
+            : `translate3d(${d * 7}%, ${-d * 6}%, ${-d * 150}px)`;
+          const o = d < 0 ? 0 : d > 3 ? 0 : 1 - d * 0.22;
+          return (
+            <div key={s.label} className={`absolute inset-0 transition-all duration-[900ms] ease-[cubic-bezier(.2,.8,.2,1)] ${s.narrow ? 'flex justify-center' : ''}`}
+              style={{ transform: t, opacity: o, zIndex: 10 - Math.abs(d), filter: d > 0 ? `brightness(${1 - d * 0.12})` : 'none' }} aria-hidden={active !== i}>
+              <Screen src={s.img} alt={s.alt} tilt={false} className={`${s.narrow ? 'w-[62%]' : 'w-full'} ${d === 0 ? 'shadow-[0_50px_120px_-20px_rgba(2,24,43,0.55),0_0_0_1px_rgba(15,23,42,0.08)]' : ''}`} eager={i <= 1} />
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 function Journey() {
   const [active, setActive] = useState(0);
@@ -206,16 +295,10 @@ function Journey() {
             </li>
           ))}
         </ol>
-        {/* Sticky screen (desktop) */}
+        {/* Sticky 3D deck of screens (desktop): the current step in front, the next ones stacked behind */}
         <div className="hidden lg:block">
-          <div className="sticky top-[14vh] h-[72vh] flex items-center">
-            <div className="relative w-full aspect-[1536/1104]">
-              {STEPS.map((s, i) => (
-                <div key={s.label} className={`absolute inset-0 transition-all duration-700 ease-out ${active === i ? 'opacity-100 translate-y-0 scale-100' : i < active ? 'opacity-0 -translate-y-8 scale-95' : 'opacity-0 translate-y-8 scale-95'} ${s.narrow ? 'flex justify-center' : ''}`} aria-hidden={active !== i}>
-                  <Screen src={s.img} alt={s.alt} className={s.narrow ? 'w-[62%]' : 'w-full'} eager={i === 0} />
-                </div>
-              ))}
-            </div>
+          <div className="sticky top-[12vh] h-[76vh] flex items-center">
+            <Deck active={active} />
           </div>
         </div>
       </div>
@@ -236,6 +319,37 @@ const CHANNELS = [
     points: ['Facebook Page and Instagram in one calendar', 'AI writes post ideas in your style', 'Schedule posts, see likes and comments', 'Staff can draft, the owner approves'] },
 ];
 
+/** The four channels orbit the CRM in 3D; click one to bring it forward. */
+function Orbit({ sel, setSel }) {
+  const R = 118;
+  return (
+    <div className="relative h-[230px] sm:h-[260px] [perspective:900px] select-none" aria-hidden="true">
+      <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-24 h-24 rounded-3xl bg-white shadow-[0_0_60px_rgba(52,211,153,0.45)] flex flex-col items-center justify-center z-10">
+        <div className="grid grid-cols-3 gap-1"><span className="w-3.5 h-3.5 rounded bg-[#F88F61]" /><span className="w-3.5 h-3.5 rounded bg-[#FDC64A]" /><span className="w-3.5 h-3.5 rounded bg-[#EB4E55]" /><span /><span className="w-3.5 h-3.5 rounded bg-[#58BA84]" /></div>
+        <div className="text-[10px] font-black text-slate-900 mt-1.5">Your CRM</div>
+      </div>
+      <div className="absolute left-1/2 top-1/2 w-0 h-0 [transform-style:preserve-3d] animate-[orbit_26s_linear_infinite] motion-reduce:animate-[orbit_70s_linear_infinite] hover:[animation-play-state:paused]">
+        <div className="absolute -left-[118px] -top-[118px] w-[236px] h-[236px] rounded-full border border-emerald-300/30" />
+        <div className="absolute -left-[150px] -top-[150px] w-[300px] h-[300px] rounded-full border border-dashed border-white/10" />
+        {CHANNELS.map((ch, i) => {
+          const a = (i / CHANNELS.length) * 360;
+          return (
+            <div key={ch.key} className="absolute left-0 top-0 [transform-style:preserve-3d]" style={{ transform: `rotateZ(${a}deg) translateX(${R}px) rotateZ(${-a}deg)` }}>
+              <div className="[transform-style:preserve-3d] animate-[counter_26s_linear_infinite] motion-reduce:animate-[counter_70s_linear_infinite]">
+                <button type="button" tabIndex={-1} onClick={() => setSel(i)}
+                  className={`-translate-x-1/2 -translate-y-1/2 w-14 h-14 rounded-2xl bg-gradient-to-br ${ch.color} text-white flex items-center justify-center shadow-xl cursor-pointer transition-transform ${sel === i ? 'scale-125 ring-4 ring-white/80' : 'hover:scale-110'}`}>
+                  <ch.icon size={22} />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+      <style>{'@keyframes orbit{from{transform:rotateX(62deg) rotateZ(0deg)}to{transform:rotateX(62deg) rotateZ(360deg)}}@keyframes counter{from{transform:rotateZ(0deg) rotateX(-62deg)}to{transform:rotateZ(-360deg) rotateX(-62deg)}}'}</style>
+    </div>
+  );
+}
+
 function Channels() {
   const [sel, setSel] = useState(0);
   const c = CHANNELS[sel];
@@ -248,7 +362,9 @@ function Channels() {
         <p className="mt-4 text-slate-400 text-center max-w-2xl mx-auto" data-reveal>Four channels, one buyer record. Every message, call and reply lands on the right lead, with the next step already set.</p>
 
         <div className="mt-12 grid lg:grid-cols-[0.8fr_1.2fr] gap-8 items-center">
-          <div role="tablist" aria-label="Channels" className="grid grid-cols-2 lg:grid-cols-1 gap-3" data-reveal>
+          <div>
+          <Orbit sel={sel} setSel={setSel} />
+          <div role="tablist" aria-label="Channels" className="grid grid-cols-2 lg:grid-cols-1 gap-3 mt-6" data-reveal>
             {CHANNELS.map((ch, i) => (
               <button key={ch.key} type="button" role="tab" aria-selected={sel === i} aria-controls="channel-panel" onClick={() => setSel(i)}
                 className={`group text-left rounded-2xl border p-4 transition-all cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-emerald-300 ${sel === i ? 'bg-white text-slate-900 border-white shadow-2xl lg:translate-x-2' : 'bg-white/5 border-white/10 hover:bg-white/10'}`}>
@@ -261,6 +377,7 @@ function Channels() {
                 </ul>
               </button>
             ))}
+          </div>
           </div>
           <div id="channel-panel" role="tabpanel" className="relative">
             {c.img ? (
@@ -315,6 +432,27 @@ function Slider({ id, label, unit, min, max, step, value, onChange }) {
   );
 }
 
+/** FOB / CFR / CIF as 3D columns that grow when the numbers change. */
+function Columns3D({ bars, maxV }) {
+  const tones = [['#34d399', '#059669', '#6ee7b7'], ['#60a5fa', '#4338ca', '#93c5fd'], ['#fbbf24', '#e11d48', '#fde68a']];
+  return (
+    <div className="mt-6 h-[170px] flex items-end justify-center gap-10 [perspective:700px]" aria-hidden="true">
+      {bars.map(([k, val], i) => {
+        const h = Math.max(14, ((val || 0) / maxV) * 140);
+        const [front, side, top] = tones[i];
+        return (
+          <div key={k} className="relative w-14 [transform-style:preserve-3d] [transform:rotateX(-14deg)_rotateY(-28deg)] transition-[height] duration-500 ease-out" style={{ height: h }}>
+            <div className="absolute inset-0 rounded-sm" style={{ background: `linear-gradient(${front}, ${side})` }} />
+            <div className="absolute top-0 left-full h-full w-7 origin-left [transform:rotateY(90deg)] rounded-sm" style={{ background: side, filter: 'brightness(.75)' }} />
+            <div className="absolute bottom-full left-0 w-full h-7 origin-bottom [transform:rotateX(90deg)] rounded-sm" style={{ background: top }} />
+            <div className="absolute -bottom-6 left-0 right-0 text-center text-[11px] font-extrabold text-slate-300 [transform:rotateY(28deg)_rotateX(14deg)]">{k}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
 function Toolkit() {
   const [price, setPrice] = useState(10);
   const [freight, setFreight] = useState(400);
@@ -351,6 +489,7 @@ function Toolkit() {
 
           <div className="rounded-3xl bg-[#06131f] text-white p-5 sm:p-8 flex flex-col" data-reveal aria-live="polite">
             <div className="text-xs font-bold text-slate-400 uppercase tracking-[0.16em]">Price per ton</div>
+            <Columns3D bars={bars} maxV={maxV} />
             <div className="mt-5 space-y-5 flex-1">
               {bars.map(([k, val, g]) => (
                 <div key={k}>

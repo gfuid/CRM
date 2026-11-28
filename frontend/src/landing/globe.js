@@ -10,7 +10,7 @@
 import {
   WebGLRenderer, Scene, PerspectiveCamera, Group, BufferGeometry, Float32BufferAttribute, Points, PointsMaterial,
   Mesh, SphereGeometry, MeshBasicMaterial, ShaderMaterial, AdditiveBlending, BackSide, Vector3, CubicBezierCurve3,
-  TubeGeometry, Color, RingGeometry, DoubleSide, CanvasTexture,
+  TubeGeometry, Color, RingGeometry, DoubleSide, CanvasTexture, Raycaster, Vector2,
 } from 'three';
 import LAND from './landDots.json';
 
@@ -18,18 +18,18 @@ const R = 1;
 // Exporter hub and buyer ports (lat, lon)
 export const HUB = { name: 'Nhava Sheva, India', lat: 18.95, lon: 72.95 };
 export const PORTS = [
-  { name: 'Jebel Ali', lat: 25.01, lon: 55.06 },
-  { name: 'Rotterdam', lat: 51.95, lon: 4.14 },
-  { name: 'Lagos', lat: 6.45, lon: 3.39 },
-  { name: 'Ho Chi Minh City', lat: 10.77, lon: 106.7 },
-  { name: 'Colombo', lat: 6.93, lon: 79.85 },
-  { name: 'Mombasa', lat: -4.04, lon: 39.67 },
-  { name: 'Chittagong', lat: 22.33, lon: 91.8 },
-  { name: 'Singapore', lat: 1.26, lon: 103.8 },
-  { name: 'Jeddah', lat: 21.48, lon: 39.17 },
-  { name: 'New York', lat: 40.68, lon: -74.04 },
-  { name: 'Hamburg', lat: 53.54, lon: 9.98 },
-  { name: 'Santos', lat: -23.96, lon: -46.3 },
+  { name: 'Jebel Ali, UAE', lat: 25.01, lon: 55.06, kind: 'wa', event: 'WhatsApp read', detail: 'Al-Zahra Trading asked for today\u2019s CIF price' },
+  { name: 'Rotterdam, Netherlands', lat: 51.95, lon: 4.14, kind: 'quote', event: 'Proforma sent', detail: 'Global Agri Impex \u00b7 Rice DDGS 80 MT \u00b7 LC at sight' },
+  { name: 'Lagos, Nigeria', lat: 6.45, lon: 3.39, kind: 'call', event: 'Follow-up due 11:00', detail: 'Logos Grain Traders \u00b7 feedback on Jowar price' },
+  { name: 'Ho Chi Minh City, Vietnam', lat: 10.77, lon: 106.7, kind: 'quote', event: 'Quotation sent', detail: 'Saigon Feed Mill \u00b7 Corn DDGS 250 MT \u00b7 CIF' },
+  { name: 'Colombo, Sri Lanka', lat: 6.93, lon: 79.85, kind: 'email', event: 'Email opened 3 times', detail: 'Thathsara Enterprises \u00b7 protein report' },
+  { name: 'Mombasa, Kenya', lat: -4.04, lon: 39.67, kind: 'ai', event: 'AI call \u00b7 Interested', detail: 'Kenya Poultry Feeds \u00b7 60 MT maize monthly' },
+  { name: 'Chittagong, Bangladesh', lat: 22.33, lon: 91.8, kind: 'won', event: 'Order confirmed', detail: 'Dhaka Agro Industries \u00b7 DORB 120 MT' },
+  { name: 'Singapore', lat: 1.26, lon: 103.8, kind: 'email', event: 'Campaign link clicked', detail: 'Price list opened by the buyer' },
+  { name: 'Jeddah, Saudi Arabia', lat: 21.48, lon: 39.17, kind: 'wa', event: 'Buyer replied PRICE', detail: 'Auto reply sent the price list' },
+  { name: 'New York, USA', lat: 40.68, lon: -74.04, kind: 'ai', event: 'AI call \u00b7 Call back', detail: 'Asked to call again on Monday' },
+  { name: 'Hamburg, Germany', lat: 53.54, lon: 9.98, kind: 'quote', event: 'Sample dispatched', detail: 'DHL waybill shared on WhatsApp' },
+  { name: 'Santos, Brazil', lat: -23.96, lon: -46.3, kind: 'call', event: 'New lead added', detail: 'From the trade fair list' },
 ];
 
 const toVec = (lat, lon, r = R, out = new Vector3()) => {
@@ -52,7 +52,7 @@ const dotTexture = () => {
   return new CanvasTexture(c);
 };
 
-export async function createGlobe(canvas, { onReady } = {}) {
+export async function createGlobe(canvas, { onReady, onHover, onSelect, calm = false } = {}) {
   const renderer = new WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: 'low-power' });
   renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.75));
   renderer.setClearColor(0x000000, 0);
@@ -65,6 +65,17 @@ export async function createGlobe(canvas, { onReady } = {}) {
   scene.add(world);
   const disposables = [];
   const keep = (x) => { disposables.push(x); return x; };
+
+  // Starfield behind the globe (moves a little with the pointer: depth)
+  const starPos = new Float32Array(1400 * 3);
+  for (let i = 0; i < 1400; i++) {
+    const r = 5 + Math.random() * 7; const th = Math.random() * Math.PI * 2; const ph = Math.acos(2 * Math.random() - 1);
+    starPos[i * 3] = r * Math.sin(ph) * Math.cos(th); starPos[i * 3 + 1] = r * Math.sin(ph) * Math.sin(th); starPos[i * 3 + 2] = -Math.abs(r * Math.cos(ph)) - 1;
+  }
+  const starGeo = keep(new BufferGeometry());
+  starGeo.setAttribute('position', new Float32BufferAttribute(starPos, 3));
+  const stars = new Points(starGeo, keep(new PointsMaterial({ size: 0.035, color: 0xcfe9ff, transparent: true, opacity: 0.7, depthWrite: false })));
+  scene.add(stars);
 
   // Ocean sphere (dark, slightly lit)
   const ocean = new Mesh(keep(new SphereGeometry(R * 0.995, 64, 64)), keep(new MeshBasicMaterial({ color: 0x0d2a42 })));
@@ -97,6 +108,9 @@ export async function createGlobe(canvas, { onReady } = {}) {
   const packetGeo = keep(new SphereGeometry(0.014, 10, 10));
   const packetMat = keep(new MeshBasicMaterial({ color: 0xffffff }));
   const ringGeo = keep(new RingGeometry(0.018, 0.026, 28));
+  const pickGeo = keep(new SphereGeometry(0.075, 8, 8));
+  const pickMat = keep(new MeshBasicMaterial({ visible: false }));
+  const picks = [];
   const routes = PORTS.map((p, idx) => {
     const end = toVec(p.lat, p.lon);
     const dist = hub.distanceTo(end);
@@ -113,6 +127,12 @@ export async function createGlobe(canvas, { onReady } = {}) {
     ring.position.copy(end).multiplyScalar(1.003);
     ring.lookAt(end.clone().multiplyScalar(2));
     world.add(ring);
+    // Invisible, larger target so a port is easy to point at
+    const pick = new Mesh(pickGeo, pickMat);
+    pick.position.copy(end);
+    pick.userData.port = idx;
+    world.add(pick);
+    picks.push(pick);
     return { curve, packet, ring, ringMat, speed: 0.08 + (idx % 4) * 0.025, offset: idx / PORTS.length };
   });
   // Hub marker
@@ -125,20 +145,50 @@ export async function createGlobe(canvas, { onReady } = {}) {
   world.rotation.y = -((HUB.lon + 180) * Math.PI) / 180 + Math.PI / 2 - 0.45;
   world.rotation.x = 0.32;
 
-  // ---- interaction: drag (or touch) to spin, pointer gives a gentle tilt ----
-  let dragging = false; let lastX = 0; let velocity = 0.0016; let targetTiltX = 0.32; let tiltX = 0.32;
-  const onDown = (e) => { dragging = true; lastX = e.clientX; canvas.setPointerCapture?.(e.pointerId); };
+  // ---- interaction ----
+  // Drag (mouse or finger) spins the globe; the pointer tilts it and moves the stars;
+  // pointing at a port shows its card (onHover), a click turns the globe to it (onSelect).
+  const BASE_SPIN = calm ? 0.0009 : 0.0019;
+  let dragging = false; let moved = 0; let lastX = 0; let velocity = BASE_SPIN; let targetTiltX = 0.32; let tiltX = 0.32;
+  let boost = 0; let flyTo = null; let hovered = -1;
+  const ray = new Raycaster(); const ndc = new Vector2(); const tmp = new Vector3();
+  const starTarget = { x: 0, y: 0 };
+  let pendingPick = null;
+  const frontAngle = (lon) => -((lon + 180) * Math.PI) / 180 + Math.PI / 2;
+  const select = (idx) => {
+    const p = PORTS[idx];
+    if (!p) return;
+    let target = frontAngle(p.lon);
+    target += Math.round((world.rotation.y - target) / (Math.PI * 2)) * Math.PI * 2; // turn the short way
+    flyTo = { y: target, x: Math.max(-0.5, Math.min(0.9, ((p.lat * Math.PI) / 180) * 0.8)), hold: 0 };
+    velocity = 0;
+    if (onSelect) onSelect(p, idx);
+  };
+  const onDown = (e) => { dragging = true; moved = 0; lastX = e.clientX; };
   const onMove = (e) => {
     const rect = canvas.getBoundingClientRect();
-    targetTiltX = 0.32 + ((e.clientY - rect.top) / rect.height - 0.5) * 0.35;
+    const nx = (e.clientX - rect.left) / rect.width; const ny = (e.clientY - rect.top) / rect.height;
+    targetTiltX = 0.32 + (ny - 0.5) * 0.35;
+    starTarget.x = (nx - 0.5) * 0.12; starTarget.y = (ny - 0.5) * 0.08;
+    pendingPick = { x: nx * 2 - 1, y: -(ny * 2 - 1), cx: e.clientX - rect.left, cy: e.clientY - rect.top };
     if (!dragging) return;
-    velocity = (e.clientX - lastX) * 0.0009;
+    const dx = e.clientX - lastX; moved += Math.abs(dx);
+    if (moved > 6) flyTo = null;
+    velocity = dx * 0.0009;
     world.rotation.y += velocity * 4;
     lastX = e.clientX;
   };
-  const onUp = () => { dragging = false; };
+  const onUp = () => {
+    if (dragging && moved < 6 && hovered >= 0) select(hovered);
+    dragging = false;
+  };
+  const onLeave = () => {
+    pendingPick = null;
+    if (hovered >= 0) { hovered = -1; canvas.style.cursor = ''; if (onHover) onHover(null); }
+  };
   canvas.addEventListener('pointerdown', onDown);
   canvas.addEventListener('pointermove', onMove);
+  canvas.addEventListener('pointerleave', onLeave);
   window.addEventListener('pointerup', onUp);
 
   // ---- size ----
@@ -153,13 +203,33 @@ export async function createGlobe(canvas, { onReady } = {}) {
   resize();
 
   // ---- render loop: only while on screen and the tab is visible ----
-  let raf = 0; let visible = true; let lost = false; let t0 = performance.now();
+  let raf = 0; let visible = true; let lost = false; const t0 = performance.now();
   const frame = (now) => {
     raf = 0;
     const t = (now - t0) / 1000;
-    if (!dragging) { velocity += (0.0016 - velocity) * 0.02; world.rotation.y += velocity; }
-    tiltX += (targetTiltX - tiltX) * 0.05;
+    if (flyTo) {
+      world.rotation.y += (flyTo.y - world.rotation.y) * 0.06;
+      tiltX += (flyTo.x - tiltX) * 0.06;
+      if (Math.abs(flyTo.y - world.rotation.y) < 0.003 && ++flyTo.hold > 240) flyTo = null; // rest ~4 s, then spin again
+    } else {
+      if (!dragging) { velocity += (BASE_SPIN + boost - velocity) * 0.03; world.rotation.y += velocity; }
+      tiltX += (targetTiltX - tiltX) * 0.05;
+    }
+    boost *= 0.94;
     world.rotation.x = tiltX;
+    stars.rotation.y += (starTarget.x - stars.rotation.y) * 0.04;
+    stars.rotation.x += (starTarget.y - stars.rotation.x) * 0.04;
+    // What is under the pointer (once per frame, only after it moved); only ports on the near side count
+    if (pendingPick && !dragging) {
+      ndc.set(pendingPick.x, pendingPick.y);
+      ray.setFromCamera(ndc, camera);
+      const hit = ray.intersectObjects(picks, false)[0];
+      const idx = hit && hit.object.getWorldPosition(tmp).z > 0.15 ? hit.object.userData.port : -1;
+      if (idx !== hovered) canvas.style.cursor = idx >= 0 ? 'pointer' : '';
+      hovered = idx;
+      if (onHover) onHover(idx >= 0 ? { port: PORTS[idx], x: pendingPick.cx, y: pendingPick.cy } : null);
+      pendingPick = null;
+    }
     for (const r of routes) {
       const k = (t * r.speed + r.offset) % 1;
       r.curve.getPointAt(k, r.packet.position);
@@ -184,12 +254,17 @@ export async function createGlobe(canvas, { onReady } = {}) {
   start();
 
   return {
+    /** Spin faster for a moment (while the page scrolls) */
+    kick(v) { boost = Math.min(0.03, boost + Math.abs(v)); },
+    /** Turn to a port (buttons outside the canvas) */
+    select,
     destroy() {
       stop();
       io.disconnect(); ro.disconnect();
       document.removeEventListener('visibilitychange', onVis);
       canvas.removeEventListener('pointerdown', onDown);
       canvas.removeEventListener('pointermove', onMove);
+      canvas.removeEventListener('pointerleave', onLeave);
       canvas.removeEventListener('webglcontextlost', onLost);
       window.removeEventListener('pointerup', onUp);
       disposables.forEach((d) => d.dispose && d.dispose());
